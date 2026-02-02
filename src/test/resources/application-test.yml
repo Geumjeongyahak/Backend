@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: sonmoum-api-test
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+        show_sql: false
+  session:
+    jdbc:
+      initialize-schema: always
+  sql:
+    init:
+      mode: never
+
+server:
+  port: 0  # Random port
+
+logging:
+  level:
+    org.geumjeong.learning.sonmoum_api: DEBUG

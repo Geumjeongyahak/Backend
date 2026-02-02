@@ -1,0 +1,22 @@
+spring:
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+app:
+  jwt:
+    refresh-cookie-secure: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health"
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

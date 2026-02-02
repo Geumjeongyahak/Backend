@@ -1,0 +1,11 @@
+[
+    {
+        "name": "Sonmoun Test Database",
+        "type": "postgres",
+        "host": "127.0.0.1",
+        "port": 2157,
+        "username": "user_sonmoum",
+        "password": "pw_sonmoum",
+        "database": "db_sonmoum"
+    }
+]
