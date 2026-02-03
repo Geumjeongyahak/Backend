@@ -36,5 +36,7 @@ out/
 ### VS Code ###
 .vscode/
 
-
+## 기본 환경 설정 관련
 .env
+.devdbrc
+.claude/settings.local.json

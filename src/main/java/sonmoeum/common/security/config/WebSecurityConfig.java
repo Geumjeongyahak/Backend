@@ -77,16 +77,12 @@ public class WebSecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // 문서/헬스체크
                 .requestMatchers("/actuator/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/swagger-ui").permitAll()
-
                 // redirect 페이지(정적)
                 .requestMatchers("/oauth2/redirect/**").permitAll()
-
                 // 자체 인증 API 경로
                 .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
-
                 // OAuth2 로그인 플로우 엔드포인트
                 .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
-
                 // 그 외는 인증 필요
                 .anyRequest().authenticated()
             )
@@ -98,7 +94,6 @@ public class WebSecurityConfig {
                 )
                 .successHandler(oAuth2SuccessHandler)
             )
-
             // JWT 인증 필터: UsernamePasswordAuthenticationFilter 전에 둠
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 
