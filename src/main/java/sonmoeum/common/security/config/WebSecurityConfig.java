@@ -40,10 +40,7 @@ public class WebSecurityConfig {
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private final CustomAccessDeniedHandler accessDeniedHandler;
 
-    // Stateless 구성에 필요한 컴포넌트들
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final CookieOAuth2AuthorizationRequestRepository cookieOAuth2AuthorizationRequestRepository;
-    private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
     @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173}")
     private String corsAllowedOrigins;
@@ -77,23 +74,12 @@ public class WebSecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // 문서/헬스체크
                 .requestMatchers("/actuator/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/swagger-ui").permitAll()
-                // redirect 페이지(정적)
-                .requestMatchers("/oauth2/redirect/**").permitAll()
                 // 자체 인증 API 경로
-                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
-                // OAuth2 로그인 플로우 엔드포인트
-                .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
+                .requestMatchers("/api/v1/auth/login").permitAll()
                 // 그 외는 인증 필요
                 .anyRequest().authenticated()
             )
 
-            // OAuth2 로그인 (세션 없이: AuthorizationRequest를 쿠키로 저장)
-            .oauth2Login(oauth2 -> oauth2
-                .authorizationEndpoint(authorization -> authorization
-                    .authorizationRequestRepository(cookieOAuth2AuthorizationRequestRepository)
-                )
-                .successHandler(oAuth2SuccessHandler)
-            )
             // JWT 인증 필터: UsernamePasswordAuthenticationFilter 전에 둠
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 
@@ -104,23 +90,14 @@ public class WebSecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // credentials=true 이면 allowedOrigins에 "*" 불가
-        config.setAllowCredentials(true);
+        config.setAllowCredentials(false);
 
         List<String> origins = Arrays.stream(corsAllowedOrigins.split(","))
             .map(String::trim)
             .filter(s -> !s.isBlank())
             .collect(Collectors.toList());
 
-        // 혹시 "*"가 들어오면(실수 방지) credentials를 꺼버리는 방어 로직
-        if (origins.contains("*")) {
-            config.setAllowCredentials(false);
-            config.addAllowedOrigin("*");
-        } else {
-            // Spring Security 6 / Boot 3.x에서 패턴을 쓸 경우 addAllowedOriginPattern 사용 가능
-            // 여기서는 명시 도메인만 허용
-            origins.forEach(config::addAllowedOrigin);
-        }
+        origins.forEach(config::addAllowedOrigin);
 
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
