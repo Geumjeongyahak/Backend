@@ -102,7 +102,7 @@ public class WebSecurityConfig {
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
 
-        // OAuth2 리다이렉트/쿠키 동작 고려 시 캐시 시간은 적당히
+        // CORS preflight(OPTIONS) 캐시 시간
         config.setMaxAge(Duration.ofHours(1));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
