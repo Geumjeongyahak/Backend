@@ -3,6 +3,7 @@ package sonmoeum.common.advice;
 import java.net.URI;
 import java.util.stream.Collectors;
 
+import org.springframework.security.authentication.BadCredentialsException;
 import sonmoeum.common.error.BusinessException;
 import sonmoeum.common.error.ErrorCode;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -71,6 +72,19 @@ public class GlobalExceptionAdvice {
         problemDetail.setType(URI.create("/errors/not-found"));
 
         return ResponseEntity.status(ErrorCode.NOT_FOUND.getStatus()).body(problemDetail);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ProblemDetail> handleBadCredentialsException(BadCredentialsException e) {
+        log.warn("BadCredentialsException: {}", e.getMessage());
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+            ErrorCode.LOGIN_FAILED.getStatus(),
+            ErrorCode.LOGIN_FAILED.getMessage()
+        );
+        problemDetail.setTitle(ErrorCode.LOGIN_FAILED.getCode());
+        problemDetail.setType(URI.create("/errors/" + ErrorCode.LOGIN_FAILED.getCode()));
+
+        return ResponseEntity.status(ErrorCode.LOGIN_FAILED.getStatus()).body(problemDetail);
     }
 
     @ExceptionHandler(Exception.class)
