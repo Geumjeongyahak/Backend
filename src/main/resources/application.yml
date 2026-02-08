@@ -3,14 +3,6 @@ spring:
     name: sonmoeum
   profiles:
     active: ${SPRING_PROFILES_ACTIVE}
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: ${GOOGLE_CLIENT_ID}
-            client-secret: ${GOOGLE_CLIENT_SECRET}
-            scope: email, profile
   jpa:
     open-in-view: false
 
@@ -23,6 +15,3 @@ app:
   jwt:
     secret: ${JWT_SECRET}
     access-exp-seconds: ${JWT_ACCESS_EXP_SECONDS:1800}
-    refresh-exp-seconds: ${JWT_REFRESH_EXP_SECONDS:1209600}
-    refresh-cookie-name: "refresh_token"
-    refresh-cookie-same-site: "Lax"

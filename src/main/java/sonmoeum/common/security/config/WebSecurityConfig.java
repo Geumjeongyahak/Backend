@@ -8,8 +8,6 @@ import java.util.stream.Collectors;
 import sonmoeum.common.security.handler.CustomAccessDeniedHandler;
 import sonmoeum.common.security.handler.CustomAuthenticationEntryPoint;
 import sonmoeum.common.security.jwt.JwtAuthenticationFilter;
-import sonmoeum.common.security.oauth.CookieOAuth2AuthorizationRequestRepository;
-import sonmoeum.common.security.oauth.OAuth2SuccessHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
