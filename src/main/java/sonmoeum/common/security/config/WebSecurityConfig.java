@@ -75,7 +75,7 @@ public class WebSecurityConfig {
                 // 문서/헬스체크
                 .requestMatchers("/actuator/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/swagger-ui").permitAll()
                 // 자체 인증 API 경로
-                .requestMatchers("/api/v1/auth/login").permitAll()
+                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/signup").permitAll()
                 // 그 외는 인증 필요
                 .anyRequest().authenticated()
             )
