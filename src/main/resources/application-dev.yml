@@ -13,11 +13,6 @@ spring:
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
-  jwt:
-    refresh-cookie-secure: false
-  oauth2:
-    redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:8080/oauth2/redirect/index.html}
-    token-transport: ${OAUTH2_TOKEN_TRANSPORT:fragment}
 
 management:
   endpoints:

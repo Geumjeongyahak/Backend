@@ -58,18 +58,6 @@ public class JwtTokenProvider {
             .compact();
     }
 
-    public String createRefreshToken(String subject) {
-        Instant now = Instant.now();
-        Instant exp = now.plusSeconds(securityProperties.getJwt().getRefreshExpSeconds());
-
-        return Jwts.builder()
-            .subject(subject)
-            .issuedAt(Date.from(now))
-            .expiration(Date.from(exp))
-            .signWith(signingKey())
-            .compact();
-    }
-
     public boolean validate(String token) {
         try {
             parse(token);
