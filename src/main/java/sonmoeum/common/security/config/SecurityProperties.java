@@ -27,5 +27,7 @@ public class SecurityProperties {
         private String secret;
 
         private long accessExpSeconds;
+
+        private long refreshExpSeconds;
     }
 }

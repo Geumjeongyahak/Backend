@@ -15,3 +15,4 @@ app:
   jwt:
     secret: ${JWT_SECRET}
     access-exp-seconds: ${JWT_ACCESS_EXP_SECONDS:1800}
+    refresh-exp-seconds: ${JWT_REFRESH_EXP_SECONDS:1209600}

@@ -72,8 +72,12 @@ public class WebSecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // 문서/헬스체크
                 .requestMatchers("/actuator/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/swagger-ui").permitAll()
-                // 자체 인증 API 경로
-                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/signup").permitAll()
+                // 인증 API (로그인, 회원가입, 토큰 재발급)
+                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/signup", "/api/v1/auth/refresh").permitAll()
+                // 중복 확인 API
+                .requestMatchers("/api/v1/auth/check/**").permitAll()
+                // 비밀번호 찾기/재설정 API
+                .requestMatchers("/api/v1/auth/password/forgot", "/api/v1/auth/password/reset").permitAll()
                 // 그 외는 인증 필요
                 .anyRequest().authenticated()
             )
