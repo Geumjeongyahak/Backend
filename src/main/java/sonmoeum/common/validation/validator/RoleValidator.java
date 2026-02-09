@@ -6,7 +6,19 @@ import sonmoeum.domain.auth.enums.RoleType;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 public class RoleValidator implements ConstraintValidator<ValidRole, String> {
+    private Set<Long> validLevels;
+
+    @Override
+    public void initialize(ValidRole constraintAnnotation) {
+        validLevels = Arrays.stream(constraintAnnotation.levels())
+                .boxed()
+                .collect(Collectors.toUnmodifiableSet());
+    }
 
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {
@@ -14,8 +26,7 @@ public class RoleValidator implements ConstraintValidator<ValidRole, String> {
             return true; // Let @NotNull handle empty values
         }
         try {
-            RoleType.valueOf(value);
-            return true;
+            return validLevels.contains(RoleType.valueOf(value).getLevel());
         } catch (IllegalArgumentException e) {
             return false;
         }
