@@ -17,6 +17,7 @@ import jakarta.validation.Payload;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ValidRole {
     String message() default "유효하지 않은 역할(Role) 입니다.";
+    long[] levels() default { 0, 1, 2};
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 }
