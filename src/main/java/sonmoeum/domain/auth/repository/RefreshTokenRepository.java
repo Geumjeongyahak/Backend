@@ -7,7 +7,6 @@ import org.springframework.data.repository.query.Param;
 import sonmoeum.domain.auth.entity.RefreshToken;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, String> {
 

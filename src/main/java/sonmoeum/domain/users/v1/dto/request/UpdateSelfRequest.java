@@ -3,7 +3,6 @@ package sonmoeum.domain.users.v1.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import sonmoeum.common.validation.annotation.ValidPhoneNumber;
-import sonmoeum.common.validation.annotation.ValidRole;
 
 @Schema(description = "사용자 본인 정보 수정 요청 DTO")
 public record UpdateSelfRequest(
