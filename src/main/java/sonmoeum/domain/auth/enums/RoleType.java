@@ -12,7 +12,10 @@ import java.util.stream.Collectors;
 @Getter
 public enum RoleType {
     ADMIN(1L), MANAGER(2L), VOLUNTEER(3L), GUEST(4L),
-    DEPT_FINANCE(1001L), DEPT_ACADEMIC(1002L), DEPT_IT(1003L), DEPT_SUPPORT(1004L),
+
+    DEPT_ADMIN(1001L), DEPT_HR(1002L), DEPT_FINANCE(1003L),
+    DEPT_IT(1004L), DEPT_MARKETING(1005L), DEPT_ACADEMIC(1006L),
+
     TEACHER(2001L);
 
     private final static Map<Long, RoleType> ID_MAP = Arrays.stream(values())
