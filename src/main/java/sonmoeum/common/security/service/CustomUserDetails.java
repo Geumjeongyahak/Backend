@@ -13,13 +13,13 @@ import lombok.RequiredArgsConstructor;
 public class CustomUserDetails implements UserDetails {
 
     private final Long userId;
-    private final String email;
+    private final String username;
     private final String password;
     private final Collection<? extends GrantedAuthority> authorities;
 
     @Override
     public String getUsername() {
-        return email;
+        return username;
     }
 
     @Override

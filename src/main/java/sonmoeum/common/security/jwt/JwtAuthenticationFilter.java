@@ -27,12 +27,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         HttpServletResponse response,
         FilterChain filterChain
     ) throws ServletException, IOException {
-
         String token = resolveBearerToken(request);
 
         if (StringUtils.hasText(token) && jwtTokenProvider.validate(token)) {
-            String email = jwtTokenProvider.getSubject(token);
-            var userDetails = customUserDetailsService.loadUserByUsername(email); // CustomUserDetails
+            String username = jwtTokenProvider.getSubject(token);
+            var userDetails = customUserDetailsService.loadUserByUsername(username); // CustomUserDetails
 
             Authentication auth = jwtTokenProvider.getAuthentication(token, userDetails);
             SecurityContextHolder.getContext().setAuthentication(auth);

@@ -1,0 +1,50 @@
+package sonmoeum.domain.users.entity;
+
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import sonmoeum.domain.auth.enums.RoleType;
+
+import java.util.Objects;
+
+@Entity
+@Table(name = "user_roles", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"user_id", "role_id"})})
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter
+public class UserRole {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @Column(name = "role_id", nullable = false)
+    private Long roleId;
+
+    public UserRole(User user, RoleType roleType) {
+        this.user = user;
+        this.roleId = roleType.getId();
+    }
+
+    public RoleType getRoleType() {
+        return RoleType.findById(roleId);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        UserRole that = (UserRole) obj;
+        return user.getId().equals(that.user.getId()) &&
+               roleId.equals(that.roleId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(user.getId(), roleId);
+    }
+}
