@@ -1,13 +1,10 @@
-package sonmoeum.api.v1.users.dto.request;
+package sonmoeum.domain.users.v1.dto.request;
 
-import java.util.List;
-
-import sonmoeum.common.validation.annotation.ValidPermissions;
 import sonmoeum.common.validation.annotation.ValidPhoneNumber;
-import sonmoeum.common.validation.annotation.ValidRole;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
+import sonmoeum.common.validation.annotation.ValidRole;
 
 public record UpdateUserRequest(
     @Schema(description = "이름", example = "홍길동")
@@ -18,17 +15,15 @@ public record UpdateUserRequest(
     @ValidPhoneNumber
     String phoneNumber,
 
+    @Schema(description = "연락 가능한 이메일 주소", example = "example@domain.com")
+    String email,
+
     @Schema(description = "비밀번호", example = "newpassword123!")
     @Size(min = 8, message = "비밀번호는 8자 이상이어야 합니다.")
     String password,
 
-    @Schema(description = "역할", example = "ADMIN")
-    @ValidRole
-    String role,
-
-    @Schema(description = "권한 목록", example = "[\"MANAGE_USERS\", \"MANAGE_DEPARTMENTS\"]")
-    @ValidPermissions
-    List<String> permissions
+    @Schema(description = "기본 역할", examples = { "ADMIN", "MANAGER", "VOLUNTEER", "GUEST" })
+    @ValidRole(levels = { 0 })
+    String role
 ) {
-
 }
