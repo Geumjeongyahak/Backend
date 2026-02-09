@@ -7,6 +7,7 @@ import sonmoeum.common.validation.annotation.ValidEmail;
 import sonmoeum.common.validation.annotation.ValidPhoneNumber;
 import sonmoeum.common.validation.annotation.ValidRole;
 
+@Schema(description = "사용자 생성 요청 DTO")
 public record CreateUserRequest(
     @Schema(description = "사용자 아이디", example = "user1324")
     @NotBlank(message = "ID는 필수입니다.")

@@ -1,6 +1,8 @@
 package sonmoeum.domain.auth.enums;
 
 import lombok.Getter;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -24,9 +26,9 @@ public enum RoleType {
         this.level = id % 1000;
     }
 
-    public String getAuthority() {
-        if (this.level == 0) return "ROLE_" + this.name();
-        return this.name();
+    public GrantedAuthority getAuthority() {
+        if (this.level == 0) return new SimpleGrantedAuthority("ROLE_" + name());
+        return new SimpleGrantedAuthority(name());
     }
     public static RoleType findById(long id) {
         return ID_MAP.get(id);

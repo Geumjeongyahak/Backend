@@ -30,7 +30,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         // Combine Role + Permissions into authorities
         Collection<GrantedAuthority> authorities = user.getRoles()
                 .stream()
-                .map(role -> new SimpleGrantedAuthority(role.getRoleType().getAuthority()))
+                .map(role -> role.getRoleType().getAuthority())
                 .collect(Collectors.toSet());
 
         return new CustomUserDetails(

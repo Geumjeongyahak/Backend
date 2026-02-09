@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import sonmoeum.common.validation.annotation.ValidRole;
 
+@Schema(description = "사용자 정보 수정 요청 DTO")
 public record UpdateUserRequest(
     @Schema(description = "이름", example = "홍길동")
     @Size(max = 50, message = "이름은 50자 이하여야 합니다.")

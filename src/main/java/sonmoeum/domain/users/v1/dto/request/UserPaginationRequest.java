@@ -1,8 +1,10 @@
 package sonmoeum.domain.users.v1.dto.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.data.domain.PageRequest;
 import sonmoeum.domain.base.dto.request.BasePaginationRequest;
 
+@Schema(description = "사용자 페이징 요청 DTO")
 public class UserPaginationRequest extends BasePaginationRequest {
 
     @Override
