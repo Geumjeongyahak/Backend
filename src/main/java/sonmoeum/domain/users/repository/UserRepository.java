@@ -1,7 +1,6 @@
 package sonmoeum.domain.users.repository;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import sonmoeum.domain.users.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
