@@ -12,7 +12,7 @@
 - **출결 관리** - 봉사자/학생 출석 체크 (출석, 결석, 지각, 조퇴, 공결)
 - **요청 처리** - 결석/수업교환/과목교환/구입 요청 및 승인
 - **수업 일지** - 수업별 리뷰 작성 및 조회
-- **인증/인가** - OAuth2(Google) 소셜 로그인, JWT 토큰, 역할 기반 접근 제어
+- **인증/인가** - JWT Access/Refresh Token, 역할 기반 접근 제어 (RBAC)
 
 ## 기술 스택
 
@@ -33,33 +33,34 @@
 ### 사전 요구사항
 
 - Java 21+
-- PostgreSQL (개발/운영 환경)
-- Google OAuth2 클라이언트 자격 증명
+- PostgreSQL (개발/운영 환경) 또는 H2 (로컬 테스트)
 
 ### 환경 변수 설정
 
 프로젝트 루트에 `.env` 파일을 생성합니다. `.env-example`을 참고하세요.
 
 ```env
-# 필수
-JWT_SECRET=your-jwt-secret-key
-SPRING_PROFILES_ACTIVE=dev
+# 필수 - JWT
+JWT_SECRET=your-jwt-secret-key-min-256-bits
+JWT_ACCESS_EXP_SECONDS=3600          # Access Token 만료 시간 (1시간)
+JWT_REFRESH_EXP_SECONDS=1209600      # Refresh Token 만료 시간 (14일)
 
-# 데이터베이스
+# 필수 - Spring Profile
+SPRING_PROFILES_ACTIVE=dev           # local, dev, prod
+
+# 필수 - 데이터베이스 (dev/prod)
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_DB=sonmoum
 POSTGRES_USER=your-db-user
 POSTGRES_PASSWORD=your-db-password
 
-# OAuth2 (Google)
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-
-# 선택
+# 선택 - CORS
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
-OAUTH2_REDIRECT_URI=http://localhost:8080/oauth2/redirect/index.html
-OAUTH2_TOKEN_TRANSPORT=fragment
+
+# 선택 - OAuth2 (향후 구현 예정)
+# GOOGLE_CLIENT_ID=your-google-client-id
+# GOOGLE_CLIENT_SECRET=your-google-client-secret
 ```
 
 ### 실행
@@ -101,31 +102,65 @@ OAUTH2_TOKEN_TRANSPORT=fragment
 
 ```
 src/main/java/sonmoeum/
-├── common/              # 공통 모듈 (보안, 설정, 에러, 검증)
-├── api/v1/              # API 레이어 (Controller + DTO)
-│   ├── auth/            #   인증
-│   ├── users/           #   사용자
-│   ├── departments/     #   부서
-│   ├── classrooms/      #   분반
-│   ├── students/        #   학생
-│   ├── subjects/        #   과목
-│   ├── lessons/         #   수업
-│   └── requests/        #   요청
-├── domain/              # 도메인 레이어 (Entity, Repository, Service)
-│   ├── auth/            #   인증/권한
-│   ├── users/           #   사용자
-│   ├── department/      #   부서
-│   ├── classroom/       #   분반
-│   ├── student/         #   학생
-│   ├── subject/         #   과목
-│   ├── lesson/          #   수업
-│   └── request/         #   요청
-└── SonmoumApiApplication.java
+├── common/              # 공통 모듈
+│   ├── advice/          #   전역 예외 처리
+│   ├── config/          #   설정 (Swagger 등)
+│   ├── event/           #   이벤트 정의
+│   ├── exception/       #   공통 예외
+│   ├── security/        #   보안 (JWT, Filter, Config)
+│   └── validation/      #   커스텀 검증
+│
+└── domain/              # 도메인 레이어
+    ├── base/            #   Base DTO, Entity
+    │
+    ├── auth/            #   인증/권한
+    │   ├── entity/      #     Role, RefreshToken
+    │   ├── enums/       #     RoleType
+    │   ├── repository/
+    │   ├── service/
+    │   └── v1/          #     API v1
+    │       ├── controller/
+    │       └── dto/
+    │
+    ├── users/           #   사용자
+    │   ├── entity/      #     User, UserRole
+    │   ├── exception/
+    │   ├── repository/
+    │   ├── service/
+    │   └── v1/          #     API v1
+    │       ├── controller/
+    │       └── dto/
+    │
+    ├── classroom/       #   분반
+    │   ├── entity/
+    │   ├── repository/
+    │   └── v1/
+    │
+    ├── student/         #   학생
+    │   ├── entity/
+    │   ├── repository/
+    │   └── v1/
+    │
+    ├── subject/         #   과목
+    │   ├── entity/
+    │   ├── event/       #     SubjectCreatedEvent
+    │   ├── repository/
+    │   └── v1/
+    │
+    ├── lesson/          #   수업
+    │   ├── entity/
+    │   ├── repository/
+    │   └── v1/
+    │
+    └── request/         #   요청 (결석, 교환, 구입)
+        ├── entity/
+        ├── repository/
+        └── v1/
 ```
 
 ### 도메인 이벤트
 
-도메인 간 직접 호출 대신 Spring ApplicationEvent를 통해 통신합니다.
+도메인 간 직접 호출 대신 Spring ApplicationEvent를 통해 느슨한 결합을 유지합니다.
 
 | 이벤트 | 발행 | 수신 | 설명 |
 |--------|------|------|------|
@@ -134,15 +169,29 @@ src/main/java/sonmoeum/
 | AbsenceApprovedEvent | Request | Lesson | 결석 승인 시 출석 상태 변경 |
 | ExchangeApprovedEvent | Request | Lesson/Subject | 교환 승인 시 담당자 변경 |
 
+**예시:**
+```java
+// 이벤트 발행
+eventPublisher.publishEvent(new SubjectCreatedEvent(subjectId, ...));
+
+// 이벤트 수신
+@EventListener
+@Transactional
+public void handleSubjectCreated(SubjectCreatedEvent event) { ... }
+```
+
 ## API 개요
 
 기본 경로: `/api/v1`
 
 | 도메인 | 엔드포인트 | 설명 |
 |--------|-----------|------|
-| Auth | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` | 인증 |
-| Users | `/users/**` | 사용자 CRUD |
-| Departments | `/departments/**` | 부서 관리 |
+| Auth | `/auth/login`, `/auth/signup`, `/auth/refresh`, `/auth/logout` | 인증 (로그인, 회원가입, 토큰 재발급) |
+| Auth | `/auth/me`, `/auth/me/logout-all` | 현재 사용자 정보, 전체 디바이스 로그아웃 |
+| Auth | `/auth/password/change`, `/auth/password/forgot`, `/auth/password/reset` | 비밀번호 관리 |
+| Auth | `/auth/check/username/{username}`, `/auth/check/email/{email}` | 중복 확인 |
+| Users | `/users/**` | 사용자 CRUD (관리자 전용) |
+| Users | `/users/{id}/roles` | 사용자 역할 추가/제거 (관리자 전용) |
 | Classrooms | `/classrooms/**` | 분반 관리 |
 | Students | `/students/**` | 학생 관리 |
 | Subjects | `/subjects/**` | 과목 관리 |
@@ -161,12 +210,28 @@ src/main/java/sonmoeum/
 
 ## 권한 체계
 
-| 역할 | 설명 |
-|------|------|
-| VOLUNTEER | 봉사자 - 수업 진행, 출결 관리, 요청 생성 |
-| ADMIN | 관리자 - 시스템 전체 관리, 요청 승인/거절 |
+### 기본 역할
 
-부서 단위 권한 관리를 지원하며, 부서 가입/탈퇴 시 권한이 자동으로 부여/회수됩니다.
+| 역할 | Authority | 설명 |
+|------|-----------|------|
+| ADMIN | ROLE_ADMIN | 관리자 - 시스템 전체 관리, 요청 승인/거절 |
+| MANAGER | ROLE_MANAGER | 매니저 - 중간 관리자 |
+| VOLUNTEER | ROLE_VOLUNTEER | 봉사자 - 수업 진행, 출결 관리, 요청 생성 |
+| GUEST | ROLE_GUEST | 게스트 - 제한적 접근 |
+
+### 부서/교육 역할
+
+| 역할 | Authority | 설명 |
+|------|-----------|------|
+| DEPT_FINANCE | DEPT_FINANCE | 재정 부서 |
+| DEPT_ACADEMIC | DEPT_ACADEMIC | 학사 부서 |
+| DEPT_IT | DEPT_IT | IT 부서 |
+| TEACHER | TEACHER | 교사 |
+
+**특징:**
+- 한 사용자는 여러 역할을 동시에 가질 수 있음
+- 기본 역할은 `ROLE_` prefix 사용 (`hasRole('ADMIN')`)
+- 부서/교육 역할은 prefix 없이 사용 (`hasAuthority('TEACHER')`)
 
 ## 개발 컨벤션
 

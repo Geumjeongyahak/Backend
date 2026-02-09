@@ -25,6 +25,7 @@
 
 | 부모 엔티티 | 자식 엔티티 | FK 필드 | 설명 |
 |-------------|-------------|---------|------|
+| Users | User Roles | user_id | 사용자별 역할 |
 | Classrooms | Subjects | class_id | 분반별 과목 |
 | Subjects | Lessons | subject_id | 과목별 수업 |
 | Users | Subjects | teacher_id | 봉사자가 담당하는 과목 |
@@ -44,22 +45,16 @@
 
 | 엔티티 A | 엔티티 B | 조인 테이블 | 설명 |
 |----------|----------|-------------|------|
-| Users | Permissions | user_permissions | 사용자별 권한 부여 |
-| Users | Departments | user_departments | 사용자별 담당 부서 |
-| Departments | Permissions | department_permissions | 부서별 권한 관리 |
+| Users | Roles | user_roles | 사용자별 역할 부여 |
 | Students | Lessons | student_enrollments | 학생 수업 등록 |
 
 ### 2.2 ERD 다이어그램
 
 ```mermaid
 erDiagram
-    %% 사용자 및 권한 관리
-    users ||--o{ user_permissions : "has"
-    users ||--o{ user_departments : "belongs to"
-    permissions ||--o{ user_permissions : "granted to"
-    permissions ||--o{ department_permissions : "granted to"
-    departments ||--o{ user_departments : "has members"
-    departments ||--o{ department_permissions : "has"
+    %% 사용자 및 역할 관리
+    users ||--o{ user_roles : "has"
+    roles ||--o{ user_roles : "assigned to"
 
     %% 분반 및 과목
     classrooms ||--o{ subjects : "contains"
@@ -88,26 +83,25 @@ erDiagram
     %% 엔티티 정의
     users {
         bigint id PK
+        varchar username UK
         varchar name
         varchar email UK
+        varchar gmail UK
         varchar password_hash
-        varchar role
+        varchar phone_number
+        varchar client_id
     }
 
-    departments {
+    roles {
         bigint id PK
-        varchar name
+        varchar name UK
+        text description
     }
 
-    permissions {
+    user_roles {
         bigint id PK
-        varchar name
-    }
-
-    department_permissions {
-        bigint id PK
-        bigint department_id FK
-        bigint permission_id FK
+        bigint user_id FK
+        bigint role_id FK
     }
 
     classrooms {
@@ -205,69 +199,49 @@ erDiagram
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
 | id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 사용자 고유 ID |
+| username | VARCHAR(50) | UNIQUE, NOT NULL | 사용자 아이디 (로그인용) |
 | name | VARCHAR(50) | NOT NULL | 사용자 실명 |
-| email | VARCHAR(255) | UNIQUE, NOT NULL | 이메일 주소 |
-| password_hash | VARCHAR(255) | NOT NULL | 암호화된 비밀번호 |
+| email | VARCHAR(100) | UNIQUE, NULL | 이메일 주소 |
+| gmail | VARCHAR(100) | UNIQUE, NULL | Gmail 주소 (OAuth) |
+| password_hash | VARCHAR(512) | NULL | 암호화된 비밀번호 |
 | phone_number | VARCHAR(20) | NULL | 전화번호 |
-| profile_image_url | VARCHAR(500) | NULL | 프로필 이미지 URL |
-| role | VARCHAR(20) | NOT NULL, DEFAULT 'VOLUNTEER' | 역할 (VOLUNTEER, ADMIN) |
-| description | TEXT | NULL | 추가 정보 |
+| client_id | VARCHAR(512) | NULL | OAuth Client ID |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
-### 3.2 부서 (departments)
+### 3.2 역할 (Roles)
 
-사용자의 권한을 관리하는 엔티티입니다. 관리자가 할당된 부서를 관리합니다.
+사용자의 역할을 정의하는 엔티티입니다. RoleType Enum으로 관리되며, 각 역할은 고유 ID를 가집니다.
+
+**역할 계층 구조:**
+- **기본 역할 (level 1-999)**: ADMIN(1), MANAGER(2), VOLUNTEER(3), GUEST(4)
+- **부서 역할 (level 1001-1999)**: DEPT_FINANCE(1001), DEPT_ACADEMIC(1002), DEPT_IT(1003), DEPT_SUPPORT(1004)
+- **교육 역할 (level 2001-)**: TEACHER(2001)
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
-| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
-| name | VARCHAR(50) | NOT NULL | 부서 이름 |
-| description | TEXT | NULL | 추가 정보 |
-| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
-| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
+| id | BIGINT | PRIMARY KEY | 역할 고유 ID (RoleType Enum에서 정의) |
+| name | VARCHAR(50) | UNIQUE, NOT NULL | 역할 이름 (RoleType) |
+| description | TEXT | NULL | 역할 설명 |
 
-### 3.3 권한 (Permissions)
+### 3.3 사용자 역할 조인 테이블 (user_roles)
 
-사용자 및 부서의 권한을 관리하는 엔티티입니다. 각 도메인별 수정 권한을 정의합니다.
-예) SUPER_ADMIN, MANAGE_USERS, MANAGE_DEPARTMENTS, MANAGE_CLASSROOMS ...
-
-현재 구현에서는 PermissionType Enum으로 관리되며, 각 권한은 고유 ID를 가집니다.
-
-| 필드명 | 데이터 타입 | 제약조건 | 설명 |
-|--------|-------------|----------|------|
-| id | BIGINT | PRIMARY KEY | 권한 고유 ID (Enum에서 정의) |
-| name | VARCHAR(50) | NOT NULL | 권한 이름 (PermissionType) |
-| description | TEXT | NULL | 추가 정보 |
-| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
-| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
-
-### 3.3.1 권한 (User Permissions)
-
-사용자별 권한을 관리하는 엔티티입니다.
+사용자와 역할의 다대다 관계를 관리하는 조인 테이블입니다. 한 사용자는 여러 역할을 가질 수 있습니다.
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
 | id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
 | user_id | BIGINT | FOREIGN KEY, NOT NULL | 사용자 ID |
-| permission_id | BIGINT | FOREIGN KEY, NOT NULL | 권한 ID (Enum) |
-| granter_type | VARCHAR(20) | DEFAULT 'USER' | 권한 부여 출처 (USER: 수동, SYSTEM: 자동/부서) |
+| role_id | BIGINT | FOREIGN KEY, NOT NULL | 역할 ID (RoleType Enum ID) |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
-> **참고**: 권한의 논리적 중복은 `(user_id, permission_id)`로 판단합니다. 즉, 동일한 사용자에게 동일한 권한이 중복 저장되지 않도록 애플리케이션 레벨에서 `equals/hashCode`가 설계되어 있습니다. `granter_type`은 이 권한이 시스템(부서 등)에 의해 부여되었는지, 관리자가 수동으로 부여했는지를 구분하는 메타데이터입니다.
+**제약조건:**
+- UNIQUE (user_id, role_id): 동일한 사용자에게 동일한 역할이 중복 부여되지 않음
 
-### 3.3.2 부서 권한 조인 테이블 (department_permissions)
-
-부서와 권한의 다대다 관계를 관리하는 조인 테이블입니다.
-
-| 필드명 | 데이터 타입 | 제약조건 | 설명 |
-|--------|-------------|----------|------|
-| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
-| department_id | BIGINT | FOREIGN KEY, NOT NULL | 부서 ID |
-| permission_id | BIGINT | FOREIGN KEY, NOT NULL | 권한 ID |
-| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
-| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
+**Spring Security 권한 매핑:**
+- 기본 역할 (level % 1000 == 0): `ROLE_` prefix 추가 (예: ROLE_ADMIN, ROLE_VOLUNTEER)
+- 부서/교육 역할 (level % 1000 != 0): prefix 없음 (예: DEPT_FINANCE, TEACHER)
 
 ### 3.4 분반(classrooms)
 

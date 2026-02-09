@@ -16,7 +16,7 @@
 | Framework | Spring Boot | 3.5.x |
 | Build | Gradle | 8.x |
 | ORM | Spring Data JPA | - |
-| Security | Spring Security + OAuth2 | - |
+| Security | Spring Security + JWT | - |
 | DB (prod) | PostgreSQL | - |
 | DB (dev) | H2 | - |
 | API Docs | SpringDoc OpenAPI | 2.8.x |
@@ -28,68 +28,67 @@
 ### 패키지 구조
 
 ```
-src/main/java/org/geumjeong/learning/sonmoum_api/
-├── common/                     # 공통 모듈 (구 global)
+src/main/java/sonmoeum/
+├── common/                     # 공통 모듈
+│   ├── advice/                 # 전역 예외 처리
 │   ├── config/                 # SwaggerConfig 등
-│   ├── property/               # 설정 프로퍼티
+│   ├── event/                  # 이벤트 정의
+│   ├── exception/              # 공통 예외
 │   ├── security/               # Security 설정
-│   │   ├── config/             # WebSecurityConfig
-│   │   ├── filter/             # Security Filter
+│   │   ├── config/             # SecurityProperties, WebSecurityConfig
+│   │   ├── filter/             # JwtAuthenticationFilter
 │   │   ├── handler/            # Success/Failure Handler
-│   │   └── property/           # Security Property
+│   │   ├── jwt/                # JwtTokenProvider
+│   │   └── service/            # CustomUserDetails
 │   └── validation/             # 커스텀 Validation
 │       ├── annotation/         # @ValidEmail 등
 │       └── validator/          # Validator 구현체
 │
-├── api/                        # API 레이어 (Controller + DTO)
-│   └── v1/                     # API v1
-│       ├── auth/               # 인증 API
-│       │   └── dto/            # Request/Response DTO
-│       ├── common/             # 공통 API DTO
-│       │   └── dto/            # BasePageRequest/Response
-│       ├── departments/        # 부서 API
-│       │   └── dto/
-│       └── users/              # 사용자 API
-│           └── dto/
-│
-├── domain/                     # 도메인 레이어
-│   ├── base/                   # 공통 엔티티
-│   │   └── entity/             # BaseEntity
-│   ├── auth/                   # 인증/권한
-│   │   ├── entity/             # Permission, UserPermission, DepartmentPermission
-│   │   ├── enums/              # RoleType, PermissionType, ProviderType
-│   │   ├── repository/
-│   │   └── service/
-│   ├── department/             # 부서
-│   │   ├── entity/             # Department, UserDepartment
-│   │   ├── repository/
-│   │   └── service/
-│   ├── users/                  # 사용자
-│   │   ├── entity/             # User
-│   │   ├── repository/
-│   │   └── service/
-│   ├── classroom/              # 분반 (예정)
-│   ├── student/                # 학생 (예정)
-│   ├── subject/                # 과목 (예정)
-│   ├── lesson/                 # 수업 (예정)
-│   └── request/                # 요청 (예정)
-│
-└── SonmoumApiApplication.java
+└── domain/                     # 도메인 레이어
+    ├── base/                   # 공통 Base 클래스
+    │   ├── dto/                # BasePageRequest/Response
+    │   └── entity/             # BaseEntity
+    │
+    ├── auth/                   # 인증/권한 도메인
+    │   ├── entity/             # Role, RefreshToken
+    │   ├── enums/              # RoleType
+    │   ├── repository/         # RefreshTokenRepository
+    │   ├── service/            # LocalLoginService, PasswordService 등
+    │   └── v1/                 # API v1
+    │       ├── controller/     # AuthController, PasswordController 등
+    │       └── dto/            # Request/Response DTO
+    │
+    ├── users/                  # 사용자 도메인
+    │   ├── entity/             # User, UserRole
+    │   ├── exception/          # UserNotFoundException 등
+    │   ├── repository/         # UserRepository, UserRoleRepository
+    │   ├── service/            # UserAdminService, UserRoleService
+    │   └── v1/                 # API v1
+    │       ├── controller/     # UserController, UserRoleController
+    │       └── dto/            # Request/Response DTO
+    │
+    ├── classroom/              # 분반 도메인
+    ├── student/                # 학생 도메인
+    ├── subject/                # 과목 도메인
+    ├── lesson/                 # 수업 도메인
+    └── request/                # 요청 도메인
 ```
 
 ### 도메인별 패키지 구조
 
 ```
-api/v1/{도메인명}/
-└── dto/           # Request/Response DTO
-    ├── request/
-    └── response/
-
 domain/{도메인명}/
 ├── entity/        # @Entity
 ├── repository/    # @Repository
 ├── service/       # @Service
-└── (enums/)       # Enum (필요시)
+├── (exception/)   # 도메인 예외 (필요시)
+├── (enums/)       # Enum (필요시)
+├── (event/)       # 도메인 이벤트 (필요시)
+└── v1/            # API v1
+    ├── controller/
+    └── dto/
+        ├── request/
+        └── response/
 ```
 
 ## 핵심 패턴
@@ -178,12 +177,32 @@ main
 
 ## 권한 체계
 
+**역할 기반 접근 제어 (RBAC)** - RoleType Enum
+
 ```java
-public enum Role {
-    VOLUNTEER,  // 봉사자
-    ADMIN       // 관리자
+public enum RoleType {
+    // 기본 역할 (level 0) - ROLE_ prefix
+    ADMIN(1L),      // 관리자
+    MANAGER(2L),    // 매니저
+    VOLUNTEER(3L),  // 봉사자
+    GUEST(4L),      // 게스트
+
+    // 부서/교육 역할 (level 1+) - prefix 없음
+    DEPT_FINANCE(1001L),   // 재정 부서
+    DEPT_ACADEMIC(1002L),  // 학사 부서
+    TEACHER(2001L);        // 교사
+
+    public String getAuthority() {
+        if (this.level == 0) return "ROLE_" + this.name();
+        return this.name();
+    }
 }
 ```
+
+**특징:**
+- 사용자는 여러 역할을 동시에 가질 수 있음 (N:M)
+- `@PreAuthorize("hasRole('ADMIN')")` - 기본 역할
+- `@PreAuthorize("hasAuthority('TEACHER')")` - 부서/교육 역할
 
 ## 주요 명령어
 
