@@ -8,6 +8,8 @@ import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -85,5 +87,11 @@ public class JwtTokenProvider {
             .verifyWith((javax.crypto.SecretKey) signingKey())
             .build()
             .parseSignedClaims(token);
+    }
+
+    public LocalDateTime getAccessTokenExpiresAt() {
+        Instant now = Instant.now();
+        Instant exp = now.plusSeconds(securityProperties.getJwt().getAccessExpSeconds());
+        return LocalDateTime.ofInstant(exp, ZoneId.systemDefault());
     }
 }

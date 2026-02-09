@@ -4,7 +4,6 @@ import java.time.Duration;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 import sonmoeum.common.security.handler.CustomAccessDeniedHandler;
 import sonmoeum.common.security.handler.CustomAuthenticationEntryPoint;
 import sonmoeum.common.security.jwt.JwtAuthenticationFilter;
@@ -74,10 +73,6 @@ public class WebSecurityConfig {
                 .requestMatchers("/actuator/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/swagger-ui").permitAll()
                 // 인증 API (로그인, 회원가입, 토큰 재발급)
                 .requestMatchers("/api/v1/auth/login", "/api/v1/auth/signup", "/api/v1/auth/refresh").permitAll()
-                // 중복 확인 API
-                .requestMatchers("/api/v1/auth/check/**").permitAll()
-                // 비밀번호 찾기/재설정 API
-                .requestMatchers("/api/v1/auth/password/forgot", "/api/v1/auth/password/reset").permitAll()
                 // 그 외는 인증 필요
                 .anyRequest().authenticated()
             )
@@ -97,7 +92,7 @@ public class WebSecurityConfig {
         List<String> origins = Arrays.stream(corsAllowedOrigins.split(","))
             .map(String::trim)
             .filter(s -> !s.isBlank())
-            .collect(Collectors.toList());
+            .toList();
 
         origins.forEach(config::addAllowedOrigin);
 
