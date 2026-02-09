@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import sonmoeum.domain.auth.enums.RoleType;
 import sonmoeum.domain.auth.v1.dto.response.RoleResponse;
@@ -21,6 +22,7 @@ import java.util.List;
 @RequestMapping("/api/v1/users/{userId}/roles")
 @RequiredArgsConstructor
 @Tag(name = "User Sub-Role", description = "사용자 하위권한 관리 API (부서권한, 부가권한 등)")
+@PreAuthorize("hasRole('ADMIN')")
 public class UserRoleController {
     private final UserRoleService userRoleService;
 

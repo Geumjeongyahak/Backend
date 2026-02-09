@@ -9,6 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import sonmoeum.domain.base.dto.response.PaginationResponse;
 import sonmoeum.domain.users.service.UserAdminService;
@@ -22,6 +25,7 @@ import sonmoeum.domain.users.v1.dto.response.UserResponse;
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 @Tag(name = "User", description = "사용자 관리 API")
+@PreAuthorize("hasRole('ADMIN')")
 public class UserController {
     private final UserAdminService userAdminService;
 
@@ -43,6 +47,16 @@ public class UserController {
     ) {
         log.debug("GET /api/v1/users/{} - 사용자 상세 조회 요청", userId);
         UserResponse response = userAdminService.getUserById(userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "사용자 본인 조회", description = "현재 사용자의 정보를 조회합니다.")
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> getCurrentUser(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        log.debug("GET /api/v1/users/me - 현재 사용자 정보 조회 요청");
+        UserResponse response = userAdminService.getUserByUsername(userDetails.getUsername());
         return ResponseEntity.ok(response);
     }
 
