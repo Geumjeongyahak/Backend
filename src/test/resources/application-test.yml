@@ -14,8 +14,6 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
-        format_sql: true
-        show_sql: true
   sql:
     init:
       mode: always
@@ -26,8 +24,10 @@ server:
   port: 0  # Random port
 
 logging:
-  level:
-    org.geumjeong.learning.sonmoum_api: DEBUG
+    level:
+      root: INFO
+      com.sonmoeum: DEBUG
+
 springdoc:
     api-docs:
         enabled: false
