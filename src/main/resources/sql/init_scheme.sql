@@ -76,8 +76,10 @@ CREATE TABLE students (
     name VARCHAR(50) NOT NULL,
     phone_number VARCHAR(20),
     description TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'ENROLLED',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP DEFAULT NULL
 );
 
 CREATE TABLE subjects (
