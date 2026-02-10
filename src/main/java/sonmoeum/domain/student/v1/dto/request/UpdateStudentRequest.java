@@ -3,6 +3,7 @@ package sonmoeum.domain.student.v1.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import sonmoeum.common.validation.annotation.ValidPhoneNumber;
+import sonmoeum.domain.student.enums.StudentStatus;
 
 public record UpdateStudentRequest(
     @Schema(description = "이름", example = "김철수")
@@ -21,5 +22,5 @@ public record UpdateStudentRequest(
         example = "ON_LEAVE",
         allowableValues = { "ENROLLED", "ON_LEAVE", "COMPLETED" }
     )
-    String status
+    StudentStatus status
 ) {}

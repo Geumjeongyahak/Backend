@@ -46,7 +46,7 @@ public class Student extends BaseEntity {
         this.status = StudentStatus.ENROLLED;
     }
 
-    public void update(String name, String phoneNumber, String description, String status) {
+    public void update(String name, String phoneNumber, String description, StudentStatus status) {
         if (name != null) {
             this.name = name;
         }
@@ -57,7 +57,7 @@ public class Student extends BaseEntity {
             this.description = description;
         }
         if (status != null) {
-            this.status = StudentStatus.valueOf(status);
+            this.status = status;
         }
     }
 }
