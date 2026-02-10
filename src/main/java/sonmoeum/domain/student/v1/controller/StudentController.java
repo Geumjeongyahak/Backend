@@ -10,6 +10,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -73,7 +74,7 @@ public class StudentController {
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "학생 수정", description = "기존 학생 정보를 수정합니다.")
     @PatchMapping("/{studentId}")
-    public ResponseEntity<StudentResponse> updateUser(
+    public ResponseEntity<StudentResponse> updateStudent(
         @Parameter(description = "학생 식별자", example = "1")
         @PathVariable Long studentId,
         @Valid @RequestBody UpdateStudentRequest request
