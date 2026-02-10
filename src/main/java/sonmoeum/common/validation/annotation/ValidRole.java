@@ -10,6 +10,7 @@ import sonmoeum.common.validation.validator.RoleValidator;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
+import sonmoeum.domain.auth.enums.RoleLevel;
 
 @Documented
 @Constraint(validatedBy = RoleValidator.class)
@@ -17,7 +18,7 @@ import jakarta.validation.Payload;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ValidRole {
     String message() default "유효하지 않은 역할(Role) 입니다.";
-    long[] levels() default { 0, 1, 2};
+    RoleLevel[] levels() default { RoleLevel.BASIC, RoleLevel.DEPARTMENT, RoleLevel.ADDITIONAL };
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 }

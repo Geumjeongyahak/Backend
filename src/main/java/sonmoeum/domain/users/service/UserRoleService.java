@@ -3,6 +3,7 @@ package sonmoeum.domain.users.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import sonmoeum.domain.auth.enums.RoleLevel;
 import sonmoeum.domain.auth.enums.RoleType;
 import sonmoeum.domain.auth.v1.dto.response.RoleResponse;
 import sonmoeum.domain.users.entity.UserRole;
@@ -32,7 +33,7 @@ public class UserRoleService {
 
     public List<RoleResponse> addRole(Long userId, RoleType roleType) {
         log.info("사용자 역할 추가 요청 - UserID: {}, RoleType: {}", userId, roleType);
-        if (roleType.getLevel() == 0) {
+        if (roleType.getLevel() == RoleLevel.BASIC) {
             log.warn("기본 역할은 직접 부여할 수 없습니다 - RoleType: {}", roleType);
             throw InvalidRoleOperationException.cannotAssignBaseRole(roleType.name());
         }
@@ -53,7 +54,7 @@ public class UserRoleService {
 
     public List<RoleResponse> removeRole(Long userId, RoleType roleType) {
         log.info("사용자 역할 제거 요청 - UserID: {}, RoleType: {}", userId, roleType);
-        if (roleType.getLevel() == 0) {
+        if (roleType.getLevel() == RoleLevel.BASIC) {
             log.warn("기본 역할은 직접 제거할 수 없습니다 - RoleType: {}", roleType);
             throw InvalidRoleOperationException.cannotRemoveBaseRole(roleType.name());
         }

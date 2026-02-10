@@ -68,7 +68,7 @@ public class LocalLoginService {
             .passwordHash(passwordEncoder.encode(request.password()))
             .email(request.email())
             .phoneNumber(request.phoneNumber())
-            .roles(List.of(RoleType.VOLUNTEER)) // 기본 역할: VOLUNTEER
+            .roles(List.of(RoleType.ROLE_VOLUNTEER)) // 기본 역할: VOLUNTEER
             .build();
 
         userProxyService.save(user);
@@ -118,12 +118,7 @@ public class LocalLoginService {
 
     private TokenResponse createTokenResponse(User user) {
         // Access Token 생성
-        String accessToken = jwtTokenProvider.createAccessToken(
-                user.getUsername(),
-                user.getRoles().stream()
-                .map(role -> role.getRoleType().getAuthority())
-                .toList()
-        );
+        String accessToken = jwtTokenProvider.createAccessToken(user.getUsername());
         // Refresh Token 생성
         String refreshToken = refreshTokenService.createRefreshToken(user.getId());
 
