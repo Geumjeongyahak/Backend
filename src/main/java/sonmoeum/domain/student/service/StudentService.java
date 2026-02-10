@@ -3,14 +3,18 @@ package sonmoeum.domain.student.service;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sonmoeum.domain.base.dto.response.PaginationResponse;
 import sonmoeum.domain.student.entity.Student;
 import sonmoeum.domain.student.exception.DuplicateStudentException;
 import sonmoeum.domain.student.exception.StudentNotFoundException;
 import sonmoeum.domain.student.repository.StudentRepository;
 import sonmoeum.domain.student.v1.dto.request.CreateStudentRequest;
+import sonmoeum.domain.student.v1.dto.request.StudentPaginationRequest;
 import sonmoeum.domain.student.v1.dto.response.StudentResponse;
+import sonmoeum.domain.users.v1.dto.response.UserResponse;
 
 @Slf4j
 @Service
@@ -36,6 +40,13 @@ public class StudentService {
 
         log.info("학생 등록 완료 - ID: {}, name: {}", savedStudent.getId(), savedStudent.getName());
         return StudentResponse.from(savedStudent);
+    }
+
+    public PaginationResponse<StudentResponse> getAllStudents(StudentPaginationRequest request) {
+        log.debug("전체 학생 목록 조회 요청");
+        var pageResponse = new PaginationResponse<>(studentRepository.findAllBy(request.toRequest()));
+        log.debug("전체 학생 목록 조회 완료 - 총 {}명", pageResponse.getTotalElements());
+        return PaginationResponse.mapTo(pageResponse, StudentResponse::from);
     }
 
     public StudentResponse getStudentById(Long studentId) {
