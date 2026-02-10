@@ -82,4 +82,15 @@ public class StudentService {
         log.info("학생 수정 완료 - ID: {}, name: {}", student.getId(), student.getName());
         return StudentResponse.from(student);
     }
+
+    @Transactional
+    public void deleteStudentById(Long studentId) {
+        log.info("학생 삭제 요청 - ID: {}", studentId);
+        if (!studentRepository.existsById(studentId)) {
+            log.warn("학생 삭제 실패 - 학생을 찾을 수 없습니다. ID: {}", studentId);
+            throw new StudentNotFoundException(studentId);
+        }
+        studentRepository.deleteById(studentId);
+        log.info("학생 삭제 완료 - ID: {}", studentId);
+    }
 }

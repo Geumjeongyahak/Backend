@@ -83,4 +83,16 @@ public class StudentController {
         StudentResponse response = studentService.updateStudent(studentId, request);
         return ResponseEntity.ok(response);
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "학생 삭제", description = "학생을 삭제합니다.")
+    @DeleteMapping("/{studentId}")
+    public ResponseEntity<Void> deleteStudent(
+        @Parameter(description = "학생 식별자", example = "1")
+        @PathVariable Long studentId
+    ) {
+        log.debug("DELETE /api/v1/students/{} - 학생 삭제 요청", studentId);
+        studentService.deleteStudentById(studentId);
+        return ResponseEntity.noContent().build();
+    }
 }
