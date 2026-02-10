@@ -39,9 +39,6 @@ public class Student extends BaseEntity {
     @Column(nullable = false, length = 20)
     private StudentStatus status = StudentStatus.ENROLLED;
 
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
-
     public Student(String name, String phoneNumber, String description) {
         this.name = name;
         this.phoneNumber = phoneNumber;
@@ -59,15 +56,5 @@ public class Student extends BaseEntity {
         if (description != null) {
             this.description = description;
         }
-    }
-
-    public void softDelete() {
-        if (this.deletedAt == null) {
-            this.deletedAt = LocalDateTime.now();
-        }
-    }
-
-    public boolean isDeleted() {
-        return this.deletedAt != null;
     }
 }
