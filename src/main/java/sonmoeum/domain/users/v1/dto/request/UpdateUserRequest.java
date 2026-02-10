@@ -5,6 +5,7 @@ import sonmoeum.common.validation.annotation.ValidPhoneNumber;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import sonmoeum.common.validation.annotation.ValidRole;
+import sonmoeum.domain.auth.enums.RoleLevel;
 
 @Schema(description = "사용자 정보 수정 요청 DTO")
 public record UpdateUserRequest(
@@ -24,7 +25,7 @@ public record UpdateUserRequest(
     String password,
 
     @Schema(description = "기본 역할", examples = { "ADMIN", "MANAGER", "VOLUNTEER", "GUEST" })
-    @ValidRole(levels = { 0 })
+    @ValidRole(levels = { RoleLevel.BASIC })
     String role
 ) {
 }
