@@ -29,6 +29,7 @@ public enum ErrorCode {
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "RES001", "요청한 리소스를 찾을 수 없습니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "RES002", "사용자를 찾을 수 없습니다."),
     ROLE_NOT_FOUND(HttpStatus.NOT_FOUND, "RES003", "역할을 찾을 수 없습니다."),
+    STUDENT_NOT_FOUND(HttpStatus.NOT_FOUND, "RES004", "학생을 찾을 수 없습니다."),
 
     // ============ 요청 검증 관련 (400 Bad Request) ============
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VAL001", "입력값 검증에 실패했습니다."),

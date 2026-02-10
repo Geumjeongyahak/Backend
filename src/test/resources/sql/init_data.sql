@@ -2,6 +2,9 @@
 INSERT INTO users (id, username, name, password_hash) VALUES
     (1, 'admin1234', 'Administrator', '$2a$10$A0Av/dPBUz5uoDmp0Z/2S.dsMzOWFL5gLK7CrXmQp6Rw2vqWulapi');
 
+INSERT INTO students (id, name, phone_number, description, status) VALUES
+    (1, 'TestStudent', '010-1234-5678', '테스트 학생입니다.', 'ENROLLED');
+
 INSERT INTO roles (id, name, description) VALUES
     (1, 'ROLE_ADMIN', '기본 권한, 모든 권한을 가진 관리자'),
     (2, 'ROLE_MANAGER', '기본 권한, 일부 관리 권한을 가진 매니저'),
