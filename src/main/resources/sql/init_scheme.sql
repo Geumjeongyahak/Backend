@@ -1,16 +1,16 @@
 -- Drop tables in reverse dependency order
-DROP TABLE IF EXISTS absence_requests;
-DROP TABLE IF EXISTS lesson_exchange_requests;
-DROP TABLE IF EXISTS purchase_requests;
-DROP TABLE IF EXISTS subject_exchange_requests;
-DROP TABLE IF EXISTS lessons;
-DROP TABLE IF EXISTS subjects;
-DROP TABLE IF EXISTS students;
-DROP TABLE IF EXISTS classrooms;
-DROP TABLE IF EXISTS user_roles;
-DROP TABLE IF EXISTS refresh_tokens;
-DROP TABLE IF EXISTS roles;
-DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS absence_requests CASCADE;
+DROP TABLE IF EXISTS lesson_exchange_requests CASCADE;
+DROP TABLE IF EXISTS purchase_requests CASCADE;
+DROP TABLE IF EXISTS subject_exchange_requests CASCADE;
+DROP TABLE IF EXISTS lessons CASCADE;
+DROP TABLE IF EXISTS subjects CASCADE;
+DROP TABLE IF EXISTS students CASCADE;
+DROP TABLE IF EXISTS classrooms CASCADE;
+DROP TABLE IF EXISTS user_roles CASCADE;
+DROP TABLE IF EXISTS refresh_tokens CASCADE;
+DROP TABLE IF EXISTS roles CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
 
 -- Users table
 CREATE TABLE users (

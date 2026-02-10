@@ -1,12 +1,18 @@
 package sonmoeum.domain.auth.exception;
 
-import org.springframework.http.HttpStatus;
-import sonmoeum.common.exception.BusinessException;
+import sonmoeum.common.exception.AuthenticationException;
+import sonmoeum.common.exception.ErrorCode;
 
-public class InvalidRefreshTokenException extends BusinessException {
-
+/**
+ * Refresh Token 검증 실패 예외
+ */
+public class InvalidRefreshTokenException extends AuthenticationException {
 
     public InvalidRefreshTokenException() {
-        super("유효하지 않은 리프레시 토큰입니다.", HttpStatus.UNAUTHORIZED, "INVALID_REFRESH_TOKEN");
+        super(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
+    }
+
+    public InvalidRefreshTokenException(String message) {
+        super(ErrorCode.INVALID_TOKEN, message);
     }
 }

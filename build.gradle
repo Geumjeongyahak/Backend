@@ -29,6 +29,7 @@ ext {
 	DOTENV_VERSION = '3.2.0'
 	SPRING_DOC_VERSION = '2.8.15'
 	JJWT_VERSION = '0.13.0'
+	REST_ASSURED_VERSION = '6.0.0'
 }
 
 dependencies {
@@ -48,12 +49,12 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-	testRuntimeOnly 'com.h2database:h2'
+	testImplementation 'com.h2database:h2'
 	
 	implementation "io.github.cdimascio:dotenv-java:${DOTENV_VERSION}"
 	implementation "org.springdoc:springdoc-openapi-starter-webmvc-api:${SPRING_DOC_VERSION}"
 	implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${SPRING_DOC_VERSION}"
-	
+
 	testImplementation 'io.rest-assured:rest-assured'
 }
 

@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import sonmoeum.common.security.service.CustomUserDetailsService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
@@ -32,8 +33,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(token) && jwtTokenProvider.validate(token)) {
             String username = jwtTokenProvider.getSubject(token);
             var userDetails = customUserDetailsService.loadUserByUsername(username); // CustomUserDetails
-
-            Authentication auth = jwtTokenProvider.getAuthentication(token, userDetails);
+            Authentication auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(auth);
         }
 
@@ -43,7 +43,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private String resolveBearerToken(HttpServletRequest request) {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (!StringUtils.hasText(header)) return null;
-
         if (header.startsWith("Bearer ")) {
             return header.substring(7);
         }

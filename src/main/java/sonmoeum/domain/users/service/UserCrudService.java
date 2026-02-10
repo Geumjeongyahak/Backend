@@ -5,6 +5,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
+import sonmoeum.domain.auth.enums.RoleLevel;
 import sonmoeum.domain.base.dto.response.PaginationResponse;
 import sonmoeum.domain.users.v1.dto.request.CreateUserRequest;
 import sonmoeum.domain.users.v1.dto.request.UpdateSelfRequest;
@@ -26,7 +27,6 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class UserCrudService {
-    private static final Long BASE_ROLE_LEVEL = 1L;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -145,7 +145,7 @@ public class UserCrudService {
                     throw new DuplicateEmailException(email.orElse(""));
                 });
         user.getRoles().stream()
-                .filter(userRole -> userRole.getRoleType().getLevel() == BASE_ROLE_LEVEL)
+                .filter(userRole -> userRole.getRoleType().getLevel() == RoleLevel.BASIC)
                 .findFirst()
                 .ifPresent(userRole -> user.removeRole(userRole.getRoleType()));
         role.ifPresent(r -> user.addRole(RoleType.valueOf(r)));

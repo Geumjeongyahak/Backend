@@ -45,6 +45,7 @@ public class UserRole {
 
     @Override
     public int hashCode() {
+        if (user == null) return Objects.hash(roleId);
         return Objects.hash(user.getId(), roleId);
     }
 }
