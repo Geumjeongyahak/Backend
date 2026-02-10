@@ -3,8 +3,11 @@ package sonmoeum.e2e.student;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 
+import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import sonmoeum.domain.student.v1.dto.request.CreateStudentRequest;
+import sonmoeum.domain.student.v1.dto.response.StudentResponse;
 
 @DisplayName("E2E: 학생 조회 테스트")
 public class StudentReadTest extends StudentBaseTest {
@@ -12,7 +15,8 @@ public class StudentReadTest extends StudentBaseTest {
     @Test
     @DisplayName("관리자 권한으로 학생 단건 조회 성공(200 OK)")
     void getStudentById_Success_Admin() {
-        Long studentId = 1L; // init_data.sql: TestStudent
+        StudentResponse created = createStudent("TestStudent1", "010-1234-5678");
+        Long studentId = created.id();
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -21,16 +25,17 @@ public class StudentReadTest extends StudentBaseTest {
             .then()
             .statusCode(200)
             .body("id", equalTo(studentId.intValue()))
-            .body("name", equalTo("TestStudent"))
+            .body("name", equalTo("TestStudent1"))
             .body("phoneNumber", equalTo("010-1234-5678"))
-            .body("description", equalTo("테스트 학생입니다."))
+            .body("description", equalTo("E2E seed")) // BaseTest 헬퍼가 고정 description 사용
             .log().all();
     }
 
     @Test
     @DisplayName("일반 선생님 권한으로 학생 단건 조회 성공(200 OK)")
     void getStudentById_Success_Volunteer() {
-        Long studentId = 1L; // init_data.sql: TestStudent
+        StudentResponse created = createStudent("TestStudent2", "010-1234-5678");
+        Long studentId = created.id();
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
@@ -39,7 +44,7 @@ public class StudentReadTest extends StudentBaseTest {
             .then()
             .statusCode(200)
             .body("id", equalTo(studentId.intValue()))
-            .body("name", equalTo("TestStudent"))
+            .body("name", equalTo("TestStudent2"))
             .log().all();
     }
 
