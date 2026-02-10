@@ -92,23 +92,4 @@ class StudentDeleteTest extends StudentBaseTest {
             .statusCode(404)
             .log().all();
     }
-
-    private StudentResponse createStudent(String name, String phoneNumber) {
-        CreateStudentRequest createReq = new CreateStudentRequest(
-            name,
-            phoneNumber,
-            "E2E delete seed"
-        );
-
-        return given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType(ContentType.JSON)
-            .body(createReq)
-            .when()
-            .post()
-            .then()
-            .statusCode(201)
-            .extract()
-            .as(StudentResponse.class);
-    }
 }

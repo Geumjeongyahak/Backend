@@ -161,23 +161,4 @@ class StudentUpdateTest extends StudentBaseTest {
             .statusCode(401)
             .log().all();
     }
-
-    private StudentResponse createStudent(String name, String phoneNumber) {
-        CreateStudentRequest createReq = new CreateStudentRequest(
-            name,
-            phoneNumber,
-            "E2E update seed"
-        );
-
-        return given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType(ContentType.JSON)
-            .body(createReq)
-            .when()
-            .post()
-            .then()
-            .statusCode(201)
-            .extract()
-            .as(StudentResponse.class);
-    }
 }
