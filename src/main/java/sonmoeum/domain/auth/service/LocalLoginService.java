@@ -80,11 +80,9 @@ public class LocalLoginService {
 
     @Transactional
     public TokenResponse refreshToken(RefreshTokenRequest request) {
-        log.debug("토큰 재발급 요청: {}", request.refreshToken());
-
+        log.debug("토큰 재발급 시도");
         // Refresh Token 검증
         if (!refreshTokenService.validateRefreshToken(request.refreshToken())) {
-            log.warn("토큰 재발급 실패 - 유효하지 않은 Refresh Token: {}", request.refreshToken());
             throw new InvalidRefreshTokenException();
         }
         // 사용자 조회
@@ -102,7 +100,7 @@ public class LocalLoginService {
 
     @Transactional
     public void logout(String refreshToken) {
-        log.debug("로그아웃 요청: {}", refreshToken);
+        log.info("로그아웃 시도");
 
         if (refreshToken != null && !refreshToken.isBlank()) {
             refreshTokenService.deleteRefreshToken(refreshToken);

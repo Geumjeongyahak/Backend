@@ -26,7 +26,6 @@ server:
 logging:
     level:
       root: INFO
-      com.sonmoeum: DEBUG
 
 springdoc:
     api-docs:
