@@ -2,6 +2,7 @@ package sonmoeum.e2e.student;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static sonmoeum.domain.student.enums.StudentStatus.ON_LEAVE;
 
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
@@ -52,7 +53,7 @@ class StudentUpdateTest extends StudentBaseTest {
             null,
             null,
             null,
-            "ON_LEAVE"
+            ON_LEAVE
         );
 
         given()
