@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 @Getter
 public enum RoleType {
-    ADMIN(1L), MANAGER(2L), VOLUNTEER(3L), GUEST(4L),
+    ROLE_ADMIN(1L), ROLE_MANAGER(2L), ROLE_VOLUNTEER(3L), ROLE_GUEST(4L),
 
     DEPT_ADMIN(1001L), DEPT_HR(1002L), DEPT_FINANCE(1003L),
     DEPT_IT(1004L), DEPT_MARKETING(1005L), DEPT_ACADEMIC(1006L),
@@ -22,15 +22,14 @@ public enum RoleType {
             .collect(Collectors.toMap(RoleType::getId, Function.identity()));
 
     private final long id;
-    private final long level;
+    private final RoleLevel level;
 
     RoleType(long id) {
         this.id = id;
-        this.level = id % 1000;
+        this.level = RoleLevel.getByCode(id);
     }
 
     public GrantedAuthority getAuthority() {
-        if (this.level == 0) return new SimpleGrantedAuthority("ROLE_" + name());
         return new SimpleGrantedAuthority(name());
     }
     public static RoleType findById(long id) {

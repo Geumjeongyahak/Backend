@@ -1,6 +1,7 @@
 package sonmoeum.common.validation.validator;
 
 import sonmoeum.common.validation.annotation.ValidRole;
+import sonmoeum.domain.auth.enums.RoleLevel;
 import sonmoeum.domain.auth.enums.RoleType;
 
 import jakarta.validation.ConstraintValidator;
@@ -11,12 +12,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class RoleValidator implements ConstraintValidator<ValidRole, String> {
-    private Set<Long> validLevels;
+    private Set<RoleLevel> validLevels;
 
     @Override
     public void initialize(ValidRole constraintAnnotation) {
         validLevels = Arrays.stream(constraintAnnotation.levels())
-                .boxed()
                 .collect(Collectors.toUnmodifiableSet());
     }
 

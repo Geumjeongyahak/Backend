@@ -9,7 +9,7 @@ public record RoleResponse(
         String name,
 
         @Schema(description = "역할 레벨", example = "100")
-        Long level,
+        String level,
 
         @Schema(description = "역할 코드", example = "1")
         Long code
@@ -17,7 +17,7 @@ public record RoleResponse(
     public static RoleResponse from(RoleType roleType) {
         return new RoleResponse(
                 roleType.name(),
-                roleType.getLevel(),
+                roleType.getLevel().name(),
                 roleType.getId()
         );
     }

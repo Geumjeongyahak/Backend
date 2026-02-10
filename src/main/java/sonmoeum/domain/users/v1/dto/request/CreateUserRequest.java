@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 import sonmoeum.common.validation.annotation.ValidEmail;
 import sonmoeum.common.validation.annotation.ValidPhoneNumber;
 import sonmoeum.common.validation.annotation.ValidRole;
+import sonmoeum.domain.auth.enums.RoleLevel;
 
 @Schema(description = "사용자 생성 요청 DTO")
 public record CreateUserRequest(
@@ -33,7 +34,7 @@ public record CreateUserRequest(
     String phoneNumber,
 
     @Schema(description = "역할", examples = { "ADMIN", "MANAGER", "VOLUNTEER", "GUEST" })
-    @ValidRole(levels = { 0 })
+    @ValidRole(levels = { RoleLevel.BASIC })
     String role
 ) {
 

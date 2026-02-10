@@ -55,6 +55,10 @@ public class User extends BaseEntity {
         this.roles.remove(new UserRole(this, roleType));
     }
 
+    public boolean hasRole(RoleType roleType) {
+        return this.roles.contains(new UserRole(this, roleType));
+    }
+
     @Builder(builderMethodName = "localBuilder")
     public static User createLocalUser(
             @NonNull String name,

@@ -8,7 +8,4 @@ import java.util.List;
 
 public interface UserRoleRepository extends JpaRepository<UserRole, Long> {
     List<UserRole> findAllByUser(User user);
-    boolean existsByUserAndRoleId(User user, Long roleId);
-
-    void deleteByUserAndRoleId(User user, Long roleId);
 }
