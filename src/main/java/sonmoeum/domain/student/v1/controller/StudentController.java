@@ -54,7 +54,7 @@ public class StudentController {
     public ResponseEntity<PaginationResponse<StudentResponse>> getAllStudents(
         @ParameterObject @Valid StudentPaginationRequest request
     ) {
-        log.debug("GET /api/v1/users - 학생 목록 조회 요청");
+        log.debug("GET /api/v1/students - 학생 목록 조회 요청");
         PaginationResponse<StudentResponse> response = studentService.getAllStudents(request);
         return ResponseEntity.ok(response);
     }
