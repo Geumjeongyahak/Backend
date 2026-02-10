@@ -1,7 +1,6 @@
 package sonmoeum.domain.users.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import sonmoeum.domain.users.entity.User;
 import sonmoeum.domain.users.entity.UserRole;
 
