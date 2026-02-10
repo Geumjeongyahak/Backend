@@ -14,12 +14,14 @@ import jakarta.persistence.Table;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Department extends BaseEntity {
 
+    @Setter
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(name = "assigned_role_id",nullable = false)
+    @Column(name = "assigned_role_id")
     private Long roleId;
 
+    @Setter
     @Column(columnDefinition = "TEXT")
     private String description;
 
@@ -27,11 +29,11 @@ public class Department extends BaseEntity {
     @Builder
     public Department(
         @NonNull String name,
-        @NonNull RoleType assignedRole,
-        @NonNull String description
+        @NonNull String description,
+        RoleType assignedRole
     ) {
         this.name = name;
-        this.roleId = assignedRole.getId();
         this.description = description;
+        this.roleId = assignedRole != null ? assignedRole.getId() : null;
     }
 }
