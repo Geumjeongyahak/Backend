@@ -14,27 +14,6 @@ public class InvalidRoleOperationException extends BusinessException {
     private InvalidRoleOperationException(ErrorCode errorCode, String message) {
         super(message, errorCode.getStatus(), errorCode.getCode());
     }
-
-    /**
-     * 기본 역할을 직접 부여하려고 시도한 경우
-     */
-    public static InvalidRoleOperationException cannotAssignBaseRole(String roleType) {
-        return new InvalidRoleOperationException(
-                ErrorCode.CANNOT_ASSIGN_BASE_ROLE,
-                ErrorCode.CANNOT_ASSIGN_BASE_ROLE.getMessage() + " (RoleType: " + roleType + ")"
-        );
-    }
-
-    /**
-     * 기본 역할을 직접 제거하려고 시도한 경우
-     */
-    public static InvalidRoleOperationException cannotRemoveBaseRole(String roleType) {
-        return new InvalidRoleOperationException(
-                ErrorCode.CANNOT_REMOVE_BASE_ROLE,
-                ErrorCode.CANNOT_REMOVE_BASE_ROLE.getMessage() + " (RoleType: " + roleType + ")"
-        );
-    }
-
     /**
      * 이미 부여된 역할을 다시 부여하려고 시도한 경우
      */

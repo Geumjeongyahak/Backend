@@ -42,10 +42,8 @@ public enum ErrorCode {
     INVALID_STATE(HttpStatus.CONFLICT, "BIZ004", "유효하지 않은 상태입니다."),
 
     // ============ Role 관련 비즈니스 로직 ============
-    CANNOT_ASSIGN_BASE_ROLE(HttpStatus.BAD_REQUEST, "ROLE001", "기본 역할은 직접 부여할 수 없습니다."),
-    CANNOT_REMOVE_BASE_ROLE(HttpStatus.BAD_REQUEST, "ROLE002", "기본 역할은 직접 제거할 수 없습니다."),
-    ROLE_ALREADY_ASSIGNED(HttpStatus.CONFLICT, "ROLE003", "사용자에게 이미 해당 역할이 부여되어 있습니다."),
-    ROLE_NOT_ASSIGNED(HttpStatus.BAD_REQUEST, "ROLE004", "사용자에게 해당 역할이 부여되어 있지 않습니다."),
+    ROLE_ALREADY_ASSIGNED(HttpStatus.CONFLICT, "ROLE001", "사용자에게 이미 해당 역할이 부여되어 있습니다."),
+    ROLE_NOT_ASSIGNED(HttpStatus.BAD_REQUEST, "ROLE002", "사용자에게 해당 역할이 부여되어 있지 않습니다."),
 
     // ============ 서버 에러 (500 Internal Server Error) ============
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SYS001", "서버 내부 오류가 발생했습니다."),
