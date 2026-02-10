@@ -26,7 +26,7 @@ public class StudentController {
     private final StudentService studentService;
 
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "사용자 생성", description = "새로운 사용자를 생성합니다.")
+    @Operation(summary = "학생 등록", description = "새로운 학생을 등록합니다.")
     @PostMapping
     public ResponseEntity<StudentResponse> createStudent(
         @Valid @RequestBody CreateStudentRequest request
