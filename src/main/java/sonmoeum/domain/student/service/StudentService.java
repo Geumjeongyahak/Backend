@@ -13,6 +13,7 @@ import sonmoeum.domain.student.exception.StudentNotFoundException;
 import sonmoeum.domain.student.repository.StudentRepository;
 import sonmoeum.domain.student.v1.dto.request.CreateStudentRequest;
 import sonmoeum.domain.student.v1.dto.request.StudentPaginationRequest;
+import sonmoeum.domain.student.v1.dto.request.UpdateStudentRequest;
 import sonmoeum.domain.student.v1.dto.response.StudentResponse;
 import sonmoeum.domain.users.v1.dto.response.UserResponse;
 
@@ -57,5 +58,28 @@ public class StudentService {
                 log.warn("학생을 찾을 수 없습니다 - ID: {}", studentId);
                 return new StudentNotFoundException(studentId);
             });
+    }
+
+    @Transactional
+    public StudentResponse updateStudent(Long studentId, UpdateStudentRequest request) {
+        log.info("학생 수정 요청 - ID: {}", studentId);
+
+        Student student = studentRepository.findById(studentId)
+            .orElseThrow(() -> {
+                log.warn("학생 수정 실패 - 학생을 찾을 수 없습니다. ID: {}", studentId);
+                return new StudentNotFoundException(studentId);
+            });
+
+        String newName = (request.name() != null) ? request.name() : student.getName();
+        String newPhone = (request.phoneNumber() != null) ? request.phoneNumber() : student.getPhoneNumber();
+
+        if (studentRepository.existsByNameAndPhoneNumberAndIdNot(newName, newPhone, studentId)) {
+            throw new DuplicateStudentException(newName, newPhone);
+        }
+
+        student.update(request.name(), request.phoneNumber(), request.description(), request.status());
+
+        log.info("학생 수정 완료 - ID: {}, name: {}", student.getId(), student.getName());
+        return StudentResponse.from(student);
     }
 }

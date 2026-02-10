@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,7 +21,9 @@ import sonmoeum.domain.base.dto.response.PaginationResponse;
 import sonmoeum.domain.student.service.StudentService;
 import sonmoeum.domain.student.v1.dto.request.CreateStudentRequest;
 import sonmoeum.domain.student.v1.dto.request.StudentPaginationRequest;
+import sonmoeum.domain.student.v1.dto.request.UpdateStudentRequest;
 import sonmoeum.domain.student.v1.dto.response.StudentResponse;
+import sonmoeum.domain.users.v1.dto.request.UpdateUserRequest;
 import sonmoeum.domain.users.v1.dto.request.UserPaginationRequest;
 import sonmoeum.domain.users.v1.dto.response.UserResponse;
 
@@ -64,6 +67,19 @@ public class StudentController {
     ) {
         log.debug("GET /api/v1/students/{} - 학생 단건 조회 요청", studentId);
         StudentResponse response = studentService.getStudentById(studentId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "학생 수정", description = "기존 학생 정보를 수정합니다.")
+    @PatchMapping("/{studentId}")
+    public ResponseEntity<StudentResponse> updateUser(
+        @Parameter(description = "학생 식별자", example = "1")
+        @PathVariable Long studentId,
+        @Valid @RequestBody UpdateStudentRequest request
+    ) {
+        log.debug("PATCH /api/v1/students/{} - 학생 수정 요청", studentId);
+        StudentResponse response = studentService.updateStudent(studentId, request);
         return ResponseEntity.ok(response);
     }
 }
