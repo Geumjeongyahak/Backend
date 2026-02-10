@@ -1,8 +1,12 @@
 package sonmoeum.e2e.student;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -120,6 +124,57 @@ class StudentPaginationTest extends StudentBaseTest {
             .body("content", notNullValue())
             .body("page", equalTo(pageNumber))
             .body("size", equalTo(pageSize))
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("이름 필터 조회 성공(200 OK) - name=Page Test Student 1")
+    void getAllStudents_FilterByName() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .queryParam("name", "Page Test Student 1")
+            .when()
+            .get()
+            .then()
+            .statusCode(200)
+            .body("content", notNullValue())
+            .body("totalElements", greaterThan(0))
+            .body("content.name", hasItem(containsString("Page Test Student 1")))
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("상태 필터 조회 성공(200 OK) - status=ENROLLED")
+    void getAllStudents_FilterByStatus() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .queryParam("status", "ENROLLED")
+            .when()
+            .get()
+            .then()
+            .statusCode(200)
+            .body("content", notNullValue())
+            .body("totalElements", greaterThan(0))
+            // content 배열의 모든 status가 ENROLLED인지 확인
+            .body("content.status", everyItem(is("ENROLLED")))
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("이름+상태 조합 필터 조회 성공(200 OK) - name + status")
+    void getAllStudents_FilterByNameAndStatus() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .queryParam("name", "Page Test Student 1")
+            .queryParam("status", "ENROLLED")
+            .when()
+            .get()
+            .then()
+            .statusCode(200)
+            .body("content", notNullValue())
+            .body("totalElements", greaterThan(0))
+            .body("content.name", everyItem(containsString("Page Test Student 1")))
+            .body("content.status", everyItem(is("ENROLLED")))
             .log().all();
     }
 

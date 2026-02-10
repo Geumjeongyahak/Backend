@@ -3,11 +3,15 @@ package sonmoeum.domain.student.service;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import sonmoeum.domain.base.dto.response.PaginationResponse;
 import sonmoeum.domain.student.entity.Student;
+import sonmoeum.domain.student.enums.StudentStatus;
 import sonmoeum.domain.student.exception.DuplicateStudentException;
 import sonmoeum.domain.student.exception.StudentNotFoundException;
 import sonmoeum.domain.student.repository.StudentRepository;
@@ -44,9 +48,12 @@ public class StudentService {
     }
 
     public PaginationResponse<StudentResponse> getAllStudents(StudentPaginationRequest request) {
-        log.debug("전체 학생 목록 조회 요청");
-        var pageResponse = new PaginationResponse<>(studentRepository.findAllBy(request.toRequest()));
-        log.debug("전체 학생 목록 조회 완료 - 총 {}명", pageResponse.getTotalElements());
+        log.debug("학생 목록 조회 요청");
+        PageRequest pageable = request.toRequest();
+        Page<Student> page = findStudentsByFilter(request, pageable);
+
+        var pageResponse = new PaginationResponse<>(page);
+        log.debug("학생 목록 조회 완료 - 총 {}명", pageResponse.getTotalElements());
         return PaginationResponse.mapTo(pageResponse, StudentResponse::from);
     }
 
@@ -92,5 +99,26 @@ public class StudentService {
         }
         studentRepository.deleteById(studentId);
         log.info("학생 삭제 완료 - ID: {}", studentId);
+    }
+
+    private Page<Student> findStudentsByFilter(StudentPaginationRequest request, Pageable pageable) {
+        String name = request.getName();
+        StudentStatus status = request.getStatus();
+
+        boolean hasName = StringUtils.hasText(name);
+        boolean hasStatus = status != null;
+
+        log.info("name={}, status={}, hasName={}, hasStatus={}", name, status, hasName, hasStatus);
+
+        if (hasName && hasStatus) {
+            return studentRepository.findAllByNameContainingAndStatus(name, status, pageable);
+        }
+        if (hasName) {
+            return studentRepository.findAllByNameContaining(name, pageable);
+        }
+        if (hasStatus) {
+            return studentRepository.findAllByStatus(status, pageable);
+        }
+        return studentRepository.findAllBy(pageable);
     }
 }
