@@ -24,9 +24,6 @@ import sonmoeum.domain.student.v1.dto.request.CreateStudentRequest;
 import sonmoeum.domain.student.v1.dto.request.StudentPaginationRequest;
 import sonmoeum.domain.student.v1.dto.request.UpdateStudentRequest;
 import sonmoeum.domain.student.v1.dto.response.StudentResponse;
-import sonmoeum.domain.users.v1.dto.request.UpdateUserRequest;
-import sonmoeum.domain.users.v1.dto.request.UserPaginationRequest;
-import sonmoeum.domain.users.v1.dto.response.UserResponse;
 
 @Slf4j
 @RestController

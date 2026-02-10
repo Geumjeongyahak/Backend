@@ -1,6 +1,5 @@
 package sonmoeum.domain.student.service;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -19,7 +18,6 @@ import sonmoeum.domain.student.v1.dto.request.CreateStudentRequest;
 import sonmoeum.domain.student.v1.dto.request.StudentPaginationRequest;
 import sonmoeum.domain.student.v1.dto.request.UpdateStudentRequest;
 import sonmoeum.domain.student.v1.dto.response.StudentResponse;
-import sonmoeum.domain.users.v1.dto.response.UserResponse;
 
 @Slf4j
 @Service
@@ -107,8 +105,6 @@ public class StudentService {
 
         boolean hasName = StringUtils.hasText(name);
         boolean hasStatus = status != null;
-
-        log.info("name={}, status={}, hasName={}, hasStatus={}", name, status, hasName, hasStatus);
 
         if (hasName && hasStatus) {
             return studentRepository.findAllByNameContainingAndStatus(name, status, pageable);
