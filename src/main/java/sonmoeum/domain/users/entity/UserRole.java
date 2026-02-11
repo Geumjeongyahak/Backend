@@ -40,7 +40,7 @@ public class UserRole {
         if (obj == null || getClass() != obj.getClass()) return false;
         UserRole that = (UserRole) obj;
 
-        if (user.getId() == null) return user == that.user;
+        if (user.getId() == null) return that.user.getId() == null && roleId.equals(that.roleId);
         return user.getId().equals(that.user.getId()) && roleId.equals(that.roleId);
     }
 
