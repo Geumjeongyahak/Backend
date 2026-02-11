@@ -36,8 +36,7 @@ class DepartmentCreateTest extends DepartmentBaseTest {
             .extract()
             .as(DepartmentResponse.class);
 
-        departmentTestHelper.setDepartment(uniqueName,
-            departmentTestHelper.createTestDepartment(res.name(), res.description()));
+        departmentTestHelper.setDepartment(res.id());
     }
 
     @Test
@@ -65,8 +64,7 @@ class DepartmentCreateTest extends DepartmentBaseTest {
                 .extract()
                 .as(DepartmentResponse.class);
 
-            departmentTestHelper.setDepartment(uniqueName,
-                departmentTestHelper.createTestDepartment(res.name(), res.description()));
+            departmentTestHelper.setDepartment(res.id());
         }
     }
 

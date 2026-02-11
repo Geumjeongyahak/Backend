@@ -84,6 +84,8 @@ FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
 FOREIGN KEY (department_id) REFERENCES departments(id),
 CONSTRAINT uk_user_department UNIQUE (user_id, department_id)
 );
+CREATE INDEX idx_user_departments_user_id ON user_departments(user_id);
+CREATE INDEX idx_user_departments_department_id ON user_departments(department_id);
 
 
 CREATE TABLE classrooms (
