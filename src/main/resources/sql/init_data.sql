@@ -1,8 +1,10 @@
 -- username : admin1234, password : admin1234
 INSERT INTO users (id, username, name, password_hash) VALUES
     (1, 'admin1234', 'Administrator', '$2a$10$A0Av/dPBUz5uoDmp0Z/2S.dsMzOWFL5gLK7CrXmQp6Rw2vqWulapi');
-
 ALTER SEQUENCE users_id_seq RESTART WITH 2;
+
+INSERT INTO students (id, name, phone_number, description, status) VALUES
+    (1, 'TestStudent', '010-1234-5678', '테스트 학생입니다.', 'ENROLLED');
 
 INSERT INTO roles (id, name, description) VALUES
     (1, 'ROLE_ADMIN', '기본 권한, 모든 권한을 가진 관리자'),
