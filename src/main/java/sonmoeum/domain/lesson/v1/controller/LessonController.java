@@ -18,7 +18,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import sonmoeum.common.security.service.CustomUserDetails;
 import sonmoeum.domain.lesson.service.LessonService;
+import sonmoeum.domain.lesson.service.StudentAttendanceService;
 import sonmoeum.domain.lesson.v1.dto.request.LessonRangeRequest;
+import sonmoeum.domain.lesson.v1.dto.response.StudentAttendanceResponse;
 import sonmoeum.domain.lesson.v1.dto.request.UpdateTeacherAttendanceRequest;
 import sonmoeum.domain.lesson.v1.dto.response.LessonDetailResponse;
 import sonmoeum.domain.lesson.v1.dto.response.LessonSummaryResponse;
@@ -31,6 +33,7 @@ import sonmoeum.domain.lesson.v1.dto.response.LessonSummaryResponse;
 public class LessonController {
 
     private final LessonService lessonService;
+    private final StudentAttendanceService studentAttendanceService;
 
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "전체 수업 조회", description = "전체 수업을 조회합니다.")
@@ -66,6 +69,24 @@ public class LessonController {
         boolean isAdmin = userDetails.getAuthorities().stream()
             .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         LessonDetailResponse response = lessonService.getLessonDetail(userDetails.getUserId(), lessonId, isAdmin);
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "학생 출석부 조회", description = "수업의 학생 출석부를 조회합니다.")
+    @GetMapping("/{lessonId}/student-attendances")
+    public ResponseEntity<List<StudentAttendanceResponse>> getStudentAttendances(
+        @PathVariable Long lessonId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("GET /api/v1/lessons/{}/student-attendances - 학생 출석부 조회 요청", lessonId);
+        boolean isAdmin = userDetails.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        List<StudentAttendanceResponse> response = studentAttendanceService.getStudentAttendances(
+            userDetails.getUserId(),
+            lessonId,
+            isAdmin
+        );
         return ResponseEntity.ok(response);
     }
 
