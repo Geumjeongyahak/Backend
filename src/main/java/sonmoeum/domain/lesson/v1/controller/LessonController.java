@@ -11,11 +11,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import sonmoeum.common.security.service.CustomUserDetails;
 import sonmoeum.domain.lesson.service.LessonService;
 import sonmoeum.domain.lesson.v1.dto.request.LessonRangeRequest;
+import sonmoeum.domain.lesson.v1.dto.response.LessonDetailResponse;
 import sonmoeum.domain.lesson.v1.dto.response.LessonSummaryResponse;
 
 @Slf4j
@@ -48,5 +50,19 @@ public class LessonController {
         log.debug("GET /api/v1/lessons/my - 내 수업 목록 조회 요청");
         List<LessonSummaryResponse> responses = lessonService.getMyLessons(userDetails.getUserId(), request);
         return ResponseEntity.ok(responses);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "수업 상세 조회", description = "수업 상세 정보를 조회합니다.")
+    @GetMapping("/{lessonId}")
+    public ResponseEntity<LessonDetailResponse> getLessonDetail(
+        @PathVariable Long lessonId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("GET /api/v1/lessons/{} - 수업 상세 조회 요청", lessonId);
+        boolean isAdmin = userDetails.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        LessonDetailResponse response = lessonService.getLessonDetail(userDetails.getUserId(), lessonId, isAdmin);
+        return ResponseEntity.ok(response);
     }
 }

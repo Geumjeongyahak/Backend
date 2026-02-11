@@ -157,4 +157,73 @@ public class LessonReadTest extends LessonBaseTest {
             .statusCode(400)
             .log().all();
     }
+
+    // [수업 상세 조회 테스트]
+
+    @Test
+    @DisplayName("관리자는 타인의 수업 상세 조회 가능(200 OK)")
+    void getLessonDetail_Admin_CanAccessOthersLesson() {
+        long othersLessonId = 2L;
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .when()
+            .get("/{lessonId}", othersLessonId)
+            .then()
+            .statusCode(200)
+            .body("lessonId", is((int) othersLessonId))
+            .body("date", notNullValue())
+            .body("period", anyOf(is(1), is(2), is(3)))
+            .body("startTime", notNullValue())
+            .body("endTime", notNullValue())
+            .body("status", notNullValue())
+            .body("teacherAttendance", notNullValue())
+            .body("teacherName", notNullValue())
+            .body("subjectName", notNullValue())
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("교사는 본인 수업 상세 조회 가능(200 OK)")
+    void getLessonDetail_Volunteer_CanAccessMyLesson() {
+        long myLessonId = 1L;   // "teacher01" 의 lessonId: 1, 3
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
+            .when()
+            .get("/{lessonId}", myLessonId)
+            .then()
+            .statusCode(200)
+            .body("lessonId", is((int) myLessonId))
+            .body("date", notNullValue())
+            .body("period", anyOf(is(1), is(2), is(3)))
+            .body("status", notNullValue())
+            .body("teacherAttendance", notNullValue())
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("수업 상세 조회 실패(401 Unauthorized) - 인증 없음")
+    void getLessonDetail_Unauthorized() {
+        given()
+            .when()
+            .get("/{lessonId}", 1L)
+            .then()
+            .statusCode(401)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("교사는 타인의 수업 상세 조회 불가(404 Not Found)")
+    void getLessonDetail_Volunteer_CannotAccessOthersLesson() {
+        long othersLessonId = 2L;   // "teacher02" 의 lessonId: 2
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
+            .when()
+            .get("/{lessonId}", othersLessonId)
+            .then()
+            .statusCode(404)
+            .log().all();
+    }
 }
