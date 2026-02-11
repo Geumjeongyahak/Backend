@@ -111,6 +111,7 @@ CREATE TABLE lessons (
     end_time TIME NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'SCHEDULED',
     teacher_attendance VARCHAR(20) NOT NULL DEFAULT 'ABSENT',
+    note TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (subject_id) REFERENCES subjects(id),

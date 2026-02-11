@@ -60,6 +60,9 @@ public class Lesson extends BaseEntity {
     @Column(nullable = false, length = 20)
     private TeacherAttendanceStatus teacherAttendance;
 
+    @Column(columnDefinition = "TEXT")
+    private String note;
+
     public Lesson(
         Subject subject,
         User teacher,
@@ -84,6 +87,10 @@ public class Lesson extends BaseEntity {
 
     public void updateStatus(LessonStatus status) {
         this.status = status;
+    }
+
+    public void updateNote(String note) {
+        this.note = note;
     }
 
     public void changeTeacher(User newTeacher) {

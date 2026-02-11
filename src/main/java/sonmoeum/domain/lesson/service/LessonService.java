@@ -1,5 +1,6 @@
 package sonmoeum.domain.lesson.service;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +15,7 @@ import sonmoeum.domain.lesson.exception.LessonNotFoundException;
 import sonmoeum.domain.lesson.repository.LessonRepository;
 import sonmoeum.domain.lesson.v1.dto.request.LessonRangeRequest;
 import sonmoeum.domain.lesson.v1.dto.response.LessonDetailResponse;
+import sonmoeum.domain.lesson.v1.dto.response.LessonNoteResponse;
 import sonmoeum.domain.lesson.v1.dto.response.LessonSummaryResponse;
 
 @Slf4j
@@ -63,6 +65,18 @@ public class LessonService {
             });
     }
 
+    @Transactional(readOnly = true)
+    public LessonNoteResponse getNote(Long teacherId, Long lessonId, boolean isAdmin) {
+        log.debug("수업 노트 조회 요청 (lessonId={})", lessonId);
+        Lesson lesson = (isAdmin
+            ? lessonRepository.findById(lessonId)
+            : lessonRepository.findByIdAndTeacherId(lessonId, teacherId)
+        ).orElseThrow(() -> new LessonNotFoundException(lessonId));
+
+        log.debug("수업 노트 조회 완료 (lessonId={})", lessonId);
+        return LessonNoteResponse.from(lesson);
+    }
+
     @Transactional
     public LessonDetailResponse updateTeacherAttendance(
         Long teacherId,
@@ -101,5 +115,26 @@ public class LessonService {
         lesson.updateStatus(status);
         log.debug("수업 상태 변경 완료 (status={})", status);
         return LessonDetailResponse.from(lesson);
+    }
+
+    @Transactional
+    public LessonNoteResponse upsertNote(
+        Long teacherId,
+        Long lessonId,
+        String note,
+        boolean isAdmin
+    ) {
+        log.debug("수업 노트 업데이트 요청 (lessonId={})", lessonId);
+        Lesson lesson = (isAdmin
+            ? lessonRepository.findById(lessonId)
+            : lessonRepository.findByIdAndTeacherId(lessonId, teacherId)
+        ).orElseThrow(() -> {
+            log.warn("교사 출석 처리 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
+            return new LessonNotFoundException(lessonId);
+        });
+
+        lesson.updateNote(note);
+        log.debug("수업 노트 업데이트 완료 (lessonId={})", lessonId);
+        return LessonNoteResponse.from(lesson);
     }
 }

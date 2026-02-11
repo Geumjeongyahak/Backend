@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,10 +21,12 @@ import sonmoeum.common.security.service.CustomUserDetails;
 import sonmoeum.domain.lesson.service.LessonService;
 import sonmoeum.domain.lesson.service.StudentAttendanceService;
 import sonmoeum.domain.lesson.v1.dto.request.LessonRangeRequest;
+import sonmoeum.domain.lesson.v1.dto.request.UpdateLessonNoteRequest;
 import sonmoeum.domain.lesson.v1.dto.request.UpdateLessonStatusRequest;
 import sonmoeum.domain.lesson.v1.dto.request.UpdateStudentAttendancesRequest;
 import sonmoeum.domain.lesson.v1.dto.request.UpdateTeacherAttendanceRequest;
 import sonmoeum.domain.lesson.v1.dto.response.LessonDetailResponse;
+import sonmoeum.domain.lesson.v1.dto.response.LessonNoteResponse;
 import sonmoeum.domain.lesson.v1.dto.response.LessonSummaryResponse;
 import sonmoeum.domain.lesson.v1.dto.response.StudentAttendanceResponse;
 
@@ -93,6 +96,23 @@ public class LessonController {
     }
 
     @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "수업 노트 조회", description = "수업 노트를 조회합니다.")
+    @GetMapping("/{lessonId}/note")
+    public ResponseEntity<LessonNoteResponse> getNote(
+        @PathVariable Long lessonId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("GET /api/v1/lessons/{}/note - 수업 노트 조회 요청", lessonId);
+        boolean isAdmin = userDetails.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        LessonNoteResponse response = lessonService.getNote(
+            userDetails.getUserId(), lessonId, isAdmin
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "교사 출석 처리", description = "교사 출석 상태를 처리합니다.")
     @PatchMapping("/{lessonId}/teacher-attendance")
     public ResponseEntity<LessonDetailResponse> updateLessonAttendance(
@@ -149,6 +169,24 @@ public class LessonController {
             lessonId,
             request.status(),
             isAdmin
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "수업 노트 업데이트", description = "수업 노트를 업데이트합니다.")
+    @PutMapping("/{lessonId}/note")
+    public ResponseEntity<LessonNoteResponse> upsertNote(
+        @PathVariable Long lessonId,
+        @Valid @RequestBody UpdateLessonNoteRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PUT /api/v1/lessons/{}/note - 수업 노트 업데이트 요청", lessonId);
+        boolean isAdmin = userDetails.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        LessonNoteResponse response = lessonService.upsertNote(
+            userDetails.getUserId(), lessonId, request.note(), isAdmin
         );
         return ResponseEntity.ok(response);
     }
