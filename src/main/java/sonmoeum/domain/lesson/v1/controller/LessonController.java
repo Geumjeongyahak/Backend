@@ -20,10 +20,11 @@ import sonmoeum.common.security.service.CustomUserDetails;
 import sonmoeum.domain.lesson.service.LessonService;
 import sonmoeum.domain.lesson.service.StudentAttendanceService;
 import sonmoeum.domain.lesson.v1.dto.request.LessonRangeRequest;
-import sonmoeum.domain.lesson.v1.dto.response.StudentAttendanceResponse;
+import sonmoeum.domain.lesson.v1.dto.request.UpdateStudentAttendancesRequest;
 import sonmoeum.domain.lesson.v1.dto.request.UpdateTeacherAttendanceRequest;
 import sonmoeum.domain.lesson.v1.dto.response.LessonDetailResponse;
 import sonmoeum.domain.lesson.v1.dto.response.LessonSummaryResponse;
+import sonmoeum.domain.lesson.v1.dto.response.StudentAttendanceResponse;
 
 @Slf4j
 @RestController
@@ -106,6 +107,26 @@ public class LessonController {
             userDetails.getUserId(),
             lessonId,
             request.status(),
+            isAdmin
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "학생 출석 처리", description = "학생 출석 상태를 처리합니다.")
+    @PatchMapping("/{lessonId}/student-attendances")
+    public ResponseEntity<List<StudentAttendanceResponse>> updateStudentAttendance(
+        @PathVariable Long lessonId,
+        @Valid @RequestBody UpdateStudentAttendancesRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/lessons/{}/student-attendances - 학생 출석 처리 요청", lessonId);
+        boolean isAdmin = userDetails.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        List<StudentAttendanceResponse> response = studentAttendanceService.updateStudentAttendances(
+            userDetails.getUserId(),
+            lessonId,
+            request,
             isAdmin
         );
         return ResponseEntity.ok(response);
