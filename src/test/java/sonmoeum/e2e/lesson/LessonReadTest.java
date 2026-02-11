@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Test;
 @DisplayName("E2E: 수업 조회 테스트")
 public class LessonReadTest extends LessonBaseTest {
 
+    // [전체 수업 목록 조회 테스트]
+
     @Test
     @DisplayName("관리자 권한으로 전체 수업 목록(기간 조회) 성공(200 OK)")
     void getAllLessons_Success_Admin() {
@@ -87,6 +89,70 @@ public class LessonReadTest extends LessonBaseTest {
             .queryParam("to", "2026-03-15")
             .when()
             .get()
+            .then()
+            .statusCode(400)
+            .log().all();
+    }
+
+    // [내 수업 목록 조회 테스트]
+
+    @Test
+    @DisplayName("내 수업 목록 조회 성공(200 OK) - 로그인 사용자")
+    void getMyLessons_Success() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
+            .queryParam("from", "2026-02-01")
+            .queryParam("to", "2026-02-28")
+            .when()
+            .get("/my")
+            .then()
+            .statusCode(200)
+            .body("$", notNullValue())
+            // 리스트(배열) 반환
+            .body("size()", is(2))
+            .body("lessonId", everyItem(notNullValue()))
+            .body("date", everyItem(notNullValue()))
+            .body("period", everyItem(anyOf(is(1), is(2), is(3))))
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("내 수업 목록 조회 실패(401 Unauthorized) - 인증 없음")
+    void getMyLessons_Unauthorized() {
+        given()
+            .queryParam("from", "2026-02-01")
+            .queryParam("to", "2026-02-28")
+            .when()
+            .get("/my")
+            .then()
+            .statusCode(401)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("내 수업 목록 조회 실패(400 Bad Request) - from > to")
+    void getMyLessons_InvalidRange_BadRequest() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
+            .queryParam("from", "2026-03-02")
+            .queryParam("to", "2026-02-01")
+            .when()
+            .get("/my")
+            .then()
+            .statusCode(400)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("내 수업 목록 조회 실패(400 Bad Request) - 기간 범위 초과")
+    void getMyLessons_RangeTooLarge_BadRequest() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
+            // (예시) 31일 초과로 요청
+            .queryParam("from", "2026-02-01")
+            .queryParam("to", "2026-03-15")
+            .when()
+            .get("/my")
             .then()
             .statusCode(400)
             .log().all();

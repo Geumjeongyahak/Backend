@@ -27,4 +27,19 @@ public class LessonService {
             .map(LessonSummaryResponse::from)
             .toList();
     }
+
+    public List<LessonSummaryResponse> getMyLessons(
+        Long userId,
+        LessonRangeRequest request
+    ) {
+        log.debug("내 수업 목록 조회 요청");
+        List<Lesson> lessonList = lessonRepository
+            .findAllByTeacherIdAndDateBetweenOrderByDateAscPeriodAsc(
+                userId, request.from(), request.to()
+            );
+        log.debug("내 수업 목록 조회 완료 - 총 {}개", lessonList.size());
+        return lessonList.stream()
+            .map(LessonSummaryResponse::from)
+            .toList();
+    }
 }
