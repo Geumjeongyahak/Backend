@@ -52,6 +52,18 @@ public class UserRoleService {
     }
 
     @Transactional
+    public void addRoleIfNotExist(Long userId, RoleType roleType) {
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("사용자를 찾을 수 없습니다 - ID: {}", userId);
+            return new UserNotFoundException(userId);
+        });
+        if (!user.hasRole(roleType)) {
+            user.addRole(roleType);
+            log.info("사용자 역할 추가 완료(멱등성) - UserID: {}, RoleType: {}", userId, roleType);
+        }
+    }
+
+    @Transactional
     public List<RoleResponse> removeRole(Long userId, RoleType roleType) {
         log.info("사용자 역할 제거 요청 - UserID: {}, RoleType: {}", userId, roleType);
         User user = userRepository.getReferenceById(userId);
@@ -64,5 +76,15 @@ public class UserRoleService {
         return user.getRoles().stream()
                 .map(userRole -> RoleResponse.from(userRole.getRoleType()))
                 .toList();
+    }
+
+    @Transactional
+    public void removeRoleIfExist(Long userId, RoleType roleType) {
+        log.info("사용자 역할 제거 요청(존재 시) - UserID: {}, Role: {}", userId, roleType);
+
+        userRoleRepository.findByUserIdAndRoleId(userId, roleType.getId()).ifPresent(userRole -> {
+            userRoleRepository.delete(userRole);
+            log.info("사용자 역할 제거 완료(멱등성) - UserID: {}, RoleType: {}", userId, roleType);
+        });
     }
 }

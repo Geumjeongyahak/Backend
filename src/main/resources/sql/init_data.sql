@@ -1,6 +1,7 @@
 -- username : admin1234, password : admin1234
 INSERT INTO users (id, username, name, password_hash) VALUES
     (1, 'admin1234', 'Administrator', '$2a$10$A0Av/dPBUz5uoDmp0Z/2S.dsMzOWFL5gLK7CrXmQp6Rw2vqWulapi');
+ALTER SEQUENCE users_id_seq RESTART WITH 2;
 
 INSERT INTO students (id, name, phone_number, description, status) VALUES
     (1, 'TestStudent', '010-1234-5678', '테스트 학생입니다.', 'ENROLLED');
@@ -20,3 +21,11 @@ INSERT INTO roles (id, name, description) VALUES
 
 INSERT INTO user_roles (user_id, role_id) VALUES
     (1, 1);  -- Assign ADMIN role to the admin user
+
+INSERT INTO departments (name, description) VALUES
+    ('총무부', '기관의 총무 업무를 담당하는 부서'),
+    ( '인사부', '기관의 인사 관리를 담당하는 부서'),
+    ( '재무부', '기관의 재무 관리를 담당하는 부서'),
+    ( 'IT부', '기관의 정보기술 관리를 담당하는 부서'),
+    ( '마케팅부', '기관의 마케팅 및 홍보를 담당하는 부서'),
+    ( '학사부', '기관의 학사 관리를 담당하는 부서');
