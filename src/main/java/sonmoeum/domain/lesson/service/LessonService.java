@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sonmoeum.domain.lesson.entity.Lesson;
+import sonmoeum.domain.lesson.enums.LessonStatus;
 import sonmoeum.domain.lesson.enums.TeacherAttendanceStatus;
 import sonmoeum.domain.lesson.exception.LessonNotFoundException;
 import sonmoeum.domain.lesson.repository.LessonRepository;
@@ -79,6 +80,26 @@ public class LessonService {
         });
         lesson.updateTeacherAttendance(status);
         log.debug("교사 출석 처리 완료");
+        return LessonDetailResponse.from(lesson);
+    }
+
+    @Transactional
+    public LessonDetailResponse updateLessonStatus(
+        Long teacherId,
+        Long lessonId,
+        LessonStatus status,
+        boolean isAdmin
+    ) {
+        log.debug("수업 상태 변경 요청 (lessonId={})", lessonId);
+        Lesson lesson = (isAdmin
+            ? lessonRepository.findById(lessonId)
+            : lessonRepository.findByIdAndTeacherId(lessonId, teacherId)
+        ).orElseThrow(() -> {
+            log.warn("교사 출석 처리 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
+            return new LessonNotFoundException(lessonId);
+        });
+        lesson.updateStatus(status);
+        log.debug("수업 상태 변경 완료 (status={})", status);
         return LessonDetailResponse.from(lesson);
     }
 }

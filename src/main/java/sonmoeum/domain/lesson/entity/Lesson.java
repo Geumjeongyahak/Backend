@@ -82,12 +82,8 @@ public class Lesson extends BaseEntity {
         this.teacherAttendance = teacherAttendance;
     }
 
-    public void cancel() {
-        this.status = LessonStatus.CANCELED;
-    }
-
-    public void complete() {
-        this.status = LessonStatus.COMPLETED;
+    public void updateStatus(LessonStatus status) {
+        this.status = status;
     }
 
     public void changeTeacher(User newTeacher) {

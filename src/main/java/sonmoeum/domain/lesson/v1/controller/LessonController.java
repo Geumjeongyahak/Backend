@@ -20,6 +20,7 @@ import sonmoeum.common.security.service.CustomUserDetails;
 import sonmoeum.domain.lesson.service.LessonService;
 import sonmoeum.domain.lesson.service.StudentAttendanceService;
 import sonmoeum.domain.lesson.v1.dto.request.LessonRangeRequest;
+import sonmoeum.domain.lesson.v1.dto.request.UpdateLessonStatusRequest;
 import sonmoeum.domain.lesson.v1.dto.request.UpdateStudentAttendancesRequest;
 import sonmoeum.domain.lesson.v1.dto.request.UpdateTeacherAttendanceRequest;
 import sonmoeum.domain.lesson.v1.dto.response.LessonDetailResponse;
@@ -127,6 +128,26 @@ public class LessonController {
             userDetails.getUserId(),
             lessonId,
             request,
+            isAdmin
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "수업 상태 변경", description = "수업 상태를 변경합니다.")
+    @PatchMapping("/{lessonId}/status")
+    public ResponseEntity<LessonDetailResponse> updateLessonStatus(
+        @PathVariable Long lessonId,
+        @Valid @RequestBody UpdateLessonStatusRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/lessons/{}/status - 수업 상태 변경 요청", lessonId);
+        boolean isAdmin = userDetails.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        LessonDetailResponse response = lessonService.updateLessonStatus(
+            userDetails.getUserId(),
+            lessonId,
+            request.status(),
             isAdmin
         );
         return ResponseEntity.ok(response);
