@@ -39,10 +39,6 @@ public class TestDepartmentHelper {
         });
     }
 
-    public void setDepartment(String name, Department department) {
-        departmentCache.put(name, department);
-    }
-
     public void setDepartment(Long deptId) {
         Department department = departmentRepository.findById(deptId).orElseThrow();
         departmentCache.put(department.getName(), department);
