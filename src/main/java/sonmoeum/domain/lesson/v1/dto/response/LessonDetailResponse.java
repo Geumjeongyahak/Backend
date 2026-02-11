@@ -33,7 +33,10 @@ public record LessonDetailResponse(
     String teacherName,
 
     @Schema(description = "과목 이름", example = "한글 기초")
-    String subjectName
+    String subjectName,
+
+    @Schema(description = "수업일지(메모)")
+    String note
 ) {
     public static LessonDetailResponse from(Lesson lesson) {
         return new LessonDetailResponse(
@@ -45,7 +48,8 @@ public record LessonDetailResponse(
             lesson.getStatus(),
             lesson.getTeacherAttendance(),
             lesson.getTeacher().getName(),
-            lesson.getSubject().getName()
+            lesson.getSubject().getName(),
+            lesson.getNote()
         );
     }
 }
