@@ -104,7 +104,7 @@ public class LessonReadTest extends LessonBaseTest {
             .queryParam("from", "2026-02-01")
             .queryParam("to", "2026-02-28")
             .when()
-            .get("/my")
+            .get("/me")
             .then()
             .statusCode(200)
             .body("$", notNullValue())
@@ -123,7 +123,7 @@ public class LessonReadTest extends LessonBaseTest {
             .queryParam("from", "2026-02-01")
             .queryParam("to", "2026-02-28")
             .when()
-            .get("/my")
+            .get("/me")
             .then()
             .statusCode(401)
             .log().all();
@@ -137,7 +137,7 @@ public class LessonReadTest extends LessonBaseTest {
             .queryParam("from", "2026-03-02")
             .queryParam("to", "2026-02-01")
             .when()
-            .get("/my")
+            .get("/me")
             .then()
             .statusCode(400)
             .log().all();
@@ -152,7 +152,7 @@ public class LessonReadTest extends LessonBaseTest {
             .queryParam("from", "2026-02-01")
             .queryParam("to", "2026-03-15")
             .when()
-            .get("/my")
+            .get("/me")
             .then()
             .statusCode(400)
             .log().all();

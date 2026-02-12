@@ -53,7 +53,7 @@ public class LessonController {
 
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "내 수업 목록 조회", description = "내 수업 목록을 조회합니다.")
-    @GetMapping("/my")
+    @GetMapping("/me")
     public ResponseEntity<List<LessonSummaryResponse>> getMyLessons(
         @ModelAttribute @Valid LessonRangeRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
