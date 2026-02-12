@@ -37,6 +37,21 @@ public class PaginationResponse<T> {
         this.totalPages = pageData.getTotalPages();
     }
 
+    public static <T,F> PaginationResponse<F> from(
+            Page<T> pageData,
+            Function<T,F> mapper
+    ) {
+        PaginationResponse<F> mapped = new PaginationResponse<>();
+        mapped.content = pageData.getContent().stream()
+            .map(mapper)
+            .toList();
+        mapped.page = pageData.getNumber();
+        mapped.size = pageData.getSize();
+        mapped.totalElements = pageData.getTotalElements();
+        mapped.totalPages = pageData.getTotalPages();
+        return mapped;
+    }
+
     public static <T,F> PaginationResponse<F> mapTo(
         PaginationResponse<T> original,
         Function<T,F> mapper
