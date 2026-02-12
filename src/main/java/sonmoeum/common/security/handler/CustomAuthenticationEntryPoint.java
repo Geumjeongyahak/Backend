@@ -16,11 +16,12 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import sonmoeum.common.exception.ErrorCode;
 
 @Component
 @RequiredArgsConstructor
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
-
+    private static final ErrorCode ERROR_CODE = ErrorCode.ACCESS_DENIED;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -31,9 +32,10 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
         response.setCharacterEncoding("UTF-8");
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "인증이 필요합니다.");
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ERROR_CODE.getMessage());
         problemDetail.setTitle("UNAUTHORIZED");
         problemDetail.setType(URI.create("/errors/unauthorized"));
+        problemDetail.setProperty("code", ERROR_CODE.getCode());
 
         response.getWriter().write(objectMapper.writeValueAsString(problemDetail));
     }

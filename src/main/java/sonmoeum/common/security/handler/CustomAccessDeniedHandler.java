@@ -16,6 +16,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import sonmoeum.common.exception.ErrorCode;
 
 @Component
 @RequiredArgsConstructor
@@ -34,6 +35,7 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "접근 권한이 없습니다.");
         problemDetail.setTitle("ACCESS_DENIED");
         problemDetail.setType(URI.create("/errors/access-denied"));
+        problemDetail.setProperty("code", ErrorCode.ACCESS_DENIED.getCode());
 
         response.getWriter().write(objectMapper.writeValueAsString(problemDetail));
     }

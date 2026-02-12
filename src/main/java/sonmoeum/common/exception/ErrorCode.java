@@ -42,6 +42,7 @@ public enum ErrorCode {
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "BIZ003", "이미 사용 중인 이메일입니다."),
     INVALID_STATE(HttpStatus.CONFLICT, "BIZ004", "유효하지 않은 상태입니다."),
     DUPLICATE_STUDENT(HttpStatus.CONFLICT, "BIZ005", "이미 존재하는 학생입니다."),
+    DUPLICATE_CLASSROOM(HttpStatus.CONFLICT, "BIZ006", "이미 존재하는 분반입니다."),
 
     // ============ Role 관련 비즈니스 로직 ============
     ROLE_ALREADY_ASSIGNED(HttpStatus.CONFLICT, "ROLE001", "사용자에게 이미 해당 역할이 부여되어 있습니다."),
