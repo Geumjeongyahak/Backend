@@ -12,12 +12,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
 import sonmoeum.e2e.util.TestUserHelper;
 
-/**
- * E2E 테스트 Base 클래스
- * - MockMvc를 사용한 통합 테스트
- * - 실제 HTTP 요청/응답 시뮬레이션
- * - JWT 토큰 기반 인증 지원
- */
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Tag("e2e")
@@ -29,7 +24,6 @@ public abstract class BaseE2ETest {
 
     @Autowired
     protected TestUserHelper userTestHelper;
-
 
     @LocalServerPort
     protected int port;

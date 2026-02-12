@@ -29,6 +29,14 @@ INSERT INTO roles (id, name, description) VALUES
 INSERT INTO user_roles (user_id, role_id) VALUES
     (1, 1);  -- Assign ADMIN role to the admin user
 
+INSERT INTO departments (name, description) VALUES
+    ('총무부', '기관의 총무 업무를 담당하는 부서'),
+    ( '인사부', '기관의 인사 관리를 담당하는 부서'),
+    ( '재무부', '기관의 재무 관리를 담당하는 부서'),
+    ( 'IT부', '기관의 정보기술 관리를 담당하는 부서'),
+    ( '마케팅부', '기관의 마케팅 및 홍보를 담당하는 부서'),
+    ( '학사부', '기관의 학사 관리를 담당하는 부서');
+
 
 INSERT INTO user_roles (user_id, role_id) VALUES
     (2, 3);  -- teacher01 유저에게 ROLE_VOLUNTEER 권한 부여

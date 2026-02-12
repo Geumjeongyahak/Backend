@@ -29,7 +29,6 @@ public class JwtTokenProvider {
 
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         if (keyBytes.length < 32) { // HS256 권장 최소 32바이트
-            System.out.println(securityProperties.getJwt().getSecret());
             throw new IllegalStateException("JWT secret은 최소 32바이트 이상 권장입니다.(현재: " + keyBytes.length + " bytes)");
         }
         return Keys.hmacShaKeyFor(keyBytes);

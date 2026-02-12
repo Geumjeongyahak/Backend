@@ -39,8 +39,9 @@ public class UserRole {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
         UserRole that = (UserRole) obj;
-        return user.getId().equals(that.user.getId()) &&
-               roleId.equals(that.roleId);
+
+        if (user.getId() == null) return that.user.getId() == null && roleId.equals(that.roleId);
+        return user.getId().equals(that.user.getId()) && roleId.equals(that.roleId);
     }
 
     @Override

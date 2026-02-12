@@ -48,6 +48,10 @@ public enum ErrorCode {
     // ============ Role 관련 비즈니스 로직 ============
     ROLE_ALREADY_ASSIGNED(HttpStatus.CONFLICT, "ROLE001", "사용자에게 이미 해당 역할이 부여되어 있습니다."),
     ROLE_NOT_ASSIGNED(HttpStatus.BAD_REQUEST, "ROLE002", "사용자에게 해당 역할이 부여되어 있지 않습니다."),
+    CANNOT_DELETE_ROLE_IN_USE(HttpStatus.BAD_REQUEST, "ROLE003", "해당 역할이 사용자에게 할당되어 있어 삭제할 수 없습니다."),
+
+    // ============ 부서 관련 비즈니스 로직 ============
+    CANNOT_DELETE_DEPARTMENT_IN_USE(HttpStatus.BAD_REQUEST, "DEPT001", "해당 부서가 사용자에게 할당되어 있어 삭제할 수 없습니다."),
 
     // ============ 서버 에러 (500 Internal Server Error) ============
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SYS001", "서버 내부 오류가 발생했습니다."),
@@ -57,32 +61,4 @@ public enum ErrorCode {
     private final HttpStatus status;
     private final String code;
     private final String message;
-
-    /**
-     * ErrorCode로부터 BusinessException 생성
-     */
-    public BusinessException toException() {
-        return new BusinessException(this.message, this.status, this.code);
-    }
-
-    /**
-     * 커스텀 메시지로 BusinessException 생성
-     */
-    public BusinessException toException(String customMessage) {
-        return new BusinessException(customMessage, this.status, this.code);
-    }
-
-    /**
-     * 원인 예외와 함께 BusinessException 생성
-     */
-    public BusinessException toException(Throwable cause) {
-        return new BusinessException(this.message, this.status, this.code, cause);
-    }
-
-    /**
-     * 커스텀 메시지와 원인 예외를 함께 BusinessException 생성
-     */
-    public BusinessException toException(String customMessage, Throwable cause) {
-        return new BusinessException(customMessage, this.status, this.code, cause);
-    }
 }
