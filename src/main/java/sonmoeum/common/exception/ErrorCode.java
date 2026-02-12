@@ -30,11 +30,14 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "RES002", "사용자를 찾을 수 없습니다."),
     ROLE_NOT_FOUND(HttpStatus.NOT_FOUND, "RES003", "역할을 찾을 수 없습니다."),
     STUDENT_NOT_FOUND(HttpStatus.NOT_FOUND, "RES004", "학생을 찾을 수 없습니다."),
+    DEPARTMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "RES005", "부서를 찾을 수 없습니다."),
+    CLASSROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "RES006", "분반을 찾을 수 없습니다."),
 
     // ============ 요청 검증 관련 (400 Bad Request) ============
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VAL001", "입력값 검증에 실패했습니다."),
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "VAL002", "잘못된 입력값입니다."),
     MISSING_REQUIRED_FIELD(HttpStatus.BAD_REQUEST, "VAL003", "필수 필드가 누락되었습니다."),
+    NO_CHANGES_DETECTED(HttpStatus.BAD_REQUEST, "VAL004", "변경된 값이 없습니다."),
 
     // ============ 비즈니스 로직 관련 (409 Conflict) ============
     DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "BIZ001", "이미 존재하는 리소스입니다."),

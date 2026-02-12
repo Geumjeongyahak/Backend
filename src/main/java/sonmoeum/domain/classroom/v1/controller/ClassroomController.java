@@ -8,12 +8,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import sonmoeum.domain.classroom.service.ClassroomCrudService;
 import sonmoeum.domain.classroom.v1.dto.request.CreateClassroomRequest;
+import sonmoeum.domain.classroom.v1.dto.request.UpdateClassroomRequest;
 import sonmoeum.domain.classroom.v1.dto.response.ClassroomResponse;
 
 @Slf4j
@@ -33,6 +31,19 @@ public class ClassroomController {
         log.debug("POST /api/v1/classrooms - 교실 생성 요청: {}", request.name());
         return ResponseEntity.status(HttpStatus.CREATED).body(
             classroomCrudService.createClassroom(request)
+        );
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @Operation(summary = "교실 수정", description = "기존 교실 정보를 수정합니다.")
+    @PutMapping("/{id}")
+    public ResponseEntity<ClassroomResponse> updateClassroom(
+        @PathVariable Long id,
+        @Valid @RequestBody UpdateClassroomRequest request
+    ) {
+        log.debug("PUT /api/v1/classrooms/{} - 교실 수정 요청: {}", id, request.name());
+        return ResponseEntity.ok(
+            classroomCrudService.updateClassroom(id, request)
         );
     }
 }
