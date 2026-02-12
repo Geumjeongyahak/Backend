@@ -35,6 +35,22 @@ public class TestClassroomHelper {
         return saved;
     }
 
+    public Classroom createTestClassroom(String name, ClassroomType type, String description) {
+        Classroom saved = classroomRepository.save(
+                Classroom.builder().name(name).type(type).description(description).build()
+        );
+        classroomCache.put(saved.getId(), saved);
+        return saved;
+    }
+
+    public Classroom refresh(Long classId) {
+        Classroom refreshed =  classroomRepository.findById(classId).orElseThrow(
+                () -> new IllegalStateException("분반(ID: " + classId + ")을 찾을 수 없습니다.")
+        );
+        classroomCache.put(classId, refreshed);
+        return refreshed;
+    }
+
     public  void registerClassroom(Long classId) {
         classroomRepository.findById(classId).ifPresentOrElse(
                 classroom -> classroomCache.put(classId, classroom),
