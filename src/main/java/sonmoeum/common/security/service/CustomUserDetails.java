@@ -46,4 +46,9 @@ public class CustomUserDetails implements UserDetails {
     public boolean isEnabled() {
         return true;
     }
+
+    public boolean isAdmin() {
+        return getAuthorities().stream()
+            .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+    }
 }
