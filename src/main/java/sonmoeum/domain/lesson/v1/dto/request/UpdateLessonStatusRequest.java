@@ -6,6 +6,6 @@ import sonmoeum.domain.lesson.enums.LessonStatus;
 
 public record UpdateLessonStatusRequest(
     @NotNull
-    @Schema(description = "수업 상태", example = "COMPLETED", allowableValues = {"IN_PROGRESS", "COMPLETED", "CANCELED"})
+    @Schema(description = "수업 상태", example = "COMPLETED", allowableValues = {"SCHEDULED", "COMPLETED", "CANCELED"})
     LessonStatus status
 ) {}

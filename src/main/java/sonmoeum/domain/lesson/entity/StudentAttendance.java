@@ -24,10 +24,6 @@ import sonmoeum.domain.student.entity.Student;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class StudentAttendance extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lesson_id", nullable = false)
     private Lesson lesson;

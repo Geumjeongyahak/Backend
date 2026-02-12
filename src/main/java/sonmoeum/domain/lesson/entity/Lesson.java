@@ -28,10 +28,6 @@ import sonmoeum.domain.users.entity.User;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Lesson extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subject_id", nullable = false)
     private Subject subject;

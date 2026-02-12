@@ -113,7 +113,7 @@ public class StudentAttendanceBulkUpdateTest extends LessonBaseTest {
 
     @Test
     @DisplayName("학생 출석 일괄 반영 실패(404) - 수업에 없는 학생")
-    void updateStudentAttendances_BadRequest_StudentNotEnrolled() {
+    void updateStudentAttendances_NotFound_StudentNotEnrolled() {
         long lessonId = 1L;
 
         given()

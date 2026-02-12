@@ -1,7 +1,5 @@
 package sonmoeum.domain.lesson.service;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -109,7 +107,7 @@ public class LessonService {
             ? lessonRepository.findById(lessonId)
             : lessonRepository.findByIdAndTeacherId(lessonId, teacherId)
         ).orElseThrow(() -> {
-            log.warn("교사 출석 처리 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
+            log.warn("수업 상태 변경 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
             return new LessonNotFoundException(lessonId);
         });
         lesson.updateStatus(status);
@@ -129,7 +127,7 @@ public class LessonService {
             ? lessonRepository.findById(lessonId)
             : lessonRepository.findByIdAndTeacherId(lessonId, teacherId)
         ).orElseThrow(() -> {
-            log.warn("교사 출석 처리 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
+            log.warn("수업 노트 업데이트 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
             return new LessonNotFoundException(lessonId);
         });
 
