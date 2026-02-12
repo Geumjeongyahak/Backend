@@ -160,7 +160,7 @@ public class ClassroomPaginationReadTest extends BaseClassroomTest {
     void getAllClassrooms_SortByName() {
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .queryParam("sort", "name,ASC")
+            .queryParam("sort", "id,DESC;name,ASC")
             .queryParam("size", 5)
         .when()
             .get()
@@ -170,6 +170,8 @@ public class ClassroomPaginationReadTest extends BaseClassroomTest {
             .body("content.size()", greaterThan(0))
             .log().all();
     }
+
+
 
     @Test
     @DisplayName("범위를 벗어난 페이지 조회 시 빈 결과 반환(200 OK)")

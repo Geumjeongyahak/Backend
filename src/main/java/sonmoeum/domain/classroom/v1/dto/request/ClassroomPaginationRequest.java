@@ -8,8 +8,6 @@ import org.springframework.data.domain.Sort;
 import sonmoeum.common.validation.annotation.ValidSortField;
 import sonmoeum.domain.base.dto.request.BasePaginationRequest;
 
-import java.util.List;
-
 @Getter
 @Setter
 public class ClassroomPaginationRequest extends BasePaginationRequest {
@@ -20,9 +18,9 @@ public class ClassroomPaginationRequest extends BasePaginationRequest {
     @Schema(description = "분반 유형 기반 필터링", example = "WEEKDAY")
     private String type;
 
-    @Schema(description = "정렬 기준 필드와 방향 쌍의 리스트", example = "[\"name\", \"ASC\", \"createdAt\", \"DESC\"]")
-    @ValidSortField(fields = {"name", "createdAt", "updatedAt"})
-    private List<String> sort;
+    @Schema(description = "정렬 기준 필드와 방향 쌍의 리스트", example = "[\"name\", \"ASC\"; \"createdAt\", \"DESC\"]")
+    @ValidSortField(fields = {"id", "name", "createdAt", "updatedAt"})
+    private String sort;
 
     public ClassroomPaginationRequest() {
         super();

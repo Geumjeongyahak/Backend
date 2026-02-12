@@ -29,6 +29,8 @@ public class ClassroomCrudService {
         log.debug("분반 생성 시도: {}", request.name());
 
         if (classroomRepository.existsByName(request.name())) {
+            // TODO: soft delete된 분반이 있을 경우 복구하는 로직 추가 고려(논의 필요)
+
             log.info("분반 생성 실패 - 중복된 이름: {}", request.name());
             throw new DuplicateResourceException(ErrorCode.DUPLICATE_CLASSROOM);
         }
@@ -69,12 +71,7 @@ public class ClassroomCrudService {
 
     public ClassroomDetailResponse getClassroomDetail(Long id) {
         log.debug("분반 상세 조회 시도: {}", id);
-        Classroom classroom = classroomRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.CLASSROOM_NOT_FOUND));
-        // 삭제된 분반인지 확인
-        if (classroom.isDeleted()) {
-            throw new ResourceNotFoundException(ErrorCode.CLASSROOM_NOT_FOUND);
-        }
+        Classroom classroom = getClassroomWithoutDeleted(id);
         log.debug("분반 상세 조회 성공: {}", classroom.getName());
         return ClassroomDetailResponse.from(classroom);
     }
@@ -83,11 +80,10 @@ public class ClassroomCrudService {
         log.debug("분반 수정 시도: {}, {}, {}", request.name(), request.type(), request.description());
 
         boolean isUpdated = false;
-        Classroom classroom = classroomRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.CLASSROOM_NOT_FOUND));
+        Classroom classroom = getClassroomWithoutDeleted(id);
 
         if (request.name() != null) {
-            if (classroomRepository.existsByName(request.name())) {
+            if (classroomRepository.existsByIdNotAndIsDeleted(id, false)) {
                 log.info("분반 수정 실패 - 중복된 이름: {}", request.name());
                 throw new DuplicateResourceException(ErrorCode.DUPLICATE_CLASSROOM);
             }
@@ -113,10 +109,19 @@ public class ClassroomCrudService {
 
     public void deleteClassroom(Long id) {
         log.debug("분반 삭제 시도: {}", id);
-        Classroom classroom = classroomRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.CLASSROOM_NOT_FOUND));
+        Classroom classroom = getClassroomWithoutDeleted(id);
         classroom.setDeleted(true);
         classroomRepository.save(classroom);
         log.info("분반 삭제 성공: {}", classroom.getName());
+    }
+
+    private Classroom getClassroomWithoutDeleted(Long id) {
+        Classroom classroom = classroomRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.CLASSROOM_NOT_FOUND));
+        // 삭제된 분반인지 확인
+        if (classroom.isDeleted()) {
+            throw new ResourceNotFoundException(ErrorCode.CLASSROOM_NOT_FOUND);
+        }
+        return classroom;
     }
 }

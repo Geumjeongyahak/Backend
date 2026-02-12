@@ -2,7 +2,7 @@ package sonmoeum.domain.classroom.v1.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
-import sonmoeum.common.validation.ValidClassroomType;
+import sonmoeum.common.validation.annotation.ValidClassroomType;
 
 @Schema(description = "반 수정 요청")
 public record UpdateClassroomRequest(

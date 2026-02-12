@@ -39,14 +39,24 @@ public abstract class BasePaginationRequest {
         this.size = (size == null || size <= 0) ? 10 : size;
     }
 
-    protected List<Sort.Order> toSortOrders(List<String> sortFields) {
+    protected List<Sort.Order> toSortOrders(String sortFields) {
         if (sortFields == null || sortFields.isEmpty()) {
             return List.of();
         }
         List<Sort.Order> orders = new ArrayList<>();
-        for (int i=0; i < sortFields.size(); i += 2) {
-            Sort.Direction dir = (sortFields.get(i+1).equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC);
-            orders.add(new Sort.Order(dir, sortFields.get(i)));
+        String[] sorts = sortFields.split(";");
+        for (String sort : sorts) {
+            if (sort.isEmpty()) {
+                continue;
+            }
+            String[] parts = sort.split(",");
+            String field = parts[0].trim();
+            String direction = parts[1].trim().toUpperCase();
+            if (direction.equals("ASC")) {
+                orders.add(Sort.Order.asc(field));
+            } else if (direction.equals("DESC")) {
+                orders.add(Sort.Order.desc(field));
+            }
         }
         return orders;
     }

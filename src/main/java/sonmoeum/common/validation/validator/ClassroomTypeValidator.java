@@ -2,7 +2,7 @@ package sonmoeum.common.validation.validator;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
-import sonmoeum.common.validation.ValidClassroomType;
+import sonmoeum.common.validation.annotation.ValidClassroomType;
 import sonmoeum.domain.classroom.enums.ClassroomType;
 
 public class ClassroomTypeValidator implements ConstraintValidator<ValidClassroomType, String> {

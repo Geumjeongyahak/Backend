@@ -21,7 +21,7 @@ import sonmoeum.common.exception.ErrorCode;
 @Component
 @RequiredArgsConstructor
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
-    private static final ErrorCode ERROR_CODE = ErrorCode.ACCESS_DENIED;
+    private static final ErrorCode ERROR_CODE = ErrorCode.AUTHENTICATION_FAILED;
     private final ObjectMapper objectMapper;
 
     @Override

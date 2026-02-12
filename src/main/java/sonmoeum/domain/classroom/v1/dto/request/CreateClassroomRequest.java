@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import sonmoeum.common.validation.ValidClassroomType;
+import sonmoeum.common.validation.annotation.ValidClassroomType;
 
 @Schema(description = "반 생성 요청")
 public record CreateClassroomRequest(

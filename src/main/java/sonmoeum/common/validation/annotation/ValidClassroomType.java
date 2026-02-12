@@ -1,4 +1,4 @@
-package sonmoeum.common.validation;
+package sonmoeum.common.validation.annotation;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;

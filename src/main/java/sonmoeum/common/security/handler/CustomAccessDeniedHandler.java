@@ -21,7 +21,7 @@ import sonmoeum.common.exception.ErrorCode;
 @Component
 @RequiredArgsConstructor
 public class CustomAccessDeniedHandler implements AccessDeniedHandler {
-
+    private static final ErrorCode ERROR_CODE = ErrorCode.ACCESS_DENIED;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -32,10 +32,10 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
         response.setCharacterEncoding("UTF-8");
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "접근 권한이 없습니다.");
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ERROR_CODE.getMessage());
         problemDetail.setTitle("ACCESS_DENIED");
         problemDetail.setType(URI.create("/errors/access-denied"));
-        problemDetail.setProperty("code", ErrorCode.ACCESS_DENIED.getCode());
+        problemDetail.setProperty("code", ERROR_CODE.getCode());
 
         response.getWriter().write(objectMapper.writeValueAsString(problemDetail));
     }
