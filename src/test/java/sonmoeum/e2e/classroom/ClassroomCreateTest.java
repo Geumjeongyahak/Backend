@@ -6,7 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import sonmoeum.domain.classroom.enums.ClassroomType;
 import sonmoeum.domain.classroom.v1.dto.request.CreateClassroomRequest;
-import sonmoeum.domain.classroom.v1.dto.response.ClassroomResponse;
+import sonmoeum.domain.classroom.v1.dto.response.ClassroomDetailResponse;
 
 import java.util.List;
 import java.util.Map;
@@ -41,7 +41,7 @@ public class ClassroomCreateTest extends BaseClassroomTest {
                 .body("description", equalTo("This is a test classroom."))
                 .log().all()
                 .extract()
-                .as(ClassroomResponse.class);
+                .as(ClassroomDetailResponse.class);
 
         // cleanup을 위해 생성된 교실 등록
         this.testClassroomHelper.registerClassroom(res.id());

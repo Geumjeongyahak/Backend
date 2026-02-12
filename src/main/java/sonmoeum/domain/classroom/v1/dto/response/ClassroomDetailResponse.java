@@ -6,7 +6,7 @@ import sonmoeum.domain.classroom.entity.Classroom;
 import java.time.LocalDateTime;
 
 @Schema(description = "교실 응답 DTO")
-public record ClassroomResponse(
+public record ClassroomDetailResponse(
         @Schema(description = "교실 ID", example = "1")
         Long id,
 
@@ -26,8 +26,8 @@ public record ClassroomResponse(
         LocalDateTime updatedAt
 ) {
 
-    public static ClassroomResponse from(Classroom classroom) {
-        return new ClassroomResponse(
+    public static ClassroomDetailResponse from(Classroom classroom) {
+        return new ClassroomDetailResponse(
                 classroom.getId(),
                 classroom.getName(),
                 classroom.getType().name(),

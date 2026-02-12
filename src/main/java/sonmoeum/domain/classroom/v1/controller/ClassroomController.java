@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import sonmoeum.domain.classroom.service.ClassroomCrudService;
 import sonmoeum.domain.classroom.v1.dto.request.CreateClassroomRequest;
 import sonmoeum.domain.classroom.v1.dto.request.UpdateClassroomRequest;
-import sonmoeum.domain.classroom.v1.dto.response.ClassroomResponse;
+import sonmoeum.domain.classroom.v1.dto.response.ClassroomDetailResponse;
 
 @Slf4j
 @RestController
@@ -25,7 +25,7 @@ public class ClassroomController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(summary = "교실 생성", description = "새로운 교실을 생성합니다.")
     @PostMapping
-    public ResponseEntity<ClassroomResponse> createClassroom(
+    public ResponseEntity<ClassroomDetailResponse> createClassroom(
         @Valid @RequestBody CreateClassroomRequest request
     ) {
         log.debug("POST /api/v1/classrooms - 교실 생성 요청: {}", request.name());
@@ -37,7 +37,7 @@ public class ClassroomController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(summary = "교실 수정", description = "기존 교실 정보를 수정합니다.")
     @PutMapping("/{id}")
-    public ResponseEntity<ClassroomResponse> updateClassroom(
+    public ResponseEntity<ClassroomDetailResponse> updateClassroom(
         @PathVariable Long id,
         @Valid @RequestBody UpdateClassroomRequest request
     ) {

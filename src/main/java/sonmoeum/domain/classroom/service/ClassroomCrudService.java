@@ -12,7 +12,7 @@ import sonmoeum.domain.classroom.enums.ClassroomType;
 import sonmoeum.domain.classroom.repository.ClassroomRepository;
 import sonmoeum.domain.classroom.v1.dto.request.CreateClassroomRequest;
 import sonmoeum.domain.classroom.v1.dto.request.UpdateClassroomRequest;
-import sonmoeum.domain.classroom.v1.dto.response.ClassroomResponse;
+import sonmoeum.domain.classroom.v1.dto.response.ClassroomDetailResponse;
 
 @Slf4j
 @Service
@@ -20,7 +20,7 @@ import sonmoeum.domain.classroom.v1.dto.response.ClassroomResponse;
 public class ClassroomCrudService {
     private final ClassroomRepository classroomRepository;
 
-    public ClassroomResponse createClassroom(CreateClassroomRequest request) {
+    public ClassroomDetailResponse createClassroom(CreateClassroomRequest request) {
         log.debug("분반 생성 시도: {}", request.name());
 
         if (classroomRepository.existsByName(request.name())) {
@@ -35,10 +35,10 @@ public class ClassroomCrudService {
                 .build());
 
         log.info("분반 생성 성공: {}", classroom.getName());
-        return ClassroomResponse.from(classroom);
+        return ClassroomDetailResponse.from(classroom);
     }
 
-    public ClassroomResponse updateClassroom(Long id, UpdateClassroomRequest request) {
+    public ClassroomDetailResponse updateClassroom(Long id, UpdateClassroomRequest request) {
         log.debug("분반 수정 시도: {}, {}, {}", request.name(), request.type(), request.description());
 
         boolean isUpdated = false;
@@ -67,6 +67,6 @@ public class ClassroomCrudService {
         }
         classroomRepository.save(classroom);
         log.info("분반 수정 성공: {}", classroom.getName());
-        return ClassroomResponse.from(classroom);
+        return ClassroomDetailResponse.from(classroom);
     }
 }
