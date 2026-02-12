@@ -71,8 +71,7 @@ public class LessonController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("GET /api/v1/lessons/{} - 수업 상세 조회 요청", lessonId);
-        boolean isAdmin = userDetails.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isAdmin = userDetails.isAdmin();
         LessonDetailResponse response = lessonService.getLessonDetail(userDetails.getUserId(), lessonId, isAdmin);
         return ResponseEntity.ok(response);
     }
@@ -85,8 +84,7 @@ public class LessonController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("GET /api/v1/lessons/{}/student-attendances - 학생 출석부 조회 요청", lessonId);
-        boolean isAdmin = userDetails.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isAdmin = userDetails.isAdmin();
         List<StudentAttendanceResponse> response = studentAttendanceService.getStudentAttendances(
             userDetails.getUserId(),
             lessonId,
@@ -103,8 +101,7 @@ public class LessonController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("GET /api/v1/lessons/{}/note - 수업 노트 조회 요청", lessonId);
-        boolean isAdmin = userDetails.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isAdmin = userDetails.isAdmin();
 
         LessonNoteResponse response = lessonService.getNote(
             userDetails.getUserId(), lessonId, isAdmin
@@ -122,8 +119,7 @@ public class LessonController {
     ) {
         log.debug("PATCH /api/v1/lessons/{}/teacher-attendance - 교사 출석 처리 요청 (status={})",
             lessonId, request.status());
-        boolean isAdmin = userDetails.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isAdmin = userDetails.isAdmin();
         LessonDetailResponse response = lessonService.updateTeacherAttendance(
             userDetails.getUserId(),
             lessonId,
@@ -142,8 +138,7 @@ public class LessonController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PATCH /api/v1/lessons/{}/student-attendances - 학생 출석 처리 요청", lessonId);
-        boolean isAdmin = userDetails.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isAdmin = userDetails.isAdmin();
         List<StudentAttendanceResponse> response = studentAttendanceService.updateStudentAttendances(
             userDetails.getUserId(),
             lessonId,
@@ -162,8 +157,7 @@ public class LessonController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PATCH /api/v1/lessons/{}/status - 수업 상태 변경 요청", lessonId);
-        boolean isAdmin = userDetails.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isAdmin = userDetails.isAdmin();
         LessonDetailResponse response = lessonService.updateLessonStatus(
             userDetails.getUserId(),
             lessonId,
@@ -182,8 +176,7 @@ public class LessonController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PUT /api/v1/lessons/{}/note - 수업 노트 업데이트 요청", lessonId);
-        boolean isAdmin = userDetails.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isAdmin = userDetails.isAdmin();
 
         LessonNoteResponse response = lessonService.upsertNote(
             userDetails.getUserId(), lessonId, request.note(), isAdmin
