@@ -71,6 +71,10 @@ public class ClassroomCrudService {
         log.debug("분반 상세 조회 시도: {}", id);
         Classroom classroom = classroomRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.CLASSROOM_NOT_FOUND));
+        // 삭제된 분반인지 확인
+        if (classroom.isDeleted()) {
+            throw new ResourceNotFoundException(ErrorCode.CLASSROOM_NOT_FOUND);
+        }
         log.debug("분반 상세 조회 성공: {}", classroom.getName());
         return ClassroomDetailResponse.from(classroom);
     }
@@ -105,5 +109,14 @@ public class ClassroomCrudService {
         classroomRepository.save(classroom);
         log.info("분반 수정 성공: {}", classroom.getName());
         return ClassroomDetailResponse.from(classroom);
+    }
+
+    public void deleteClassroom(Long id) {
+        log.debug("분반 삭제 시도: {}", id);
+        Classroom classroom = classroomRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.CLASSROOM_NOT_FOUND));
+        classroom.setDeleted(true);
+        classroomRepository.save(classroom);
+        log.info("분반 삭제 성공: {}", classroom.getName());
     }
 }

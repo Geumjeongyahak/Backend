@@ -73,4 +73,15 @@ public class ClassroomController {
             classroomCrudService.updateClassroom(id, request)
         );
     }
+
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @Operation(summary = "교실 삭제", description = "기존 교실을 삭제합니다.")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteClassroom(
+        @PathVariable Long id
+    ) {
+        log.debug("DELETE /api/v1/classrooms/{} - 교실 삭제 요청", id);
+        classroomCrudService.deleteClassroom(id);
+        return ResponseEntity.noContent().build();
+    }
 }
