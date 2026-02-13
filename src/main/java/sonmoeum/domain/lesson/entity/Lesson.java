@@ -1,12 +1,5 @@
 package sonmoeum.domain.lesson.entity;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-
-import sonmoeum.domain.base.entity.BaseEntity;
-import sonmoeum.domain.subject.entity.Subject;
-import sonmoeum.domain.users.entity.User;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -18,19 +11,22 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import sonmoeum.domain.base.entity.BaseEntity;
+import sonmoeum.domain.lesson.enums.LessonStatus;
+import sonmoeum.domain.lesson.enums.TeacherAttendanceStatus;
+import sonmoeum.domain.subject.entity.Subject;
+import sonmoeum.domain.users.entity.User;
 
 @Entity
 @Getter
 @Table(name = "lessons")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Lesson extends BaseEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subject_id", nullable = false)
@@ -39,6 +35,9 @@ public class Lesson extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id", nullable = false)
     private User teacher;
+
+    @Column(nullable = false)
+    private Integer period;
 
     @Column(nullable = false)
     private LocalDate date;
@@ -51,32 +50,46 @@ public class Lesson extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private AttendanceStatus attendance;
+    private LessonStatus status;
 
-    public enum AttendanceStatus {
-        PENDING,
-        PRESENT,
-        ABSENT,
-        EXCUSED // 공결 (사유 있는 결석)
-    }
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TeacherAttendanceStatus teacherAttendance;
+
+    @Column(columnDefinition = "TEXT")
+    private String note;
 
     public Lesson(
-            Subject subject,
-            User teacher,
-            LocalDate date,
-            LocalTime startTime,
-            LocalTime endTime,
-            AttendanceStatus attendance) {
+        Subject subject,
+        User teacher,
+        LocalDate date,
+        LocalTime startTime,
+        LocalTime endTime,
+        Integer period
+    ) {
         this.subject = subject;
         this.teacher = teacher;
         this.date = date;
         this.startTime = startTime;
         this.endTime = endTime;
-        this.attendance = attendance;
+        this.period = period;
+        this.status = LessonStatus.SCHEDULED;
+        this.teacherAttendance = TeacherAttendanceStatus.ABSENT;
     }
 
+    public void updateTeacherAttendance(TeacherAttendanceStatus teacherAttendance) {
+        this.teacherAttendance = teacherAttendance;
+    }
 
-    public void updateAttendance(AttendanceStatus attendance) {
-        this.attendance = attendance;
+    public void updateStatus(LessonStatus status) {
+        this.status = status;
+    }
+
+    public void updateNote(String note) {
+        this.note = note;
+    }
+
+    public void changeTeacher(User newTeacher) {
+        this.teacher = newTeacher;
     }
 }

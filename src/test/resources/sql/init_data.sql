@@ -2,6 +2,14 @@
 INSERT INTO users (id, username, name, password_hash) VALUES
     (1, 'admin1234', 'Administrator', '$2a$10$A0Av/dPBUz5uoDmp0Z/2S.dsMzOWFL5gLK7CrXmQp6Rw2vqWulapi');
 
+-- username : teacher01, password : teacher01
+INSERT INTO users (id, username, name, password_hash) VALUES
+    (2, 'teacher01', '홍길동', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu');
+
+-- username : teacher02, password : teacher02
+INSERT INTO users (id, username, name, password_hash) VALUES
+    (3, 'teacher02', '김철수', '$2a$12$jNEpPdWPB8WX6kOR/t9cru3Lz7WwZRw3KHfgoRJBg0ddWUFnymr/O');
+
 INSERT INTO students (id, name, phone_number, description, status) VALUES
     (1, 'TestStudent', '010-1234-5678', '테스트 학생입니다.', 'ENROLLED');
 
@@ -28,3 +36,43 @@ INSERT INTO departments (name, description) VALUES
     ( 'IT부', '기관의 정보기술 관리를 담당하는 부서'),
     ( '마케팅부', '기관의 마케팅 및 홍보를 담당하는 부서'),
     ( '학사부', '기관의 학사 관리를 담당하는 부서');
+
+
+INSERT INTO user_roles (user_id, role_id) VALUES
+    (2, 3);  -- teacher01 유저에게 ROLE_VOLUNTEER 권한 부여
+
+INSERT INTO user_roles (user_id, role_id) VALUES
+    (3, 3);  -- teacher02 유저에게 ROLE_VOLUNTEER 권한 부여
+
+INSERT INTO classrooms (id, name, type, description)
+VALUES
+    (1, '벚꽃반', 'WEEKDAY', '기초 한글'),
+    (2, '장미반', 'WEEKDAY', '초등 저학년 수준'),
+    (3, '스마트폰반', 'WEEKEND', '스마트폰 기능/앱 사용');
+
+INSERT INTO subjects
+(id, class_id, teacher_id, name, start_at, end_at, times, day_of_week, start_time, end_time, period, description)
+VALUES
+    (1, 1, 2, '한글 기초', '2026-02-01', '2026-06-30', 20, 'FRIDAY',  '19:20:00', '20:00:00', 1, '기초 한글 수업'),
+    (2, 2, 3, '수학 기초', '2026-02-01', '2026-06-30', 20, 'FRIDAY',  '20:10:00', '20:50:00', 2, '기초 수학 수업'),
+    (3, 3, 2, '스마트폰 활용', '2026-02-01', '2026-06-30', 12, 'SATURDAY','19:20:00', '20:00:00', 1, '스마트폰 사용법');
+
+INSERT INTO lessons
+(id, subject_id, teacher_id, period, date, start_time, end_time, status, teacher_attendance)
+VALUES
+    -- 2026-02-13(금) 벚꽃반 1교시
+    (1, 1, 2, 1, '2026-02-13', '19:20:00', '20:00:00', 'SCHEDULED', 'ABSENT'),
+    -- 2026-02-13(금) 장미반 2교시
+    (2, 2, 3, 2, '2026-02-13', '20:10:00', '20:50:00', 'SCHEDULED', 'ABSENT'),
+    -- 2026-02-14(토) 스마트폰반 1교시
+    (3, 3, 2, 1, '2026-02-14', '19:20:00', '20:00:00', 'SCHEDULED', 'ABSENT');
+
+INSERT INTO students (id, name, phone_number, description, status)
+VALUES
+    (2, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),
+    (3, '박민수', '010-4444-4444', '기초반', 'ENROLLED');
+
+INSERT INTO student_attendances (lesson_id, student_id, status, memo)
+VALUES
+    (1, 2, 'ABSENT', NULL),
+    (1, 3, 'ABSENT', NULL);

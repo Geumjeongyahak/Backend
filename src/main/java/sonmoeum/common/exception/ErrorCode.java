@@ -30,8 +30,11 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "RES002", "사용자를 찾을 수 없습니다."),
     ROLE_NOT_FOUND(HttpStatus.NOT_FOUND, "RES003", "역할을 찾을 수 없습니다."),
     STUDENT_NOT_FOUND(HttpStatus.NOT_FOUND, "RES004", "학생을 찾을 수 없습니다."),
+    //TODO: 
     DEPARTMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "RES005", "부서를 찾을 수 없습니다."),
     CLASSROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "RES006", "분반을 찾을 수 없습니다."),
+    LESSON_NOT_FOUND(HttpStatus.NOT_FOUND, "RES005", "수업을 찾을 수 없습니다."),
+    STUDENT_NOT_ENROLLED(HttpStatus.NOT_FOUND, "RES006", "수업에 등록된 학생이 아닙니다."),
 
     // ============ 요청 검증 관련 (400 Bad Request) ============
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VAL001", "입력값 검증에 실패했습니다."),
