@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -71,5 +72,14 @@ public class SubjectController {
         log.debug("PATCH /api/v1/subjects/{} - 과목 부분 수정 요청", subjectId);
         SubjectDetailResponse response = subjectService.updateSubject(subjectId, request);
         return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @Operation(summary = "과목 삭제", description = "과목을 삭제(비활성화)합니다.")
+    @DeleteMapping("/{subjectId}")
+    public ResponseEntity<Void> deleteSubject(@PathVariable Long subjectId) {
+        log.debug("DELETE /api/v1/subjects/{} - 과목 삭제(비활성화) 요청", subjectId);
+        subjectService.deleteSubject(subjectId);
+        return ResponseEntity.noContent().build();
     }
 }

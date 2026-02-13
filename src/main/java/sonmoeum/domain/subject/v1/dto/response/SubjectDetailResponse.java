@@ -43,7 +43,10 @@ public record SubjectDetailResponse(
     Integer period,
 
     @Schema(description = "과목 설명", example = "과목 설명")
-    String description
+    String description,
+
+    @Schema(description = "과목 활성화 여부", example = "true")
+    Boolean isActive
 ) {
     public static SubjectDetailResponse from(Subject subject) {
         return new SubjectDetailResponse(
@@ -58,7 +61,8 @@ public record SubjectDetailResponse(
             subject.getStartTime(),
             subject.getEndTime(),
             subject.getPeriod(),
-            subject.getDescription()
+            subject.getDescription(),
+            subject.getIsActive()
         );
     }
 }

@@ -121,6 +121,7 @@ CREATE TABLE subjects (
     end_time TIME NOT NULL,
     period INTEGER NOT NULL,
     description TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (class_id) REFERENCES classrooms(id),

@@ -192,6 +192,28 @@ public class SubjectService {
         return SubjectDetailResponse.from(saved);
     }
 
+    @Transactional
+    public void deleteSubject(Long subjectId) {
+        log.debug("과목 삭제(비활성화) 요청 (id={})", subjectId);
+
+        Subject subject = subjectRepository.findById(subjectId)
+            .orElseThrow(() -> {
+                log.info("과목 삭제 실패 - 과목을 찾을 수 없습니다. ID: {}", subjectId);
+                return new SubjectNotFoundException(subjectId);
+            });
+
+        // 이미 비활성화면 멱등하게 처리(성공 처리)
+        if (Boolean.FALSE.equals(subject.getIsActive())) {
+            log.debug("과목은 이미 비활성화 상태입니다. (id={})", subjectId);
+            return;
+        }
+
+        subject.deactivate();
+        subjectRepository.save(subject);
+
+        log.debug("과목 삭제(비활성화) 완료 (id={})", subjectId);
+    }
+
     private void validateScheduleRange(LocalDate startAt, LocalDate endAt, LocalTime startTime, LocalTime endTime) {
         if (startAt != null && endAt != null && startAt.isAfter(endAt)) {
             throw new InvalidSubjectScheduleException("startAt은 endAt보다 늦을 수 없습니다.");
