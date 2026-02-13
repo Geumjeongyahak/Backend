@@ -2,6 +2,7 @@ package sonmoeum.domain.subject.repository;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,4 +22,11 @@ public interface SubjectRepository extends JpaRepository<Subject, Long> {
     @Override
     @EntityGraph(attributePaths = {"classroom", "teacher"})
     Optional<Subject> findById(Long subjectId);
+
+    @EntityGraph(attributePaths = {"classroom", "teacher"})
+    List<Subject> findByClassroomId(Long classroomId);
+
+    @Override
+    @EntityGraph(attributePaths = {"classroom", "teacher"})
+    List<Subject> findAll();
 }

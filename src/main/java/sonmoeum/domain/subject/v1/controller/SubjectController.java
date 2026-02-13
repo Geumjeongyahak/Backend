@@ -3,6 +3,7 @@ package sonmoeum.domain.subject.v1.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import sonmoeum.domain.subject.service.SubjectService;
 import sonmoeum.domain.subject.v1.dto.request.CreateSubjectRequest;
@@ -45,5 +47,15 @@ public class SubjectController {
         log.debug("GET /api/v1/subjects/{} - 과목 단건 조회 요청", subjectId);
         SubjectDetailResponse response = subjectService.getSubject(subjectId);
         return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "과목 목록 조회", description = "과목 목록을 조회합니다. classroomId가 있으면 해당 분반의 과목만 조회합니다.")
+    @GetMapping
+    public ResponseEntity<List<SubjectDetailResponse>> getAllSubjects(
+        @RequestParam(required = false) Long classroomId
+    ) {
+        log.debug("GET /api/v1/subjects - 과목 목록 조회 요청 (classroomId={})", classroomId);
+        return ResponseEntity.ok(subjectService.getAllSubjects(classroomId));
     }
 }

@@ -1,5 +1,6 @@
 package sonmoeum.domain.subject.service;
 
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -85,5 +86,25 @@ public class SubjectService {
 
         log.debug("과목 단건 조회 완료 (id={})", subject.getId());
         return SubjectDetailResponse.from(subject);
+    }
+
+    public List<SubjectDetailResponse> getAllSubjects(Long classroomId) {
+        log.debug("과목 목록 조회 요청 (classroomId={})", classroomId);
+
+        if (classroomId != null) {
+            classroomRepository.findById(classroomId)
+                .orElseThrow(() -> {
+                    log.info("과목 목록 조회 실패 - 분반을 찾을 수 없습니다. ID: {}", classroomId);
+                    return new ClassroomNotFoundException(classroomId);
+                });
+
+            return subjectRepository.findByClassroomId(classroomId).stream()
+                .map(SubjectDetailResponse::from)
+                .toList();
+        }
+
+        return subjectRepository.findAll().stream()
+            .map(SubjectDetailResponse::from)
+            .toList();
     }
 }
