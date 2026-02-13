@@ -111,6 +111,7 @@ public class SubjectService {
             .toList();
     }
 
+    @Transactional
     public SubjectDetailResponse updateSubject(Long subjectId, UpdateSubjectRequest request) {
         log.debug("과목 수정 요청 (id={})", subjectId);
 
