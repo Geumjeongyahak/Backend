@@ -30,6 +30,9 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "RES002", "사용자를 찾을 수 없습니다."),
     ROLE_NOT_FOUND(HttpStatus.NOT_FOUND, "RES003", "역할을 찾을 수 없습니다."),
     STUDENT_NOT_FOUND(HttpStatus.NOT_FOUND, "RES004", "학생을 찾을 수 없습니다."),
+    //TODO: 
+    DEPARTMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "RES005", "부서를 찾을 수 없습니다."),
+    CLASSROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "RES006", "분반을 찾을 수 없습니다."),
     LESSON_NOT_FOUND(HttpStatus.NOT_FOUND, "RES005", "수업을 찾을 수 없습니다."),
     STUDENT_NOT_ENROLLED(HttpStatus.NOT_FOUND, "RES006", "수업에 등록된 학생이 아닙니다."),
 
@@ -37,6 +40,7 @@ public enum ErrorCode {
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VAL001", "입력값 검증에 실패했습니다."),
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "VAL002", "잘못된 입력값입니다."),
     MISSING_REQUIRED_FIELD(HttpStatus.BAD_REQUEST, "VAL003", "필수 필드가 누락되었습니다."),
+    NO_CHANGES_DETECTED(HttpStatus.BAD_REQUEST, "VAL004", "변경된 값이 없습니다."),
 
     // ============ 비즈니스 로직 관련 (409 Conflict) ============
     DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "BIZ001", "이미 존재하는 리소스입니다."),
@@ -44,6 +48,7 @@ public enum ErrorCode {
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "BIZ003", "이미 사용 중인 이메일입니다."),
     INVALID_STATE(HttpStatus.CONFLICT, "BIZ004", "유효하지 않은 상태입니다."),
     DUPLICATE_STUDENT(HttpStatus.CONFLICT, "BIZ005", "이미 존재하는 학생입니다."),
+    DUPLICATE_CLASSROOM(HttpStatus.CONFLICT, "BIZ006", "이미 존재하는 분반입니다."),
 
     // ============ Role 관련 비즈니스 로직 ============
     ROLE_ALREADY_ASSIGNED(HttpStatus.CONFLICT, "ROLE001", "사용자에게 이미 해당 역할이 부여되어 있습니다."),
