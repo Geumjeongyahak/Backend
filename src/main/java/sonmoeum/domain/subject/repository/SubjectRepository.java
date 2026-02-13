@@ -2,6 +2,8 @@ package sonmoeum.domain.subject.repository;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import sonmoeum.domain.subject.entity.Subject;
 
@@ -15,4 +17,8 @@ public interface SubjectRepository extends JpaRepository<Subject, Long> {
         LocalDate newEndAt,
         LocalDate newStartAt
     );
+
+    @Override
+    @EntityGraph(attributePaths = {"classroom", "teacher"})
+    Optional<Subject> findById(Long subjectId);
 }

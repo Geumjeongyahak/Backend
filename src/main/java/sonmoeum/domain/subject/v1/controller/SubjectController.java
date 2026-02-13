@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,5 +36,14 @@ public class SubjectController {
         log.debug("POST /api/v1/subjects - 과목 등록 요청");
         SubjectDetailResponse response = subjectService.createSubject(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "과목 단건 조회", description = "과목 ID로 과목 정보를 조회합니다.")
+    @GetMapping("/{subjectId}")
+    public ResponseEntity<SubjectDetailResponse> getSubject(@PathVariable Long subjectId) {
+        log.debug("GET /api/v1/subjects/{} - 과목 단건 조회 요청", subjectId);
+        SubjectDetailResponse response = subjectService.getSubject(subjectId);
+        return ResponseEntity.ok(response);
     }
 }

@@ -9,6 +9,7 @@ import sonmoeum.domain.classroom.exception.ClassroomNotFoundException;
 import sonmoeum.domain.classroom.repository.ClassroomRepository;
 import sonmoeum.domain.subject.entity.Subject;
 import sonmoeum.domain.subject.exception.SubjectDuplicateException;
+import sonmoeum.domain.subject.exception.SubjectNotFoundException;
 import sonmoeum.domain.subject.repository.SubjectRepository;
 import sonmoeum.domain.subject.v1.dto.request.CreateSubjectRequest;
 import sonmoeum.domain.subject.v1.dto.response.SubjectDetailResponse;
@@ -71,5 +72,18 @@ public class SubjectService {
         Subject savedSubject = subjectRepository.save(subject);
         log.debug("과목 등록 완료 (id={})", savedSubject.getId());
         return SubjectDetailResponse.from(savedSubject);
+    }
+
+    public SubjectDetailResponse getSubject(Long subjectId) {
+        log.debug("과목 단건 조회 요청 (id={})", subjectId);
+
+        Subject subject = subjectRepository.findById(subjectId)
+            .orElseThrow(() -> {
+                log.info("과목 단건 조회 실패 - 과목을 찾을 수 없습니다. ID: {}", subjectId);
+                return new SubjectNotFoundException(subjectId);
+            });
+
+        log.debug("과목 단건 조회 완료 (id={})", subject.getId());
+        return SubjectDetailResponse.from(subject);
     }
 }
