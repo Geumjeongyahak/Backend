@@ -39,6 +39,7 @@ public enum ErrorCode {
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VAL001", "입력값 검증에 실패했습니다."),
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "VAL002", "잘못된 입력값입니다."),
     MISSING_REQUIRED_FIELD(HttpStatus.BAD_REQUEST, "VAL003", "필수 필드가 누락되었습니다."),
+    INVALID_SUBJECT_SCHEDULE(HttpStatus.BAD_REQUEST, "VAL004", "과목 스케줄이 유효하지 않습니다."),
 
     // ============ 비즈니스 로직 관련 (409 Conflict) ============
     DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "BIZ001", "이미 존재하는 리소스입니다."),

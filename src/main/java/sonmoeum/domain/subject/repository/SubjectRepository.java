@@ -19,6 +19,16 @@ public interface SubjectRepository extends JpaRepository<Subject, Long> {
         LocalDate newStartAt
     );
 
+    // 해당 과목을 제외하고 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재하는지 확인하는 메서드
+    boolean existsByIdNotAndClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqual(
+        Long subjectId,
+        Long classroomId,
+        DayOfWeek dayOfWeek,
+        Integer period,
+        LocalDate newEndAt,
+        LocalDate newStartAt
+    );
+
     @Override
     @EntityGraph(attributePaths = {"classroom", "teacher"})
     Optional<Subject> findById(Long subjectId);

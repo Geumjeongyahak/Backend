@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import sonmoeum.domain.subject.service.SubjectService;
 import sonmoeum.domain.subject.v1.dto.request.CreateSubjectRequest;
+import sonmoeum.domain.subject.v1.dto.request.UpdateSubjectRequest;
 import sonmoeum.domain.subject.v1.dto.response.SubjectDetailResponse;
 
 @Slf4j
@@ -57,5 +59,17 @@ public class SubjectController {
     ) {
         log.debug("GET /api/v1/subjects - 과목 목록 조회 요청 (classroomId={})", classroomId);
         return ResponseEntity.ok(subjectService.getAllSubjects(classroomId));
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @Operation(summary = "과목 부분 수정", description = "과목 정보를 부분 수정합니다.")
+    @PatchMapping("/{subjectId}")
+    public ResponseEntity<SubjectDetailResponse> updateSubject(
+        @PathVariable Long subjectId,
+        @Valid @RequestBody UpdateSubjectRequest request
+    ) {
+        log.debug("PATCH /api/v1/subjects/{} - 과목 부분 수정 요청", subjectId);
+        SubjectDetailResponse response = subjectService.updateSubject(subjectId, request);
+        return ResponseEntity.ok(response);
     }
 }

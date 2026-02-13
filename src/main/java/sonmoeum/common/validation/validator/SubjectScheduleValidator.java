@@ -6,23 +6,43 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import sonmoeum.common.validation.annotation.ValidSubjectSchedule;
 import sonmoeum.domain.subject.v1.dto.request.CreateSubjectRequest;
+import sonmoeum.domain.subject.v1.dto.request.UpdateSubjectRequest;
 
-public class SubjectScheduleValidator implements ConstraintValidator<ValidSubjectSchedule, CreateSubjectRequest> {
+public class SubjectScheduleValidator implements ConstraintValidator<ValidSubjectSchedule, Object> {
 
     @Override
-    public boolean isValid(CreateSubjectRequest value, ConstraintValidatorContext context) {
+    public boolean isValid(Object value, ConstraintValidatorContext context) {
         if (value == null) {
             return true;
         }
 
-        // 단일 필드 @NotNull 등이 먼저 잡도록 구현, null이면 여기서는 통과
-        LocalDate startAt = value.startAt();
-        LocalDate endAt = value.endAt();
-        LocalTime startTime = value.startTime();
-        LocalTime endTime = value.endTime();
+        LocalDate startAt;
+        LocalDate endAt;
+        LocalTime startTime;
+        LocalTime endTime;
+
+        if (value instanceof CreateSubjectRequest req) {
+            startAt = req.startAt();
+            endAt = req.endAt();
+            startTime = req.startTime();
+            endTime = req.endTime();
+        } else if (value instanceof UpdateSubjectRequest req) {
+            startAt = req.startAt();
+            endAt = req.endAt();
+            startTime = req.startTime();
+            endTime = req.endTime();
+        } else {
+            return true;
+        }
 
         // startAt <= endAt
-        if (startAt != null && endAt != null && startAt.isAfter(endAt)) {
+        boolean dateCheck = startAt != null && endAt != null && startAt.isAfter(endAt);
+        // startTime < endTime
+        boolean timeCheck = startTime != null && endTime != null && !startTime.isBefore(endTime);
+
+        if (!dateCheck && !timeCheck) return true;
+
+        if (dateCheck) {
             context.disableDefaultConstraintViolation();
             context.buildConstraintViolationWithTemplate("startAt은 endAt보다 늦을 수 없습니다.")
                 .addPropertyNode("startAt")
@@ -30,8 +50,7 @@ public class SubjectScheduleValidator implements ConstraintValidator<ValidSubjec
             return false;
         }
 
-        // startTime < endTime
-        if (startTime != null && endTime != null && !startTime.isBefore(endTime)) {
+        if (timeCheck) {
             context.disableDefaultConstraintViolation();
             context.buildConstraintViolationWithTemplate("startTime은 endTime보다 빨라야 합니다.")
                 .addPropertyNode("startTime")
