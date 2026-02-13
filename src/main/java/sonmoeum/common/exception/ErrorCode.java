@@ -32,6 +32,7 @@ public enum ErrorCode {
     STUDENT_NOT_FOUND(HttpStatus.NOT_FOUND, "RES004", "학생을 찾을 수 없습니다."),
     LESSON_NOT_FOUND(HttpStatus.NOT_FOUND, "RES005", "수업을 찾을 수 없습니다."),
     STUDENT_NOT_ENROLLED(HttpStatus.NOT_FOUND, "RES006", "수업에 등록된 학생이 아닙니다."),
+    CLASSROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "RES007", "분반을 찾을 수 없습니다."),
 
     // ============ 요청 검증 관련 (400 Bad Request) ============
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VAL001", "입력값 검증에 실패했습니다."),
@@ -44,6 +45,7 @@ public enum ErrorCode {
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "BIZ003", "이미 사용 중인 이메일입니다."),
     INVALID_STATE(HttpStatus.CONFLICT, "BIZ004", "유효하지 않은 상태입니다."),
     DUPLICATE_STUDENT(HttpStatus.CONFLICT, "BIZ005", "이미 존재하는 학생입니다."),
+    DUPLICATE_SUBJECT(HttpStatus.CONFLICT, "BIZ006", "이미 존재하는 과목입니다."),
 
     // ============ Role 관련 비즈니스 로직 ============
     ROLE_ALREADY_ASSIGNED(HttpStatus.CONFLICT, "ROLE001", "사용자에게 이미 해당 역할이 부여되어 있습니다."),
