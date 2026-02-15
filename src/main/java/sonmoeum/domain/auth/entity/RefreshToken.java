@@ -36,7 +36,11 @@ public class RefreshToken {
     }
 
     @Builder
-    public RefreshToken(String token, Long userId, LocalDateTime expiryDate) {
+    public RefreshToken(
+            String token,
+            Long userId,
+            LocalDateTime expiryDate
+    ) {
         this.token = token;
         this.userId = userId;
         this.expiryDate = expiryDate;
