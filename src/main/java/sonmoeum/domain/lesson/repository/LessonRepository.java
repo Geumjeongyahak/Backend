@@ -12,20 +12,20 @@ import sonmoeum.domain.lesson.entity.Lesson;
 public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
     @EntityGraph(attributePaths = {"teacher", "subject"})
-    List<Lesson> findAllByDateBetweenOrderByDateAscPeriodAsc(LocalDate startDate, LocalDate endDate);
+    List<Lesson> findAllByIsDeletedFalseAndDateBetweenOrderByDateAscPeriodAsc(LocalDate startDate, LocalDate endDate);
 
     @EntityGraph(attributePaths = {"teacher", "subject"})
-    List<Lesson> findAllByTeacherIdAndDateBetweenOrderByDateAscPeriodAsc(
+    List<Lesson> findAllByTeacherIdAndIsDeletedFalseAndDateBetweenOrderByDateAscPeriodAsc(
         Long teacherId, LocalDate startDate, LocalDate endDate
     );
 
     @EntityGraph(attributePaths = {"teacher", "subject"})
-    Optional<Lesson> findById(Long lessonId);
+    Optional<Lesson> findByIdAndIsDeletedFalse(Long lessonId);
 
     @EntityGraph(attributePaths = {"teacher", "subject"})
-    Optional<Lesson> findByIdAndTeacherId(Long lessonId, Long teacherId);
+    Optional<Lesson> findByIdAndTeacherIdAndIsDeletedFalse(Long lessonId, Long teacherId);
 
-    boolean existsByTeacherIdAndDateAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
-        Long id, LocalDate date, LocalTime startTime, LocalTime endTime);
+    boolean existsByTeacherIdAndDateAndIsDeletedFalseAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+        Long teacherId, LocalDate date, LocalTime endTime, LocalTime startTime);
 }
 

@@ -40,7 +40,7 @@ public class LessonService {
         Long requesterId,
         CreateLessonRequest request
     ) {
-        log.debug("수업 생성 요청 (requesterId={}})", requesterId);
+        log.debug("수업 생성 요청 (requesterId={})", requesterId);
 
         Subject subject = subjectRepository.findById(request.subjectId())
             .orElseThrow(() -> {
@@ -55,11 +55,11 @@ public class LessonService {
             });
 
         // 같은 teacher + 같은 date 기준 겹치는 시간이 있는지 확인
-        if (lessonRepository.existsByTeacherIdAndDateAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+        if (lessonRepository.existsByTeacherIdAndDateAndIsDeletedFalseAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
             teacher.getId(),
             request.date(),
-            request.startTime(),
-            request.endTime()
+            request.endTime(),
+            request.startTime()
         )) {
             log.info("수업 생성 실패 - 시간대가 겹치는 수업이 존재합니다.");
             throw new LessonDuplicateException("시간대가 겹치는 수업이 존재합니다.");
@@ -83,7 +83,7 @@ public class LessonService {
     public List<LessonSummaryResponse> getAllLessons(LessonRangeRequest request) {
         log.debug("전체 수업 목록 조회 요청");
         List<Lesson> lessonList = lessonRepository
-            .findAllByDateBetweenOrderByDateAscPeriodAsc(request.from(), request.to());
+            .findAllByIsDeletedFalseAndDateBetweenOrderByDateAscPeriodAsc(request.from(), request.to());
         log.debug("전체 수업 목록 조회 완료 - 총 {}개", lessonList.size());
         return lessonList.stream()
             .map(LessonSummaryResponse::from)
@@ -96,7 +96,7 @@ public class LessonService {
     ) {
         log.debug("내 수업 목록 조회 요청");
         List<Lesson> lessonList = lessonRepository
-            .findAllByTeacherIdAndDateBetweenOrderByDateAscPeriodAsc(
+            .findAllByTeacherIdAndIsDeletedFalseAndDateBetweenOrderByDateAscPeriodAsc(
                 userId, request.from(), request.to()
             );
         log.debug("내 수업 목록 조회 완료 - 총 {}개", lessonList.size());
@@ -108,8 +108,8 @@ public class LessonService {
     public LessonDetailResponse getLessonDetail(Long teacherId, Long lessonId, boolean isAdmin) {
         log.debug("수업 상세 조회 요청");
         Optional<Lesson> lessonOpt = isAdmin
-            ? lessonRepository.findById(lessonId)
-            : lessonRepository.findByIdAndTeacherId(lessonId, teacherId);
+            ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
+            : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId);
 
         return lessonOpt
             .map(LessonDetailResponse::from)
@@ -123,8 +123,8 @@ public class LessonService {
     public LessonNoteResponse getNote(Long teacherId, Long lessonId, boolean isAdmin) {
         log.debug("수업 노트 조회 요청 (lessonId={})", lessonId);
         Lesson lesson = (isAdmin
-            ? lessonRepository.findById(lessonId)
-            : lessonRepository.findByIdAndTeacherId(lessonId, teacherId)
+            ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
+            : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> new LessonNotFoundException(lessonId));
 
         log.debug("수업 노트 조회 완료 (lessonId={})", lessonId);
@@ -140,8 +140,8 @@ public class LessonService {
     ) {
         log.debug("교사 출석 처리 요청 (status={})", status);
         Lesson lesson = (isAdmin
-            ? lessonRepository.findById(lessonId)
-            : lessonRepository.findByIdAndTeacherId(lessonId, teacherId)
+            ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
+            : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> {
             log.warn("교사 출석 처리 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
             return new LessonNotFoundException(lessonId);
@@ -160,8 +160,8 @@ public class LessonService {
     ) {
         log.debug("수업 상태 변경 요청 (lessonId={})", lessonId);
         Lesson lesson = (isAdmin
-            ? lessonRepository.findById(lessonId)
-            : lessonRepository.findByIdAndTeacherId(lessonId, teacherId)
+            ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
+            : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> {
             log.warn("수업 상태 변경 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
             return new LessonNotFoundException(lessonId);
@@ -180,8 +180,8 @@ public class LessonService {
     ) {
         log.debug("수업 노트 업데이트 요청 (lessonId={})", lessonId);
         Lesson lesson = (isAdmin
-            ? lessonRepository.findById(lessonId)
-            : lessonRepository.findByIdAndTeacherId(lessonId, teacherId)
+            ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
+            : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> {
             log.warn("수업 노트 업데이트 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
             return new LessonNotFoundException(lessonId);
