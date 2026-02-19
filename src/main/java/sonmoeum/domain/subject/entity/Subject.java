@@ -69,6 +69,9 @@ public class Subject extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
     public Subject(
             Classroom classroom,
             User teacher,
@@ -95,13 +98,37 @@ public class Subject extends BaseEntity {
     }
 
     public void update(
-            String name,
-            User teacher,
-            String description
+        Classroom classroom,
+        User teacher,
+        String name,
+        LocalDate startAt,
+        LocalDate endAt,
+        Integer times,
+        DayOfWeek dayOfWeek,
+        LocalTime startTime,
+        LocalTime endTime,
+        Integer period,
+        String description
     ) {
-        if (name != null) this.name = name;
-        if (teacher != null) this.teacher = teacher;
-        if (description != null) this.description = description;
+        this.classroom = classroom;
+        this.teacher = teacher;
+        this.name = name;
+        this.startAt = startAt;
+        this.endAt = endAt;
+        this.times = times;
+        this.dayOfWeek = dayOfWeek;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.period = period;
+        this.description = description;
+    }
+
+    public void deactivate() {
+        this.isActive = false;
+    }
+
+    public void activate() {
+        this.isActive = true;
     }
 }
 

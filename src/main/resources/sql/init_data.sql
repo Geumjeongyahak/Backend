@@ -1,7 +1,6 @@
 -- username : admin1234, password : admin1234
 INSERT INTO users (id, username, name, password_hash) VALUES
     (1, 'admin1234', 'Administrator', '$2a$10$A0Av/dPBUz5uoDmp0Z/2S.dsMzOWFL5gLK7CrXmQp6Rw2vqWulapi');
-ALTER SEQUENCE users_id_seq RESTART WITH 2;
 
 -- username : teacher01, password : teacher01
 INSERT INTO users (id, username, name, password_hash) VALUES
@@ -10,6 +9,7 @@ INSERT INTO users (id, username, name, password_hash) VALUES
 -- username : teacher02, password : teacher02
 INSERT INTO users (id, username, name, password_hash) VALUES
     (3, 'teacher02', '김철수', '$2a$12$jNEpPdWPB8WX6kOR/t9cru3Lz7WwZRw3KHfgoRJBg0ddWUFnymr/O');
+ALTER SEQUENCE users_id_seq RESTART WITH 4;
 
 INSERT INTO roles (id, name, description) VALUES
     (1, 'ROLE_ADMIN', '기본 권한, 모든 권한을 가진 관리자'),
@@ -46,6 +46,7 @@ VALUES
     (1, '벚꽃반', 'WEEKDAY', '기초 한글'),
     (2, '장미반', 'WEEKDAY', '초등 저학년 수준'),
     (3, '스마트폰반', 'WEEKEND', '스마트폰 기능/앱 사용');
+ALTER SEQUENCE classrooms_id_seq RESTART WITH 4;
 
 INSERT INTO subjects
 (id, class_id, teacher_id, name, start_at, end_at, times, day_of_week, start_time, end_time, period, description)
@@ -53,6 +54,7 @@ VALUES
     (1, 1, 2, '한글 기초', '2026-02-01', '2026-06-30', 20, 'FRIDAY',  '19:20:00', '20:00:00', 1, '기초 한글 수업'),
     (2, 2, 3, '수학 기초', '2026-02-01', '2026-06-30', 20, 'FRIDAY',  '20:10:00', '20:50:00', 2, '기초 수학 수업'),
     (3, 3, 2, '스마트폰 활용', '2026-02-01', '2026-06-30', 12, 'SATURDAY','19:20:00', '20:00:00', 1, '스마트폰 사용법');
+ALTER SEQUENCE subjects_id_seq RESTART WITH 4;
 
 INSERT INTO lessons
 (id, subject_id, teacher_id, period, date, start_time, end_time, status, teacher_attendance)
@@ -63,11 +65,13 @@ VALUES
     (2, 2, 3, 2, '2026-02-13', '20:10:00', '20:50:00', 'SCHEDULED', 'ABSENT'),
     -- 2026-02-14(토) 스마트폰반 1교시
     (3, 3, 2, 1, '2026-02-14', '19:20:00', '20:00:00', 'SCHEDULED', 'ABSENT');
+ALTER SEQUENCE lessons_id_seq RESTART WITH 4;
 
 INSERT INTO students (id, name, phone_number, description, status)
 VALUES
     (1, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),
     (2, '박민수', '010-4444-4444', '기초반', 'ENROLLED');
+ALTER SEQUENCE students_id_seq RESTART WITH 3;
 
 INSERT INTO student_attendances (lesson_id, student_id, status, memo)
 VALUES
