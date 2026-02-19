@@ -9,12 +9,20 @@ import org.springframework.transaction.annotation.Transactional;
 import sonmoeum.domain.lesson.entity.Lesson;
 import sonmoeum.domain.lesson.enums.LessonStatus;
 import sonmoeum.domain.lesson.enums.TeacherAttendanceStatus;
+import sonmoeum.domain.lesson.exception.LessonDuplicateException;
 import sonmoeum.domain.lesson.exception.LessonNotFoundException;
 import sonmoeum.domain.lesson.repository.LessonRepository;
+import sonmoeum.domain.lesson.v1.dto.request.CreateLessonRequest;
 import sonmoeum.domain.lesson.v1.dto.request.LessonRangeRequest;
 import sonmoeum.domain.lesson.v1.dto.response.LessonDetailResponse;
 import sonmoeum.domain.lesson.v1.dto.response.LessonNoteResponse;
 import sonmoeum.domain.lesson.v1.dto.response.LessonSummaryResponse;
+import sonmoeum.domain.subject.entity.Subject;
+import sonmoeum.domain.subject.exception.SubjectNotFoundException;
+import sonmoeum.domain.subject.repository.SubjectRepository;
+import sonmoeum.domain.users.entity.User;
+import sonmoeum.domain.users.exception.UserNotFoundException;
+import sonmoeum.domain.users.repository.UserRepository;
 
 @Slf4j
 @Service
@@ -23,6 +31,54 @@ import sonmoeum.domain.lesson.v1.dto.response.LessonSummaryResponse;
 public class LessonService {
 
     private final LessonRepository lessonRepository;
+    private final SubjectRepository subjectRepository;
+    private final UserRepository userRepository;
+
+
+    @Transactional
+    public LessonDetailResponse createLesson(
+        Long requesterId,
+        CreateLessonRequest request
+    ) {
+        log.debug("수업 생성 요청 (requesterId={}})", requesterId);
+
+        Subject subject = subjectRepository.findById(request.subjectId())
+            .orElseThrow(() -> {
+                log.info("수업 생성 실패 - 과목을 찾을 수 없습니다. ID: {}", request.subjectId());
+                return new SubjectNotFoundException(request.subjectId());
+            });
+
+        User teacher = userRepository.findById(request.teacherId())
+            .orElseThrow(() -> {
+                log.info("수업 생성 실패 - 교사를 찾을 수 없습니다. ID: {}", request.teacherId());
+                return new UserNotFoundException(request.teacherId());
+            });
+
+        // 같은 teacher + 같은 date 기준 겹치는 시간이 있는지 확인
+        if (lessonRepository.existsByTeacherIdAndDateAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+            teacher.getId(),
+            request.date(),
+            request.startTime(),
+            request.endTime()
+        )) {
+            log.info("수업 생성 실패 - 시간대가 겹치는 수업이 존재합니다.");
+            throw new LessonDuplicateException("시간대가 겹치는 수업이 존재합니다.");
+        }
+
+        Lesson lesson = new Lesson(
+            subject,
+            teacher,
+            request.date(),
+            request.startTime(),
+            request.endTime(),
+            request.period()
+        );
+
+        Lesson saved = lessonRepository.save(lesson);
+        log.debug("수업 생성 완료 (lessonId={})", saved.getId());
+
+        return LessonDetailResponse.from(saved);
+    }
 
     public List<LessonSummaryResponse> getAllLessons(LessonRangeRequest request) {
         log.debug("전체 수업 목록 조회 요청");

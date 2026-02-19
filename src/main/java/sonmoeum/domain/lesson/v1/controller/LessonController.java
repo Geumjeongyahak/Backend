@@ -3,9 +3,11 @@ package sonmoeum.domain.lesson.v1.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.net.URI;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,13 +15,16 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import sonmoeum.common.security.service.CustomUserDetails;
 import sonmoeum.domain.lesson.service.LessonService;
 import sonmoeum.domain.lesson.service.StudentAttendanceService;
+import sonmoeum.domain.lesson.v1.dto.request.CreateLessonRequest;
 import sonmoeum.domain.lesson.v1.dto.request.LessonRangeRequest;
 import sonmoeum.domain.lesson.v1.dto.request.UpdateLessonNoteRequest;
 import sonmoeum.domain.lesson.v1.dto.request.UpdateLessonStatusRequest;
@@ -39,6 +44,22 @@ public class LessonController {
 
     private final LessonService lessonService;
     private final StudentAttendanceService studentAttendanceService;
+
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @Operation(summary = "수업 생성", description = "수업을 생성합니다.")
+    @PostMapping
+    public ResponseEntity<LessonDetailResponse> createLesson(
+        @Valid @RequestBody CreateLessonRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("POST /api/v1/lessons - 수업 생성 요청 (subjectId={}, teacherId={}, date={}, period={})",
+            request.subjectId(), request.teacherId(), request.date(), request.period());
+        LessonDetailResponse response = lessonService.createLesson(
+            userDetails.getUserId(),
+            request
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
 
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "전체 수업 조회", description = "전체 수업을 조회합니다.")
