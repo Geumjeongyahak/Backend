@@ -191,4 +191,18 @@ public class LessonService {
         log.debug("수업 노트 업데이트 완료 (lessonId={})", lessonId);
         return LessonNoteResponse.from(lesson);
     }
+
+    @Transactional
+    public void deleteLesson(Long lessonId) {
+        log.debug("수업 삭제 요청 (lessonId={})", lessonId);
+        Lesson lesson = lessonRepository.findById(lessonId)
+            .orElseThrow(() -> {
+                log.info("수업 삭제 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
+                return new LessonNotFoundException(lessonId);
+            });
+        if (!lesson.getIsDeleted()) {
+            lesson.softDelete();
+        }
+        log.debug("수업 삭제 완료 (lessonId={})", lessonId);
+    }
 }
