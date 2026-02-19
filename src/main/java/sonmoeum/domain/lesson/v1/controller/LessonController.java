@@ -28,6 +28,7 @@ import sonmoeum.domain.lesson.service.StudentAttendanceService;
 import sonmoeum.domain.lesson.v1.dto.request.CreateLessonRequest;
 import sonmoeum.domain.lesson.v1.dto.request.LessonRangeRequest;
 import sonmoeum.domain.lesson.v1.dto.request.UpdateLessonNoteRequest;
+import sonmoeum.domain.lesson.v1.dto.request.UpdateLessonRequest;
 import sonmoeum.domain.lesson.v1.dto.request.UpdateLessonStatusRequest;
 import sonmoeum.domain.lesson.v1.dto.request.UpdateStudentAttendancesRequest;
 import sonmoeum.domain.lesson.v1.dto.request.UpdateTeacherAttendanceRequest;
@@ -128,6 +129,18 @@ public class LessonController {
         LessonNoteResponse response = lessonService.getNote(
             userDetails.getUserId(), lessonId, isAdmin
         );
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @Operation(summary = "수업 수정", description = "수업을 수정합니다.")
+    @PatchMapping("/{lessonId}")
+    public ResponseEntity<LessonDetailResponse> updateLesson(
+        @PathVariable Long lessonId,
+        @RequestBody UpdateLessonRequest request
+    ) {
+        log.debug("PATCH /api/v1/lessons/{} - 수업 수정 요청", lessonId);
+        LessonDetailResponse response = lessonService.updateLesson(lessonId, request);
         return ResponseEntity.ok(response);
     }
 

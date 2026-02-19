@@ -77,6 +77,22 @@ public class Lesson extends BaseEntity {
         this.teacherAttendance = TeacherAttendanceStatus.ABSENT;
     }
 
+    public void update(
+        Subject subject,
+        User teacher,
+        LocalDate newDate,
+        LocalTime newStart,
+        LocalTime newEnd,
+        Integer newPeriod
+    ) {
+        this.subject = subject;
+        this.teacher = teacher;
+        this.date = newDate;
+        this.startTime = newStart;
+        this.endTime = newEnd;
+        this.period = newPeriod;
+    }
+
     public void updateTeacherAttendance(TeacherAttendanceStatus teacherAttendance) {
         this.teacherAttendance = teacherAttendance;
     }

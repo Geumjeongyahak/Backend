@@ -1,5 +1,7 @@
 package sonmoeum.domain.lesson.service;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -9,11 +11,13 @@ import org.springframework.transaction.annotation.Transactional;
 import sonmoeum.domain.lesson.entity.Lesson;
 import sonmoeum.domain.lesson.enums.LessonStatus;
 import sonmoeum.domain.lesson.enums.TeacherAttendanceStatus;
+import sonmoeum.domain.lesson.exception.InvalidLessonScheduleException;
 import sonmoeum.domain.lesson.exception.LessonDuplicateException;
 import sonmoeum.domain.lesson.exception.LessonNotFoundException;
 import sonmoeum.domain.lesson.repository.LessonRepository;
 import sonmoeum.domain.lesson.v1.dto.request.CreateLessonRequest;
 import sonmoeum.domain.lesson.v1.dto.request.LessonRangeRequest;
+import sonmoeum.domain.lesson.v1.dto.request.UpdateLessonRequest;
 import sonmoeum.domain.lesson.v1.dto.response.LessonDetailResponse;
 import sonmoeum.domain.lesson.v1.dto.response.LessonNoteResponse;
 import sonmoeum.domain.lesson.v1.dto.response.LessonSummaryResponse;
@@ -129,6 +133,69 @@ public class LessonService {
 
         log.debug("수업 노트 조회 완료 (lessonId={})", lessonId);
         return LessonNoteResponse.from(lesson);
+    }
+
+    @Transactional
+    public LessonDetailResponse updateLesson(Long lessonId, UpdateLessonRequest request) {
+        log.debug("수업 수정 요청 (lessonId={})", lessonId);
+        Lesson lesson = lessonRepository.findByIdAndIsDeletedFalse(lessonId)
+            .orElseThrow(() -> {
+                log.info("수업 수정 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
+                return new LessonNotFoundException(lessonId);
+            });
+
+        // 최종 값
+        Long newSubjectId = request.subjectId() != null ? request.subjectId() : lesson.getSubject().getId();
+        Long newTeacherId = request.teacherId() != null ? request.teacherId() : lesson.getTeacher().getId();
+        LocalDate newDate = request.date() != null ? request.date() : lesson.getDate();
+        LocalTime newStart = request.startTime() != null ? request.startTime() : lesson.getStartTime();
+        LocalTime newEnd = request.endTime() != null ? request.endTime() : lesson.getEndTime();
+        Integer newPeriod = request.period() != null ? request.period() : lesson.getPeriod();
+
+        // 시간 유효성 검증
+        if (!newStart.isBefore(newEnd)) {
+            log.info("수업 수정 실패 - 시작 시간은 종료 시간보다 빨라야 합니다.");
+            throw new InvalidLessonScheduleException("시작 시간은 종료 시간보다 빨라야 합니다.");
+        }
+
+        // 중복 검사 (merge 기준, 자기 자신 제외)
+        boolean overlap = lessonRepository
+            .existsByTeacherIdAndDateAndIsDeletedFalseAndIdNotAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+                newTeacherId,
+                newDate,
+                lesson.getId(),
+                newEnd,
+                newStart
+            );
+
+        if (overlap) {
+            log.info("수업 수정 실패 - 시간대가 겹치는 수업이 존재합니다.");
+            throw new LessonDuplicateException("시간대가 겹치는 수업이 존재합니다.");
+        }
+
+        // 연관 엔티티가 바뀌는 경우만 조회
+        Subject subject = lesson.getSubject();
+        if (!subject.getId().equals(newSubjectId)) {
+            subject = subjectRepository.findById(newSubjectId)
+                .orElseThrow(() -> {
+                    log.info("수업 수정 실패 - 과목을 찾을 수 없습니다. ID: {}", newSubjectId);
+                    return new SubjectNotFoundException(newSubjectId);
+                });
+        }
+
+        User teacher = lesson.getTeacher();
+        if (!teacher.getId().equals(newTeacherId)) {
+            teacher = userRepository.findById(newTeacherId)
+                .orElseThrow(() -> {
+                    log.info("수업 수정 실패 - 교사를 찾을 수 없습니다. ID: {}", newTeacherId);
+                    return new UserNotFoundException(newTeacherId);
+                });
+        }
+
+        // 변경 반영
+        lesson.update(subject, teacher, newDate, newStart, newEnd, newPeriod);
+        log.debug("수업 수정 완료 (lessonId={})", lessonId);
+        return LessonDetailResponse.from(lesson);
     }
 
     @Transactional

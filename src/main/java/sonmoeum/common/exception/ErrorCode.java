@@ -43,6 +43,7 @@ public enum ErrorCode {
     MISSING_REQUIRED_FIELD(HttpStatus.BAD_REQUEST, "VAL003", "필수 필드가 누락되었습니다."),
     NO_CHANGES_DETECTED(HttpStatus.BAD_REQUEST, "VAL004", "변경된 값이 없습니다."),
     INVALID_SUBJECT_SCHEDULE(HttpStatus.BAD_REQUEST, "VAL005", "과목 스케줄이 유효하지 않습니다."),
+    INVALID_LESSON_SCHEDULE(HttpStatus.BAD_REQUEST, "VAL006", "수업 스케줄이 유효하지 않습니다."),
 
     // ============ 비즈니스 로직 관련 (409 Conflict) ============
     DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "BIZ001", "이미 존재하는 리소스입니다."),
