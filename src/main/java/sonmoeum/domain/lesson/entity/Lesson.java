@@ -56,6 +56,9 @@ public class Lesson extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String note;
 
+    @Column(nullable = false)
+    private Boolean isDeleted = false;
+
     public Lesson(
         Subject subject,
         User teacher,
@@ -74,6 +77,22 @@ public class Lesson extends BaseEntity {
         this.teacherAttendance = TeacherAttendanceStatus.ABSENT;
     }
 
+    public void update(
+        Subject subject,
+        User teacher,
+        LocalDate newDate,
+        LocalTime newStart,
+        LocalTime newEnd,
+        Integer newPeriod
+    ) {
+        this.subject = subject;
+        this.teacher = teacher;
+        this.date = newDate;
+        this.startTime = newStart;
+        this.endTime = newEnd;
+        this.period = newPeriod;
+    }
+
     public void updateTeacherAttendance(TeacherAttendanceStatus teacherAttendance) {
         this.teacherAttendance = teacherAttendance;
     }
@@ -84,6 +103,10 @@ public class Lesson extends BaseEntity {
 
     public void updateNote(String note) {
         this.note = note;
+    }
+
+    public void softDelete() {
+        this.isDeleted = true;
     }
 
     public void changeTeacher(User newTeacher) {

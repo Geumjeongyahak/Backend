@@ -43,6 +43,7 @@ public enum ErrorCode {
     MISSING_REQUIRED_FIELD(HttpStatus.BAD_REQUEST, "VAL003", "필수 필드가 누락되었습니다."),
     NO_CHANGES_DETECTED(HttpStatus.BAD_REQUEST, "VAL004", "변경된 값이 없습니다."),
     INVALID_SUBJECT_SCHEDULE(HttpStatus.BAD_REQUEST, "VAL005", "과목 스케줄이 유효하지 않습니다."),
+    INVALID_LESSON_SCHEDULE(HttpStatus.BAD_REQUEST, "VAL006", "수업 스케줄이 유효하지 않습니다."),
 
     // ============ 비즈니스 로직 관련 (409 Conflict) ============
     DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "BIZ001", "이미 존재하는 리소스입니다."),
@@ -52,6 +53,7 @@ public enum ErrorCode {
     DUPLICATE_STUDENT(HttpStatus.CONFLICT, "BIZ005", "이미 존재하는 학생입니다."),
     DUPLICATE_CLASSROOM(HttpStatus.CONFLICT, "BIZ006", "이미 존재하는 분반입니다."),
     DUPLICATE_SUBJECT(HttpStatus.CONFLICT, "BIZ007", "이미 존재하는 과목입니다."),
+    DUPLICATE_LESSON(HttpStatus.CONFLICT, "BIZ008", "이미 존재하는 수업입니다."),
 
     // ============ Role 관련 비즈니스 로직 ============
     ROLE_ALREADY_ASSIGNED(HttpStatus.CONFLICT, "ROLE001", "사용자에게 이미 해당 역할이 부여되어 있습니다."),

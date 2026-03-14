@@ -170,7 +170,6 @@ public class SubjectService {
             log.info("과목 수정 실패 - 같은 분반에서 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재합니다.");
             throw new SubjectDuplicateException("같은 분반에서 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재합니다.");
         }
-        log.info("[PATCH-CONFLICT] subjectId={}, conflict={}", subjectId, conflict);
 
         // 실제 반영
         subject.update(

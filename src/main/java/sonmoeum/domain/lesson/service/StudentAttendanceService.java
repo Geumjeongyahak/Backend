@@ -29,8 +29,8 @@ public class StudentAttendanceService {
     public List<StudentAttendanceResponse> getStudentAttendances(Long teacherId, Long lessonId, boolean isAdmin) {
         log.debug("학생 출석부 조회 요청 (lessonId={})", lessonId);
         Lesson lesson = (isAdmin
-            ? lessonRepository.findById(lessonId)
-            : lessonRepository.findByIdAndTeacherId(lessonId, teacherId)
+            ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
+            : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> {
             log.warn("학생 출석부 조회 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
             return new LessonNotFoundException(lessonId);
@@ -51,8 +51,8 @@ public class StudentAttendanceService {
     ) {
         log.debug("학생 출석 처리 요청 (lessonId={})", lessonId);
         Lesson lesson = (isAdmin
-            ? lessonRepository.findById(lessonId)
-            : lessonRepository.findByIdAndTeacherId(lessonId, teacherId)
+            ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
+            : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> {
             log.warn("학생 출석 처리 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
             return new LessonNotFoundException(lessonId);
