@@ -63,6 +63,11 @@ public enum ErrorCode {
     // ============ 부서 관련 비즈니스 로직 ============
     CANNOT_DELETE_DEPARTMENT_IN_USE(HttpStatus.BAD_REQUEST, "DEPT001", "해당 부서가 사용자에게 할당되어 있어 삭제할 수 없습니다."),
 
+    // ============ 요청(Request) 관련 ============
+    REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "REQ001", "요청을 찾을 수 없습니다."),
+    REQUEST_ALREADY_PROCESSED(HttpStatus.CONFLICT, "REQ002", "이미 처리된 요청입니다."),
+    REQUEST_FORBIDDEN(HttpStatus.FORBIDDEN, "REQ003", "해당 요청에 대한 권한이 없습니다."),
+
     // ============ 서버 에러 (500 Internal Server Error) ============
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SYS001", "서버 내부 오류가 발생했습니다."),
     DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SYS002", "데이터베이스 오류가 발생했습니다."),
