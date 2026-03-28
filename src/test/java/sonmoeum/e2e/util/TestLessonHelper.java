@@ -12,7 +12,8 @@ import org.springframework.stereotype.Component;
 /**
  * Request 도메인 E2E 테스트에서 보조 도메인(과목/수업)을 생성·조회·삭제하는 헬퍼.
  * <p>
- * - Subject: SUBJECT_SEQ(100번~)로 name·dayOfWeek·period를 자동 조합 → 충돌 방지
+ * - Subject: SUBJECT_SEQ(100번~)로 name·dayOfWeek·period를 자동 조합하고, 날짜 범위를
+ *   2050-01-01 기준으로 seq마다 1일씩 증가시켜 classroom+dayOfWeek+period 중복 충돌 방지.
  * - Lesson: DATE_OFFSET으로 날짜를 자동 증가 → 동일 teacher+date 충돌 방지
  * </p>
  */
@@ -21,6 +22,7 @@ public class TestLessonHelper {
 
     private static final AtomicInteger SUBJECT_SEQ = new AtomicInteger(100);
     private static final AtomicInteger DATE_OFFSET = new AtomicInteger(0);
+    private static final LocalDate SUBJECT_BASE_DATE = LocalDate.of(2050, 1, 1);
     private static final LocalDate LESSON_BASE_DATE = LocalDate.of(2026, 8, 1);
     private static final String[] DAYS = {"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"};
 
@@ -40,12 +42,15 @@ public class TestLessonHelper {
         String dayOfWeek = DAYS[seq % DAYS.length];
         int period = (seq % 6) + 1;
 
+        // seq마다 고유한 단일-날짜 범위 사용 → classroom+dayOfWeek+period 중복 방지
+        String uniqueDate = SUBJECT_BASE_DATE.plusDays(seq).toString();
+
         Map<String, Object> req = Map.ofEntries(
             entry("classroomId", classroomId),
             entry("teacherId", teacherId),
             entry("name", "Request테스트과목-" + seq),
-            entry("startAt", "2026-03-02"),
-            entry("endAt", "2026-12-31"),
+            entry("startAt", uniqueDate),
+            entry("endAt", uniqueDate),
             entry("times", 12),
             entry("dayOfWeek", dayOfWeek),
             entry("startTime", "09:00:00"),
@@ -98,6 +103,16 @@ public class TestLessonHelper {
             .extract()
             .jsonPath()
             .getLong("lessonId");
+    }
+
+    /** 과목을 비활성화(소프트 삭제)한다 (cleanup용). */
+    public void deleteSubject(String authHeader, Long subjectId) {
+        given()
+            .basePath("/api/v1/subjects")
+            .header("Authorization", authHeader)
+            .delete("/{id}", subjectId)
+            .then()
+            .statusCode(204);
     }
 
     /** 수업을 삭제한다 (cleanup용). */

@@ -58,6 +58,7 @@ class AbsenceRequestReadTest extends RequestBaseTest {
         if (requestIdByVolunteer2 != null) absenceRequestRepository.deleteById(requestIdByVolunteer2);
         if (lessonIdForVolunteer1 != null) lessonHelper.deleteLesson(getAuthHeader(adminToken), lessonIdForVolunteer1);
         if (lessonIdForVolunteer2 != null) lessonHelper.deleteLesson(getAuthHeader(adminToken), lessonIdForVolunteer2);
+        if (subjectId != null) lessonHelper.deleteSubject(getAuthHeader(adminToken), subjectId);
     }
 
     // ── 목록 조회 ─────────────────────────────────────────

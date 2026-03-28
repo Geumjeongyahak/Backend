@@ -29,6 +29,7 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
     @Autowired
     private AbsenceRequestRepository absenceRequestRepository;
 
+    private Long currentSubjectId;
     private Long currentLessonId;
     private Long currentRequestId;
 
@@ -44,16 +45,20 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
             lessonHelper.deleteLesson(getAuthHeader(adminToken), currentLessonId);
             currentLessonId = null;
         }
+        if (currentSubjectId != null) {
+            lessonHelper.deleteSubject(getAuthHeader(adminToken), currentSubjectId);
+            currentSubjectId = null;
+        }
     }
 
     // ── 준비 헬퍼 ─────────────────────────────────────────
 
     /** 독립 수업 + 결석 요청을 생성하고 요청 ID를 반환한다. */
     private Long setupPendingRequest(long teacherId) {
-        Long subjectId = lessonHelper.createSubjectAndGetId(
+        currentSubjectId = lessonHelper.createSubjectAndGetId(
             getAuthHeader(adminToken), CLASSROOM_ID, teacherId);
         currentLessonId = lessonHelper.createLessonAndGetId(
-            getAuthHeader(adminToken), subjectId, teacherId);
+            getAuthHeader(adminToken), currentSubjectId, teacherId);
         return createAbsenceRequest(getAuthHeader(volunteerToken), currentLessonId, "결석 사유");
     }
 

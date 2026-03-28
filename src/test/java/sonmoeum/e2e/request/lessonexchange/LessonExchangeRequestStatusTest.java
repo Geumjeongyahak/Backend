@@ -30,6 +30,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     @Autowired
     private LessonExchangeRequestRepository lessonExchangeRequestRepository;
 
+    private Long currentSubjectId;
     private Long currentLessonId;
     private Long currentRequestId;
 
@@ -45,13 +46,17 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             lessonHelper.deleteLesson(getAuthHeader(adminToken), currentLessonId);
             currentLessonId = null;
         }
+        if (currentSubjectId != null) {
+            lessonHelper.deleteSubject(getAuthHeader(adminToken), currentSubjectId);
+            currentSubjectId = null;
+        }
     }
 
     private Long setupPendingRequest() {
-        Long subjectId = lessonHelper.createSubjectAndGetId(
+        currentSubjectId = lessonHelper.createSubjectAndGetId(
             getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID);
         currentLessonId = lessonHelper.createLessonAndGetId(
-            getAuthHeader(adminToken), subjectId, TEACHER_ID);
+            getAuthHeader(adminToken), currentSubjectId, TEACHER_ID);
         return createLessonExchangeRequest(
             getAuthHeader(volunteerToken), currentLessonId, "교환 요청", "수업 교환 부탁드립니다.");
     }
@@ -261,6 +266,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
         } finally {
             lessonExchangeRequestRepository.deleteById(request2Id);
             lessonHelper.deleteLesson(getAuthHeader(adminToken), lesson2Id);
+            lessonHelper.deleteSubject(getAuthHeader(adminToken), subjectId2);
         }
     }
 

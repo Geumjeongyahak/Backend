@@ -35,6 +35,10 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             lessonHelper.deleteLesson(getAuthHeader(adminToken), createdLessonId);
             createdLessonId = null;
         }
+        if (createdSubjectId != null) {
+            lessonHelper.deleteSubject(getAuthHeader(adminToken), createdSubjectId);
+            createdSubjectId = null;
+        }
     }
 
     // ── 성공 ──────────────────────────────────────────────

@@ -22,6 +22,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
     @Autowired
     private LessonExchangeRequestRepository lessonExchangeRequestRepository;
 
+    private Long currentSubjectId;
     private Long currentLessonId;
     private Long currentRequestId;
 
@@ -35,6 +36,10 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             lessonHelper.deleteLesson(getAuthHeader(adminToken), currentLessonId);
             currentLessonId = null;
         }
+        if (currentSubjectId != null) {
+            lessonHelper.deleteSubject(getAuthHeader(adminToken), currentSubjectId);
+            currentSubjectId = null;
+        }
     }
 
     // ── 성공 ──────────────────────────────────────────────
@@ -42,10 +47,10 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
     @Test
     @DisplayName("인증된 봉사자가 수업 교환 요청 생성 → 201, 필드 검증")
     void createRequest_authenticated_returns201() {
-        Long subjectId = lessonHelper.createSubjectAndGetId(
+        currentSubjectId = lessonHelper.createSubjectAndGetId(
             getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID);
         currentLessonId = lessonHelper.createLessonAndGetId(
-            getAuthHeader(adminToken), subjectId, TEACHER_ID);
+            getAuthHeader(adminToken), currentSubjectId, TEACHER_ID);
 
         currentRequestId = given()
             .basePath("/api/v1/lesson-exchange-requests")
