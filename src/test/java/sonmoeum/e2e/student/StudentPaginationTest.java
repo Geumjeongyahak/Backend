@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import sonmoeum.domain.lesson.repository.StudentAttendanceRepository;
 import sonmoeum.domain.student.repository.StudentRepository;
 import sonmoeum.domain.student.v1.dto.request.CreateStudentRequest;
 import sonmoeum.domain.student.v1.dto.response.StudentResponse;
@@ -23,12 +24,16 @@ import sonmoeum.domain.student.v1.dto.response.StudentResponse;
 class StudentPaginationTest extends StudentBaseTest {
 
     @Autowired
+    private StudentAttendanceRepository studentAttendanceRepository;
+
+    @Autowired
     private StudentRepository studentRepository;
 
     @BeforeEach
     @Override
     protected void setUp() {
         super.setUp();
+        studentAttendanceRepository.deleteAll();
         studentRepository.deleteAll();
         createTestStudents(15);
     }

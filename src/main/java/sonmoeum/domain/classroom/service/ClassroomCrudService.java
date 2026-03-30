@@ -83,7 +83,7 @@ public class ClassroomCrudService {
         Classroom classroom = getClassroomWithoutDeleted(id);
 
         if (request.name() != null) {
-            if (classroomRepository.existsByIdNotAndIsDeleted(id, false)) {
+            if (classroomRepository.existsByNameAndIdNot(request.name(), id)) {
                 log.info("분반 수정 실패 - 중복된 이름: {}", request.name());
                 throw new DuplicateResourceException(ErrorCode.DUPLICATE_CLASSROOM);
             }
