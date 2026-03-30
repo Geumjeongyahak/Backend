@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import sonmoeum.common.security.service.CustomUserDetails;
 import sonmoeum.domain.request.enums.RequestStatus;
 import sonmoeum.domain.request.service.SubjectExchangeRequestService;
+import sonmoeum.domain.request.v1.dto.request.ApproveSubjectExchangeRequest;
 import sonmoeum.domain.request.v1.dto.request.CreateSubjectExchangeRequestRequest;
 import sonmoeum.domain.request.v1.dto.request.RejectRequestRequest;
 import sonmoeum.domain.request.v1.dto.response.SubjectExchangeRequestResponse;
@@ -81,11 +82,12 @@ public class SubjectExchangeRequestController {
     @PatchMapping("/{requestId}/approve")
     public ResponseEntity<SubjectExchangeRequestResponse> approveSubjectExchangeRequest(
         @PathVariable Long requestId,
+        @Valid @RequestBody ApproveSubjectExchangeRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PATCH /api/v1/subject-exchange-requests/{}/approve - 과목 교환 요청 승인", requestId);
         SubjectExchangeRequestResponse response = subjectExchangeRequestService.approveSubjectExchangeRequest(
-            userDetails.getUserId(), requestId
+            userDetails.getUserId(), requestId, request.exchangeWithUserId()
         );
         return ResponseEntity.ok(response);
     }

@@ -54,6 +54,8 @@ class SubjectExchangeRequestStatusTest extends RequestBaseTest {
         given()
             .basePath("/api/v1/subject-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("exchangeWithUserId", TEACHER2_ID))
             .patch("/{id}/approve", currentRequestId)
             .then()
             .statusCode(200)
@@ -69,11 +71,15 @@ class SubjectExchangeRequestStatusTest extends RequestBaseTest {
 
         given().basePath("/api/v1/subject-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("exchangeWithUserId", TEACHER2_ID))
             .patch("/{id}/approve", currentRequestId)
             .then().statusCode(200);
 
         given().basePath("/api/v1/subject-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("exchangeWithUserId", TEACHER2_ID))
             .patch("/{id}/approve", currentRequestId)
             .then().statusCode(409);
     }
@@ -86,6 +92,8 @@ class SubjectExchangeRequestStatusTest extends RequestBaseTest {
         given()
             .basePath("/api/v1/subject-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("exchangeWithUserId", TEACHER2_ID))
             .patch("/{id}/approve", currentRequestId)
             .then()
             .statusCode(403);
@@ -97,6 +105,8 @@ class SubjectExchangeRequestStatusTest extends RequestBaseTest {
         given()
             .basePath("/api/v1/subject-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("exchangeWithUserId", TEACHER2_ID))
             .patch("/{id}/approve", 99999L)
             .then()
             .statusCode(404);
@@ -143,6 +153,8 @@ class SubjectExchangeRequestStatusTest extends RequestBaseTest {
 
         given().basePath("/api/v1/subject-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("exchangeWithUserId", TEACHER2_ID))
             .patch("/{id}/approve", currentRequestId)
             .then().statusCode(200);
 
