@@ -5,12 +5,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sonmoeum.common.event.EventPublisher;
 import sonmoeum.domain.lesson.entity.Lesson;
-import sonmoeum.domain.lesson.enums.TeacherAttendanceStatus;
-import sonmoeum.domain.lesson.exception.LessonNotFoundException;
-import sonmoeum.domain.lesson.repository.LessonRepository;
+import sonmoeum.domain.lesson.service.LessonProxyService;
 import sonmoeum.domain.request.entity.AbsenceRequest;
 import sonmoeum.domain.request.enums.RequestStatus;
+import sonmoeum.domain.request.event.AbsenceApprovedEvent;
 import sonmoeum.domain.request.exception.RequestAlreadyProcessedException;
 import sonmoeum.domain.request.exception.RequestForbiddenException;
 import sonmoeum.domain.request.exception.RequestNotFoundException;
@@ -18,8 +18,7 @@ import sonmoeum.domain.request.repository.AbsenceRequestRepository;
 import sonmoeum.domain.request.v1.dto.request.CreateAbsenceRequestRequest;
 import sonmoeum.domain.request.v1.dto.response.AbsenceRequestResponse;
 import sonmoeum.domain.users.entity.User;
-import sonmoeum.domain.users.exception.UserNotFoundException;
-import sonmoeum.domain.users.repository.UserRepository;
+import sonmoeum.domain.users.service.UserProxyService;
 
 @Slf4j
 @Service
@@ -28,18 +27,16 @@ import sonmoeum.domain.users.repository.UserRepository;
 public class AbsenceRequestService {
 
     private final AbsenceRequestRepository absenceRequestRepository;
-    private final LessonRepository lessonRepository;
-    private final UserRepository userRepository;
+    private final LessonProxyService lessonProxyService;
+    private final UserProxyService userProxyService;
+    private final EventPublisher eventPublisher;
 
     @Transactional
     public AbsenceRequestResponse createAbsenceRequest(Long requesterId, CreateAbsenceRequestRequest request) {
         log.debug("결석 요청 생성 (requesterId={}, lessonId={})", requesterId, request.lessonId());
 
-        Lesson lesson = lessonRepository.findByIdAndIsDeletedFalse(request.lessonId())
-            .orElseThrow(() -> new LessonNotFoundException(request.lessonId()));
-
-        User requester = userRepository.findById(requesterId)
-            .orElseThrow(() -> new UserNotFoundException(requesterId));
+        Lesson lesson = lessonProxyService.getActiveById(request.lessonId());
+        User requester = userProxyService.getById(requesterId);
 
         AbsenceRequest absenceRequest = new AbsenceRequest(lesson, requester, request.reason());
         AbsenceRequest saved = absenceRequestRepository.save(absenceRequest);
@@ -90,14 +87,13 @@ public class AbsenceRequestService {
             throw new RequestAlreadyProcessedException();
         }
 
-        User approver = userRepository.findById(approverId)
-            .orElseThrow(() -> new UserNotFoundException(approverId));
-
+        User approver = userProxyService.getById(approverId);
         absenceRequest.approve(approver);
 
-        // 수업 출석 상태를 공결(EXCUSED)로 업데이트
-        Lesson lesson = absenceRequest.getLesson();
-        lesson.updateTeacherAttendance(TeacherAttendanceStatus.EXCUSED);
+        eventPublisher.publish(new AbsenceApprovedEvent(
+            absenceRequest.getLesson().getId(),
+            approverId
+        ));
 
         log.debug("결석 요청 승인 완료 (requestId={})", requestId);
         return AbsenceRequestResponse.from(absenceRequest);
@@ -113,9 +109,7 @@ public class AbsenceRequestService {
             throw new RequestAlreadyProcessedException();
         }
 
-        User approver = userRepository.findById(approverId)
-            .orElseThrow(() -> new UserNotFoundException(approverId));
-
+        User approver = userProxyService.getById(approverId);
         absenceRequest.reject(approver, note);
 
         log.debug("결석 요청 반려 완료 (requestId={})", requestId);

@@ -16,6 +16,7 @@ import sonmoeum.domain.auth.v1.dto.response.TokenResponse;
 import sonmoeum.domain.users.entity.User;
 import sonmoeum.domain.users.exception.DuplicateEmailException;
 import sonmoeum.domain.users.exception.DuplicateUsernameException;
+import sonmoeum.domain.users.exception.UserNotFoundException;
 import sonmoeum.domain.users.service.UserProxyService;
 
 import java.time.LocalDateTime;
@@ -34,8 +35,13 @@ public class LocalLoginService {
     public TokenResponse login(LocalLoginRequest request) {
         log.debug("로그인 시도: {}", request.username());
 
-        // 사용자 조회
-        User user = userProxyService.getByUsername(request.username());
+        // 사용자 조회 (미존재도 잘못된 자격증명으로 처리하여 사용자 존재 여부 노출 방지)
+        User user;
+        try {
+            user = userProxyService.getByUsername(request.username());
+        } catch (UserNotFoundException e) {
+            throw new BadCredentialsException("아이디 또는 비밀번호가 올바르지 않습니다.");
+        }
 
         // 비밀번호 검증
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {

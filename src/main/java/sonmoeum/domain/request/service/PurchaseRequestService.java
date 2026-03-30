@@ -14,11 +14,9 @@ import sonmoeum.domain.request.repository.PurchaseRequestRepository;
 import sonmoeum.domain.request.v1.dto.request.CreatePurchaseRequestRequest;
 import sonmoeum.domain.request.v1.dto.response.PurchaseRequestResponse;
 import sonmoeum.domain.subject.entity.Subject;
-import sonmoeum.domain.subject.exception.SubjectNotFoundException;
-import sonmoeum.domain.subject.repository.SubjectRepository;
+import sonmoeum.domain.subject.service.SubjectProxyService;
 import sonmoeum.domain.users.entity.User;
-import sonmoeum.domain.users.exception.UserNotFoundException;
-import sonmoeum.domain.users.repository.UserRepository;
+import sonmoeum.domain.users.service.UserProxyService;
 
 @Slf4j
 @Service
@@ -27,18 +25,15 @@ import sonmoeum.domain.users.repository.UserRepository;
 public class PurchaseRequestService {
 
     private final PurchaseRequestRepository purchaseRequestRepository;
-    private final SubjectRepository subjectRepository;
-    private final UserRepository userRepository;
+    private final SubjectProxyService subjectProxyService;
+    private final UserProxyService userProxyService;
 
     @Transactional
     public PurchaseRequestResponse createPurchaseRequest(Long requesterId, CreatePurchaseRequestRequest request) {
         log.debug("구입 요청 생성 (requesterId={}, subjectId={})", requesterId, request.subjectId());
 
-        Subject subject = subjectRepository.findById(request.subjectId())
-            .orElseThrow(() -> new SubjectNotFoundException(request.subjectId()));
-
-        User requester = userRepository.findById(requesterId)
-            .orElseThrow(() -> new UserNotFoundException(requesterId));
+        Subject subject = subjectProxyService.getById(request.subjectId());
+        User requester = userProxyService.getById(requesterId);
 
         PurchaseRequest purchaseRequest = new PurchaseRequest(
             subject, requester, request.title(), request.content(), request.price()
@@ -93,8 +88,7 @@ public class PurchaseRequestService {
             throw new RequestAlreadyProcessedException();
         }
 
-        User approver = userRepository.findById(approverId)
-            .orElseThrow(() -> new UserNotFoundException(approverId));
+        User approver = userProxyService.getById(approverId);
 
         purchaseRequest.approve(approver);
 
@@ -112,8 +106,7 @@ public class PurchaseRequestService {
             throw new RequestAlreadyProcessedException();
         }
 
-        User approver = userRepository.findById(approverId)
-            .orElseThrow(() -> new UserNotFoundException(approverId));
+        User approver = userProxyService.getById(approverId);
 
         purchaseRequest.reject(approver, note);
 

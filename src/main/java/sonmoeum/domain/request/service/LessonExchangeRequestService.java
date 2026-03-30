@@ -5,11 +5,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sonmoeum.common.event.EventPublisher;
 import sonmoeum.domain.lesson.entity.Lesson;
-import sonmoeum.domain.lesson.exception.LessonNotFoundException;
-import sonmoeum.domain.lesson.repository.LessonRepository;
+import sonmoeum.domain.lesson.service.LessonProxyService;
 import sonmoeum.domain.request.entity.LessonExchangeRequest;
 import sonmoeum.domain.request.enums.RequestStatus;
+import sonmoeum.domain.request.event.LessonExchangeApprovedEvent;
 import sonmoeum.domain.request.exception.RequestAlreadyProcessedException;
 import sonmoeum.domain.request.exception.RequestForbiddenException;
 import sonmoeum.domain.request.exception.RequestNotFoundException;
@@ -18,7 +19,7 @@ import sonmoeum.domain.request.v1.dto.request.CreateLessonExchangeRequestRequest
 import sonmoeum.domain.request.v1.dto.response.LessonExchangeRequestResponse;
 import sonmoeum.domain.users.entity.User;
 import sonmoeum.domain.users.exception.UserNotFoundException;
-import sonmoeum.domain.users.repository.UserRepository;
+import sonmoeum.domain.users.service.UserProxyService;
 
 @Slf4j
 @Service
@@ -27,8 +28,9 @@ import sonmoeum.domain.users.repository.UserRepository;
 public class LessonExchangeRequestService {
 
     private final LessonExchangeRequestRepository lessonExchangeRequestRepository;
-    private final LessonRepository lessonRepository;
-    private final UserRepository userRepository;
+    private final LessonProxyService lessonProxyService;
+    private final UserProxyService userProxyService;
+    private final EventPublisher eventPublisher;
 
     @Transactional
     public LessonExchangeRequestResponse createLessonExchangeRequest(
@@ -37,11 +39,8 @@ public class LessonExchangeRequestService {
     ) {
         log.debug("수업 교환 요청 생성 (requesterId={}, lessonId={})", requesterId, request.lessonId());
 
-        Lesson lesson = lessonRepository.findByIdAndIsDeletedFalse(request.lessonId())
-            .orElseThrow(() -> new LessonNotFoundException(request.lessonId()));
-
-        User requester = userRepository.findById(requesterId)
-            .orElseThrow(() -> new UserNotFoundException(requesterId));
+        Lesson lesson = lessonProxyService.getActiveById(request.lessonId());
+        User requester = userProxyService.getById(requesterId);
 
         LessonExchangeRequest exchangeRequest = new LessonExchangeRequest(
             lesson, requester, request.title(), request.content()
@@ -100,16 +99,20 @@ public class LessonExchangeRequestService {
             throw new RequestAlreadyProcessedException();
         }
 
-        User approver = userRepository.findById(approverId)
-            .orElseThrow(() -> new UserNotFoundException(approverId));
+        User approver = userProxyService.getById(approverId);
 
-        User newTeacher = userRepository.findById(exchangeWithUserId)
-            .orElseThrow(() -> new UserNotFoundException(exchangeWithUserId));
+        // exchangeWithUserId 유효성 검증 (존재 여부 확인)
+        if (!userProxyService.existsById(exchangeWithUserId)) {
+            throw new UserNotFoundException(exchangeWithUserId);
+        }
 
         exchangeRequest.approve(approver);
 
-        // 수업 담당 교사 변경
-        exchangeRequest.getLesson().changeTeacher(newTeacher);
+        eventPublisher.publish(new LessonExchangeApprovedEvent(
+            exchangeRequest.getLesson().getId(),
+            exchangeWithUserId,
+            approverId
+        ));
 
         log.debug("수업 교환 요청 승인 완료 (requestId={})", requestId);
         return LessonExchangeRequestResponse.from(exchangeRequest);
@@ -127,9 +130,7 @@ public class LessonExchangeRequestService {
             throw new RequestAlreadyProcessedException();
         }
 
-        User approver = userRepository.findById(approverId)
-            .orElseThrow(() -> new UserNotFoundException(approverId));
-
+        User approver = userProxyService.getById(approverId);
         exchangeRequest.reject(approver, note);
 
         log.debug("수업 교환 요청 반려 완료 (requestId={})", requestId);

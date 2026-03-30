@@ -2,10 +2,10 @@ package sonmoeum.domain.users.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sonmoeum.domain.users.entity.User;
+import sonmoeum.domain.users.exception.UserNotFoundException;
 import sonmoeum.domain.users.repository.UserRepository;
 
 import java.util.Optional;
@@ -72,7 +72,7 @@ public class UserProxyService {
     @Transactional(readOnly = true)
     public User getById(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다. userId=" + userId));
+                .orElseThrow(() -> new UserNotFoundException(userId));
     }
 
     /**
@@ -89,7 +89,7 @@ public class UserProxyService {
     @Transactional(readOnly = true)
     public User getByUsername(String username) {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다. username=" + username));
+                .orElseThrow(() -> new UserNotFoundException(username));
     }
 
     // ============== 저장 메서드 (단순 저장만, 비즈니스 로직 없음) ==============

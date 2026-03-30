@@ -1,5 +1,6 @@
 package sonmoeum.domain.request.service;
 
+import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,15 +11,16 @@ import sonmoeum.domain.request.enums.RequestStatus;
 import sonmoeum.domain.request.exception.RequestAlreadyProcessedException;
 import sonmoeum.domain.request.exception.RequestForbiddenException;
 import sonmoeum.domain.request.exception.RequestNotFoundException;
+import sonmoeum.common.event.EventPublisher;
+import sonmoeum.domain.request.event.SubjectApprovedEvent;
 import sonmoeum.domain.request.repository.SubjectExchangeRequestRepository;
 import sonmoeum.domain.request.v1.dto.request.CreateSubjectExchangeRequestRequest;
 import sonmoeum.domain.request.v1.dto.response.SubjectExchangeRequestResponse;
 import sonmoeum.domain.subject.entity.Subject;
-import sonmoeum.domain.subject.exception.SubjectNotFoundException;
-import sonmoeum.domain.subject.repository.SubjectRepository;
+import sonmoeum.domain.subject.service.SubjectProxyService;
 import sonmoeum.domain.users.entity.User;
 import sonmoeum.domain.users.exception.UserNotFoundException;
-import sonmoeum.domain.users.repository.UserRepository;
+import sonmoeum.domain.users.service.UserProxyService;
 
 @Slf4j
 @Service
@@ -27,8 +29,9 @@ import sonmoeum.domain.users.repository.UserRepository;
 public class SubjectExchangeRequestService {
 
     private final SubjectExchangeRequestRepository subjectExchangeRequestRepository;
-    private final SubjectRepository subjectRepository;
-    private final UserRepository userRepository;
+    private final SubjectProxyService subjectProxyService;
+    private final UserProxyService userProxyService;
+    private final EventPublisher eventPublisher;
 
     @Transactional
     public SubjectExchangeRequestResponse createSubjectExchangeRequest(
@@ -37,11 +40,8 @@ public class SubjectExchangeRequestService {
     ) {
         log.debug("과목 교환 요청 생성 (requesterId={}, subjectId={})", requesterId, request.subjectId());
 
-        Subject subject = subjectRepository.findById(request.subjectId())
-            .orElseThrow(() -> new SubjectNotFoundException(request.subjectId()));
-
-        User requester = userRepository.findById(requesterId)
-            .orElseThrow(() -> new UserNotFoundException(requesterId));
+        Subject subject = subjectProxyService.getById(request.subjectId());
+        User requester = userProxyService.getById(requesterId);
 
         SubjectExchangeRequest exchangeRequest = new SubjectExchangeRequest(
             subject, requester, request.title(), request.content()
@@ -89,8 +89,10 @@ public class SubjectExchangeRequestService {
     }
 
     @Transactional
-    public SubjectExchangeRequestResponse approveSubjectExchangeRequest(Long approverId, Long requestId) {
-        log.debug("과목 교환 요청 승인 (requestId={})", requestId);
+    public SubjectExchangeRequestResponse approveSubjectExchangeRequest(
+        Long approverId, Long requestId, Long exchangeWithUserId
+    ) {
+        log.debug("과목 교환 요청 승인 (requestId={}, exchangeWithUserId={})", requestId, exchangeWithUserId);
         SubjectExchangeRequest exchangeRequest = subjectExchangeRequestRepository.findById(requestId)
             .orElseThrow(() -> new RequestNotFoundException(requestId));
 
@@ -98,10 +100,19 @@ public class SubjectExchangeRequestService {
             throw new RequestAlreadyProcessedException();
         }
 
-        User approver = userRepository.findById(approverId)
-            .orElseThrow(() -> new UserNotFoundException(approverId));
+        User approver = userProxyService.getById(approverId);
+
+        if (!userProxyService.existsById(exchangeWithUserId)) {
+            throw new UserNotFoundException(exchangeWithUserId);
+        }
 
         exchangeRequest.approve(approver);
+
+        eventPublisher.publish(new SubjectApprovedEvent(
+            exchangeRequest.getSubject().getId(),
+            exchangeWithUserId,
+            LocalDate.now()
+        ));
 
         log.debug("과목 교환 요청 승인 완료 (requestId={})", requestId);
         return SubjectExchangeRequestResponse.from(exchangeRequest);
@@ -119,8 +130,7 @@ public class SubjectExchangeRequestService {
             throw new RequestAlreadyProcessedException();
         }
 
-        User approver = userRepository.findById(approverId)
-            .orElseThrow(() -> new UserNotFoundException(approverId));
+        User approver = userProxyService.getById(approverId);
 
         exchangeRequest.reject(approver, note);
 
