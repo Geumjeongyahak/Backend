@@ -1,5 +1,6 @@
 package sonmoeum.domain.lesson.service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -257,6 +258,88 @@ public class LessonService {
         lesson.updateNote(note);
         log.debug("수업 노트 업데이트 완료 (lessonId={})", lessonId);
         return LessonNoteResponse.from(lesson);
+    }
+
+    // ── 이벤트 핸들러 전용 내부 메서드 ─────────────────────────────────────────
+
+    /**
+     * 과목 생성 이벤트 처리용 - startAt~endAt 사이 dayOfWeek에 해당하는 날짜를 times개 골라 수업을 자동 생성한다.
+     * 특정 날짜에 교사 시간 충돌이 있으면 해당 날짜만 스킵하고 계속 진행한다.
+     */
+    @Transactional
+    public void createLessonsFromSubject(
+        Long subjectId,
+        Long teacherId,
+        LocalDate startAt,
+        LocalDate endAt,
+        int times,
+        DayOfWeek dayOfWeek,
+        LocalTime startTime,
+        LocalTime endTime,
+        int period
+    ) {
+        log.debug("과목 수업 자동 생성 (subjectId={}, times={})", subjectId, times);
+
+        Subject subject = subjectRepository.findById(subjectId)
+            .orElseThrow(() -> new SubjectNotFoundException(subjectId));
+        User teacher = userRepository.findById(teacherId)
+            .orElseThrow(() -> new UserNotFoundException(teacherId));
+
+        List<LocalDate> dates = startAt.datesUntil(endAt.plusDays(1))
+            .filter(d -> d.getDayOfWeek() == dayOfWeek)
+            .limit(times)
+            .toList();
+
+        int created = 0;
+        for (LocalDate date : dates) {
+            boolean conflict = lessonRepository
+                .existsByTeacherIdAndDateAndIsDeletedFalseAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+                    teacherId, date, endTime, startTime
+                );
+            if (conflict) {
+                log.warn("수업 자동 생성 스킵 - 교사 시간 충돌 (date={}, teacherId={})", date, teacherId);
+                continue;
+            }
+            lessonRepository.save(new Lesson(subject, teacher, date, startTime, endTime, period));
+            created++;
+        }
+
+        log.debug("수업 자동 생성 완료 (subjectId={}, 생성={}건, 스킵={}건)", subjectId, created, dates.size() - created);
+    }
+
+    /**
+     * 과목 교환 승인 이벤트 처리용 - 과목의 승인일 이후 모든 수업의 담당 교사를 변경한다.
+     */
+    @Transactional
+    public void applyTeacherChangeFromSubjectApproval(Long subjectId, Long newTeacherId, LocalDate from) {
+        log.debug("과목 수업 교사 일괄 변경 (subjectId={}, newTeacherId={}, from={})", subjectId, newTeacherId, from);
+        User newTeacher = userRepository.findById(newTeacherId)
+            .orElseThrow(() -> new UserNotFoundException(newTeacherId));
+        List<Lesson> lessons = lessonRepository.findAllBySubjectIdAndDateGreaterThanEqualAndIsDeletedFalse(subjectId, from);
+        lessons.forEach(lesson -> lesson.changeTeacher(newTeacher));
+        log.debug("과목 수업 교사 일괄 변경 완료 (변경된 수업={}건)", lessons.size());
+    }
+
+    /**
+     * 결석 승인 이벤트 처리용 - 수업 교사 출석 상태를 공결(EXCUSED)로 변경한다.
+     */
+    @Transactional
+    public void applyTeacherExcused(Long lessonId) {
+        log.debug("교사 출석 공결 처리 (lessonId={})", lessonId);
+        Lesson lesson = lessonRepository.findById(lessonId)
+            .orElseThrow(() -> new LessonNotFoundException(lessonId));
+        lesson.updateTeacherAttendance(TeacherAttendanceStatus.EXCUSED);
+    }
+
+    /**
+     * 수업 교환 승인 이벤트 처리용 - 수업 담당 교사를 변경한다.
+     */
+    @Transactional
+    public void applyTeacherChange(Long lessonId, User newTeacher) {
+        log.debug("담당 교사 변경 (lessonId={}, newTeacherId={})", lessonId, newTeacher.getId());
+        Lesson lesson = lessonRepository.findById(lessonId)
+            .orElseThrow(() -> new LessonNotFoundException(lessonId));
+        lesson.changeTeacher(newTeacher);
     }
 
     @Transactional
