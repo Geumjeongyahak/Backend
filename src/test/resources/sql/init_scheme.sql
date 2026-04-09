@@ -3,6 +3,7 @@ DROP TABLE IF EXISTS absence_requests CASCADE;
 DROP TABLE IF EXISTS lesson_exchange_requests CASCADE;
 DROP TABLE IF EXISTS purchase_requests CASCADE;
 DROP TABLE IF EXISTS subject_exchange_requests CASCADE;
+DROP TABLE IF EXISTS files CASCADE;
 DROP TABLE IF EXISTS student_attendances CASCADE;
 DROP TABLE IF EXISTS lessons CASCADE;
 DROP TABLE IF EXISTS subjects CASCADE;
@@ -226,4 +227,16 @@ CREATE TABLE subject_exchange_requests (
     FOREIGN KEY (subject_id) REFERENCES subjects(id),
     FOREIGN KEY (requested_by) REFERENCES users(id),
     FOREIGN KEY (approval_by) REFERENCES users(id)
+);
+
+CREATE TABLE files (
+    id            UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
+    storage_key   VARCHAR(500) NOT NULL,
+    bucket        VARCHAR(100) NOT NULL,
+    original_name VARCHAR(255),
+    content_type  VARCHAR(100) NOT NULL,
+    file_size     BIGINT,
+    ext           VARCHAR(20)  NOT NULL,
+    is_deleted    BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
