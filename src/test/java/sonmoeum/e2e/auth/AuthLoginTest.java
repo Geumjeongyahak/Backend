@@ -174,4 +174,19 @@ class AuthLoginTest extends AuthBaseTest {
             .statusCode(400)
             .log().all();
     }
+
+    @Test
+    @DisplayName("GET으로 로그인 엔드포인트 호출 시 405 Method Not Allowed와 표준 에러 응답 반환")
+    void login_GetMethodNotAllowed() {
+        given()
+        .when()
+            .get("/login")
+        .then()
+            .statusCode(405)
+            .body("code", equalTo("VAL007"))
+            .body("detail", equalTo("지원하지 않는 HTTP 메서드입니다."))
+            .body("method", equalTo("GET"))
+            .body("supportedMethods", hasItem("POST"))
+            .log().all();
+    }
 }

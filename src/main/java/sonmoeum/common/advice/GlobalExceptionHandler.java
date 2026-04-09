@@ -13,6 +13,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -144,6 +145,27 @@ public class GlobalExceptionHandler {
                 .toList());
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ProblemDetail> handleHttpRequestMethodNotSupportedException(
+            HttpRequestMethodNotSupportedException ex
+    ) {
+        log.warn("HttpRequestMethodNotSupportedException 발생 - method: {}, supported: {}",
+                ex.getMethod(), ex.getSupportedHttpMethods());
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.METHOD_NOT_ALLOWED,
+                ErrorCode.METHOD_NOT_ALLOWED.getMessage()
+        );
+        problemDetail.setTitle(ErrorCode.METHOD_NOT_ALLOWED.getCode());
+        problemDetail.setProperty("code", ErrorCode.METHOD_NOT_ALLOWED.getCode());
+        problemDetail.setProperty("method", ex.getMethod());
+        if (ex.getSupportedMethods() != null) {
+            problemDetail.setProperty("supportedMethods", ex.getSupportedMethods());
+        }
+
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(problemDetail);
     }
 
     // ============ 데이터베이스 예외 처리 ============

@@ -14,6 +14,7 @@ DROP TABLE IF EXISTS user_departments CASCADE;
 DROP TABLE IF EXISTS departments CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS files CASCADE;
 
 -- Users table
 CREATE TABLE users (
@@ -227,3 +228,18 @@ CREATE TABLE subject_exchange_requests (
     FOREIGN KEY (requested_by) REFERENCES users(id),
     FOREIGN KEY (approval_by) REFERENCES users(id)
 );
+
+CREATE TABLE files (
+    id            UUID PRIMARY KEY,
+    storage_key   VARCHAR(500) NOT NULL,
+    bucket        VARCHAR(100) NOT NULL,
+    original_name VARCHAR(255),
+    content_type  VARCHAR(100) NOT NULL,
+    file_size     BIGINT,
+    ext           VARCHAR(20)  NOT NULL,
+    is_deleted    BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
