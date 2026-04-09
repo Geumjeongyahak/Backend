@@ -5,7 +5,11 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE}
   jpa:
     open-in-view: false
-
+  cloud:
+    gcp:
+      project-id: ${GCP_PROJECT_ID}
+      credentials:
+        location: file:${GCP_CREDENTIALS_PATH}
 server:
   port: 8080
 

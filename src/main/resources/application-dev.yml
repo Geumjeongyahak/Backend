@@ -6,13 +6,17 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: none
+    show-sql: false
   sql:
     init:
       mode: always
       schema-locations: classpath:/sql/init_scheme.sql
       data-locations: classpath:/sql/init_data.sql
+  cloud:
+    gcp:
+      storage:
+        bucket: ${GCP_DEV_BUCKET_NAME}
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
