@@ -25,6 +25,14 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
     @EntityGraph(attributePaths = {"teacher", "subject"})
     Optional<Lesson> findByIdAndTeacherIdAndIsDeletedFalse(Long lessonId, Long teacherId);
 
+    @EntityGraph(attributePaths = {"teacher", "subject"})
+    Optional<Lesson> findByTeacherIdAndDateAndStartTimeAndEndTimeAndIsDeletedFalse(
+        Long teacherId,
+        LocalDate date,
+        LocalTime startTime,
+        LocalTime endTime
+    );
+
     List<Lesson> findAllBySubjectIdAndDateGreaterThanEqualAndIsDeletedFalse(Long subjectId, LocalDate from);
 
     boolean existsByTeacherIdAndDateAndIsDeletedFalseAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(

@@ -12,4 +12,9 @@ public interface PurchaseRequestRepository extends JpaRepository<PurchaseRequest
     List<PurchaseRequest> findAllByRequestedBy_IdOrderByCreatedAtDesc(Long requestedById);
 
     List<PurchaseRequest> findAllByStatusOrderByCreatedAtDesc(RequestStatus status);
+
+    List<PurchaseRequest> findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(
+        RequestStatus status,
+        Long requestedById
+    );
 }

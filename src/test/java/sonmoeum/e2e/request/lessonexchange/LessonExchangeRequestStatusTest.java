@@ -31,7 +31,9 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     private LessonExchangeRequestRepository lessonExchangeRequestRepository;
 
     private Long currentSubjectId;
+    private Long counterpartSubjectId;
     private Long currentLessonId;
+    private Long counterpartLessonId;
     private Long currentRequestId;
 
     @AfterEach
@@ -46,9 +48,17 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             lessonHelper.deleteLesson(getAuthHeader(adminToken), currentLessonId);
             currentLessonId = null;
         }
+        if (counterpartLessonId != null) {
+            lessonHelper.deleteLesson(getAuthHeader(adminToken), counterpartLessonId);
+            counterpartLessonId = null;
+        }
         if (currentSubjectId != null) {
             lessonHelper.deleteSubject(getAuthHeader(adminToken), currentSubjectId);
             currentSubjectId = null;
+        }
+        if (counterpartSubjectId != null) {
+            lessonHelper.deleteSubject(getAuthHeader(adminToken), counterpartSubjectId);
+            counterpartSubjectId = null;
         }
     }
 
@@ -101,6 +111,39 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
         String teacherAfter = lessonHelper.getLessonTeacherName(
             getAuthHeader(adminToken), currentLessonId);
         assertThat(teacherAfter).isEqualTo("김철수");   // teacher02
+    }
+
+    @Test
+    @DisplayName("[Side-effect] 동일 시간대 상대 수업이 있으면 양쪽 담당 교사가 서로 교환된다")
+    void approve_swapsCounterpartLessonTeacher_whenCounterpartExists() {
+        currentSubjectId = lessonHelper.createSubjectAndGetId(
+            getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID);
+        counterpartSubjectId = lessonHelper.createSubjectAndGetId(
+            getAuthHeader(adminToken), CLASSROOM_ID, TEACHER2_ID);
+
+        currentLessonId = lessonHelper.createLessonAndGetId(
+            getAuthHeader(adminToken), currentSubjectId, TEACHER_ID, "2026-09-01", "09:00:00", "10:00:00", 1
+        );
+        counterpartLessonId = lessonHelper.createLessonAndGetId(
+            getAuthHeader(adminToken), counterpartSubjectId, TEACHER2_ID, "2026-09-01", "09:00:00", "10:00:00", 1
+        );
+        currentRequestId = createLessonExchangeRequest(
+            getAuthHeader(volunteerToken), currentLessonId, "교환 요청", "수업 교환 부탁드립니다."
+        );
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("exchangeWithUserId", TEACHER2_ID))
+            .patch("/{id}/approve", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        assertThat(lessonHelper.getLessonTeacherName(getAuthHeader(adminToken), currentLessonId))
+            .isEqualTo("김철수");
+        assertThat(lessonHelper.getLessonTeacherName(getAuthHeader(adminToken), counterpartLessonId))
+            .isEqualTo("홍길동");
     }
 
     @Test

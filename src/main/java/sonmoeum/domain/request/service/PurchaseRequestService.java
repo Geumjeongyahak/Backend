@@ -53,10 +53,9 @@ public class PurchaseRequestService {
         if (status != null) {
             list = isAdmin
                 ? purchaseRequestRepository.findAllByStatusOrderByCreatedAtDesc(status)
-                : purchaseRequestRepository.findAllByStatusOrderByCreatedAtDesc(status)
-                    .stream()
-                    .filter(r -> r.getRequestedBy().getId().equals(requesterId))
-                    .toList();
+                : purchaseRequestRepository.findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(
+                    status, requesterId
+                );
         } else {
             list = isAdmin
                 ? purchaseRequestRepository.findAllByOrderByCreatedAtDesc()
@@ -105,7 +104,6 @@ public class PurchaseRequestService {
         if (purchaseRequest.getStatus() != RequestStatus.PENDING) {
             throw new RequestAlreadyProcessedException();
         }
-
         User approver = userProxyService.getById(approverId);
 
         purchaseRequest.reject(approver, note);

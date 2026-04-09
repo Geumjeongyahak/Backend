@@ -19,7 +19,6 @@ import sonmoeum.domain.request.v1.dto.response.SubjectExchangeRequestResponse;
 import sonmoeum.domain.subject.entity.Subject;
 import sonmoeum.domain.subject.service.SubjectProxyService;
 import sonmoeum.domain.users.entity.User;
-import sonmoeum.domain.users.exception.UserNotFoundException;
 import sonmoeum.domain.users.service.UserProxyService;
 
 @Slf4j
@@ -41,6 +40,9 @@ public class SubjectExchangeRequestService {
         log.debug("과목 교환 요청 생성 (requesterId={}, subjectId={})", requesterId, request.subjectId());
 
         Subject subject = subjectProxyService.getById(request.subjectId());
+        if (!subject.getTeacher().getId().equals(requesterId)) {
+            throw new RequestForbiddenException();
+        }
         User requester = userProxyService.getById(requesterId);
 
         SubjectExchangeRequest exchangeRequest = new SubjectExchangeRequest(
@@ -61,10 +63,9 @@ public class SubjectExchangeRequestService {
         if (status != null) {
             list = isAdmin
                 ? subjectExchangeRequestRepository.findAllByStatusOrderByCreatedAtDesc(status)
-                : subjectExchangeRequestRepository.findAllByStatusOrderByCreatedAtDesc(status)
-                    .stream()
-                    .filter(r -> r.getRequestedBy().getId().equals(requesterId))
-                    .toList();
+                : subjectExchangeRequestRepository.findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(
+                    status, requesterId
+                );
         } else {
             list = isAdmin
                 ? subjectExchangeRequestRepository.findAllByOrderByCreatedAtDesc()
@@ -101,12 +102,10 @@ public class SubjectExchangeRequestService {
         }
 
         User approver = userProxyService.getById(approverId);
-
-        if (!userProxyService.existsById(exchangeWithUserId)) {
-            throw new UserNotFoundException(exchangeWithUserId);
-        }
+        User newTeacher = userProxyService.getById(exchangeWithUserId);
 
         exchangeRequest.approve(approver);
+        exchangeRequest.getSubject().changeTeacher(newTeacher);
 
         eventPublisher.publish(new SubjectApprovedEvent(
             exchangeRequest.getSubject().getId(),

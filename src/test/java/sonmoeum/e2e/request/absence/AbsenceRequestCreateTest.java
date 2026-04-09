@@ -51,7 +51,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
         createdLessonId = lessonHelper.createLessonAndGetId(
             getAuthHeader(adminToken), createdSubjectId, TEACHER_ID);
 
-        given()
+        createdRequestId = given()
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
@@ -63,18 +63,10 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .body("lessonId", equalTo(createdLessonId.intValue()))
             .body("reason", equalTo("개인 사정"))
             .body("status", equalTo("PENDING"))
-            .body("requestedByName", equalTo("홍길동"));
-
-        // 생성된 요청 추적 (cleanup)
-        createdRequestId = given()
-            .basePath("/api/v1/absence-requests")
-            .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .get()
-            .then()
-            .statusCode(200)
+            .body("requestedByName", equalTo("홍길동"))
             .extract()
             .jsonPath()
-            .getLong("[0].id");
+            .getLong("id");
     }
 
     @Test

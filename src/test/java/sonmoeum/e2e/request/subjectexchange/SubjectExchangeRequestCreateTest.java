@@ -100,6 +100,23 @@ class SubjectExchangeRequestCreateTest extends RequestBaseTest {
             .statusCode(404);
     }
 
+    @Test
+    @DisplayName("요청자가 담당하지 않은 과목으로 생성 시도 → 403")
+    void createRequest_forOtherTeachersSubject_returns403() {
+        given()
+            .basePath("/api/v1/subject-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
+            .contentType(ContentType.JSON)
+            .body(Map.ofEntries(
+                entry("subjectId", SUBJECT_ID),
+                entry("title", "과목 교환 요청"),
+                entry("content", "타인 과목 요청")
+            ))
+            .post()
+            .then()
+            .statusCode(403);
+    }
+
     // ── 유효성 오류 ───────────────────────────────────────
 
     @Test

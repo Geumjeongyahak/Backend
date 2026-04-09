@@ -12,4 +12,9 @@ public interface LessonExchangeRequestRepository extends JpaRepository<LessonExc
     List<LessonExchangeRequest> findAllByRequestedBy_IdOrderByCreatedAtDesc(Long requestedById);
 
     List<LessonExchangeRequest> findAllByStatusOrderByCreatedAtDesc(RequestStatus status);
+
+    List<LessonExchangeRequest> findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(
+        RequestStatus status,
+        Long requestedById
+    );
 }

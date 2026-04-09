@@ -51,7 +51,9 @@ public class SubjectCreatedEvent extends BaseEventDto {
         data.put("startAt", startAt);
         data.put("endAt", endAt);
         data.put("times", times);
-        data.put("dayOfWeek", dayOfWeek);
+        data.put("dayOfWeek", dayOfWeek != null ? dayOfWeek.name() : null);
+        data.put("startTime", startTime);
+        data.put("endTime", endTime);
         data.put("period", period);
         return data;
     }

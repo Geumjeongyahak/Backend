@@ -27,6 +27,9 @@ class SubjectExchangeRequestStatusTest extends RequestBaseTest {
     @Autowired
     private SubjectExchangeRequestRepository subjectExchangeRequestRepository;
 
+    private Long currentSubjectId;
+    private Long currentLessonId;
+    private Long otherSubjectId;
     private Long currentRequestId;
 
     @AfterEach
@@ -37,11 +40,27 @@ class SubjectExchangeRequestStatusTest extends RequestBaseTest {
             }
             currentRequestId = null;
         }
+        if (currentLessonId != null) {
+            lessonHelper.deleteLesson(getAuthHeader(adminToken), currentLessonId);
+            currentLessonId = null;
+        }
+        if (currentSubjectId != null) {
+            lessonHelper.deleteSubject(getAuthHeader(adminToken), currentSubjectId);
+            currentSubjectId = null;
+        }
+        if (otherSubjectId != null) {
+            lessonHelper.deleteSubject(getAuthHeader(adminToken), otherSubjectId);
+            otherSubjectId = null;
+        }
     }
 
     private Long setupPendingRequest() {
+        currentSubjectId = lessonHelper.createSubjectAndGetId(
+            getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID
+        );
         return createSubjectExchangeRequest(
-            getAuthHeader(volunteerToken), SUBJECT_ID, "과목 교환 요청", "조정 필요합니다.");
+            getAuthHeader(volunteerToken), currentSubjectId, "과목 교환 요청", "조정 필요합니다."
+        );
     }
 
     // ── 승인 (approve) ────────────────────────────────────
@@ -62,6 +81,33 @@ class SubjectExchangeRequestStatusTest extends RequestBaseTest {
             .body("status", equalTo("APPROVED"))
             .body("approvalAt", notNullValue())
             .body("approvalByName", notNullValue());
+    }
+
+    @Test
+    @DisplayName("[Side-effect] 승인 후 과목 담당 교사와 이후 수업 담당 교사가 함께 변경된다")
+    void approve_updatesSubjectTeacher_andFutureLessons() {
+        currentSubjectId = lessonHelper.createSubjectAndGetId(
+            getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID);
+        currentLessonId = lessonHelper.createLessonAndGetId(
+            getAuthHeader(adminToken), currentSubjectId, TEACHER_ID
+        );
+        currentRequestId = createSubjectExchangeRequest(
+            getAuthHeader(volunteerToken), currentSubjectId, "과목 교환 요청", "조정 필요합니다."
+        );
+
+        given()
+            .basePath("/api/v1/subject-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("exchangeWithUserId", TEACHER2_ID))
+            .patch("/{id}/approve", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        assertThat(lessonHelper.getSubjectTeacherId(getAuthHeader(adminToken), currentSubjectId))
+            .isEqualTo(TEACHER2_ID);
+        assertThat(lessonHelper.getLessonTeacherName(getAuthHeader(adminToken), currentLessonId))
+            .isEqualTo("김철수");
     }
 
     @Test
@@ -186,10 +232,16 @@ class SubjectExchangeRequestStatusTest extends RequestBaseTest {
     @Test
     @DisplayName("관리자는 전체 목록 / 봉사자는 본인 요청만 조회")
     void getList_adminSeesAll_volunteerSeesOnlyOwn() {
+        currentSubjectId = lessonHelper.createSubjectAndGetId(
+            getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID
+        );
+        otherSubjectId = lessonHelper.createSubjectAndGetId(
+            getAuthHeader(adminToken), CLASSROOM_ID, TEACHER2_ID
+        );
         Long req1 = createSubjectExchangeRequest(
-            getAuthHeader(volunteerToken), SUBJECT_ID, "v1 교환", "v1 내용");
+            getAuthHeader(volunteerToken), currentSubjectId, "v1 교환", "v1 내용");
         Long req2 = createSubjectExchangeRequest(
-            getAuthHeader(volunteer2Token), SUBJECT_ID, "v2 교환", "v2 내용");
+            getAuthHeader(volunteer2Token), otherSubjectId, "v2 교환", "v2 내용");
 
         try {
             List<Long> adminIds = given()

@@ -80,6 +80,22 @@ class AbsenceRequestReadTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("매니저 전체 목록 조회 → 두 요청 모두 포함")
+    void getList_asManager_seesAllRequests() {
+        List<Long> ids = given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(managerToken))
+            .get()
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getList("id", Long.class);
+
+        assertThat(ids).contains(requestIdByVolunteer1, requestIdByVolunteer2);
+    }
+
+    @Test
     @DisplayName("봉사자1 목록 조회 → 본인 요청만 포함, 봉사자2 요청 미포함")
     void getList_asVolunteer_seesOnlyOwn() {
         List<Long> ids = given()
@@ -154,6 +170,18 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             .body("id", equalTo(requestIdByVolunteer1.intValue()))
             .body("status", equalTo("PENDING"))
             .body("reason", equalTo("봉사자1 결석 사유"));
+    }
+
+    @Test
+    @DisplayName("매니저 단건 조회 → 200")
+    void getDetail_asManager_returns200() {
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(managerToken))
+            .get("/{id}", requestIdByVolunteer1)
+            .then()
+            .statusCode(200)
+            .body("id", equalTo(requestIdByVolunteer1.intValue()));
     }
 
     @Test

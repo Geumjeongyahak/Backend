@@ -12,4 +12,9 @@ public interface SubjectExchangeRequestRepository extends JpaRepository<SubjectE
     List<SubjectExchangeRequest> findAllByRequestedBy_IdOrderByCreatedAtDesc(Long requestedById);
 
     List<SubjectExchangeRequest> findAllByStatusOrderByCreatedAtDesc(RequestStatus status);
+
+    List<SubjectExchangeRequest> findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(
+        RequestStatus status,
+        Long requestedById
+    );
 }

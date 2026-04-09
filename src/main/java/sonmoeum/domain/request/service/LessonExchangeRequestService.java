@@ -40,6 +40,9 @@ public class LessonExchangeRequestService {
         log.debug("수업 교환 요청 생성 (requesterId={}, lessonId={})", requesterId, request.lessonId());
 
         Lesson lesson = lessonProxyService.getActiveById(request.lessonId());
+        if (!lesson.getTeacher().getId().equals(requesterId)) {
+            throw new RequestForbiddenException();
+        }
         User requester = userProxyService.getById(requesterId);
 
         LessonExchangeRequest exchangeRequest = new LessonExchangeRequest(
@@ -60,10 +63,9 @@ public class LessonExchangeRequestService {
         if (status != null) {
             list = isAdmin
                 ? lessonExchangeRequestRepository.findAllByStatusOrderByCreatedAtDesc(status)
-                : lessonExchangeRequestRepository.findAllByStatusOrderByCreatedAtDesc(status)
-                    .stream()
-                    .filter(r -> r.getRequestedBy().getId().equals(requesterId))
-                    .toList();
+                : lessonExchangeRequestRepository.findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(
+                    status, requesterId
+                );
         } else {
             list = isAdmin
                 ? lessonExchangeRequestRepository.findAllByOrderByCreatedAtDesc()
@@ -110,6 +112,7 @@ public class LessonExchangeRequestService {
 
         eventPublisher.publish(new LessonExchangeApprovedEvent(
             exchangeRequest.getLesson().getId(),
+            exchangeRequest.getRequestedBy().getId(),
             exchangeWithUserId,
             approverId
         ));

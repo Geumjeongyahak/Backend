@@ -31,6 +31,7 @@ public class AbsenceRequestService {
     private final UserProxyService userProxyService;
     private final EventPublisher eventPublisher;
 
+
     @Transactional
     public AbsenceRequestResponse createAbsenceRequest(Long requesterId, CreateAbsenceRequestRequest request) {
         log.debug("결석 요청 생성 (requesterId={}, lessonId={})", requesterId, request.lessonId());
@@ -52,10 +53,9 @@ public class AbsenceRequestService {
         if (status != null) {
             list = isAdmin
                 ? absenceRequestRepository.findAllByStatusOrderByCreatedAtDesc(status)
-                : absenceRequestRepository.findAllByStatusOrderByCreatedAtDesc(status)
-                    .stream()
-                    .filter(r -> r.getRequestedBy().getId().equals(requesterId))
-                    .toList();
+                : absenceRequestRepository.findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(
+                    status, requesterId
+                );
         } else {
             list = isAdmin
                 ? absenceRequestRepository.findAllByOrderByCreatedAtDesc()
@@ -124,6 +124,9 @@ public class AbsenceRequestService {
 
         if (!isAdmin && !absenceRequest.getRequestedBy().getId().equals(requesterId)) {
             throw new RequestForbiddenException();
+        }
+        if (absenceRequest.getStatus() != RequestStatus.PENDING) {
+            throw new RequestAlreadyProcessedException();
         }
 
         absenceRequestRepository.delete(absenceRequest);

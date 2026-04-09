@@ -81,15 +81,34 @@ public class TestLessonHelper {
      * 날짜는 BASE_DATE(2026-08-01)에서 자동 증가하여 teacher+date 충돌을 방지한다.
      */
     public Long createLessonAndGetId(String authHeader, Long subjectId, Long teacherId) {
-        String date = LESSON_BASE_DATE.plusDays(DATE_OFFSET.getAndIncrement()).toString();
+        return createLessonAndGetId(
+            authHeader,
+            subjectId,
+            teacherId,
+            LESSON_BASE_DATE.plusDays(DATE_OFFSET.getAndIncrement()).toString(),
+            "09:00:00",
+            "10:00:00",
+            1
+        );
+    }
+
+    public Long createLessonAndGetId(
+        String authHeader,
+        Long subjectId,
+        Long teacherId,
+        String date,
+        String startTime,
+        String endTime,
+        int period
+    ) {
 
         Map<String, Object> req = Map.ofEntries(
             entry("subjectId", subjectId),
             entry("teacherId", teacherId),
             entry("date", date),
-            entry("startTime", "09:00:00"),
-            entry("endTime", "10:00:00"),
-            entry("period", 1)
+            entry("startTime", startTime),
+            entry("endTime", endTime),
+            entry("period", period)
         );
 
         return given()
@@ -153,5 +172,18 @@ public class TestLessonHelper {
             .extract()
             .jsonPath()
             .getString("teacherName");
+    }
+
+    /** 과목의 담당 교사 ID를 반환한다. */
+    public Long getSubjectTeacherId(String authHeader, Long subjectId) {
+        return given()
+            .basePath("/api/v1/subjects")
+            .header("Authorization", authHeader)
+            .get("/{id}", subjectId)
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getLong("teacherId");
     }
 }

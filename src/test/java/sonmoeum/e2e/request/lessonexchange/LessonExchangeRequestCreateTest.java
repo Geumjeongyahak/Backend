@@ -112,6 +112,28 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .statusCode(404);
     }
 
+    @Test
+    @DisplayName("요청자가 담당하지 않은 수업으로 생성 시도 → 403")
+    void createRequest_forOtherTeachersLesson_returns403() {
+        currentSubjectId = lessonHelper.createSubjectAndGetId(
+            getAuthHeader(adminToken), CLASSROOM_ID, TEACHER2_ID);
+        currentLessonId = lessonHelper.createLessonAndGetId(
+            getAuthHeader(adminToken), currentSubjectId, TEACHER2_ID);
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.ofEntries(
+                entry("lessonId", currentLessonId),
+                entry("title", "수업 교환 요청"),
+                entry("content", "타인 수업 요청")
+            ))
+            .post()
+            .then()
+            .statusCode(403);
+    }
+
     // ── 유효성 오류 ───────────────────────────────────────
 
     @Test

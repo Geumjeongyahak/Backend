@@ -13,5 +13,10 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
 
     List<AbsenceRequest> findAllByStatusOrderByCreatedAtDesc(RequestStatus status);
 
+    List<AbsenceRequest> findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(
+        RequestStatus status,
+        Long requestedById
+    );
+
     boolean existsByLesson_IdAndRequestedBy_Id(Long lessonId, Long requestedById);
 }

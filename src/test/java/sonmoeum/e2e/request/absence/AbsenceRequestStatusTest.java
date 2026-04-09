@@ -302,6 +302,26 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("이미 처리된 요청 삭제 → 409")
+    void delete_processedRequest_returns409() {
+        currentRequestId = setupPendingRequest(TEACHER_ID);
+
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{id}/approve", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .delete("/{id}", currentRequestId)
+            .then()
+            .statusCode(409);
+    }
+
+    @Test
     @DisplayName("존재하지 않는 요청 삭제 → 404")
     void delete_notFound_returns404() {
         given()
