@@ -15,6 +15,8 @@ import sonmoeum.domain.subject.entity.Subject;
 import sonmoeum.domain.subject.exception.InvalidSubjectScheduleException;
 import sonmoeum.domain.subject.exception.SubjectDuplicateException;
 import sonmoeum.domain.subject.exception.SubjectNotFoundException;
+import sonmoeum.common.event.EventPublisher;
+import sonmoeum.domain.subject.event.SubjectCreatedEvent;
 import sonmoeum.domain.subject.repository.SubjectRepository;
 import sonmoeum.domain.subject.v1.dto.request.CreateSubjectRequest;
 import sonmoeum.domain.subject.v1.dto.request.UpdateSubjectRequest;
@@ -32,6 +34,7 @@ public class SubjectService {
     private final SubjectRepository subjectRepository;
     private final ClassroomRepository classroomRepository;
     private final UserRepository userRepository;
+    private final EventPublisher eventPublisher;
 
     @Transactional
     public SubjectDetailResponse createSubject(CreateSubjectRequest request) {
@@ -75,6 +78,19 @@ public class SubjectService {
 
         Subject savedSubject = subjectRepository.save(subject);
         log.debug("과목 등록 완료 (id={})", savedSubject.getId());
+
+        eventPublisher.publish(new SubjectCreatedEvent(
+            savedSubject.getId(),
+            savedSubject.getTeacher().getId(),
+            savedSubject.getStartAt(),
+            savedSubject.getEndAt(),
+            savedSubject.getTimes(),
+            savedSubject.getDayOfWeek(),
+            savedSubject.getStartTime(),
+            savedSubject.getEndTime(),
+            savedSubject.getPeriod()
+        ));
+
         return SubjectDetailResponse.from(savedSubject);
     }
 

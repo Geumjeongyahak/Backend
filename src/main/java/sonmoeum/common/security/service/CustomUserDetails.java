@@ -51,4 +51,9 @@ public class CustomUserDetails implements UserDetails {
         return getAuthorities().stream()
             .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
     }
+
+    public boolean isAdminOrManager() {
+        return getAuthorities().stream()
+            .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()) || "ROLE_MANAGER".equals(a.getAuthority()));
+    }
 }

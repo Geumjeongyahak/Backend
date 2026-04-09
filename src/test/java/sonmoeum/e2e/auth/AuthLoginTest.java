@@ -84,7 +84,7 @@ class AuthLoginTest extends AuthBaseTest {
             .post("/login")
         .then()
             .statusCode(401)
-            .body("code", equalTo("AUTH006"))  // USER_NOT_FOUND_FOR_AUTH
+            .body("code", equalTo("AUTH005"))  // INVALID_CREDENTIALS (사용자 존재 여부 노출 방지)
             .log().all();
     }
 

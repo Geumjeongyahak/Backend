@@ -130,5 +130,9 @@ public class Subject extends BaseEntity {
     public void activate() {
         this.isActive = true;
     }
+
+    public void changeTeacher(User teacher) {
+        this.teacher = teacher;
+    }
 }
 

@@ -111,7 +111,7 @@ public class ClassroomUpdateTest extends BaseClassroomTest {
                 .put("/{classId}", targetClassroom.getId())
         .then()
                 .statusCode(401)
-                .body("code", equalTo("AUTHZ001"))
+                .body("code", equalTo("AUTH001"))
                 .log().body();
     }
 
@@ -150,21 +150,17 @@ public class ClassroomUpdateTest extends BaseClassroomTest {
     @Test
     @DisplayName("중복된 분반 이름으로 수정 실패(409 Conflict)")
     void updateClassroom_Fail_DuplicateName() {
-        // 다른 분반 생성
-        String existingName = "기존 분반 이름(충돌 테스트)";
+        // 이름 충돌용 다른 분반 생성
+        String conflictName = "기존 분반 이름(충돌 테스트)";
+        this.testClassroomHelper.createTestClassroom(conflictName, ClassroomType.WEEKDAY);
 
-        Classroom classroom = this.testClassroomHelper.createTestClassroom(
-                existingName,
-                ClassroomType.WEEKDAY
-        );
-
-        // 중복 이름으로 수정 시도
+        // targetClassroom을 conflictName으로 수정 시도 → 409
         given()
                 .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
                 .contentType("application/json")
-                .body(Map.of("name", existingName))
+                .body(Map.of("name", conflictName))
         .when()
-                .put("/{classId}", classroom.getId())
+                .put("/{classId}", targetClassroom.getId())
         .then()
                 .statusCode(409)
                 .body("code", equalTo("BIZ006"))
