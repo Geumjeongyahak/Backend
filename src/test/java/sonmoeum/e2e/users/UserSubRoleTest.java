@@ -88,8 +88,8 @@ class UserSubRoleTest extends UserBaseTest {
     }
 
     @Test
-    @DisplayName("하위권한 추가 성공 - DEPT_FINANCE 역할(200 OK)")
-    void addSubRole_Success_DeptFinance() {
+    @DisplayName("하위권한 추가 성공 - DEPT_GENERAL_AFFAIRS 역할(200 OK)")
+    void addSubRole_Success_DeptGeneralAffairs() {
         // 테스트용 사용자 생성
         String uniqueUsername = "deptfinance" + System.currentTimeMillis();
         CreateUserRequest createReq = new CreateUserRequest(
@@ -114,8 +114,8 @@ class UserSubRoleTest extends UserBaseTest {
 
         userTestHelper.setUser(user.username());
 
-        // DEPT_FINANCE 하위권한 추가
-        AddSubRoleRequest addReq = new AddSubRoleRequest("DEPT_FINANCE");
+        // DEPT_GENERAL_AFFAIRS 하위권한 추가
+        AddSubRoleRequest addReq = new AddSubRoleRequest("DEPT_GENERAL_AFFAIRS");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -125,8 +125,8 @@ class UserSubRoleTest extends UserBaseTest {
             .post("/{userId}/roles", user.id())
         .then()
             .statusCode(200)
-            .body("size()", equalTo(2))  // ROLE_VOLUNTEER + DEPT_FINANCE
-            .body("find { it.name == 'DEPT_FINANCE' }", notNullValue())
+            .body("size()", equalTo(2))  // ROLE_VOLUNTEER + DEPT_GENERAL_AFFAIRS
+            .body("find { it.name == 'DEPT_GENERAL_AFFAIRS' }", notNullValue())
             .log().all();
     }
 
@@ -167,16 +167,16 @@ class UserSubRoleTest extends UserBaseTest {
         .then()
             .statusCode(200);
 
-        // DEPT_ACADEMIC 추가
+        // DEPT_EDUCATION_RESEARCH 추가
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType(ContentType.JSON)
-            .body(new AddSubRoleRequest("DEPT_ACADEMIC"))
+            .body(new AddSubRoleRequest("DEPT_EDUCATION_RESEARCH"))
         .when()
             .post("/{userId}/roles", user.id())
         .then()
             .statusCode(200)
-            .body("size()", equalTo(3))  // ROLE_VOLUNTEER + TEACHER + DEPT_ACADEMIC
+            .body("size()", equalTo(3))  // ROLE_VOLUNTEER + TEACHER + DEPT_EDUCATION_RESEARCH
             .log().all();
     }
 
