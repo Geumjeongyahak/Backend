@@ -25,4 +25,12 @@ public class SubjectProxyService {
         return subjectRepository.findById(subjectId)
             .orElseThrow(() -> new SubjectNotFoundException(subjectId));
     }
+
+    /**
+     * 특정 분반에 특정 교사가 연결된 과목이 존재하는지 확인한다.
+     */
+    @Transactional(readOnly = true)
+    public boolean existsByClassroomIdAndTeacherId(Long classroomId, Long teacherId) {
+        return subjectRepository.existsByClassroomIdAndTeacherId(classroomId, teacherId);
+    }
 }
