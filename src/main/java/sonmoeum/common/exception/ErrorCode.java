@@ -36,6 +36,9 @@ public enum ErrorCode {
     LESSON_NOT_FOUND(HttpStatus.NOT_FOUND, "RES005", "수업을 찾을 수 없습니다."),
     STUDENT_NOT_ENROLLED(HttpStatus.NOT_FOUND, "RES006", "수업에 등록된 학생이 아닙니다."),
     SUBJECT_NOT_FOUND(HttpStatus.NOT_FOUND, "RES008", "과목을 찾을 수 없습니다."),
+    CHANNEL_NOT_FOUND(HttpStatus.NOT_FOUND, "RES009", "채널을 찾을 수 없습니다."),
+    POST_NOT_FOUND(HttpStatus.NOT_FOUND, "RES010", "게시글을 찾을 수 없습니다."),
+    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "RES011", "댓글을 찾을 수 없습니다."),
 
     // ============ 요청 검증 관련 (400 Bad Request) ============
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VAL001", "입력값 검증에 실패했습니다."),
@@ -54,6 +57,8 @@ public enum ErrorCode {
     DUPLICATE_CLASSROOM(HttpStatus.CONFLICT, "BIZ006", "이미 존재하는 분반입니다."),
     DUPLICATE_SUBJECT(HttpStatus.CONFLICT, "BIZ007", "이미 존재하는 과목입니다."),
     DUPLICATE_LESSON(HttpStatus.CONFLICT, "BIZ008", "이미 존재하는 수업입니다."),
+    DUPLICATE_CHANNEL(HttpStatus.CONFLICT, "BIZ009", "이미 존재하는 채널입니다."),
+    DUPLICATE_POST(HttpStatus.CONFLICT, "BIZ010", "이미 존재하는 게시글입니다."),
 
     // ============ Role 관련 비즈니스 로직 ============
     ROLE_ALREADY_ASSIGNED(HttpStatus.CONFLICT, "ROLE001", "사용자에게 이미 해당 역할이 부여되어 있습니다."),
