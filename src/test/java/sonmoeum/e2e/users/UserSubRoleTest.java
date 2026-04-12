@@ -266,7 +266,7 @@ class UserSubRoleTest extends UserBaseTest {
             .post("/{userId}/roles", user.id())
         .then()
             .statusCode(409)
-            .body("code", equalTo("ROLE001"))  // ROLE_ALREADY_ASSIGNED
+            .body("code", equalTo("BIZ-01-003"))  // ROLE_ALREADY_ASSIGNED
             .log().all();
     }
 
@@ -401,7 +401,7 @@ class UserSubRoleTest extends UserBaseTest {
             .delete("/{userId}/roles", user.id())
         .then()
             .statusCode(400)
-            .body("code", equalTo("ROLE002"))  // ROLE_NOT_ASSIGNED
+            .body("code", equalTo("VAL-01-001"))  // ROLE_NOT_ASSIGNED
             .log().all();
     }
 
@@ -418,7 +418,7 @@ class UserSubRoleTest extends UserBaseTest {
             .post("/{userId}/roles", 99999L)  // 존재하지 않는 ID
         .then()
             .statusCode(404)
-            .body("code", equalTo("RES002"))  // USER_NOT_FOUND
+            .body("code", equalTo("RES-01-001"))  // USER_NOT_FOUND
             .log().all();
     }
 

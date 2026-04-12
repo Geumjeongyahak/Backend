@@ -135,7 +135,7 @@ public class ClassroomCreateTest extends BaseClassroomTest {
                 .post()
         .then()
                 .statusCode(409)
-                .body("code", equalTo("BIZ006"))
+                .body("code", equalTo("BIZ-03-001"))
                 .log().all();
     }
 }
