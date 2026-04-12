@@ -265,6 +265,8 @@ CREATE TABLE channels (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE UNIQUE INDEX idx_channels_slug ON channels(slug, is_deleted) WHERE is_deleted = FALSE;
+
 CREATE INDEX idx_channels_channel_type_ref_id ON channels(channel_type, ref_id);
 CREATE INDEX idx_channels_sort_order ON channels(sort_order);
 CREATE INDEX idx_channels_is_active ON channels(is_active);
