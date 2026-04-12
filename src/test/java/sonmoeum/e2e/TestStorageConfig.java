@@ -1,4 +1,4 @@
-package sonmoeum.e2e.file;
+package sonmoeum.e2e;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -15,7 +15,7 @@ import sonmoeum.domain.file.service.StorageService;
 import static org.mockito.Mockito.mock;
 
 @TestConfiguration
-public class TestFileStorageConfig {
+public class TestStorageConfig {
 
     @Bean
     @Primary
