@@ -1,10 +1,12 @@
 package sonmoeum.domain.file.service;
 
+import java.awt.AlphaComposite;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import javax.imageio.ImageIO;
 
@@ -119,8 +121,8 @@ public class ImageUploadService {
     }
 
     private byte[] resizeToPng(MultipartFile file) {
-        try {
-            BufferedImage sourceImage = ImageIO.read(file.getInputStream());
+        try (InputStream inputStream = file.getInputStream()) {
+            BufferedImage sourceImage = ImageIO.read(inputStream);
             if (sourceImage == null) {
                 throw new BadRequestException(ErrorCode.INVALID_INPUT, "이미지 파일을 읽을 수 없습니다.");
             }
@@ -128,10 +130,13 @@ public class ImageUploadService {
             BufferedImage resizedImage = new BufferedImage(
                 PROFILE_IMAGE_WIDTH,
                 PROFILE_IMAGE_HEIGHT,
-                BufferedImage.TYPE_INT_RGB
+                BufferedImage.TYPE_INT_ARGB
             );
 
             Graphics2D graphics = resizedImage.createGraphics();
+            graphics.setComposite(AlphaComposite.Clear);
+            graphics.fillRect(0, 0, PROFILE_IMAGE_WIDTH, PROFILE_IMAGE_HEIGHT);
+            graphics.setComposite(AlphaComposite.Src);
             graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
             graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
             graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
