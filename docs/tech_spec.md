@@ -9,8 +9,10 @@
 ### 1.2 참조 문서
 
 - [PRD (Product Requirements Document)](./prd.md)
-- [API 명세서](./api_spec.md)
+- [API 흐름 문서](./api-spec/api_spec.md)
+- [도메인별 API 문서](./api/README.md)
 - [데이터 모델](./data_model.md)
+- [에러 코드 문서](./error_codes.md)
 
 ---
 

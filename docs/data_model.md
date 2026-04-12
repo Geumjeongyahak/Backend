@@ -14,8 +14,10 @@
 
 ### 1.3 참조 문서
 - [PRD (Product Requirements Document)](./prd.md)
-- [API 명세서](./api_spec.md)
+- [API 흐름 문서](./api-spec/api_spec.md)
+- [도메인별 API 문서](./api/README.md)
 - [기술 명세서](./tech_spec.md)
+- [에러 코드 문서](./error_codes.md)
 
 ## 2. 데이터 모델 아키텍처
 
