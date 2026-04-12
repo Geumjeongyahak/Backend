@@ -17,10 +17,11 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import lombok.extern.slf4j.Slf4j;
+import sonmoeum.common.exception.CommonErrorCode;
 import sonmoeum.common.exception.BusinessException;
 import sonmoeum.common.exception.DuplicateResourceException;
-import sonmoeum.common.exception.ErrorCode;
 import sonmoeum.common.exception.ResourceNotFoundException;
+import sonmoeum.domain.auth.exception.AuthErrorCode;
 
 /**
  * 전역 예외 처리 핸들러
@@ -76,8 +77,8 @@ public class GlobalExceptionHandler {
                 HttpStatus.UNAUTHORIZED,
                 "인증에 실패했습니다."
         );
-        problemDetail.setTitle(ErrorCode.AUTHENTICATION_FAILED.getCode());
-        problemDetail.setProperty("code", ErrorCode.AUTHENTICATION_FAILED.getCode());
+        problemDetail.setTitle(AuthErrorCode.AUTHENTICATION_FAILED.getCode());
+        problemDetail.setProperty("code", AuthErrorCode.AUTHENTICATION_FAILED.getCode());
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(problemDetail);
     }
@@ -88,10 +89,10 @@ public class GlobalExceptionHandler {
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.UNAUTHORIZED,
-                ErrorCode.INVALID_CREDENTIALS.getMessage()
+                AuthErrorCode.INVALID_CREDENTIALS.getMessage()
         );
-        problemDetail.setTitle(ErrorCode.INVALID_CREDENTIALS.getCode());
-        problemDetail.setProperty("code", ErrorCode.INVALID_CREDENTIALS.getCode());
+        problemDetail.setTitle(AuthErrorCode.INVALID_CREDENTIALS.getCode());
+        problemDetail.setProperty("code", AuthErrorCode.INVALID_CREDENTIALS.getCode());
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(problemDetail);
     }
@@ -102,10 +103,10 @@ public class GlobalExceptionHandler {
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.UNAUTHORIZED,
-                ErrorCode.USER_NOT_FOUND_FOR_AUTH.getMessage()
+                AuthErrorCode.USER_NOT_FOUND_FOR_AUTH.getMessage()
         );
-        problemDetail.setTitle(ErrorCode.USER_NOT_FOUND_FOR_AUTH.getCode());
-        problemDetail.setProperty("code", ErrorCode.USER_NOT_FOUND_FOR_AUTH.getCode());
+        problemDetail.setTitle(AuthErrorCode.USER_NOT_FOUND_FOR_AUTH.getCode());
+        problemDetail.setProperty("code", AuthErrorCode.USER_NOT_FOUND_FOR_AUTH.getCode());
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(problemDetail);
     }
@@ -116,10 +117,10 @@ public class GlobalExceptionHandler {
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.FORBIDDEN,
-                ErrorCode.ACCESS_DENIED.getMessage()
+                AuthErrorCode.ACCESS_DENIED.getMessage()
         );
-        problemDetail.setTitle(ErrorCode.ACCESS_DENIED.getCode());
-        problemDetail.setProperty("code", ErrorCode.ACCESS_DENIED.getCode());
+        problemDetail.setTitle(AuthErrorCode.ACCESS_DENIED.getCode());
+        problemDetail.setProperty("code", AuthErrorCode.ACCESS_DENIED.getCode());
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problemDetail);
     }
@@ -136,10 +137,10 @@ public class GlobalExceptionHandler {
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.BAD_REQUEST,
-                ErrorCode.VALIDATION_ERROR.getMessage()
+                CommonErrorCode.VALIDATION_ERROR.getMessage()
         );
-        problemDetail.setTitle(ErrorCode.VALIDATION_ERROR.getCode());
-        problemDetail.setProperty("code", ErrorCode.VALIDATION_ERROR.getCode());
+        problemDetail.setTitle(CommonErrorCode.VALIDATION_ERROR.getCode());
+        problemDetail.setProperty("code", CommonErrorCode.VALIDATION_ERROR.getCode());
         problemDetail.setProperty("errors", ex.getBindingResult().getFieldErrors().stream()
                 .map(error -> new FieldError(error.getField(), error.getDefaultMessage()))
                 .toList());
@@ -156,10 +157,10 @@ public class GlobalExceptionHandler {
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.METHOD_NOT_ALLOWED,
-                ErrorCode.METHOD_NOT_ALLOWED.getMessage()
+                CommonErrorCode.METHOD_NOT_ALLOWED.getMessage()
         );
-        problemDetail.setTitle(ErrorCode.METHOD_NOT_ALLOWED.getCode());
-        problemDetail.setProperty("code", ErrorCode.METHOD_NOT_ALLOWED.getCode());
+        problemDetail.setTitle(CommonErrorCode.METHOD_NOT_ALLOWED.getCode());
+        problemDetail.setProperty("code", CommonErrorCode.METHOD_NOT_ALLOWED.getCode());
         problemDetail.setProperty("method", ex.getMethod());
         if (ex.getSupportedMethods() != null) {
             problemDetail.setProperty("supportedMethods", ex.getSupportedMethods());
@@ -178,10 +179,10 @@ public class GlobalExceptionHandler {
         if (ex.getMessage() != null && ex.getMessage().contains("Unique")) {
             ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                     HttpStatus.CONFLICT,
-                    ErrorCode.DUPLICATE_RESOURCE.getMessage()
+                    CommonErrorCode.DUPLICATE_RESOURCE.getMessage()
             );
-            problemDetail.setTitle(ErrorCode.DUPLICATE_RESOURCE.getCode());
-            problemDetail.setProperty("code", ErrorCode.DUPLICATE_RESOURCE.getCode());
+            problemDetail.setTitle(CommonErrorCode.DUPLICATE_RESOURCE.getCode());
+            problemDetail.setProperty("code", CommonErrorCode.DUPLICATE_RESOURCE.getCode());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail);
         }
 
@@ -204,10 +205,10 @@ public class GlobalExceptionHandler {
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.NOT_FOUND,
-                ErrorCode.RESOURCE_NOT_FOUND.getMessage()
+                CommonErrorCode.RESOURCE_NOT_FOUND.getMessage()
         );
-        problemDetail.setTitle(ErrorCode.RESOURCE_NOT_FOUND.getCode());
-        problemDetail.setProperty("code", ErrorCode.RESOURCE_NOT_FOUND.getCode());
+        problemDetail.setTitle(CommonErrorCode.RESOURCE_NOT_FOUND.getCode());
+        problemDetail.setProperty("code", CommonErrorCode.RESOURCE_NOT_FOUND.getCode());
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
@@ -220,8 +221,8 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 ex.getMessage()
         );
-        problemDetail.setTitle(ErrorCode.INVALID_INPUT.getCode());
-        problemDetail.setProperty("code", ErrorCode.INVALID_INPUT.getCode());
+        problemDetail.setTitle(CommonErrorCode.INVALID_INPUT.getCode());
+        problemDetail.setProperty("code", CommonErrorCode.INVALID_INPUT.getCode());
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
@@ -232,10 +233,10 @@ public class GlobalExceptionHandler {
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.INTERNAL_SERVER_ERROR,
-                ErrorCode.INTERNAL_SERVER_ERROR.getMessage()
+                CommonErrorCode.INTERNAL_SERVER_ERROR.getMessage()
         );
-        problemDetail.setTitle(ErrorCode.INTERNAL_SERVER_ERROR.getCode());
-        problemDetail.setProperty("code", ErrorCode.INTERNAL_SERVER_ERROR.getCode());
+        problemDetail.setTitle(CommonErrorCode.INTERNAL_SERVER_ERROR.getCode());
+        problemDetail.setProperty("code", CommonErrorCode.INTERNAL_SERVER_ERROR.getCode());
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problemDetail);
     }

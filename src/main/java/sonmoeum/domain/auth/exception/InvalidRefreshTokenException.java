@@ -1,7 +1,6 @@
 package sonmoeum.domain.auth.exception;
 
 import sonmoeum.common.exception.AuthenticationException;
-import sonmoeum.common.exception.ErrorCode;
 
 /**
  * Refresh Token 검증 실패 예외
@@ -9,10 +8,10 @@ import sonmoeum.common.exception.ErrorCode;
 public class InvalidRefreshTokenException extends AuthenticationException {
 
     public InvalidRefreshTokenException() {
-        super(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
+        super(AuthErrorCode.REFRESH_TOKEN_NOT_FOUND);
     }
 
     public InvalidRefreshTokenException(String message) {
-        super(ErrorCode.INVALID_TOKEN, message);
+        super(AuthErrorCode.INVALID_TOKEN, message);
     }
 }

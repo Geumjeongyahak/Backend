@@ -17,11 +17,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import sonmoeum.common.exception.ErrorCode;
+import sonmoeum.domain.auth.exception.AuthErrorCode;
 
 @Component
 @RequiredArgsConstructor
 public class CustomAccessDeniedHandler implements AccessDeniedHandler {
-    private static final ErrorCode ERROR_CODE = ErrorCode.ACCESS_DENIED;
+    private static final ErrorCode ERROR_CODE = AuthErrorCode.ACCESS_DENIED;
     private final ObjectMapper objectMapper;
 
     @Override
