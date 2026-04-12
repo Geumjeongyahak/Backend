@@ -1,12 +1,9 @@
 package sonmoeum.e2e.department;
 
-import io.restassured.RestAssured;
-import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import sonmoeum.domain.department.entity.Department;
-import sonmoeum.domain.department.v1.dto.request.JoinDepartmentRequest;
 import sonmoeum.domain.users.entity.User;
 
 import static io.restassured.RestAssured.given;

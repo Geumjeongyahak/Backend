@@ -40,3 +40,9 @@ out/
 .env
 .devdbrc
 .claude/settings.local.json
+.secret
+.secret/*
+
+docs/issue/*
+docs/pr/*
+src/test/resources/images/*
