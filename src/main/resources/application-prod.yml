@@ -4,6 +4,10 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: false
+  cloud:
+    gcp:
+      storage:
+        bucket: ${GCP_DEV_BUCKET_NAME}
 
 management:
   endpoints:

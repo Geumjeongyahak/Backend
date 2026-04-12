@@ -3,13 +3,11 @@ package sonmoeum.e2e.auth;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import sonmoeum.domain.auth.enums.RoleType;
 import sonmoeum.domain.auth.v1.dto.request.LocalLoginRequest;
 import sonmoeum.domain.auth.v1.dto.request.LocalSignupRequest;
 import sonmoeum.domain.auth.v1.dto.request.RefreshTokenRequest;
 import sonmoeum.domain.auth.v1.dto.response.TokenResponse;
 
-import java.util.List;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;

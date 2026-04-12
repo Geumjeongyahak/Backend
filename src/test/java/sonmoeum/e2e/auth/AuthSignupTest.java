@@ -218,7 +218,7 @@ class AuthSignupTest extends AuthBaseTest {
                 null   // 전화번호 선택
         );
 
-        var response = given()
+        given()
             .contentType(ContentType.JSON)
             .body(req)
         .when()

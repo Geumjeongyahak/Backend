@@ -47,6 +47,7 @@ public enum ErrorCode {
     NO_CHANGES_DETECTED(HttpStatus.BAD_REQUEST, "VAL004", "변경된 값이 없습니다."),
     INVALID_SUBJECT_SCHEDULE(HttpStatus.BAD_REQUEST, "VAL005", "과목 스케줄이 유효하지 않습니다."),
     INVALID_LESSON_SCHEDULE(HttpStatus.BAD_REQUEST, "VAL006", "수업 스케줄이 유효하지 않습니다."),
+    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "VAL007", "지원하지 않는 HTTP 메서드입니다."),
 
     // ============ 비즈니스 로직 관련 (409 Conflict) ============
     DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "BIZ001", "이미 존재하는 리소스입니다."),
@@ -76,7 +77,8 @@ public enum ErrorCode {
     // ============ 서버 에러 (500 Internal Server Error) ============
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SYS001", "서버 내부 오류가 발생했습니다."),
     DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SYS002", "데이터베이스 오류가 발생했습니다."),
-    EXTERNAL_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SYS003", "외부 API 호출 중 오류가 발생했습니다.");
+    EXTERNAL_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SYS003", "외부 API 호출 중 오류가 발생했습니다."),
+    FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SYS004", "파일 업로드에 실패했습니다.");
 
     private final HttpStatus status;
     private final String code;
