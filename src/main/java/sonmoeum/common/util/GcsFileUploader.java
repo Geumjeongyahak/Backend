@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import sonmoeum.common.exception.BusinessException;
-import sonmoeum.common.exception.ErrorCode;
+import sonmoeum.common.exception.CommonErrorCode;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -36,7 +36,7 @@ public class GcsFileUploader implements FileUploader {
             storage.create(blobInfo, file.getBytes());
         } catch (IOException e) {
             log.error("파일 업로드 실패: directory={}, filename={}, error={}", directory, file.getOriginalFilename(), e.getMessage());
-            throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED);
+            throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED);
         }
         String fileUrl = GCS_URL_PREFIX + bucketName + "/" + fileName;
         log.info("파일 업로드 성공: url={}", fileUrl);

@@ -143,7 +143,7 @@ public class ClassroomUpdateTest extends BaseClassroomTest {
                 .put("/{classId}", nonExistentClassroomId)
         .then()
                 .statusCode(404)
-                .body("code", equalTo("RES006"))
+                .body("code", equalTo("RES-03-001"))
                 .log().body();
     }
 
@@ -163,7 +163,7 @@ public class ClassroomUpdateTest extends BaseClassroomTest {
                 .put("/{classId}", targetClassroom.getId())
         .then()
                 .statusCode(409)
-                .body("code", equalTo("BIZ006"))
+                .body("code", equalTo("BIZ-03-001"))
                 .log().body();
     }
 

@@ -13,7 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 import sonmoeum.common.exception.BusinessException;
-import sonmoeum.common.exception.ErrorCode;
+import sonmoeum.common.exception.CommonErrorCode;
 import sonmoeum.common.util.GcsFileUploader;
 
 import java.io.IOException;
@@ -86,8 +86,8 @@ class GcsFileUploaderTest {
         );
 
         // then
-        assertThat(ex.getCode()).isEqualTo(ErrorCode.FILE_UPLOAD_FAILED.getCode());
-        assertThat(ex.getStatus()).isEqualTo(ErrorCode.FILE_UPLOAD_FAILED.getStatus());
+        assertThat(ex.getCode()).isEqualTo(CommonErrorCode.FILE_UPLOAD_FAILED.getCode());
+        assertThat(ex.getStatus()).isEqualTo(CommonErrorCode.FILE_UPLOAD_FAILED.getStatus());
     }
 
     @Test

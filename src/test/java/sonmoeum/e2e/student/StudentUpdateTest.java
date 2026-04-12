@@ -7,7 +7,6 @@ import static sonmoeum.domain.student.enums.StudentStatus.ON_LEAVE;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import sonmoeum.domain.student.v1.dto.request.CreateStudentRequest;
 import sonmoeum.domain.student.v1.dto.request.UpdateStudentRequest;
 import sonmoeum.domain.student.v1.dto.response.StudentResponse;
 

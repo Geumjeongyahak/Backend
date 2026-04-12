@@ -17,11 +17,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import sonmoeum.common.exception.ErrorCode;
+import sonmoeum.domain.auth.exception.AuthErrorCode;
 
 @Component
 @RequiredArgsConstructor
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
-    private static final ErrorCode ERROR_CODE = ErrorCode.AUTHENTICATION_FAILED;
+    private static final ErrorCode ERROR_CODE = AuthErrorCode.AUTHENTICATION_FAILED;
     private final ObjectMapper objectMapper;
 
     @Override

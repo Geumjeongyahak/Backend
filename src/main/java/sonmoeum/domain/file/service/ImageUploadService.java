@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import sonmoeum.common.exception.BadRequestException;
 import sonmoeum.common.exception.BusinessException;
-import sonmoeum.common.exception.ErrorCode;
+import sonmoeum.common.exception.CommonErrorCode;
 import sonmoeum.common.validation.FileValidationSupport;
 import sonmoeum.domain.file.entity.File;
 import sonmoeum.domain.file.repository.FileRepository;
@@ -124,7 +124,7 @@ public class ImageUploadService {
         try (InputStream inputStream = file.getInputStream()) {
             BufferedImage sourceImage = ImageIO.read(inputStream);
             if (sourceImage == null) {
-                throw new BadRequestException(ErrorCode.INVALID_INPUT, "이미지 파일을 읽을 수 없습니다.");
+                throw new BadRequestException(CommonErrorCode.INVALID_INPUT, "이미지 파일을 읽을 수 없습니다.");
             }
 
             BufferedImage resizedImage = new BufferedImage(
@@ -147,7 +147,7 @@ public class ImageUploadService {
             ImageIO.write(resizedImage, "png", outputStream);
             return outputStream.toByteArray();
         } catch (IOException exception) {
-            throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED, "이미지 변환에 실패했습니다.");
+            throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED, "이미지 변환에 실패했습니다.");
         }
     }
 }

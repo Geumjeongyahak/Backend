@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sonmoeum.common.exception.ErrorCode;
+import sonmoeum.common.exception.CommonErrorCode;
 import sonmoeum.common.exception.ResourceNotFoundException;
 import sonmoeum.domain.auth.enums.RoleType;
 import sonmoeum.domain.department.entity.Department;
@@ -93,7 +93,7 @@ public class DepartmentCrudService {
         return departmentRepository.findById(deptId)
                 .orElseThrow(() -> {
                     log.warn("부서를 찾을 수 없습니다 - ID: {}", deptId);
-                    return new ResourceNotFoundException(ErrorCode.RESOURCE_NOT_FOUND, "부서를 찾을 수 없습니다 - ID: " + deptId);
+                    return new ResourceNotFoundException(CommonErrorCode.RESOURCE_NOT_FOUND, "부서를 찾을 수 없습니다 - ID: " + deptId);
                 });
     }
 }

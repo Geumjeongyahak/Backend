@@ -205,7 +205,7 @@ class UserCreateTest extends UserBaseTest {
             .post()
         .then()
             .statusCode(409)
-            .body("code", equalTo("BIZ002"))  // DUPLICATE_USERNAME
+            .body("code", equalTo("BIZ-01-001"))  // DUPLICATE_USERNAME
             .log().all();
     }
 

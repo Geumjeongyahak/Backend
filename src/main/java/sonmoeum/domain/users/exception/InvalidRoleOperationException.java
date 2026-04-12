@@ -19,8 +19,8 @@ public class InvalidRoleOperationException extends BusinessException {
      */
     public static InvalidRoleOperationException roleAlreadyAssigned(Long userId, String roleType) {
         return new InvalidRoleOperationException(
-                ErrorCode.ROLE_ALREADY_ASSIGNED,
-                ErrorCode.ROLE_ALREADY_ASSIGNED.getMessage() + " (UserID: " + userId + ", RoleType: " + roleType + ")"
+                UserErrorCode.ROLE_ALREADY_ASSIGNED,
+                UserErrorCode.ROLE_ALREADY_ASSIGNED.getMessage() + " (UserID: " + userId + ", RoleType: " + roleType + ")"
         );
     }
 
@@ -29,8 +29,8 @@ public class InvalidRoleOperationException extends BusinessException {
      */
     public static InvalidRoleOperationException roleNotAssigned(Long userId, String roleType) {
         return new InvalidRoleOperationException(
-                ErrorCode.ROLE_NOT_ASSIGNED,
-                ErrorCode.ROLE_NOT_ASSIGNED.getMessage() + " (UserID: " + userId + ", RoleType: " + roleType + ")"
+                UserErrorCode.ROLE_NOT_ASSIGNED,
+                UserErrorCode.ROLE_NOT_ASSIGNED.getMessage() + " (UserID: " + userId + ", RoleType: " + roleType + ")"
         );
     }
 }

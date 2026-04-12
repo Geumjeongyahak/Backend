@@ -3,9 +3,10 @@ package sonmoeum.domain.department.exception;
 import sonmoeum.common.exception.BusinessException;
 import sonmoeum.common.exception.ErrorCode;
 import sonmoeum.domain.auth.enums.RoleType;
+import sonmoeum.domain.users.exception.UserErrorCode;
 
 public class DeleteDepartmentWithRoleException extends BusinessException {
-    private static final ErrorCode CODE = ErrorCode.CANNOT_DELETE_ROLE_IN_USE;
+    private static final ErrorCode CODE = UserErrorCode.CANNOT_DELETE_ROLE_IN_USE;
 
     public DeleteDepartmentWithRoleException(Long deptId, RoleType roleType) {
         super(CODE,

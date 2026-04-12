@@ -106,7 +106,7 @@ public class StudentCreateTest extends StudentBaseTest {
             .post()
             .then()
             .statusCode(409)
-            .body("code", startsWith("BIZ005"))
+            .body("code", startsWith("BIZ-04-001"))
             .log().all();
     }
 
