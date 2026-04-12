@@ -61,7 +61,7 @@ public class DepartmentParticipateService {
                 .orElseThrow(() -> new ResourceNotFoundException(DepartmentErrorCode.DEPARTMENT_NOT_FOUND, departmentId));
 
         if (!userDepartmentRepository.existsByUserIdAndDepartmentId(userId, departmentId)) {
-            throw new ResourceNotFoundException(DepartmentErrorCode.DEPARTMENT_NOT_FOUND, "해당 부서에 참여하지 않은 사용자입니다.");
+            throw new ResourceNotFoundException(DepartmentErrorCode.USER_NOT_IN_DEPARTMENT);
         }
         userDepartmentRepository.deleteByUserIdAndDepartmentId(userId, departmentId);
         log.info("사용자(ID: {}) 부서 탈퇴 완료 - 부서 ID: {}", userId, departmentId);
