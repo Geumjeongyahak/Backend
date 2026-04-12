@@ -7,9 +7,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sonmoeum.common.exception.BusinessException;
+import sonmoeum.common.exception.CommonErrorCode;
 import sonmoeum.common.exception.DuplicateResourceException;
-import sonmoeum.common.exception.ErrorCode;
 import sonmoeum.common.exception.ResourceNotFoundException;
+import sonmoeum.domain.channel.exception.ChannelErrorCode;
 import sonmoeum.domain.channel.entity.Channel;
 import sonmoeum.domain.channel.enums.ChannelType;
 import sonmoeum.domain.channel.enums.ChannelWriterPolicy;
@@ -152,7 +153,7 @@ public class ChannelCrudService {
         }
 
         if (!isUpdated) {
-            throw new BusinessException(ErrorCode.NO_CHANGES_DETECTED);
+            throw new BusinessException(CommonErrorCode.NO_CHANGES_DETECTED);
         }
 
         Channel updated = channelRepository.save(channel);
@@ -195,10 +196,10 @@ public class ChannelCrudService {
 
     private Channel getChannelWithoutDeleted(Long id) {
         Channel channel = channelRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.CHANNEL_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(ChannelErrorCode.CHANNEL_NOT_FOUND));
 
         if (channel.isDeleted()) {
-            throw new ResourceNotFoundException(ErrorCode.CHANNEL_NOT_FOUND);
+            throw new ResourceNotFoundException(ChannelErrorCode.CHANNEL_NOT_FOUND);
         }
 
         return channel;
@@ -215,7 +216,7 @@ public class ChannelCrudService {
                 : channelRepository.existsBySlugAndIdNotAndIsDeletedFalse(slug, id);
 
         if (isDuplicate) {
-            throw new DuplicateResourceException(ErrorCode.DUPLICATE_CHANNEL);
+            throw new DuplicateResourceException(ChannelErrorCode.DUPLICATE_CHANNEL);
         }
     }
 
@@ -227,7 +228,7 @@ public class ChannelCrudService {
         try {
             return ChannelWriterPolicy.valueOf(writerPolicy);
         } catch (IllegalArgumentException exception) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "유효하지 않은 채널 작성 권한 정책입니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 채널 작성 권한 정책입니다.");
         }
     }
 
@@ -235,7 +236,7 @@ public class ChannelCrudService {
         try {
             return ChannelType.valueOf(channelType);
         } catch (IllegalArgumentException exception) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "유효하지 않은 채널 유형입니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 채널 유형입니다.");
         }
     }
 }

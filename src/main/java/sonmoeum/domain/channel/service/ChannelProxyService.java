@@ -3,8 +3,8 @@ package sonmoeum.domain.channel.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sonmoeum.common.exception.ErrorCode;
 import sonmoeum.common.exception.ResourceNotFoundException;
+import sonmoeum.domain.channel.exception.ChannelErrorCode;
 import sonmoeum.domain.channel.entity.Channel;
 import sonmoeum.domain.channel.repository.ChannelRepository;
 
@@ -21,10 +21,10 @@ public class ChannelProxyService {
     @Transactional(readOnly = true)
     public Channel getReadableById(Long channelId) {
         Channel channel = channelRepository.findById(channelId)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.CHANNEL_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(ChannelErrorCode.CHANNEL_NOT_FOUND));
 
         if (channel.isDeleted() || !channel.isActive()) {
-            throw new ResourceNotFoundException(ErrorCode.CHANNEL_NOT_FOUND);
+            throw new ResourceNotFoundException(ChannelErrorCode.CHANNEL_NOT_FOUND);
         }
 
         return channel;

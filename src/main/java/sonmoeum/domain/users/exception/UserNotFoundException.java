@@ -1,6 +1,5 @@
 package sonmoeum.domain.users.exception;
 
-import sonmoeum.common.exception.ErrorCode;
 import sonmoeum.common.exception.ResourceNotFoundException;
 
 /**
@@ -9,10 +8,10 @@ import sonmoeum.common.exception.ResourceNotFoundException;
 public class UserNotFoundException extends ResourceNotFoundException {
 
     public UserNotFoundException(Long userId) {
-        super(ErrorCode.USER_NOT_FOUND, userId);
+        super(UserErrorCode.USER_NOT_FOUND, userId);
     }
 
     public UserNotFoundException(String username) {
-        super(ErrorCode.USER_NOT_FOUND, "사용자를 찾을 수 없습니다. Username: " + username);
+        super(UserErrorCode.USER_NOT_FOUND, "사용자를 찾을 수 없습니다. Username: " + username);
     }
 }

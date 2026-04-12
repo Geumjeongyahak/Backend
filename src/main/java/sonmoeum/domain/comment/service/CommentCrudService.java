@@ -4,9 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sonmoeum.common.exception.BusinessException;
-import sonmoeum.common.exception.ErrorCode;
+import sonmoeum.common.exception.CommonErrorCode;
 import sonmoeum.common.exception.ResourceNotFoundException;
 import sonmoeum.domain.channel.service.ChannelProxyService;
+import sonmoeum.domain.auth.exception.AuthErrorCode;
+import sonmoeum.domain.comment.exception.CommentErrorCode;
 import sonmoeum.domain.comment.entity.Comment;
 import sonmoeum.domain.comment.repository.CommentRepository;
 import sonmoeum.domain.comment.v1.dto.request.CreateCommentRequest;
@@ -37,7 +39,7 @@ public class CommentCrudService {
                 .orElseThrow(() -> new UserNotFoundException(userId));
 
         if (!post.isAllowComment()) {
-            throw new BusinessException(ErrorCode.INVALID_STATE, "댓글이 허용되지 않은 게시글입니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_STATE, "댓글이 허용되지 않은 게시글입니다.");
         }
 
         Comment parentComment = resolveParentComment(postId, request.parentCommentId());
@@ -68,7 +70,7 @@ public class CommentCrudService {
         Comment comment = getActiveComment(postId, commentId);
 
         if (!isAdminOrManager && !comment.getAuthor().getId().equals(userId)) {
-            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            throw new BusinessException(AuthErrorCode.ACCESS_DENIED);
         }
 
         comment.delete();
@@ -82,17 +84,17 @@ public class CommentCrudService {
 
         Comment parentComment = getActiveComment(postId, parentCommentId);
         if (parentComment.getParentComment() != null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "대댓글에는 다시 답글을 달 수 없습니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "대댓글에는 다시 답글을 달 수 없습니다.");
         }
         return parentComment;
     }
 
     private Comment getActiveComment(Long postId, Long commentId) {
         Comment comment = commentRepository.findByIdAndPostId(commentId, postId)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.COMMENT_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(CommentErrorCode.COMMENT_NOT_FOUND));
 
         if (comment.isDeleted()) {
-            throw new ResourceNotFoundException(ErrorCode.COMMENT_NOT_FOUND);
+            throw new ResourceNotFoundException(CommentErrorCode.COMMENT_NOT_FOUND);
         }
 
         return comment;

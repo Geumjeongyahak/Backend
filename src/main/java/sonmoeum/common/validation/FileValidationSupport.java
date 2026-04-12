@@ -11,7 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import lombok.extern.slf4j.Slf4j;
 import sonmoeum.common.config.FileProperties;
 import sonmoeum.common.exception.BadRequestException;
-import sonmoeum.common.exception.ErrorCode;
+import sonmoeum.common.exception.CommonErrorCode;
 
 @Slf4j
 @Component
@@ -45,7 +45,7 @@ public class FileValidationSupport {
 
     public String extractExtension(String filename) {
         if (filename == null || filename.isBlank() || !filename.contains(".")) {
-            throw new BadRequestException(ErrorCode.INVALID_INPUT, "파일 확장자를 확인할 수 없습니다.");
+            throw new BadRequestException(CommonErrorCode.INVALID_INPUT, "파일 확장자를 확인할 수 없습니다.");
         }
 
         return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
@@ -53,13 +53,13 @@ public class FileValidationSupport {
 
     private void validateFilePresence(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new BadRequestException(ErrorCode.MISSING_REQUIRED_FIELD, "업로드할 파일이 비어 있습니다.");
+            throw new BadRequestException(CommonErrorCode.MISSING_REQUIRED_FIELD, "업로드할 파일이 비어 있습니다.");
         }
     }
 
     private void validateSize(MultipartFile file, long maxBytes, String message) {
         if (file.getSize() > maxBytes) {
-            throw new BadRequestException(ErrorCode.INVALID_INPUT, message);
+            throw new BadRequestException(CommonErrorCode.INVALID_INPUT, message);
         }
     }
 
@@ -67,7 +67,7 @@ public class FileValidationSupport {
         String contentType = file.getContentType();
         if (contentType == null || !allowedTypes.contains(contentType.toLowerCase(Locale.ROOT))) {
             log.warn("허용되지 않은 MIME 타입: {}", contentType);
-            throw new BadRequestException(ErrorCode.INVALID_INPUT, message);
+            throw new BadRequestException(CommonErrorCode.INVALID_INPUT, message);
         }
     }
 

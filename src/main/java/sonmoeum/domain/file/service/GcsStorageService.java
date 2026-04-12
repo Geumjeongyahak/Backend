@@ -19,7 +19,7 @@ import com.google.cloud.storage.Storage.SignUrlOption;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import sonmoeum.common.exception.BusinessException;
-import sonmoeum.common.exception.ErrorCode;
+import sonmoeum.common.exception.CommonErrorCode;
 
 @Slf4j
 @Service
@@ -44,7 +44,7 @@ public class GcsStorageService implements StorageService {
             );
         } catch (IOException exception) {
             log.error("파일 읽기 실패: filename={}", file.getOriginalFilename(), exception);
-            throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED, "업로드할 파일을 읽지 못했습니다.");
+            throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED, "업로드할 파일을 읽지 못했습니다.");
         }
     }
 
@@ -59,7 +59,7 @@ public class GcsStorageService implements StorageService {
             storage.create(blobInfo, content);
         } catch (RuntimeException exception) {
             log.error("GCS 업로드 실패: path={}", path, exception);
-            throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED);
+            throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED);
         }
 
         return new StoredFile(path, bucketName, getPublicUrl(path));

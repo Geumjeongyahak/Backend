@@ -5,11 +5,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import sonmoeum.common.exception.BusinessException;
+import sonmoeum.common.exception.CommonErrorCode;
 import sonmoeum.common.exception.DuplicateResourceException;
-import sonmoeum.common.exception.ErrorCode;
 import sonmoeum.common.exception.ResourceNotFoundException;
 import sonmoeum.domain.base.dto.response.PaginationResponse;
 import sonmoeum.domain.classroom.entity.Classroom;
+import sonmoeum.domain.classroom.exception.ClassroomErrorCode;
 import sonmoeum.domain.classroom.enums.ClassroomType;
 import sonmoeum.domain.classroom.repository.ClassroomRepository;
 import sonmoeum.domain.classroom.repository.specification.ClassroomSpecs;
@@ -32,7 +33,7 @@ public class ClassroomCrudService {
             // TODO: soft delete된 분반이 있을 경우 복구하는 로직 추가 고려(논의 필요)
 
             log.info("분반 생성 실패 - 중복된 이름: {}", request.name());
-            throw new DuplicateResourceException(ErrorCode.DUPLICATE_CLASSROOM);
+            throw new DuplicateResourceException(ClassroomErrorCode.DUPLICATE_CLASSROOM);
         }
 
         Classroom classroom =  classroomRepository.save(Classroom.builder()
@@ -85,7 +86,7 @@ public class ClassroomCrudService {
         if (request.name() != null) {
             if (classroomRepository.existsByNameAndIdNot(request.name(), id)) {
                 log.info("분반 수정 실패 - 중복된 이름: {}", request.name());
-                throw new DuplicateResourceException(ErrorCode.DUPLICATE_CLASSROOM);
+                throw new DuplicateResourceException(ClassroomErrorCode.DUPLICATE_CLASSROOM);
             }
             classroom.setName(request.name());
             isUpdated = true;
@@ -100,7 +101,7 @@ public class ClassroomCrudService {
         }
         if (!isUpdated) {
             log.info("분반 수정 실패 - 변경된 값이 없음: {}", classroom.getName());
-            throw new BusinessException(ErrorCode.NO_CHANGES_DETECTED);
+            throw new BusinessException(CommonErrorCode.NO_CHANGES_DETECTED);
         }
         classroomRepository.save(classroom);
         log.info("분반 수정 성공: {}", classroom.getName());
@@ -117,10 +118,10 @@ public class ClassroomCrudService {
 
     private Classroom getClassroomWithoutDeleted(Long id) {
         Classroom classroom = classroomRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.CLASSROOM_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(ClassroomErrorCode.CLASSROOM_NOT_FOUND));
         // 삭제된 분반인지 확인
         if (classroom.isDeleted()) {
-            throw new ResourceNotFoundException(ErrorCode.CLASSROOM_NOT_FOUND);
+            throw new ResourceNotFoundException(ClassroomErrorCode.CLASSROOM_NOT_FOUND);
         }
         return classroom;
     }

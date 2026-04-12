@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 import sonmoeum.common.exception.BusinessException;
-import sonmoeum.common.exception.ErrorCode;
+import sonmoeum.common.exception.CommonErrorCode;
 import sonmoeum.domain.channel.enums.ChannelType;
 import sonmoeum.domain.channel.service.ChannelProxyService;
 import sonmoeum.domain.post.entity.Post;
@@ -66,7 +66,7 @@ public class PostSearchSpecificationBuilder {
         try {
             return PostStatus.valueOf(status);
         } catch (IllegalArgumentException exception) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "유효하지 않은 게시글 상태입니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 게시글 상태입니다.");
         }
     }
 
@@ -74,7 +74,7 @@ public class PostSearchSpecificationBuilder {
         try {
             return PostType.valueOf(postType);
         } catch (IllegalArgumentException exception) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "유효하지 않은 게시글 유형입니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 게시글 유형입니다.");
         }
     }
 
@@ -82,7 +82,7 @@ public class PostSearchSpecificationBuilder {
         try {
             return ChannelType.valueOf(channelType);
         } catch (IllegalArgumentException exception) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "유효하지 않은 채널 유형입니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 채널 유형입니다.");
         }
     }
 }

@@ -9,7 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import sonmoeum.common.exception.ErrorCode;
+import sonmoeum.common.exception.CommonErrorCode;
 import sonmoeum.common.exception.ResourceNotFoundException;
 import sonmoeum.common.validation.FileValidationSupport;
 import sonmoeum.domain.file.entity.File;
@@ -63,6 +63,6 @@ public class AttachmentUploadService {
 
     private File getFile(UUID fileId) {
         return fileRepository.findByIdAndIsDeletedFalse(fileId)
-            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.RESOURCE_NOT_FOUND, "파일을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ResourceNotFoundException(CommonErrorCode.RESOURCE_NOT_FOUND, "파일을 찾을 수 없습니다."));
     }
 }

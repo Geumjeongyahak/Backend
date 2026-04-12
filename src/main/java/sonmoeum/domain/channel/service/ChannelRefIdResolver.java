@@ -3,7 +3,7 @@ package sonmoeum.domain.channel.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import sonmoeum.common.exception.BusinessException;
-import sonmoeum.common.exception.ErrorCode;
+import sonmoeum.common.exception.CommonErrorCode;
 import sonmoeum.domain.channel.entity.Channel;
 import sonmoeum.domain.channel.enums.ChannelType;
 import sonmoeum.domain.classroom.service.ClassroomProxyService;
@@ -60,16 +60,16 @@ public class ChannelRefIdResolver {
 
     private void validateNoRefId(Long classroomId, Long departmentId, Long customRefId) {
         if (classroomId != null || departmentId != null || customRefId != null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "ALL 채널에는 참조 ID를 지정할 수 없습니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "ALL 채널에는 참조 ID를 지정할 수 없습니다.");
         }
     }
 
     private Long requireExistingClassroomId(Long classroomId, Long departmentId, Long customRefId) {
         if (classroomId == null) {
-            throw new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, "CLASSROOM 채널에는 classroomId가 필요합니다.");
+            throw new BusinessException(CommonErrorCode.MISSING_REQUIRED_FIELD, "CLASSROOM 채널에는 classroomId가 필요합니다.");
         }
         if (departmentId != null || customRefId != null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "CLASSROOM 채널에는 classroomId만 지정할 수 있습니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "CLASSROOM 채널에는 classroomId만 지정할 수 있습니다.");
         }
 
         classroomProxyService.getActiveById(classroomId);
@@ -78,10 +78,10 @@ public class ChannelRefIdResolver {
 
     private Long requireExistingDepartmentId(Long classroomId, Long departmentId, Long customRefId) {
         if (departmentId == null) {
-            throw new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, "DEPARTMENT 채널에는 departmentId가 필요합니다.");
+            throw new BusinessException(CommonErrorCode.MISSING_REQUIRED_FIELD, "DEPARTMENT 채널에는 departmentId가 필요합니다.");
         }
         if (classroomId != null || customRefId != null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "DEPARTMENT 채널에는 departmentId만 지정할 수 있습니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "DEPARTMENT 채널에는 departmentId만 지정할 수 있습니다.");
         }
 
         departmentProxyService.getById(departmentId);
@@ -90,10 +90,10 @@ public class ChannelRefIdResolver {
 
     private Long requireCustomRefId(Long classroomId, Long departmentId, Long customRefId) {
         if (customRefId == null) {
-            throw new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, "CUSTOM 채널에는 customRefId가 필요합니다.");
+            throw new BusinessException(CommonErrorCode.MISSING_REQUIRED_FIELD, "CUSTOM 채널에는 customRefId가 필요합니다.");
         }
         if (classroomId != null || departmentId != null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "CUSTOM 채널에는 customRefId만 지정할 수 있습니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "CUSTOM 채널에는 customRefId만 지정할 수 있습니다.");
         }
         return customRefId;
     }

@@ -3,9 +3,9 @@ package sonmoeum.domain.department.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sonmoeum.common.exception.ErrorCode;
 import sonmoeum.common.exception.ResourceNotFoundException;
 import sonmoeum.domain.department.entity.Department;
+import sonmoeum.domain.department.exception.DepartmentErrorCode;
 import sonmoeum.domain.department.repository.DepartmentRepository;
 
 /**
@@ -24,6 +24,6 @@ public class DepartmentProxyService {
     @Transactional(readOnly = true)
     public Department getById(Long departmentId) {
         return departmentRepository.findById(departmentId)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.DEPARTMENT_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(DepartmentErrorCode.DEPARTMENT_NOT_FOUND));
     }
 }

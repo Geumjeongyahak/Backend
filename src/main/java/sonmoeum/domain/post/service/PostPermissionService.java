@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sonmoeum.common.exception.BusinessException;
-import sonmoeum.common.exception.ErrorCode;
+import sonmoeum.domain.auth.exception.AuthErrorCode;
 import sonmoeum.domain.channel.entity.Channel;
 import sonmoeum.domain.channel.enums.ChannelType;
 import sonmoeum.domain.channel.enums.ChannelWriterPolicy;
@@ -36,7 +36,7 @@ public class PostPermissionService {
         };
 
         if (!allowed) {
-            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            throw new BusinessException(AuthErrorCode.ACCESS_DENIED);
         }
     }
 
@@ -44,7 +44,7 @@ public class PostPermissionService {
         if (isAdminOrManager || post.getAuthor().getId().equals(userId)) {
             return;
         }
-        throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        throw new BusinessException(AuthErrorCode.ACCESS_DENIED);
     }
 
     private boolean hasClassroomWritePermission(Channel channel, Long userId) {
