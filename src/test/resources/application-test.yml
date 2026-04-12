@@ -26,10 +26,11 @@ spring:
 
   cloud:
     gcp:
+      project-id: ${GCP_PROJECT_ID:}
       credentials:
         location: ${GCP_CREDENTIALS_PATH:}
       storage:
-        bucket: ${GCP_DEV_BUCKET_NAME:test-bucket}
+        bucket: ${GCP_DEV_BUCKET_NAME:}
 server:
   port: 0  # Random port
 
