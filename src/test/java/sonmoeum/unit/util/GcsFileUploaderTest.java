@@ -1,4 +1,4 @@
-package sonmoeum.common.util;
+package sonmoeum.unit.util;
 
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
@@ -14,6 +14,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 import sonmoeum.common.exception.BusinessException;
 import sonmoeum.common.exception.ErrorCode;
+import sonmoeum.common.util.GcsFileUploader;
 
 import java.io.IOException;
 
