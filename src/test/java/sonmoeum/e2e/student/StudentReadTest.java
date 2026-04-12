@@ -3,10 +3,8 @@ package sonmoeum.e2e.student;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 
-import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import sonmoeum.domain.student.v1.dto.request.CreateStudentRequest;
 import sonmoeum.domain.student.v1.dto.response.StudentResponse;
 
 @DisplayName("E2E: 학생 조회 테스트")

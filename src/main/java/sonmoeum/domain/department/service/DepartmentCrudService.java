@@ -9,7 +9,6 @@ import sonmoeum.common.exception.ResourceNotFoundException;
 import sonmoeum.domain.auth.enums.RoleType;
 import sonmoeum.domain.department.entity.Department;
 import sonmoeum.domain.department.entity.UserDepartment;
-import sonmoeum.domain.department.exception.DepartmentErrorCode;
 import sonmoeum.domain.department.exception.DeleteDepartmentWithMemberException;
 import sonmoeum.domain.department.exception.DeleteDepartmentWithRoleException;
 import sonmoeum.domain.department.repository.DepartmentRepository;

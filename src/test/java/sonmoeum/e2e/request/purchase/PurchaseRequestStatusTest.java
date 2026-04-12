@@ -1,7 +1,6 @@
 package sonmoeum.e2e.request.purchase;
 
 import static io.restassured.RestAssured.given;
-import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
