@@ -3,7 +3,6 @@ package sonmoeum.domain.channel.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sonmoeum.common.exception.BusinessException;
@@ -75,9 +74,7 @@ public class ChannelCrudService {
         if (request.getChannelType() != null && !request.getChannelType().isBlank()) {
             spec = spec.and(ChannelSpecs.hasChannelType(parseChannelType(request.getChannelType())));
         }
-        if (request.getIsActive() != null) {
-            spec = spec.and(ChannelSpecs.hasIsActive(request.getIsActive()));
-        }
+        spec = spec.and(ChannelSpecs.hasIsActive(request.getIsActive() != null ? request.getIsActive() : true));
         if (request.getIsDefault() != null) {
             spec = spec.and(ChannelSpecs.hasIsDefault(request.getIsDefault()));
         }

@@ -83,6 +83,14 @@ class ChannelLifecycleTest extends BaseChannelTest {
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get()
+        .then()
+            .statusCode(200)
+            .body("id", not(hasItems(channelId.intValue())));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .queryParam("isActive", false)
         .when()
             .get()

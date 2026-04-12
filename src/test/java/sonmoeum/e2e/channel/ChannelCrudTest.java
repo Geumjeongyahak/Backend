@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import sonmoeum.domain.channel.v1.dto.request.CreateChannelRequest;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -88,6 +89,19 @@ public class ChannelCrudTest extends BaseChannelTest {
                 .then()
                 .statusCode(400)
                 .body("code", equalTo("VAL003"));
+    }
+
+    @Test
+    @DisplayName("잘못된 sort 형식으로 채널 목록 조회 시 400을 반환한다")
+    void getChannels_InvalidSortFormat_BadRequest() {
+        given()
+                .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+                .queryParam("sort", "name")
+                .when()
+                .get()
+                .then()
+                .statusCode(400)
+                .body("code", anyOf(equalTo("VAL001"), equalTo("VAL002")));
     }
 
     @Test

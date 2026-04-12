@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.domain.Sort;
+import sonmoeum.common.exception.BadRequestException;
+import sonmoeum.common.exception.CommonErrorCode;
 import sonmoeum.common.validation.annotation.ValidSortField;
 
 import java.util.ArrayList;
@@ -105,12 +107,23 @@ public class ChannelListRequest {
                 continue;
             }
             String[] parts = sort.split(",");
+            if (parts.length != 2) {
+                throw new BadRequestException(
+                        CommonErrorCode.INVALID_INPUT,
+                        "정렬 조건은 '필드명,방향' 형식이어야 합니다: " + sort
+                );
+            }
             String field = parts[0].trim();
             String direction = parts[1].trim().toUpperCase();
             if (direction.equals("ASC")) {
                 orders.add(Sort.Order.asc(field));
             } else if (direction.equals("DESC")) {
                 orders.add(Sort.Order.desc(field));
+            } else {
+                throw new BadRequestException(
+                        CommonErrorCode.INVALID_INPUT,
+                        "정렬 방향은 ASC 또는 DESC만 사용할 수 있습니다: " + sort
+                );
             }
         }
         return orders;
