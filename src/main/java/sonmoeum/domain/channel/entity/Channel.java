@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,7 +20,13 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
-@Table(name = "channels")
+@Table(
+        name = "channels",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_channels_slug_is_deleted",
+                columnNames = {"slug", "is_deleted"}
+        )
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Channel extends BaseEntity {
 
