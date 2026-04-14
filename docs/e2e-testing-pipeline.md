@@ -1,6 +1,6 @@
 # E2E 테스트 작성 파이프라인
 
-손모음 플랫폼 백엔드의 E2E 테스트를 일관된 방법으로 작성하기 위한 가이드.
+금정야학 플랫폼 백엔드의 E2E 테스트를 일관된 방법으로 작성하기 위한 가이드.
 
 ---
 
@@ -27,7 +27,7 @@
 ## 2. 디렉터리 구조
 
 ```
-src/test/java/sonmoeum/
+src/test/java/geumjeongyahak/
 ├── e2e/
 │   ├── BaseE2ETest.java              ← 모든 E2E 테스트의 최상위 베이스
 │   ├── util/
@@ -67,7 +67,7 @@ src/test/java/sonmoeum/
 
 ### Step 2 – 헬퍼 준비
 
-보조 도메인이 필요하면 `src/test/java/sonmoeum/e2e/util/` 에 헬퍼를 추가한다.
+보조 도메인이 필요하면 `src/test/java/geumjeongyahak/e2e/util/` 에 헬퍼를 추가한다.
 
 ```java
 @Component

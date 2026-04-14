@@ -76,13 +76,13 @@ Use this policy unless the user directs otherwise:
 
 ## Scope mapping hints
 
-- `src/main/java/sonmoeum/domain/lesson/**` -> `lesson`
-- `src/main/java/sonmoeum/domain/subject/**` -> `subject`
-- `src/main/java/sonmoeum/domain/student/**` -> `student`
-- `src/main/java/sonmoeum/domain/classroom/**` -> `classroom`
-- `src/main/java/sonmoeum/domain/request/**` -> `request`
-- `src/main/java/sonmoeum/domain/auth/**` -> `auth`
-- `src/main/java/sonmoeum/domain/users/**` -> `user`
-- `src/main/java/sonmoeum/common/**` or build/config files -> `global`
+- `src/main/java/geumjeongyahak/domain/lesson/**` -> `lesson`
+- `src/main/java/geumjeongyahak/domain/subject/**` -> `subject`
+- `src/main/java/geumjeongyahak/domain/student/**` -> `student`
+- `src/main/java/geumjeongyahak/domain/classroom/**` -> `classroom`
+- `src/main/java/geumjeongyahak/domain/request/**` -> `request`
+- `src/main/java/geumjeongyahak/domain/auth/**` -> `auth`
+- `src/main/java/geumjeongyahak/domain/users/**` -> `user`
+- `src/main/java/geumjeongyahak/common/**` or build/config files -> `global`
 
 If multiple domains are changed, either split the commit or use `global` only when the change is truly cross-cutting.

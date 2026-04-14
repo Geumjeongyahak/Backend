@@ -1,4 +1,4 @@
-# 손모음 플랫폼 (Sonmoum API)
+# 금정야학 플랫폼 (Sonmoum API)
 
 금정열린배움터 교육 봉사 관리 시스템 백엔드 API
 
@@ -28,7 +28,7 @@
 ### 패키지 구조
 
 ```
-src/main/java/sonmoeum/
+src/main/java/geumjeongyahak/
 ├── common/                     # 공통 모듈
 │   ├── advice/                 # 전역 예외 처리
 │   ├── config/                 # SwaggerConfig 등

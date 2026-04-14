@@ -1,4 +1,4 @@
-# 손모음 플랫폼 PRD (Product Requirements Document)
+# 금정야학 플랫폼 PRD (Product Requirements Document)
 
 ## 1. 개요
 
