@@ -232,7 +232,7 @@ CREATE TABLE subject_exchange_requests (
 );
 
 CREATE TABLE files (
-    id            UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
+    id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     storage_key   VARCHAR(500) NOT NULL,
     bucket        VARCHAR(100) NOT NULL,
     original_name VARCHAR(255),

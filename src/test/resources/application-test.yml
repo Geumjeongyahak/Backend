@@ -37,7 +37,7 @@ server:
 logging:
     level:
       root: INFO
-      sonmoeum: DEBUG
+      geumjeongyahak: DEBUG
 
 springdoc:
     api-docs:
