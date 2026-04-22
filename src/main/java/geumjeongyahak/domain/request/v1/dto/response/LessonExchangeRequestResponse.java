@@ -1,10 +1,11 @@
 package geumjeongyahak.domain.request.v1.dto.response;
 
+import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
+import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
+import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
-import geumjeongyahak.domain.request.enums.RequestStatus;
 
 public record LessonExchangeRequestResponse(
 
@@ -30,16 +31,28 @@ public record LessonExchangeRequestResponse(
     String content,
 
     @Schema(description = "요청 상태", example = "PENDING")
-    RequestStatus status,
+    LessonExchangeRequestStatus status,
 
-    @Schema(description = "승인/반려 시각")
-    LocalDateTime approvalAt,
+    @Schema(description = "교환 범위", example = "FULL")
+    LessonExchangeScope scope,
+
+    @Schema(description = "교환 시작 교시", example = "1")
+    Integer startPeriod,
+
+    @Schema(description = "교환 종료 교시", example = "2")
+    Integer endPeriod,
+
+    @Schema(description = "처리(승인/반려) 시각")
+    LocalDateTime processedAt,
 
     @Schema(description = "처리자 이름")
-    String approvalByName,
+    String processedByName,
 
-    @Schema(description = "처리 메모")
-    String note,
+    @Schema(description = "반려 메모")
+    String rejectionNote,
+
+    @Schema(description = "교환 완료 시각")
+    LocalDateTime completedAt,
 
     @Schema(description = "생성 시각")
     LocalDateTime createdAt
@@ -54,9 +67,13 @@ public record LessonExchangeRequestResponse(
             r.getTitle(),
             r.getContent(),
             r.getStatus(),
-            r.getApprovalAt(),
-            r.getApprovalBy() != null ? r.getApprovalBy().getName() : null,
-            r.getNote(),
+            r.getScope(),
+            r.getStartPeriod(),
+            r.getEndPeriod(),
+            r.getProcessedAt(),
+            r.getProcessedBy() != null ? r.getProcessedBy().getName() : null,
+            r.getRejectionNote(),
+            r.getCompletedAt(),
             r.getCreatedAt()
         );
     }
