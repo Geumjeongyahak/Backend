@@ -1,14 +1,10 @@
 package geumjeongyahak.domain.request.service;
 
-import java.util.List;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
+import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import geumjeongyahak.domain.request.enums.RequestStatus;
 import geumjeongyahak.domain.request.event.LessonExchangeApprovedEvent;
 import geumjeongyahak.domain.request.exception.RequestAlreadyProcessedException;
@@ -20,6 +16,11 @@ import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestRespon
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.exception.UserNotFoundException;
 import geumjeongyahak.domain.users.service.UserProxyService;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -46,7 +47,14 @@ public class LessonExchangeRequestService {
         User requester = userProxyService.getById(requesterId);
 
         LessonExchangeRequest exchangeRequest = new LessonExchangeRequest(
-            lesson, requester, request.title(), request.content()
+            lesson,
+            requester,
+            request.title(),
+            request.content(),
+            request.scope(),
+            request.startPeriod(),
+            request.endPeriod(),
+            request.expiresAt()
         );
         LessonExchangeRequest saved = lessonExchangeRequestRepository.save(exchangeRequest);
 
@@ -97,7 +105,7 @@ public class LessonExchangeRequestService {
         LessonExchangeRequest exchangeRequest = lessonExchangeRequestRepository.findById(requestId)
             .orElseThrow(() -> new RequestNotFoundException(requestId));
 
-        if (exchangeRequest.getStatus() != RequestStatus.PENDING) {
+        if (exchangeRequest.getStatus() != LessonExchangeRequestStatus.PENDING) {
             throw new RequestAlreadyProcessedException();
         }
 
@@ -129,7 +137,7 @@ public class LessonExchangeRequestService {
         LessonExchangeRequest exchangeRequest = lessonExchangeRequestRepository.findById(requestId)
             .orElseThrow(() -> new RequestNotFoundException(requestId));
 
-        if (exchangeRequest.getStatus() != RequestStatus.PENDING) {
+        if (exchangeRequest.getStatus() != LessonExchangeRequestStatus.PENDING) {
             throw new RequestAlreadyProcessedException();
         }
 
