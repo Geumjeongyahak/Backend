@@ -2,6 +2,7 @@ package geumjeongyahak.domain.request.repository;
 
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,8 +22,9 @@ public interface LessonExchangeRequestRepository extends JpaRepository<LessonExc
         Long requestedById
     );
 
-    boolean existsByLesson_IdAndStatusIn(
-        Long lessonId,
-        Collection<LessonExchangeRequestStatus> statuses
+    List<LessonExchangeRequest> findAllByRequestedBy_IdAndLessonDateAndStatusIn(
+        Long requesterId,
+        LocalDate lessonDate,
+        Collection<LessonExchangeRequestStatus> activeStatuses
     );
 }

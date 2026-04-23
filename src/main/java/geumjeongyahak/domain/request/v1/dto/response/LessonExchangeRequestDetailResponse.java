@@ -12,9 +12,6 @@ public record LessonExchangeRequestDetailResponse(
     @Schema(description = "요청 ID", example = "1")
     Long id,
 
-    @Schema(description = "수업 ID", example = "1")
-    Long lessonId,
-
     @Schema(description = "반 이름", example = "개나리반")
     String classroomName,
 
@@ -63,12 +60,14 @@ public record LessonExchangeRequestDetailResponse(
     @Schema(description = "생성 시각")
     LocalDateTime createdAt
 ) {
-    public static LessonExchangeRequestDetailResponse from(LessonExchangeRequest r) {
+    public static LessonExchangeRequestDetailResponse from(
+        LessonExchangeRequest r,
+        String classroomName
+    ) {
         return new LessonExchangeRequestDetailResponse(
             r.getId(),
-            r.getLesson().getId(),
-            r.getLesson().getSubject().getClassroom().getName(),
-            r.getLesson().getDate(),
+            classroomName,
+            r.getLessonDate(),
             r.getRequestedBy().getId(),
             r.getRequestedBy().getName(),
             r.getTitle(),

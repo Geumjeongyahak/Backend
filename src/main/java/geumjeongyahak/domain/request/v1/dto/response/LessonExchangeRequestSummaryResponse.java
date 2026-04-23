@@ -25,10 +25,13 @@ public record LessonExchangeRequestSummaryResponse(
     @Schema(description = "생성 시각")
     LocalDateTime createdAt
 ) {
-    public static LessonExchangeRequestSummaryResponse from(LessonExchangeRequest r) {
+    public static LessonExchangeRequestSummaryResponse from(
+        LessonExchangeRequest r,
+        String classroomName
+    ) {
         return new LessonExchangeRequestSummaryResponse(
             r.getId(),
-            r.getLesson().getSubject().getClassroom().getName(),
+            classroomName,
             r.getRequestedBy().getName(),
             r.getTitle(),
             r.getStatus(),

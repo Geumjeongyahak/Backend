@@ -49,7 +49,7 @@ public class LessonExchangeRequestController {
         @Valid @RequestBody CreateLessonExchangeRequestRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.debug("POST /api/v1/lesson-exchange-requests - 수업 교환 요청 생성 (lessonId={})", request.lessonId());
+        log.debug("POST /api/v1/lesson-exchange-requests - 수업 교환 요청 생성 (title={})", request.title());
         LessonExchangeRequestDetailResponse response = lessonExchangeRequestService.createLessonExchangeRequest(
             userDetails.getUserId(), request
         );

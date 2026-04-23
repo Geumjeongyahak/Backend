@@ -1,12 +1,12 @@
 package geumjeongyahak.domain.lesson.repository;
 
+import geumjeongyahak.domain.lesson.entity.Lesson;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
-import geumjeongyahak.domain.lesson.entity.Lesson;
 
 public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
@@ -16,6 +16,17 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
     @EntityGraph(attributePaths = {"teacher", "subject"})
     List<Lesson> findAllByTeacherIdAndIsDeletedFalseAndDateBetweenOrderByDateAscPeriodAsc(
         Long teacherId, LocalDate startDate, LocalDate endDate
+    );
+
+    @EntityGraph(attributePaths = {"teacher", "subject", "subject.classroom"})
+    List<Lesson> findAllByTeacher_IdAndDateAndIsDeletedFalse(Long teacherId, LocalDate date);
+
+    @EntityGraph(attributePaths = {"teacher", "subject", "subject.classroom"})
+    List<Lesson> findAllByTeacher_IdAndDateAndPeriodBetweenAndIsDeletedFalse(
+        Long teacherId,
+        LocalDate date,
+        Integer startPeriod,
+        Integer endPeriod
     );
 
     @EntityGraph(attributePaths = {"teacher", "subject"})

@@ -1,7 +1,6 @@
 package geumjeongyahak.domain.request.entity;
 
 import geumjeongyahak.domain.base.entity.BaseEntity;
-import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import geumjeongyahak.domain.users.entity.User;
@@ -15,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,9 +28,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LessonExchangeRequest extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "lesson_id", nullable = false)
-    private Lesson lesson;
+    @Column(nullable = false)
+    private LocalDate lessonDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requested_by", nullable = false)
@@ -76,8 +75,8 @@ public class LessonExchangeRequest extends BaseEntity {
     private List<LessonExchangeProposal> proposals = new ArrayList<>();
 
     public LessonExchangeRequest(
-        Lesson lesson,
         User requestedBy,
+        LocalDate lessonDate,
         String title,
         String content,
         LessonExchangeScope scope,
@@ -86,8 +85,8 @@ public class LessonExchangeRequest extends BaseEntity {
         LocalDateTime expiresAt
     ) {
         validateScope(scope, startPeriod, endPeriod);
-        this.lesson = lesson;
         this.requestedBy = requestedBy;
+        this.lessonDate = lessonDate;
         this.title = title;
         this.content = content;
         this.status = LessonExchangeRequestStatus.PENDING;
