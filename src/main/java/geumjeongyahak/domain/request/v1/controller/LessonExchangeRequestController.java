@@ -1,5 +1,12 @@
 package geumjeongyahak.domain.request.v1.controller;
 
+import geumjeongyahak.common.security.service.CustomUserDetails;
+import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
+import geumjeongyahak.domain.request.service.LessonExchangeRequestService;
+import geumjeongyahak.domain.request.v1.dto.request.ApproveLessonExchangeRequest;
+import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeRequestRequest;
+import geumjeongyahak.domain.request.v1.dto.request.RejectRequestRequest;
+import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -18,13 +25,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import geumjeongyahak.common.security.service.CustomUserDetails;
-import geumjeongyahak.domain.request.enums.RequestStatus;
-import geumjeongyahak.domain.request.service.LessonExchangeRequestService;
-import geumjeongyahak.domain.request.v1.dto.request.ApproveLessonExchangeRequest;
-import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeRequestRequest;
-import geumjeongyahak.domain.request.v1.dto.request.RejectRequestRequest;
-import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestResponse;
 
 @Slf4j
 @RestController
@@ -39,8 +39,10 @@ public class LessonExchangeRequestController {
     @Operation(
         summary = "수업 교환 요청 생성",
         description = "인증된 사용자가 자신이 담당 중인 수업에 대해서만 수업 교환 요청을 생성합니다. "
-            + "요청 생성 시 상태는 PENDING 으로 저장되며 대상 수업, 요청자, 제목, 본문이 함께 기록됩니다. "
-            + "이 단계에서는 실제 담당 교사 변경이 일어나지 않으며, side effect 는 승인 API에서만 발생합니다."
+            + "요청 생성 시 PENDING 상태(승인 대기 상태)로 저장되며 대상 수업, 요청자, 제목, 내용, 교환 범위, 교시 범위, 만료 시각이 함께 저장됩니다. "
+            + "이 단계에서는 실제 담당 교사 변경이 일어나지 않으며, side effect(승인/제안/수락)는 승인 API에서만 발생합니다. "
+            + "수업 교환 요청은 현재 기준 4일 이후 수업부터 가능합니다. (현재 6월 1일인 경우, 6월 5일 수업부터 교환 신청 가능) "
+            + "수업 교환 요청의 만료 시각은 교환 대상 수업의 3일 전 23:59:59까지 설정 가능합니다. (6월 5일 수업인 경우 6월 2일 23:59:59까지 설정 가능)"
     )
     @PostMapping
     public ResponseEntity<LessonExchangeRequestResponse> createLessonExchangeRequest(
@@ -64,7 +66,7 @@ public class LessonExchangeRequestController {
     )
     @GetMapping
     public ResponseEntity<List<LessonExchangeRequestResponse>> getLessonExchangeRequests(
-        @RequestParam(required = false) RequestStatus status,
+        @RequestParam(required = false) LessonExchangeRequestStatus status,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("GET /api/v1/lesson-exchange-requests - 수업 교환 요청 목록 조회 (status={})", status);
