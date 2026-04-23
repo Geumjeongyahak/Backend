@@ -1,11 +1,14 @@
 package geumjeongyahak.domain.request.v1.dto.request;
 
+import geumjeongyahak.common.validation.annotation.ValidLessonExchangeScope;
 import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
+@ValidLessonExchangeScope
 public record CreateLessonExchangeRequestRequest(
 
     @NotNull
@@ -24,13 +27,14 @@ public record CreateLessonExchangeRequestRequest(
     @Schema(description = "교환 범위", example = "PARTIAL")
     LessonExchangeScope scope,
 
-    @Schema(description = "교환 시작 기간", example = "1")
+    @Schema(description = "교환 시작 교시", example = "1")
     Integer startPeriod,
 
-    @Schema(description = "교환 종료 기간", example = "2")
+    @Schema(description = "교환 종료 교시", example = "2")
     Integer endPeriod,
 
     @NotNull
-    @Schema(description = "요청 만료 시간", example = "2026-06-01T22:00:00")
+    @Future
+    @Schema(description = "요청 만료 시각", example = "2026-06-01T22:00:00")
     LocalDateTime expiresAt
 ) {}

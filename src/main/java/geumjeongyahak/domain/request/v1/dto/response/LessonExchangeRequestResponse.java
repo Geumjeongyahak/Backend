@@ -42,6 +42,9 @@ public record LessonExchangeRequestResponse(
     @Schema(description = "교환 종료 교시", example = "2")
     Integer endPeriod,
 
+    @Schema(description = "요청 만료 시각")
+    LocalDateTime expiresAt,
+
     @Schema(description = "처리(승인/반려) 시각")
     LocalDateTime processedAt,
 
@@ -70,6 +73,7 @@ public record LessonExchangeRequestResponse(
             r.getScope(),
             r.getStartPeriod(),
             r.getEndPeriod(),
+            r.getExpiresAt(),
             r.getProcessedAt(),
             r.getProcessedBy() != null ? r.getProcessedBy().getName() : null,
             r.getRejectionNote(),
