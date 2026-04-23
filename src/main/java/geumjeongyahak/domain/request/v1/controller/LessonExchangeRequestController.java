@@ -119,8 +119,8 @@ public class LessonExchangeRequestController {
     @Operation(
         summary = "수업 교환 요청 반려",
         description = "ADMIN 또는 MANAGER 가 PENDING 상태의 수업 교환 요청을 반려합니다. "
-            + "반려 시 요청 상태는 REJECTED 로 변경되고 승인자, 승인 시각, 반려 사유(note)가 저장됩니다. "
-            + "반려는 요청 상태만 변경하며 실제 수업 담당 교사 변경 side effect 는 발생하지 않습니다. "
+            + "반려 시 요청 상태는 REJECTED 로 변경되고 처리자, 처리 시각, 반려 사유(note)가 저장됩니다. "
+            + "이 단계에서는 실제 수업 교환 side effect 는 발생하지 않으며, "
             + "이미 처리된 요청은 다시 반려할 수 없습니다."
     )
     @PatchMapping("/{requestId}/reject")

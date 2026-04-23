@@ -132,7 +132,7 @@ public class LessonExchangeRequestService {
     public LessonExchangeRequestDetailResponse rejectLessonExchangeRequest(
         Long approverId, Long requestId, String note
     ) {
-        log.debug("수업 교환 요청 반려 (requestId={})", requestId);
+        log.debug("수업 교환 요청 반려 (requestId={}, approverId={})", requestId, approverId);
         LessonExchangeRequest exchangeRequest = lessonExchangeRequestRepository.findById(requestId)
             .orElseThrow(() -> new RequestNotFoundException(requestId));
 
@@ -143,7 +143,7 @@ public class LessonExchangeRequestService {
         User approver = userProxyService.getById(approverId);
         exchangeRequest.reject(approver, note);
 
-        log.debug("수업 교환 요청 반려 완료 (requestId={})", requestId);
+        log.debug("수업 교환 요청 반려 완료 (requestId={}, approverId={})", requestId, approverId);
         return LessonExchangeRequestDetailResponse.from(exchangeRequest);
     }
 
