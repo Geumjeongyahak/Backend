@@ -7,13 +7,16 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-public record LessonExchangeRequestResponse(
+public record LessonExchangeRequestDetailResponse(
 
     @Schema(description = "요청 ID", example = "1")
     Long id,
 
     @Schema(description = "수업 ID", example = "1")
     Long lessonId,
+
+    @Schema(description = "반 이름", example = "개나리반")
+    String classroomName,
 
     @Schema(description = "수업 날짜", example = "2026-03-28")
     LocalDate lessonDate,
@@ -60,10 +63,11 @@ public record LessonExchangeRequestResponse(
     @Schema(description = "생성 시각")
     LocalDateTime createdAt
 ) {
-    public static LessonExchangeRequestResponse from(LessonExchangeRequest r) {
-        return new LessonExchangeRequestResponse(
+    public static LessonExchangeRequestDetailResponse from(LessonExchangeRequest r) {
+        return new LessonExchangeRequestDetailResponse(
             r.getId(),
             r.getLesson().getId(),
+            r.getLesson().getSubject().getClassroom().getName(),
             r.getLesson().getDate(),
             r.getRequestedBy().getId(),
             r.getRequestedBy().getName(),

@@ -16,7 +16,8 @@ import geumjeongyahak.domain.request.exception.RequestForbiddenException;
 import geumjeongyahak.domain.request.exception.RequestNotFoundException;
 import geumjeongyahak.domain.request.repository.LessonExchangeRequestRepository;
 import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeRequestRequest;
-import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestResponse;
+import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestDetailResponse;
+import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestSummaryResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.exception.UserNotFoundException;
 import geumjeongyahak.domain.users.service.UserProxyService;
@@ -34,11 +35,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class LessonExchangeRequestService {
 
-    private static final Integer REQUEST_DEADLINE_DAY = 4;
-    private static final Integer EXPIRE_DEADLINE_DAY = 3;
-    private static final Integer EXPIRE_DEADLINE_HOUR = 23;
-    private static final Integer EXPIRE_DEADLINE_MINUTE = 59;
-    private static final Integer EXPIRE_DEADLINE_SECOND = 59;
+    private static final int REQUEST_DEADLINE_DAY = 4;
+    private static final int EXPIRE_DEADLINE_DAY = 3;
+    private static final int EXPIRE_DEADLINE_HOUR = 23;
+    private static final int EXPIRE_DEADLINE_MINUTE = 59;
+    private static final int EXPIRE_DEADLINE_SECOND = 59;
 
     private final LessonExchangeRequestRepository lessonExchangeRequestRepository;
     private final LessonProxyService lessonProxyService;
@@ -46,7 +47,7 @@ public class LessonExchangeRequestService {
     private final EventPublisher eventPublisher;
 
     @Transactional
-    public LessonExchangeRequestResponse createLessonExchangeRequest(
+    public LessonExchangeRequestDetailResponse createLessonExchangeRequest(
         Long requesterId,
         CreateLessonExchangeRequestRequest request
     ) {
@@ -76,31 +77,31 @@ public class LessonExchangeRequestService {
         LessonExchangeRequest saved = lessonExchangeRequestRepository.save(exchangeRequest);
 
         log.debug("수업 교환 요청 생성 완료 (id={})", saved.getId());
-        return LessonExchangeRequestResponse.from(saved);
+        return LessonExchangeRequestDetailResponse.from(saved);
     }
 
-    public List<LessonExchangeRequestResponse> getLessonExchangeRequests(
-        Long requesterId, boolean isAdmin, LessonExchangeRequestStatus status
+    public List<LessonExchangeRequestSummaryResponse> getLessonExchangeRequests(
+        Long requesterId, LessonExchangeRequestStatus status, boolean mine
     ) {
-        log.debug("수업 교환 요청 목록 조회 (isAdmin={}, status={})", isAdmin, status);
+        log.debug("수업 교환 요청 목록 조회 (status={}, mine={})", status, mine);
 
         List<LessonExchangeRequest> list;
         if (status != null) {
-            list = isAdmin
-                ? lessonExchangeRequestRepository.findAllByStatusOrderByCreatedAtDesc(status)
-                : lessonExchangeRequestRepository.findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(
+            list = mine
+                ? lessonExchangeRequestRepository.findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(
                     status, requesterId
-                );
+                )
+                : lessonExchangeRequestRepository.findAllByStatusOrderByCreatedAtDesc(status);
         } else {
-            list = isAdmin
-                ? lessonExchangeRequestRepository.findAllByOrderByCreatedAtDesc()
-                : lessonExchangeRequestRepository.findAllByRequestedBy_IdOrderByCreatedAtDesc(requesterId);
+            list = mine
+                ? lessonExchangeRequestRepository.findAllByRequestedBy_IdOrderByCreatedAtDesc(requesterId)
+                : lessonExchangeRequestRepository.findAllByOrderByCreatedAtDesc();
         }
 
-        return list.stream().map(LessonExchangeRequestResponse::from).toList();
+        return list.stream().map(LessonExchangeRequestSummaryResponse::from).toList();
     }
 
-    public LessonExchangeRequestResponse getLessonExchangeRequest(
+    public LessonExchangeRequestDetailResponse getLessonExchangeRequest(
         Long requesterId, Long requestId, boolean isAdmin
     ) {
         log.debug("수업 교환 요청 상세 조회 (requestId={})", requestId);
@@ -111,11 +112,11 @@ public class LessonExchangeRequestService {
             throw new RequestForbiddenException();
         }
 
-        return LessonExchangeRequestResponse.from(exchangeRequest);
+        return LessonExchangeRequestDetailResponse.from(exchangeRequest);
     }
 
     @Transactional
-    public LessonExchangeRequestResponse approveLessonExchangeRequest(
+    public LessonExchangeRequestDetailResponse approveLessonExchangeRequest(
         Long approverId, Long requestId, Long exchangeWithUserId
     ) {
         log.debug("수업 교환 요청 승인 (requestId={}, exchangeWithUserId={})", requestId, exchangeWithUserId);
@@ -143,11 +144,11 @@ public class LessonExchangeRequestService {
         ));
 
         log.debug("수업 교환 요청 승인 완료 (requestId={})", requestId);
-        return LessonExchangeRequestResponse.from(exchangeRequest);
+        return LessonExchangeRequestDetailResponse.from(exchangeRequest);
     }
 
     @Transactional
-    public LessonExchangeRequestResponse rejectLessonExchangeRequest(
+    public LessonExchangeRequestDetailResponse rejectLessonExchangeRequest(
         Long approverId, Long requestId, String note
     ) {
         log.debug("수업 교환 요청 반려 (requestId={})", requestId);
@@ -162,7 +163,7 @@ public class LessonExchangeRequestService {
         exchangeRequest.reject(approver, note);
 
         log.debug("수업 교환 요청 반려 완료 (requestId={})", requestId);
-        return LessonExchangeRequestResponse.from(exchangeRequest);
+        return LessonExchangeRequestDetailResponse.from(exchangeRequest);
     }
 
     private void validateRequesterOwnsLesson(Lesson lesson, Long requesterId) {
