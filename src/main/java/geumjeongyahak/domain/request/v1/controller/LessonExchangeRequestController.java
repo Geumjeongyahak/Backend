@@ -6,7 +6,8 @@ import geumjeongyahak.domain.request.service.LessonExchangeRequestService;
 import geumjeongyahak.domain.request.v1.dto.request.ApproveLessonExchangeRequest;
 import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.request.RejectRequestRequest;
-import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestResponse;
+import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestDetailResponse;
+import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestSummaryResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -45,12 +46,12 @@ public class LessonExchangeRequestController {
             + "수업 교환 요청의 만료 시각은 교환 대상 수업의 3일 전 23:59:59까지 설정 가능합니다. (6월 5일 수업인 경우 6월 2일 23:59:59까지 설정 가능)"
     )
     @PostMapping
-    public ResponseEntity<LessonExchangeRequestResponse> createLessonExchangeRequest(
+    public ResponseEntity<LessonExchangeRequestDetailResponse> createLessonExchangeRequest(
         @Valid @RequestBody CreateLessonExchangeRequestRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("POST /api/v1/lesson-exchange-requests - 수업 교환 요청 생성 (lessonId={})", request.lessonId());
-        LessonExchangeRequestResponse response = lessonExchangeRequestService.createLessonExchangeRequest(
+        LessonExchangeRequestDetailResponse response = lessonExchangeRequestService.createLessonExchangeRequest(
             userDetails.getUserId(), request
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -59,19 +60,20 @@ public class LessonExchangeRequestController {
     @PreAuthorize("isAuthenticated()")
     @Operation(
         summary = "수업 교환 요청 목록 조회",
-        description = "수업 교환 요청 목록을 조회합니다. ADMIN 과 MANAGER 는 전체 요청을 조회할 수 있고, "
-            + "일반 사용자는 본인이 생성한 요청만 조회할 수 있습니다. "
+        description = "수업 교환 요청 목록을 조회합니다. 모든 교원은 모든 요청을 조회할 수 있습니다. "
+            + "mine 파라미터를 전달하면 본인이 요청한 요청만 반환합니다. "
             + "status 파라미터를 전달하면 해당 상태의 요청만 반환합니다. "
             + "조회 API는 side effect 를 발생시키지 않습니다."
     )
     @GetMapping
-    public ResponseEntity<List<LessonExchangeRequestResponse>> getLessonExchangeRequests(
+    public ResponseEntity<List<LessonExchangeRequestSummaryResponse>> getLessonExchangeRequests(
         @RequestParam(required = false) LessonExchangeRequestStatus status,
+        @RequestParam(defaultValue = "false") boolean mine,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.debug("GET /api/v1/lesson-exchange-requests - 수업 교환 요청 목록 조회 (status={})", status);
-        List<LessonExchangeRequestResponse> response = lessonExchangeRequestService.getLessonExchangeRequests(
-            userDetails.getUserId(), userDetails.isAdminOrManager(), status
+        log.debug("GET /api/v1/lesson-exchange-requests - 수업 교환 요청 목록 조회 (status={}, mine={})", status, mine);
+        List<LessonExchangeRequestSummaryResponse> response = lessonExchangeRequestService.getLessonExchangeRequests(
+            userDetails.getUserId(), status, mine
         );
         return ResponseEntity.ok(response);
     }
@@ -84,12 +86,12 @@ public class LessonExchangeRequestController {
             + "응답에는 대상 수업, 요청자, 제목/내용, 요청 상태, 승인자, 승인 시각, 반려 메모가 포함될 수 있으며 조회 자체는 side effect 를 발생시키지 않습니다."
     )
     @GetMapping("/{requestId}")
-    public ResponseEntity<LessonExchangeRequestResponse> getLessonExchangeRequest(
+    public ResponseEntity<LessonExchangeRequestDetailResponse> getLessonExchangeRequest(
         @PathVariable Long requestId,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("GET /api/v1/lesson-exchange-requests/{} - 수업 교환 요청 상세 조회", requestId);
-        LessonExchangeRequestResponse response = lessonExchangeRequestService.getLessonExchangeRequest(
+        LessonExchangeRequestDetailResponse response = lessonExchangeRequestService.getLessonExchangeRequest(
             userDetails.getUserId(), requestId, userDetails.isAdminOrManager()
         );
         return ResponseEntity.ok(response);
@@ -105,13 +107,13 @@ public class LessonExchangeRequestController {
             + "양방향 스왑 side effect 가 함께 적용됩니다. 이미 처리된 요청은 다시 승인할 수 없습니다."
     )
     @PatchMapping("/{requestId}/approve")
-    public ResponseEntity<LessonExchangeRequestResponse> approveLessonExchangeRequest(
+    public ResponseEntity<LessonExchangeRequestDetailResponse> approveLessonExchangeRequest(
         @PathVariable Long requestId,
         @Valid @RequestBody ApproveLessonExchangeRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PATCH /api/v1/lesson-exchange-requests/{}/approve - 수업 교환 요청 승인", requestId);
-        LessonExchangeRequestResponse response = lessonExchangeRequestService.approveLessonExchangeRequest(
+        LessonExchangeRequestDetailResponse response = lessonExchangeRequestService.approveLessonExchangeRequest(
             userDetails.getUserId(), requestId, request.exchangeWithUserId()
         );
         return ResponseEntity.ok(response);
@@ -126,13 +128,13 @@ public class LessonExchangeRequestController {
             + "이미 처리된 요청은 다시 반려할 수 없습니다."
     )
     @PatchMapping("/{requestId}/reject")
-    public ResponseEntity<LessonExchangeRequestResponse> rejectLessonExchangeRequest(
+    public ResponseEntity<LessonExchangeRequestDetailResponse> rejectLessonExchangeRequest(
         @PathVariable Long requestId,
         @Valid @RequestBody RejectRequestRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PATCH /api/v1/lesson-exchange-requests/{}/reject - 수업 교환 요청 반려", requestId);
-        LessonExchangeRequestResponse response = lessonExchangeRequestService.rejectLessonExchangeRequest(
+        LessonExchangeRequestDetailResponse response = lessonExchangeRequestService.rejectLessonExchangeRequest(
             userDetails.getUserId(), requestId, request.note()
         );
         return ResponseEntity.ok(response);
