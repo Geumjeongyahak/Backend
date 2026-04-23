@@ -5,7 +5,6 @@ import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
-import geumjeongyahak.domain.request.event.LessonExchangeApprovedEvent;
 import geumjeongyahak.domain.request.exception.DuplicateActiveRequestException;
 import geumjeongyahak.domain.request.exception.InvalidRequestExpiresAfterLessonException;
 import geumjeongyahak.domain.request.exception.InvalidRequestExpiresInPastException;
@@ -19,7 +18,6 @@ import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeRequestR
 import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestDetailResponse;
 import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestSummaryResponse;
 import geumjeongyahak.domain.users.entity.User;
-import geumjeongyahak.domain.users.exception.UserNotFoundException;
 import geumjeongyahak.domain.users.service.UserProxyService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -44,7 +42,6 @@ public class LessonExchangeRequestService {
     private final LessonExchangeRequestRepository lessonExchangeRequestRepository;
     private final LessonProxyService lessonProxyService;
     private final UserProxyService userProxyService;
-    private final EventPublisher eventPublisher;
 
     @Transactional
     public LessonExchangeRequestDetailResponse createLessonExchangeRequest(
@@ -113,9 +110,10 @@ public class LessonExchangeRequestService {
 
     @Transactional
     public LessonExchangeRequestDetailResponse approveLessonExchangeRequest(
-        Long approverId, Long requestId, Long exchangeWithUserId
+        Long approverId,
+        Long requestId
     ) {
-        log.debug("수업 교환 요청 승인 (requestId={}, exchangeWithUserId={})", requestId, exchangeWithUserId);
+        log.debug("수업 교환 요청 승인 (requestId={}, approverId={})", requestId, approverId);
         LessonExchangeRequest exchangeRequest = lessonExchangeRequestRepository.findById(requestId)
             .orElseThrow(() -> new RequestNotFoundException(requestId));
 
@@ -124,22 +122,9 @@ public class LessonExchangeRequestService {
         }
 
         User approver = userProxyService.getById(approverId);
-
-        // exchangeWithUserId 유효성 검증 (존재 여부 확인)
-        if (!userProxyService.existsById(exchangeWithUserId)) {
-            throw new UserNotFoundException(exchangeWithUserId);
-        }
-
         exchangeRequest.approve(approver);
 
-        eventPublisher.publish(new LessonExchangeApprovedEvent(
-            exchangeRequest.getLesson().getId(),
-            exchangeRequest.getRequestedBy().getId(),
-            exchangeWithUserId,
-            approverId
-        ));
-
-        log.debug("수업 교환 요청 승인 완료 (requestId={})", requestId);
+        log.debug("수업 교환 요청 승인 완료 (requestId={}, approverId={})", requestId, approverId);
         return LessonExchangeRequestDetailResponse.from(exchangeRequest);
     }
 
