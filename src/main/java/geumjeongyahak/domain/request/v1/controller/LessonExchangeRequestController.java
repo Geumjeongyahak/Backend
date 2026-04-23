@@ -3,7 +3,6 @@ package geumjeongyahak.domain.request.v1.controller;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import geumjeongyahak.domain.request.service.LessonExchangeRequestService;
-import geumjeongyahak.domain.request.v1.dto.request.ApproveLessonExchangeRequest;
 import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.request.RejectRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestDetailResponse;
@@ -100,20 +99,18 @@ public class LessonExchangeRequestController {
     @Operation(
         summary = "수업 교환 요청 승인",
         description = "ADMIN 또는 MANAGER 가 PENDING 상태의 수업 교환 요청을 승인합니다. "
-            + "exchangeWithUserId 로 교환 대상 교사를 지정해야 하며, 요청 상태는 APPROVED 로 변경되고 승인자 및 승인 시각이 기록됩니다. "
-            + "승인 이벤트가 발행되면 대상 수업의 담당 교사가 exchangeWithUserId 사용자로 변경됩니다. "
-            + "또한 동일한 날짜와 시간대에 교환 대상 교사가 맡고 있는 다른 수업이 존재하면, 해당 수업의 담당 교사는 요청자로 교체되어 "
-            + "양방향 스왑 side effect 가 함께 적용됩니다. 이미 처리된 요청은 다시 승인할 수 없습니다."
+            + "요청 상태는 APPROVED 로 변경되고 처리자 및 처리 시각이 기록됩니다. "
+            + "이 단계에서는 실제 수업 교환 side effect 는 발생하지 않으며, "
+            + "이후 다른 교원이 해당 요청에 대해 교환 제안을 작성할 수 있게 됩니다."
     )
     @PatchMapping("/{requestId}/approve")
     public ResponseEntity<LessonExchangeRequestDetailResponse> approveLessonExchangeRequest(
         @PathVariable Long requestId,
-        @Valid @RequestBody ApproveLessonExchangeRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PATCH /api/v1/lesson-exchange-requests/{}/approve - 수업 교환 요청 승인", requestId);
         LessonExchangeRequestDetailResponse response = lessonExchangeRequestService.approveLessonExchangeRequest(
-            userDetails.getUserId(), requestId, request.exchangeWithUserId()
+            userDetails.getUserId(), requestId
         );
         return ResponseEntity.ok(response);
     }
