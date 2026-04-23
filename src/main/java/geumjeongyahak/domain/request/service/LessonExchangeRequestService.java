@@ -102,15 +102,11 @@ public class LessonExchangeRequestService {
     }
 
     public LessonExchangeRequestDetailResponse getLessonExchangeRequest(
-        Long requesterId, Long requestId, boolean isAdmin
+        Long requestId
     ) {
         log.debug("수업 교환 요청 상세 조회 (requestId={})", requestId);
         LessonExchangeRequest exchangeRequest = lessonExchangeRequestRepository.findById(requestId)
             .orElseThrow(() -> new RequestNotFoundException(requestId));
-
-        if (!isAdmin && !exchangeRequest.getRequestedBy().getId().equals(requesterId)) {
-            throw new RequestForbiddenException();
-        }
 
         return LessonExchangeRequestDetailResponse.from(exchangeRequest);
     }

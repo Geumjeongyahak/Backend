@@ -81,18 +81,17 @@ public class LessonExchangeRequestController {
     @PreAuthorize("isAuthenticated()")
     @Operation(
         summary = "수업 교환 요청 상세 조회",
-        description = "수업 교환 요청 단건을 조회합니다. ADMIN 과 MANAGER 는 모든 요청을 조회할 수 있고, "
-            + "일반 사용자는 본인 요청만 조회할 수 있습니다. "
-            + "응답에는 대상 수업, 요청자, 제목/내용, 요청 상태, 승인자, 승인 시각, 반려 메모가 포함될 수 있으며 조회 자체는 side effect 를 발생시키지 않습니다."
+        description = "수업 교환 요청 단건을 조회합니다. 모든 교원은 모든 요청을 조회할 수 있습니다. "
+            + "응답에는 대상 수업, 반 이름, 요청자, 제목/내용, 요청 상태, 교환 범위, 교시 범위, 만료 시각, 처리 정보가 포함됩니다. "
+            + "조회 API는 side effect 를 발생시키지 않습니다."
     )
     @GetMapping("/{requestId}")
     public ResponseEntity<LessonExchangeRequestDetailResponse> getLessonExchangeRequest(
-        @PathVariable Long requestId,
-        @AuthenticationPrincipal CustomUserDetails userDetails
+        @PathVariable Long requestId
     ) {
         log.debug("GET /api/v1/lesson-exchange-requests/{} - 수업 교환 요청 상세 조회", requestId);
         LessonExchangeRequestDetailResponse response = lessonExchangeRequestService.getLessonExchangeRequest(
-            userDetails.getUserId(), requestId, userDetails.isAdminOrManager()
+            requestId
         );
         return ResponseEntity.ok(response);
     }
