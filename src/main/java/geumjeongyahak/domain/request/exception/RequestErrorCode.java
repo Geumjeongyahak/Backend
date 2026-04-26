@@ -40,6 +40,56 @@ public enum RequestErrorCode implements ErrorCode {
         HttpStatus.CONFLICT,
         "REQ-07-009",
         "하나의 수업 교환 요청에 여러 반이 포함될 수 없습니다."
+    ),
+    REQUEST_NOT_PROPOSABLE(
+        HttpStatus.CONFLICT,
+        "REQ-07-010",
+        "현재 상태의 요청에는 제안할 수 없습니다."
+    ),
+    REQUEST_EXPIRED_FOR_PROPOSAL(
+        HttpStatus.CONFLICT,
+        "REQ-07-011",
+        "제안 가능 시간이 지난 요청입니다."
+    ),
+    CANNOT_PROPOSE_TO_OWN_REQUEST(
+        HttpStatus.FORBIDDEN,
+        "REQ-07-012",
+        "자신의 수업 교환 요청에는 제안할 수 없습니다."
+    ),
+    DUPLICATE_ACTIVE_PROPOSAL(
+        HttpStatus.CONFLICT,
+        "REQ-07-013",
+        "이미 활성 상태의 제안을 작성했습니다."
+    ),
+    PROPOSAL_TIME_OVERLAPS_REQUEST(
+        HttpStatus.BAD_REQUEST,
+        "REQ-07-014",
+        "요청 수업과 같은 시간대의 수업은 제안할 수 없습니다."
+    ),
+    PROPOSAL_LESSONS_NOT_FOUND(
+        HttpStatus.BAD_REQUEST,
+        "REQ-07-015",
+        "제안 조건에 맞는 수업을 찾을 수 없습니다."
+    ),
+    PROPOSAL_SCHEDULE_CONFLICT(
+        HttpStatus.CONFLICT,
+        "REQ-07-016",
+        "해당 시간대에 이미 다른 수업이 있어 제안할 수 없습니다."
+    ),
+    MULTIPLE_CLASSROOMS_IN_LESSON_EXCHANGE_PROPOSAL(
+        HttpStatus.CONFLICT,
+        "REQ-07-017",
+        "하나의 수업 교환 제안에 여러 반이 포함될 수 없습니다."
+    ),
+    REQUEST_LESSONS_NOT_FOUND(
+            HttpStatus.CONFLICT,
+            "REQ-07-018",
+            "수업 교환 요청에 해당하는 기존 수업을 찾을 수 없습니다."
+    ),
+    INVALID_PROPOSAL_STATUS(
+            HttpStatus.CONFLICT,
+            "REQ-07-019",
+            "현재 상태의 제안은 처리할 수 없습니다."
     );
 
     private final HttpStatus status;
