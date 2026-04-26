@@ -3,6 +3,7 @@ package geumjeongyahak.domain.request.v1.dto.response;
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.LocalDateTime;
 
 public record LessonExchangeRequestSummaryResponse(

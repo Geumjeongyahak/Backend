@@ -2,10 +2,11 @@ package geumjeongyahak.domain.request.repository;
 
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
+import org.springframework.data.jpa.repository.JpaRepository;
+
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
-import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LessonExchangeRequestRepository extends JpaRepository<LessonExchangeRequest, Long> {
 

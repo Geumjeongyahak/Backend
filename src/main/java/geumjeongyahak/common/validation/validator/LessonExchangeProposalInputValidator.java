@@ -4,6 +4,7 @@ import geumjeongyahak.common.validation.annotation.ValidLessonExchangeProposalIn
 import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeProposalRequest;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
+
 import java.time.LocalDate;
 
 public class LessonExchangeProposalInputValidator
