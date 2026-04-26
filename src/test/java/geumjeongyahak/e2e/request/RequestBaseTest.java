@@ -4,10 +4,14 @@ import static io.restassured.RestAssured.given;
 import static java.util.Map.entry;
 
 import io.restassured.http.ContentType;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.e2e.BaseE2ETest;
 import geumjeongyahak.e2e.util.TestLessonHelper;
@@ -75,17 +79,34 @@ public abstract class RequestBaseTest extends BaseE2ETest {
             .getLong("id");
     }
 
-    protected Long createLessonExchangeRequest(String authHeader, Long lessonId,
-        String title, String content) {
+    protected Long createLessonExchangeRequest(
+        String authHeader,
+        LocalDate lessonDate,
+        String title,
+        String content,
+        LessonExchangeScope scope,
+        Integer startPeriod,
+        Integer endPeriod,
+        LocalDateTime expiresAt
+    ) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("lessonDate", lessonDate.toString());
+        body.put("title", title);
+        body.put("content", content);
+        body.put("scope", scope.name());
+        body.put("expiresAt", expiresAt.toString());
+        if (startPeriod != null) {
+            body.put("startPeriod", startPeriod);
+        }
+        if (endPeriod != null) {
+            body.put("endPeriod", endPeriod);
+        }
+
         return given()
             .basePath("/api/v1/lesson-exchange-requests")
             .header(AUTH_HEADER, authHeader)
             .contentType(ContentType.JSON)
-            .body(Map.ofEntries(
-                entry("lessonId", lessonId),
-                entry("title", title),
-                entry("content", content)
-            ))
+            .body(body)
             .post()
             .then()
             .statusCode(201)
