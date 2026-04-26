@@ -1,21 +1,22 @@
 package geumjeongyahak.e2e.request;
 
-import static io.restassured.RestAssured.given;
-import static java.util.Map.entry;
-
+import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.request.enums.LessonExchangeScope;
+import geumjeongyahak.e2e.BaseE2ETest;
+import geumjeongyahak.e2e.util.TestLessonHelper;
 import io.restassured.http.ContentType;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
-import geumjeongyahak.domain.auth.enums.RoleType;
-import geumjeongyahak.domain.request.enums.LessonExchangeScope;
-import org.springframework.beans.factory.annotation.Autowired;
-import geumjeongyahak.e2e.BaseE2ETest;
-import geumjeongyahak.e2e.util.TestLessonHelper;
+
+import static io.restassured.RestAssured.given;
+import static java.util.Map.entry;
 
 /**
  * 요청(Request) 도메인 E2E 테스트 공통 베이스 클래스.

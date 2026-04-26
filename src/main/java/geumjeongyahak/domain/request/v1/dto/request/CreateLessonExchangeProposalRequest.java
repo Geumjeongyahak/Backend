@@ -1,9 +1,9 @@
 package geumjeongyahak.domain.request.v1.dto.request;
 
 import geumjeongyahak.common.validation.annotation.ValidLessonExchangeProposalInput;
-import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+
 import java.time.LocalDate;
 
 @ValidLessonExchangeProposalInput

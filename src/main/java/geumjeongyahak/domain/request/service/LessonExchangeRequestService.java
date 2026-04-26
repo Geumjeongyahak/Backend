@@ -5,12 +5,7 @@ import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeScope;
-import geumjeongyahak.domain.request.exception.LessonExchangeRequest.DuplicateActiveRequestException;
-import geumjeongyahak.domain.request.exception.LessonExchangeRequest.InvalidRequestExpiresAfterLessonException;
-import geumjeongyahak.domain.request.exception.LessonExchangeRequest.InvalidRequestExpiresInPastException;
-import geumjeongyahak.domain.request.exception.LessonExchangeRequest.InvalidRequestExpiresPolicyException;
-import geumjeongyahak.domain.request.exception.LessonExchangeRequest.InvalidRequestLessonPolicyException;
-import geumjeongyahak.domain.request.exception.LessonExchangeRequest.MultipleClassroomsInLessonExchangeRequestException;
+import geumjeongyahak.domain.request.exception.LessonExchangeRequest.*;
 import geumjeongyahak.domain.request.exception.RequestAlreadyProcessedException;
 import geumjeongyahak.domain.request.exception.RequestForbiddenException;
 import geumjeongyahak.domain.request.exception.RequestNotFoundException;
@@ -20,13 +15,14 @@ import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestDetail
 import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestSummaryResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Slf4j
 @Service
