@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.lesson.service;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,21 @@ public class LessonProxyService {
             date,
             startPeriod,
             endPeriod
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsActiveLessonConflict(
+        Long teacherId,
+        LocalDate date,
+        LocalTime startTime,
+        LocalTime endTime
+    ) {
+        return lessonRepository.existsByTeacherIdAndDateAndIsDeletedFalseAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+            teacherId,
+            date,
+            endTime,
+            startTime
         );
     }
 }

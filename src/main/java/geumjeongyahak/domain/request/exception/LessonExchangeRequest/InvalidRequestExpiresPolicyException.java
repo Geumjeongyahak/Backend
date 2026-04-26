@@ -1,6 +1,7 @@
-package geumjeongyahak.domain.request.exception;
+package geumjeongyahak.domain.request.exception.LessonExchangeRequest;
 
 import geumjeongyahak.common.exception.BusinessException;
+import geumjeongyahak.domain.request.exception.RequestErrorCode;
 
 public class InvalidRequestExpiresPolicyException extends BusinessException {
 
