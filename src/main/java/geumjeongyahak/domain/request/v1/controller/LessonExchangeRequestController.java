@@ -110,6 +110,25 @@ public class LessonExchangeRequestController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+        summary = "수업 교환 요청 취소",
+        description = "인증된 사용자가 본인이 생성한 PENDING 상태의 수업 교환 요청을 취소합니다. "
+            + "취소 시 요청 상태는 CANCELLED 로 변경되고 취소 시각이 기록됩니다. "
+            + "승인 이후 상태의 요청은 취소할 수 없으며, 실제 수업 교환 side effect 는 발생하지 않습니다."
+    )
+    @PatchMapping("/{requestId}/cancel")
+    public ResponseEntity<LessonExchangeRequestDetailResponse> cancelLessonExchangeRequest(
+        @PathVariable Long requestId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/lesson-exchange-requests/{}/cancel - 수업 교환 요청 취소", requestId);
+        LessonExchangeRequestDetailResponse response = lessonExchangeRequestService.cancelLessonExchangeRequest(
+            userDetails.getUserId(), requestId
+        );
+        return ResponseEntity.ok(response);
+    }
+
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
         summary = "수업 교환 요청 승인",

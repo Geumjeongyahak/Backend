@@ -229,6 +229,38 @@ public class LessonExchangeRequestService {
     }
 
     @Transactional
+    public LessonExchangeRequestDetailResponse cancelLessonExchangeRequest(
+        Long requesterId,
+        Long requestId
+    ) {
+        log.debug("수업 교환 요청 취소 (requestId={}, requesterId={})", requestId, requesterId);
+        LessonExchangeRequest exchangeRequest = lessonExchangeRequestRepository.findById(requestId)
+            .orElseThrow(() -> new RequestNotFoundException(requestId));
+
+        if (!exchangeRequest.getRequestedBy().getId().equals(requesterId)) {
+            throw new RequestForbiddenException();
+        }
+
+        if (exchangeRequest.getStatus() != LessonExchangeRequestStatus.PENDING) {
+            throw new RequestAlreadyProcessedException();
+        }
+
+        exchangeRequest.cancel();
+
+        List<Lesson> targetLessons = getTargetLessons(
+            exchangeRequest.getRequestedBy().getId(),
+            exchangeRequest.getLessonDate(),
+            exchangeRequest.getScope(),
+            exchangeRequest.getStartPeriod(),
+            exchangeRequest.getEndPeriod()
+        );
+        String classroomName = resolveClassroomName(targetLessons);
+
+        log.debug("수업 교환 요청 취소 완료 (requestId={}, requesterId={})", requestId, requesterId);
+        return LessonExchangeRequestDetailResponse.from(exchangeRequest, classroomName);
+    }
+
+    @Transactional
     public LessonExchangeRequestDetailResponse rejectLessonExchangeRequest(
         Long approverId, Long requestId, String note
     ) {
