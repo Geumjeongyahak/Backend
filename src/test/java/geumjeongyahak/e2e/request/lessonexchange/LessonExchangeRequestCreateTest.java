@@ -1,7 +1,6 @@
 package geumjeongyahak.e2e.request.lessonexchange;
 
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
-import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import geumjeongyahak.domain.request.repository.LessonExchangeRequestRepository;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 import io.restassured.http.ContentType;
@@ -58,7 +57,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "전체 교환 요청",
                 "content", "해당 날짜 전체 수업 교환을 요청합니다.",
-                "scope", "FULL",
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
             ))
             .post()
@@ -96,7 +94,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "부분 교환 요청",
                 "content", "1~2교시만 교환을 요청합니다.",
-                "scope", "PARTIAL",
                 "startPeriod", 1,
                 "endPeriod", 2,
                 "expiresAt", lessonDate.minusDays(3).atTime(22, 0).toString()
@@ -126,7 +123,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "제목",
                 "content", "내용",
-                "scope", "FULL",
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
             ))
             .post()
@@ -149,7 +145,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "타인 수업 요청",
                 "content", "내 수업이 아닌 일정으로 요청",
-                "scope", "FULL",
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
             ))
             .post()
@@ -170,7 +165,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             lessonDate,
             "첫 요청",
             "중복 체크용",
-            LessonExchangeScope.PARTIAL,
             1,
             2,
             lessonDate.minusDays(3).atTime(22, 0)
@@ -184,7 +178,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "두 번째 요청",
                 "content", "중복 생성 시도",
-                "scope", "PARTIAL",
                 "startPeriod", 2,
                 "endPeriod", 2,
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
@@ -207,7 +200,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             lessonDate,
             "전체 요청",
             "먼저 전체 요청을 생성합니다.",
-            LessonExchangeScope.FULL,
             null,
             null,
             lessonDate.minusDays(3).atTime(22, 0)
@@ -221,7 +213,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "부분 요청",
                 "content", "전체 요청과 같은 날짜에 부분 요청 추가",
-                "scope", "PARTIAL",
                 "startPeriod", 1,
                 "endPeriod", 1,
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
@@ -244,7 +235,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             lessonDate,
             "부분 요청",
             "먼저 부분 요청을 생성합니다.",
-            LessonExchangeScope.PARTIAL,
             1,
             1,
             lessonDate.minusDays(3).atTime(22, 0)
@@ -258,7 +248,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "전체 요청",
                 "content", "부분 요청과 같은 날짜에 전체 요청 추가",
-                "scope", "FULL",
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
             ))
             .post()
@@ -279,7 +268,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             lessonDate,
             "1교시 요청",
             "1교시만 요청합니다.",
-            LessonExchangeScope.PARTIAL,
             1,
             1,
             lessonDate.minusDays(3).atTime(22, 0)
@@ -293,7 +281,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "2교시 요청",
                 "content", "겹치지 않는 2교시 요청",
-                "scope", "PARTIAL",
                 "startPeriod", 2,
                 "endPeriod", 2,
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
@@ -312,31 +299,41 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("FULL 요청에 교시 범위를 함께 보내면 -> 400")
-    void createRequest_fullWithPeriods_returns400() {
+    @DisplayName("교시 범위를 입력하면 PARTIAL 요청으로 해석되어 생성된다 -> 201")
+    void createRequest_withPeriods_resolvesPartialRequest() {
         LocalDate lessonDate = LocalDate.now().plusDays(11);
+        Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
+        registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "09:50:00", 1);
+        registerLesson(subjectId, TEACHER_ID, lessonDate, "10:00:00", "10:50:00", 2);
 
-        given()
+        Long requestId = given()
             .basePath("/api/v1/lesson-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
                 "lessonDate", lessonDate.toString(),
-                "title", "전체 요청 교시 포함",
-                "content", "FULL 요청에는 교시 범위를 보낼 수 없습니다.",
-                "scope", "FULL",
+                "title", "교시 포함 요청",
+                "content", "교시를 입력하면 부분 교환으로 저장됩니다.",
                 "startPeriod", 1,
                 "endPeriod", 2,
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
             ))
             .post()
             .then()
-            .statusCode(400);
+            .statusCode(201)
+            .body("scope", equalTo("PARTIAL"))
+            .body("startPeriod", equalTo(1))
+            .body("endPeriod", equalTo(2))
+            .extract()
+            .jsonPath()
+            .getLong("id");
+
+        requestIds.add(requestId);
     }
 
     @Test
-    @DisplayName("PARTIAL 요청에서 시작 교시가 종료 교시보다 크면 -> 400")
-    void createRequest_partialWithInvalidPeriodOrder_returns400() {
+    @DisplayName("시작 교시가 종료 교시보다 크면 -> 400")
+    void createRequest_withInvalidPeriodOrder_returns400() {
         LocalDate lessonDate = LocalDate.now().plusDays(12);
 
         given()
@@ -347,7 +344,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "잘못된 교시 순서",
                 "content", "startPeriod > endPeriod",
-                "scope", "PARTIAL",
                 "startPeriod", 3,
                 "endPeriod", 2,
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
@@ -358,8 +354,8 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("PARTIAL 요청에서 교시 범위가 정책 밖이면 -> 400")
-    void createRequest_partialWithOutOfRangePeriods_returns400() {
+    @DisplayName("교시 범위가 정책 밖이면 -> 400")
+    void createRequest_withOutOfRangePeriods_returns400() {
         LocalDate lessonDate = LocalDate.now().plusDays(13);
 
         given()
@@ -370,7 +366,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "교시 범위 초과",
                 "content", "0교시부터 4교시까지는 허용되지 않습니다.",
-                "scope", "PARTIAL",
                 "startPeriod", 0,
                 "endPeriod", 4,
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
@@ -393,7 +388,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "",
                 "content", "내용",
-                "scope", "FULL",
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
             ))
             .post()
@@ -402,8 +396,8 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("부분 교환에서 교시 범위가 없으면 -> 400")
-    void createRequest_partialWithoutPeriods_returns400() {
+    @DisplayName("교시를 하나만 입력하면 -> 400")
+    void createRequest_withOnlyOnePeriod_returns400() {
         LocalDate lessonDate = LocalDate.now().plusDays(5);
 
         given()
@@ -412,9 +406,9 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .contentType(ContentType.JSON)
             .body(Map.of(
                 "lessonDate", lessonDate.toString(),
-                "title", "부분 교환",
-                "content", "교시 누락",
-                "scope", "PARTIAL",
+                "title", "교시 하나만 입력",
+                "content", "시작 교시만 입력",
+                "startPeriod", 1,
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
             ))
             .post()
@@ -437,7 +431,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "만료 정책 위반",
                 "content", "너무 늦은 만료 시각",
-                "scope", "FULL",
                 "expiresAt", lessonDate.minusDays(2).atTime(12, 0).toString()
             ))
             .post()
@@ -460,7 +453,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "경계 날짜 요청",
                 "content", "요청 가능 시작일 경계 테스트",
-                "scope", "FULL",
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 59, 59).toString()
             ))
             .post()
@@ -488,7 +480,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "정책 이전 날짜 요청",
                 "content", "요청 가능 시작일보다 이른 날짜",
-                "scope", "FULL",
                 "expiresAt", lessonDate.minusDays(2).atTime(23, 59, 59).toString()
             ))
             .post()
@@ -511,7 +502,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "만료 경계 허용",
                 "content", "정책 상한 시각과 같은 만료 시각",
-                "scope", "FULL",
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 59, 59).toString()
             ))
             .post()
@@ -539,7 +529,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "수업일 경계 만료",
                 "content", "수업일 자정과 같은 만료 시각",
-                "scope", "FULL",
                 "expiresAt", lessonDate.atStartOfDay().toString()
             ))
             .post()
@@ -560,7 +549,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             lessonDate,
             "반려될 요청",
             "먼저 요청을 생성합니다.",
-            LessonExchangeScope.PARTIAL,
             1,
             1,
             lessonDate.minusDays(3).atTime(22, 0)
@@ -576,7 +564,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "재요청",
                 "content", "반려 후 같은 날짜 재요청",
-                "scope", "PARTIAL",
                 "startPeriod", 1,
                 "endPeriod", 1,
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
@@ -603,7 +590,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             lessonDate,
             "완료된 요청",
             "먼저 요청을 생성합니다.",
-            LessonExchangeScope.FULL,
             null,
             null,
             lessonDate.minusDays(3).atTime(22, 0)
@@ -619,7 +605,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "완료 후 재요청",
                 "content", "완료된 요청 이후 새 요청 생성",
-                "scope", "FULL",
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
             ))
             .post()
@@ -644,7 +629,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             lessonDate,
             "취소된 요청",
             "먼저 요청을 생성합니다.",
-            LessonExchangeScope.FULL,
             null,
             null,
             lessonDate.minusDays(3).atTime(22, 0)
@@ -660,7 +644,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "취소 후 재요청",
                 "content", "취소된 요청 이후 새 요청 생성",
-                "scope", "FULL",
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
             ))
             .post()

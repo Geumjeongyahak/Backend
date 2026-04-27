@@ -5,6 +5,7 @@ import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import geumjeongyahak.domain.request.service.LessonExchangeRequestService;
 import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.request.RejectRequestRequest;
+import geumjeongyahak.domain.request.v1.dto.request.UpdateLessonExchangeRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestDetailResponse;
 import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestSummaryResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -85,6 +86,26 @@ public class LessonExchangeRequestController {
         log.debug("GET /api/v1/lesson-exchange-requests/{} - 수업 교환 요청 상세 조회", requestId);
         LessonExchangeRequestDetailResponse response = lessonExchangeRequestService.getLessonExchangeRequest(
             requestId
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+        summary = "수업 교환 요청 수정",
+        description = "인증된 사용자가 본인이 생성한 PENDING 상태의 수업 교환 요청을 수정합니다. "
+            + "기본 뼈대 단계에서는 생성 API와 동일한 입력 구조를 사용하며, 수정 후에도 대상 수업, 교환 범위, 만료 시각 정책 검증을 동일하게 수행합니다. "
+            + "승인 이후 상태의 요청은 수정할 수 없으며, 실제 수업 교환 side effect 는 발생하지 않습니다."
+    )
+    @PatchMapping("/{requestId}")
+    public ResponseEntity<LessonExchangeRequestDetailResponse> updateLessonExchangeRequest(
+        @PathVariable Long requestId,
+        @Valid @RequestBody UpdateLessonExchangeRequestRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/lesson-exchange-requests/{} - 수업 교환 요청 수정", requestId);
+        LessonExchangeRequestDetailResponse response = lessonExchangeRequestService.updateLessonExchangeRequest(
+            userDetails.getUserId(), requestId, request
         );
         return ResponseEntity.ok(response);
     }

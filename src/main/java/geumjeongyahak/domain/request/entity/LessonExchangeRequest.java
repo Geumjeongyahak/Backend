@@ -101,6 +101,25 @@ public class LessonExchangeRequest extends BaseEntity {
         this.rejectionNote = rejectionNote;
     }
 
+    public void update(
+        LocalDate lessonDate,
+        String title,
+        String content,
+        LessonExchangeScope scope,
+        Integer startPeriod,
+        Integer endPeriod,
+        LocalDateTime expiresAt
+    ) {
+        validateScope(scope, startPeriod, endPeriod);
+        this.lessonDate = lessonDate;
+        this.title = title;
+        this.content = content;
+        this.scope = scope;
+        this.startPeriod = startPeriod;
+        this.endPeriod = endPeriod;
+        this.expiresAt = expiresAt;
+    }
+
     public void complete() {
         this.status = LessonExchangeRequestStatus.COMPLETED;
         this.completedAt = LocalDateTime.now();

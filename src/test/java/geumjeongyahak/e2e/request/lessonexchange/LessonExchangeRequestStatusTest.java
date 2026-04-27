@@ -1,7 +1,6 @@
 package geumjeongyahak.e2e.request.lessonexchange;
 
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
-import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import geumjeongyahak.domain.request.repository.LessonExchangeRequestRepository;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 import io.restassured.http.ContentType;
@@ -392,7 +391,6 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             lessonDate,
             "수업 교환 요청",
             "해당 일정 조정이 필요합니다.",
-            LessonExchangeScope.FULL,
             null,
             null,
             lessonDate.minusDays(3).atTime(23, 0)

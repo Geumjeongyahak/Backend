@@ -492,7 +492,6 @@ class LessonExchangeProposalCreateTest extends RequestBaseTest {
             lessonDate,
             "수업 교환 요청",
             "해당 날짜 수업 교환을 요청합니다.",
-            LessonExchangeScope.FULL,
             null,
             null,
             lessonDate.minusDays(3).atTime(23, 0)
@@ -528,7 +527,6 @@ class LessonExchangeProposalCreateTest extends RequestBaseTest {
             lessonDate,
             "부분 수업 교환 요청",
             "일부 교시만 교환을 요청합니다.",
-            LessonExchangeScope.PARTIAL,
             startPeriod,
             endPeriod,
             lessonDate.minusDays(3).atTime(23, 0)

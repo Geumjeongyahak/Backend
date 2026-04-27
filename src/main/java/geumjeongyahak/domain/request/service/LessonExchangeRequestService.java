@@ -11,6 +11,7 @@ import geumjeongyahak.domain.request.exception.RequestForbiddenException;
 import geumjeongyahak.domain.request.exception.RequestNotFoundException;
 import geumjeongyahak.domain.request.repository.LessonExchangeRequestRepository;
 import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeRequestRequest;
+import geumjeongyahak.domain.request.v1.dto.request.UpdateLessonExchangeRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestDetailResponse;
 import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestSummaryResponse;
 import geumjeongyahak.domain.users.entity.User;
@@ -47,10 +48,12 @@ public class LessonExchangeRequestService {
     ) {
         log.debug("수업 교환 요청 생성 (requesterId={}, lessonDate={})", requesterId, request.lessonDate());
 
+        LessonExchangeScope scope = resolveRequestScope(request.startPeriod(), request.endPeriod());
+
         List<Lesson> targetLessons = getTargetLessons(
             requesterId,
             request.lessonDate(),
-            request.scope(),
+            scope,
             request.startPeriod(),
             request.endPeriod()
         );
@@ -58,7 +61,7 @@ public class LessonExchangeRequestService {
         validateNoActiveExchangeRequestExists(
             requesterId,
             request.lessonDate(),
-            request.scope(),
+            scope,
             request.startPeriod(),
             request.endPeriod()
         );
@@ -74,7 +77,7 @@ public class LessonExchangeRequestService {
             request.lessonDate(),
             request.title(),
             request.content(),
-            request.scope(),
+            scope,
             request.startPeriod(),
             request.endPeriod(),
             request.expiresAt()
@@ -169,6 +172,63 @@ public class LessonExchangeRequestService {
     }
 
     @Transactional
+    public LessonExchangeRequestDetailResponse updateLessonExchangeRequest(
+        Long requesterId,
+        Long requestId,
+        UpdateLessonExchangeRequestRequest request
+    ) {
+        log.debug("수업 교환 요청 수정 (requestId={}, requesterId={})", requestId, requesterId);
+        LessonExchangeRequest exchangeRequest = lessonExchangeRequestRepository.findById(requestId)
+            .orElseThrow(() -> new RequestNotFoundException(requestId));
+
+        LessonExchangeScope scope = resolveRequestScope(request.startPeriod(), request.endPeriod());
+
+        if (!exchangeRequest.getRequestedBy().getId().equals(requesterId)) {
+            throw new RequestForbiddenException();
+        }
+
+        if (exchangeRequest.getStatus() != LessonExchangeRequestStatus.PENDING) {
+            throw new RequestAlreadyProcessedException();
+        }
+
+        List<Lesson> targetLessons = getTargetLessons(
+            requesterId,
+            request.lessonDate(),
+            scope,
+            request.startPeriod(),
+            request.endPeriod()
+        );
+
+        validateNoActiveExchangeRequestExists(
+            requesterId,
+            request.lessonDate(),
+            scope,
+            request.startPeriod(),
+            request.endPeriod(),
+            exchangeRequest.getId()
+        );
+        validateLessonWithPolicy(request.lessonDate());
+        validateExpiresAtIsFuture(request.expiresAt());
+        validateExpiresAtBeforeLessonDate(request.lessonDate(), request.expiresAt());
+        validateExpiresAtWithinPolicy(request.lessonDate(), request.expiresAt());
+
+        exchangeRequest.update(
+            request.lessonDate(),
+            request.title(),
+            request.content(),
+            scope,
+            request.startPeriod(),
+            request.endPeriod(),
+            request.expiresAt()
+        );
+
+        String classroomName = resolveClassroomName(targetLessons);
+
+        log.debug("수업 교환 요청 수정 완료 (requestId={}, requesterId={})", requestId, requesterId);
+        return LessonExchangeRequestDetailResponse.from(exchangeRequest, classroomName);
+    }
+
+    @Transactional
     public LessonExchangeRequestDetailResponse rejectLessonExchangeRequest(
         Long approverId, Long requestId, String note
     ) {
@@ -234,12 +294,25 @@ public class LessonExchangeRequestService {
     }
 
     // 중복 요청 여부 (같은 수업에 대해 진행 중인(PENDING, APPROVED) 요청이 있으면 생성 불가)
+    // 생성 시에는 제외할 요청이 없으므로, 전체 수업 교환 요청을 그대로 중복 검사 (excludeRequestId = null)
     private void validateNoActiveExchangeRequestExists(
         Long requesterId,
         LocalDate lessonDate,
         LessonExchangeScope scope,
         Integer startPeriod,
         Integer endPeriod
+    ) {
+        validateNoActiveExchangeRequestExists(requesterId, lessonDate, scope, startPeriod, endPeriod, null);
+    }
+
+    // 수정 시에는 현재 수정 중인 자기 자신 요청은 중복 검사 대상에서 제외해야 하기 때문에 excludedRequestId 파라미터를 따로 받음
+    private void validateNoActiveExchangeRequestExists(
+        Long requesterId,
+        LocalDate lessonDate,
+        LessonExchangeScope scope,
+        Integer startPeriod,
+        Integer endPeriod,
+        Long excludedRequestId
     ) {
         List<LessonExchangeRequestStatus> activeStatuses = List.of(
             LessonExchangeRequestStatus.PENDING,
@@ -255,6 +328,7 @@ public class LessonExchangeRequestService {
 
         // 기존 요청이 없으면 isOverlapping 메서드가 호출되지 않고 false 값이 됨
         boolean hasOverlap = existingRequests.stream()
+            .filter(existing -> excludedRequestId == null || !existing.getId().equals(excludedRequestId))
             .anyMatch(existing
                 -> isOverlapping(existing, scope, startPeriod, endPeriod));
 
@@ -316,6 +390,14 @@ public class LessonExchangeRequestService {
         }
 
         return lessons;
+    }
+
+    private LessonExchangeScope resolveRequestScope(Integer startPeriod, Integer endPeriod) {
+        if (startPeriod == null && endPeriod == null) {
+            return LessonExchangeScope.FULL;
+        }
+
+        return LessonExchangeScope.PARTIAL;
     }
 
     private String resolveClassroomName(List<Lesson> lessons) {
