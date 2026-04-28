@@ -17,7 +17,7 @@ class AuthLoginTest extends AuthBaseTest {
     @DisplayName("올바른 아이디와 비밀번호로 로그인 성공(200 OK)")
     void login_Success() {
         LocalLoginRequest req = new LocalLoginRequest(
-                TEST_ADMIN_USERNAME,
+                TEST_ADMIN_EMAIL,
                 TEST_ADMIN_PASSWORD
         );
 
@@ -55,7 +55,7 @@ class AuthLoginTest extends AuthBaseTest {
     @DisplayName("잘못된 비밀번호로 로그인 실패(401 Unauthorized)")
     void login_WrongPassword() {
         LocalLoginRequest req = new LocalLoginRequest(
-                TEST_ADMIN_USERNAME,
+                TEST_ADMIN_EMAIL,
                 "wrongpassword123!"
         );
 
@@ -73,7 +73,7 @@ class AuthLoginTest extends AuthBaseTest {
     @DisplayName("존재하지 않는 사용자로 로그인 실패(401 Unauthorized)")
     void login_UserNotFound() {
         LocalLoginRequest req = new LocalLoginRequest(
-                "nonexistentuser1234",
+                "nonexistentuser1234@test.com",
                 "password123!"
         );
 
@@ -127,10 +127,10 @@ class AuthLoginTest extends AuthBaseTest {
     }
 
     @Test
-    @DisplayName("짧은 아이디로 로그인 실패(400 Bad Request)")
+    @DisplayName("유효하지 않은 이메일 형식으로 로그인 실패(400 Bad Request)")
     void login_ShortUsername() {
         LocalLoginRequest req = new LocalLoginRequest(
-                "short",  // 8자 미만
+                "short",
                 "password123!"
         );
 
@@ -145,10 +145,10 @@ class AuthLoginTest extends AuthBaseTest {
     }
 
     @Test
-    @DisplayName("짧은 비밀번호로 로그인 실패(400 Bad Request)")
+    @DisplayName("짧은 비밀번호로 로그인 시 인증 실패(401 Unauthorized)")
     void login_ShortPassword() {
         LocalLoginRequest req = new LocalLoginRequest(
-                TEST_ADMIN_USERNAME,
+                TEST_ADMIN_EMAIL,
                 "short"  // 8자 미만
         );
 
@@ -158,7 +158,7 @@ class AuthLoginTest extends AuthBaseTest {
         .when()
             .post("/login")
         .then()
-            .statusCode(400)
+            .statusCode(401)
             .log().all();
     }
 

@@ -16,12 +16,11 @@ class AuthSignupTest extends AuthBaseTest {
     @Test
     @DisplayName("올바른 정보로 회원가입 성공(201 Created)")
     void signup_Success() {
-        String uniqueUsername = "signuptest" + System.currentTimeMillis();
+        String uniqueEmail = "signuptest" + System.currentTimeMillis() + "@test.com";
         LocalSignupRequest req = new LocalSignupRequest(
-                uniqueUsername,
                 "password123!",
                 "회원가입 테스트",
-                uniqueUsername + "@test.com",
+                uniqueEmail,
                 "010-1234-5678"
         );
 
@@ -41,8 +40,6 @@ class AuthSignupTest extends AuthBaseTest {
             .extract()
             .as(TokenResponse.class);
 
-        userTestHelper.setUser(uniqueUsername);
-
         // 발급받은 토큰이 작동하는지 확인 (basePath 임시 초기화)
         String originalBasePath = RestAssured.basePath;
         RestAssured.basePath = "";
@@ -53,19 +50,18 @@ class AuthSignupTest extends AuthBaseTest {
             .get("/api/v1/users/me")
         .then()
             .statusCode(200)
-            .body("username", equalTo(uniqueUsername));
+            .body("name", equalTo("회원가입 테스트"));
 
         RestAssured.basePath = originalBasePath;
     }
 
     @Test
-    @DisplayName("중복된 아이디로 회원가입 실패(409 Conflict)")
-    void signup_DuplicateUsername() {
+    @DisplayName("중복된 이메일로 회원가입 실패(409 Conflict)")
+    void signup_DuplicateEmail() {
         LocalSignupRequest req = new LocalSignupRequest(
-                TEST_ADMIN_USERNAME,  // 이미 존재하는 사용자
                 "password123!",
                 "중복 테스트",
-                "duplicate@test.com",
+                TEST_ADMIN_EMAIL,  // 이미 존재하는 이메일
                 "010-1234-5678"
         );
 
@@ -84,7 +80,7 @@ class AuthSignupTest extends AuthBaseTest {
     void signup_MissingRequiredFields() {
         String invalidReq = """
             {
-                "username": "testuser1234"
+                "phoneNumber": "010-1234-5678"
             }
             """;
 
@@ -99,34 +95,12 @@ class AuthSignupTest extends AuthBaseTest {
     }
 
     @Test
-    @DisplayName("짧은 아이디로 회원가입 실패(400 Bad Request)")
-    void signup_ShortUsername() {
-        LocalSignupRequest req = new LocalSignupRequest(
-                "short",  // 8자 미만
-                "password123!",
-                "테스트 사용자",
-                "test@test.com",
-                "010-1234-5678"
-        );
-
-        given()
-            .contentType(ContentType.JSON)
-            .body(req)
-        .when()
-            .post("/signup")
-        .then()
-            .statusCode(400)
-            .log().all();
-    }
-
-    @Test
     @DisplayName("짧은 비밀번호로 회원가입 실패(400 Bad Request)")
     void signup_ShortPassword() {
         LocalSignupRequest req = new LocalSignupRequest(
-                "testuser1234",
                 "short",  // 8자 미만
                 "테스트 사용자",
-                "test@test.com",
+                "test" + System.currentTimeMillis() + "@test.com",
                 "010-1234-5678"
         );
 
@@ -143,9 +117,7 @@ class AuthSignupTest extends AuthBaseTest {
     @Test
     @DisplayName("잘못된 이메일 형식으로 회원가입 실패(400 Bad Request)")
     void signup_InvalidEmail() {
-        String uniqueUsername = "emailtest" + System.currentTimeMillis();
         LocalSignupRequest req = new LocalSignupRequest(
-                uniqueUsername,
                 "password123!",
                 "이메일 테스트",
                 "invalid-email",  // 잘못된 이메일 형식
@@ -165,12 +137,11 @@ class AuthSignupTest extends AuthBaseTest {
     @Test
     @DisplayName("잘못된 전화번호 형식으로 회원가입 실패(400 Bad Request)")
     void signup_InvalidPhoneNumber() {
-        String uniqueUsername = "phonetest" + System.currentTimeMillis();
+        String uniqueEmail = "phonetest" + System.currentTimeMillis() + "@test.com";
         LocalSignupRequest req = new LocalSignupRequest(
-                uniqueUsername,
                 "password123!",
                 "전화번호 테스트",
-                uniqueUsername + "@test.com",
+                uniqueEmail,
                 "invalid-phone"  // 잘못된 전화번호 형식
         );
 
@@ -187,12 +158,11 @@ class AuthSignupTest extends AuthBaseTest {
     @Test
     @DisplayName("긴 이름으로 회원가입 실패(400 Bad Request)")
     void signup_TooLongName() {
-        String uniqueUsername = "longname" + System.currentTimeMillis();
+        String uniqueEmail = "longname" + System.currentTimeMillis() + "@test.com";
         LocalSignupRequest req = new LocalSignupRequest(
-                uniqueUsername,
                 "password123!",
                 "a".repeat(51),  // 50자 초과
-                uniqueUsername + "@test.com",
+                uniqueEmail,
                 "010-1234-5678"
         );
 
@@ -207,14 +177,13 @@ class AuthSignupTest extends AuthBaseTest {
     }
 
     @Test
-    @DisplayName("선택 필드 없이 회원가입 성공(201 Created)")
-    void signup_WithoutOptionalFields() {
-        String uniqueUsername = "minimal" + System.currentTimeMillis();
+    @DisplayName("전화번호 없이 회원가입 성공(201 Created) - 선택 필드")
+    void signup_WithoutPhoneNumber() {
+        String uniqueEmail = "minimal" + System.currentTimeMillis() + "@test.com";
         LocalSignupRequest req = new LocalSignupRequest(
-                uniqueUsername,
                 "password123!",
                 "최소 정보",
-                null,  // 이메일 선택
+                uniqueEmail,
                 null   // 전화번호 선택
         );
 
@@ -230,7 +199,5 @@ class AuthSignupTest extends AuthBaseTest {
             .log().all()
             .extract()
             .as(TokenResponse.class);
-
-        userTestHelper.setUser(uniqueUsername);
     }
 }
