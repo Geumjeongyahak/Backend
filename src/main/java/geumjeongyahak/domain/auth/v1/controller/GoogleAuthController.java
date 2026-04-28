@@ -53,10 +53,13 @@ public class GoogleAuthController {
                 .fromUriString(googleProperties.getFrontendRedirectUri())
                 .queryParam("tempToken", result.tempToken())
                 .queryParam("signupRequired", result.signupRequired())
+                .queryParam("connectedToLocal", result.connectedToLocal())
                 .queryParam("email", result.email())
                 .queryParam("name", result.name())
                 .queryParam("profileImageUrl", result.profileImageUrl())
-                .build().toUriString();
+                .encode()
+                .build()
+                .toUriString();
             response.sendRedirect(redirectUrl);
         } catch (Exception e) {
             log.error("Google OAuth 콜백 처리 실패", e);
