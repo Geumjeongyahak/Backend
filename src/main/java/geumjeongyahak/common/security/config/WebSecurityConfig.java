@@ -76,6 +76,7 @@ public class WebSecurityConfig {
                 .requestMatchers("/actuator/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/swagger-ui").permitAll()
                 // 인증 API (로그인, 회원가입, 토큰 재발급, 로그아웃)
                 .requestMatchers("/api/v1/auth/login", "/api/v1/auth/signup", "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
+                .requestMatchers("/api/v1/auth/google/**").permitAll()
                 // 그 외는 인증 필요
                 .anyRequest().authenticated()
             )

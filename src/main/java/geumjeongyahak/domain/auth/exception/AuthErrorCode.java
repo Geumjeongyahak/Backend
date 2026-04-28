@@ -17,7 +17,9 @@ public enum AuthErrorCode implements ErrorCode {
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "AUTHZ001", "접근 권한이 없습니다."),
     INSUFFICIENT_PERMISSIONS(HttpStatus.FORBIDDEN, "AUTHZ002", "권한이 부족합니다."),
     DUPLICATED_CREDENTIAL(HttpStatus.CONFLICT, "AUTH007", "이미 인증 정보가 존재합니다."),
-    CREDENTIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "AUTH008", "인증 정보를 찾을 수 없습니다.");
+    CREDENTIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "AUTH008", "인증 정보를 찾을 수 없습니다."),
+    INVALID_OAUTH_STATE(HttpStatus.UNAUTHORIZED, "AUTH009", "유효하지 않은 OAuth state입니다."),
+    OAUTH_PROCESSING_FAILED(HttpStatus.UNAUTHORIZED, "AUTH010", "Google 인증 처리 중 오류가 발생했습니다.");
 
     private final HttpStatus status;
     private final String code;
