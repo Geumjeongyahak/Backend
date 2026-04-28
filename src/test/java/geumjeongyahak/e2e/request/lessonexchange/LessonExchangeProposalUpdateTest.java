@@ -366,6 +366,7 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
         request.update(
             request.getLessonDate(),
             request.getTitle(),
+            request.getClassroomNameSnapshot(),
             request.getContent(),
             request.getScope(),
             request.getStartPeriod(),

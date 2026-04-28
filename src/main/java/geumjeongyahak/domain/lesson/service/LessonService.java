@@ -337,23 +337,15 @@ public class LessonService {
     }
 
     /**
-     * 수업 교환 승인 이벤트 처리용 - 수업 담당 교사를 변경한다.
+     * 수업 교환 제안 수락 이벤트 처리용 - 대상 수업의 담당 교사를 변경한다.
      */
     @Transactional
-    public void applyTeacherExchange(Long lessonId, Long requesterId, Long newTeacherId) {
-        log.debug("담당 교사 교환 처리 (lessonId={}, requesterId={}, newTeacherId={})",
-            lessonId, requesterId, newTeacherId);
+    public void applyTeacherExchange(Long lessonId, Long newTeacherId) {
+        log.debug("담당 교사 교환 처리 (lessonId={}, newTeacherId={})", lessonId, newTeacherId);
         Lesson lesson = lessonRepository.findById(lessonId)
             .orElseThrow(() -> new LessonNotFoundException(lessonId));
-        User requester = userRepository.findById(requesterId)
-            .orElseThrow(() -> new UserNotFoundException(requesterId));
         User newTeacher = userRepository.findById(newTeacherId)
             .orElseThrow(() -> new UserNotFoundException(newTeacherId));
-
-        lessonRepository.findByTeacherIdAndDateAndStartTimeAndEndTimeAndIsDeletedFalse(
-            newTeacherId, lesson.getDate(), lesson.getStartTime(), lesson.getEndTime()
-        ).filter(counterpartLesson -> !counterpartLesson.getId().equals(lessonId))
-            .ifPresent(counterpartLesson -> counterpartLesson.changeTeacher(requester));
 
         lesson.changeTeacher(newTeacher);
     }

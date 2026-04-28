@@ -95,6 +95,11 @@ public enum RequestErrorCode implements ErrorCode {
             HttpStatus.NOT_FOUND,
             "REQ-07-020",
             "수업 교환 제안을 찾을 수 없습니다."
+    ),
+    REQUEST_NOT_ACCEPTABLE(
+            HttpStatus.CONFLICT,
+            "REQ-07-021",
+            "현재 상태의 요청에서는 제안을 수락할 수 없습니다."
     );
 
     private final HttpStatus status;

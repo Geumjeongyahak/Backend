@@ -47,6 +47,10 @@ public class LessonExchangeProposal extends BaseEntity {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
+    // 실제 수업 교사가 변경된 이후에도 제안 화면에는 생성/수정 당시의 반 이름을 유지하기 위한 snapshot 값
+    @Column(name = "classroom_name_snapshot")
+    private String classroomNameSnapshot;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private LessonExchangeProposalStatus status;
@@ -65,7 +69,8 @@ public class LessonExchangeProposal extends BaseEntity {
         LocalDate lessonDate,
         Integer startPeriod,
         Integer endPeriod,
-        String content
+        String content,
+        String classroomNameSnapshot
     ) {
         this.request = request;
         this.proposedBy = proposedBy;
@@ -75,6 +80,7 @@ public class LessonExchangeProposal extends BaseEntity {
         this.startPeriod = startPeriod;
         this.endPeriod = endPeriod;
         this.content = content;
+        this.classroomNameSnapshot = classroomNameSnapshot;
         this.status = LessonExchangeProposalStatus.ACTIVE;
     }
 
@@ -102,7 +108,8 @@ public class LessonExchangeProposal extends BaseEntity {
         LocalDate lessonDate,
         Integer startPeriod,
         Integer endPeriod,
-        String content
+        String content,
+        String classroomNameSnapshot
     ) {
         this.proposalType = proposalType;
         this.proposalScope = proposalScope;
@@ -110,6 +117,7 @@ public class LessonExchangeProposal extends BaseEntity {
         this.startPeriod = startPeriod;
         this.endPeriod = endPeriod;
         this.content = content;
+        this.classroomNameSnapshot = classroomNameSnapshot;
     }
 
     private void validateActive() {
