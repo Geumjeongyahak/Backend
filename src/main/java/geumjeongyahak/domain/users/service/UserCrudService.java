@@ -1,13 +1,11 @@
 package geumjeongyahak.domain.users.service;
 
-import geumjeongyahak.domain.department.exception.DepartmentErrorCode;
-import geumjeongyahak.domain.department.repository.DepartmentRepository;
+import geumjeongyahak.domain.department.service.DepartmentProxyService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
-import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.auth.service.UserCredentialService;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
@@ -31,7 +29,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserCrudService {
     private final UserRepository userRepository;
-    private final DepartmentRepository departmentRepository;
+    private final DepartmentProxyService departmentProxyService;
     private final PasswordEncoder passwordEncoder;
     private final UserCredentialService credentialService;
     private final UserProxyService userProxyService;
@@ -77,11 +75,12 @@ public class UserCrudService {
             .role(RoleType.valueOf(request.role()));
 
         if (request.departmentId() != null) {
-            userBuilder.department(departmentRepository.findById(request.departmentId())
-                .orElseThrow(() -> new ResourceNotFoundException(DepartmentErrorCode.DEPARTMENT_NOT_FOUND, request.departmentId())));
+            userBuilder.department(departmentProxyService.getById(request.departmentId()));
         }
 
         User savedUser = userRepository.save(userBuilder.build());
+        
+        
         credentialService.createLocalCredential(
             savedUser,
             request.email(),
@@ -169,8 +168,7 @@ public class UserCrudService {
         });
         role.map(RoleType::valueOf).ifPresent(user::setRole);
         departmentId.ifPresent(deptId -> {
-            user.setDepartment(departmentRepository.findById(deptId)
-                .orElseThrow(() -> new ResourceNotFoundException(DepartmentErrorCode.DEPARTMENT_NOT_FOUND, deptId)));
+            user.setDepartment(departmentProxyService.getById(deptId));
         });
     }
 
