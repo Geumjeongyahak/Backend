@@ -114,9 +114,47 @@ class LessonExchangeProposalReadTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("철회된 제안은 목록 조회에서 제외된다")
+    void getProposals_excludesWithdrawnProposal() {
+        Long requestId = createApprovedFullRequest(LocalDate.now().plusDays(9));
+        Long activeProposalId = createProposal(
+            requestId,
+            getAuthHeader(volunteer2Token),
+            Map.of("content", "보이는 제안")
+        );
+        Long withdrawnProposalId = createProposal(
+            requestId,
+            getAuthHeader(managerToken),
+            Map.of("content", "철회될 제안")
+        );
+        proposalIds.add(activeProposalId);
+        proposalIds.add(withdrawnProposalId);
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(managerToken))
+            .patch("/{requestId}/proposals/{proposalId}/withdraw", requestId, withdrawnProposalId)
+            .then()
+            .statusCode(200);
+
+        List<Long> ids = given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get("/{requestId}/proposals", requestId)
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getList("id", Long.class);
+
+        assertThat(ids).contains(activeProposalId);
+        assertThat(ids).doesNotContain(withdrawnProposalId);
+    }
+
+    @Test
     @DisplayName("인증 없이 제안 목록 조회 -> 401")
     void getProposals_unauthenticated_returns401() {
-        Long requestId = createApprovedFullRequest(LocalDate.now().plusDays(9));
+        Long requestId = createApprovedFullRequest(LocalDate.now().plusDays(10));
 
         given()
             .basePath("/api/v1/lesson-exchange-requests")

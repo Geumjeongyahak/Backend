@@ -104,8 +104,13 @@ public class LessonExchangeRequestService {
                 : lessonExchangeRequestRepository.findAllByStatusOrderByCreatedAtDesc(status);
         } else {
             requests = mine
-                ? lessonExchangeRequestRepository.findAllByRequestedBy_IdOrderByCreatedAtDesc(requesterId)
-                : lessonExchangeRequestRepository.findAllByOrderByCreatedAtDesc();
+                ? lessonExchangeRequestRepository.findAllByRequestedBy_IdAndStatusNotOrderByCreatedAtDesc(
+                    requesterId,
+                    LessonExchangeRequestStatus.CANCELLED
+                )
+                : lessonExchangeRequestRepository.findAllByStatusNotOrderByCreatedAtDesc(
+                    LessonExchangeRequestStatus.CANCELLED
+                );
         }
 
         return requests.stream()

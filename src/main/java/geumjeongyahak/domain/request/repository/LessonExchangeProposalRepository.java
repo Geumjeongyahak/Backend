@@ -17,5 +17,8 @@ public interface LessonExchangeProposalRepository
 
     Optional<LessonExchangeProposal> findByIdAndRequest_Id(Long proposalId, Long requestId);
 
-    List<LessonExchangeProposal> findAllByRequest_IdOrderByCreatedAtDesc(Long requestId);
+    List<LessonExchangeProposal> findAllByRequest_IdAndStatusNotOrderByCreatedAtDesc(
+        Long requestId,
+        LessonExchangeProposalStatus status
+    );
 }

@@ -122,7 +122,10 @@ public class LessonExchangeProposalService {
 
         lessonExchangeRequestProxyService.getById(requestId);
 
-        return lessonExchangeProposalRepository.findAllByRequest_IdOrderByCreatedAtDesc(requestId).stream()
+        return lessonExchangeProposalRepository.findAllByRequest_IdAndStatusNotOrderByCreatedAtDesc(
+                requestId,
+                LessonExchangeProposalStatus.WITHDRAWN
+            ).stream()
             .map(proposal -> LessonExchangeProposalResponse.from(
                 proposal,
                 resolveProposalClassroomName(proposal)

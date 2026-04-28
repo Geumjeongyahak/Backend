@@ -10,9 +10,14 @@ import java.util.List;
 
 public interface LessonExchangeRequestRepository extends JpaRepository<LessonExchangeRequest, Long> {
 
-    List<LessonExchangeRequest> findAllByOrderByCreatedAtDesc();
+    List<LessonExchangeRequest> findAllByStatusNotOrderByCreatedAtDesc(
+        LessonExchangeRequestStatus status
+    );
 
-    List<LessonExchangeRequest> findAllByRequestedBy_IdOrderByCreatedAtDesc(Long requestedById);
+    List<LessonExchangeRequest> findAllByRequestedBy_IdAndStatusNotOrderByCreatedAtDesc(
+        Long requestedById,
+        LessonExchangeRequestStatus status
+    );
 
     List<LessonExchangeRequest> findAllByStatusOrderByCreatedAtDesc(
         LessonExchangeRequestStatus status

@@ -230,13 +230,44 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("기본 목록 조회에서는 CANCELLED 요청이 제외된다")
+    void getList_defaultView_excludesCancelledRequests() {
+        Long visibleRequestId = createPendingFullRequest(
+            VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(14)
+        );
+        Long cancelledRequestId = createPendingFullRequest(
+            VOLUNTEER2_USERNAME, TEACHER2_ID, LocalDate.now().plusDays(15)
+        );
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
+            .patch("/{id}/cancel", cancelledRequestId)
+            .then()
+            .statusCode(200);
+
+        List<Long> requestIds = given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get()
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getList("id", Long.class);
+
+        assertThat(requestIds).contains(visibleRequestId);
+        assertThat(requestIds).doesNotContain(cancelledRequestId);
+    }
+
+    @Test
     @DisplayName("mine=true 이면 본인 요청만 조회된다")
     void getList_withMineTrue_returnsOnlyOwnRequests() {
         Long volunteer1RequestId = createPendingFullRequest(
-            VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(14)
+            VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(16)
         );
         Long volunteer2RequestId = createPendingFullRequest(
-            VOLUNTEER2_USERNAME, TEACHER2_ID, LocalDate.now().plusDays(15)
+            VOLUNTEER2_USERNAME, TEACHER2_ID, LocalDate.now().plusDays(17)
         );
 
         List<Long> ownView = given()
@@ -255,13 +286,45 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("mine=true 목록 조회에서도 CANCELLED 요청은 제외된다")
+    void getList_withMineTrue_excludesCancelledOwnRequest() {
+        Long visibleOwnRequestId = createPendingFullRequest(
+            VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(18)
+        );
+        Long cancelledOwnRequestId = createPendingFullRequest(
+            VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(19)
+        );
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .patch("/{id}/cancel", cancelledOwnRequestId)
+            .then()
+            .statusCode(200);
+
+        List<Long> ownView = given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .queryParam("mine", true)
+            .get()
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getList("id", Long.class);
+
+        assertThat(ownView).contains(visibleOwnRequestId);
+        assertThat(ownView).doesNotContain(cancelledOwnRequestId);
+    }
+
+    @Test
     @DisplayName("status 필터로 APPROVED 요청만 조회할 수 있다")
     void getList_filteredByStatus_returnsMatchingRequests() {
         Long approvedRequestId = createPendingFullRequest(
-            VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(16)
+            VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(20)
         );
         Long pendingRequestId = createPendingFullRequest(
-            VOLUNTEER2_USERNAME, TEACHER2_ID, LocalDate.now().plusDays(17)
+            VOLUNTEER2_USERNAME, TEACHER2_ID, LocalDate.now().plusDays(21)
         );
 
         given()
@@ -290,13 +353,13 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     @DisplayName("mine=true 와 status 를 함께 쓰면 본인 요청 중 해당 상태만 조회된다")
     void getList_filteredByMineAndStatus_returnsOwnMatchingRequests() {
         Long approvedOwnRequestId = createPendingFullRequest(
-            VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(18)
+            VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(22)
         );
         Long pendingOwnRequestId = createPendingFullRequest(
-            VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(19)
+            VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(23)
         );
         createPendingFullRequest(
-            VOLUNTEER2_USERNAME, TEACHER2_ID, LocalDate.now().plusDays(20)
+            VOLUNTEER2_USERNAME, TEACHER2_ID, LocalDate.now().plusDays(24)
         );
 
         given()
@@ -326,7 +389,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     @DisplayName("반려 후 status=REJECTED 목록 필터에 포함된다")
     void getList_filteredByRejectedStatus_containsRejectedRequest() {
         Long rejectedRequestId = createPendingFullRequest(
-            VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(20)
+            VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(25)
         );
 
         given()
@@ -353,9 +416,38 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("status=CANCELLED 필터로 취소 요청을 직접 조회할 수 있다")
+    void getList_filteredByCancelledStatus_containsCancelledRequest() {
+        Long cancelledRequestId = createPendingFullRequest(
+            VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(26)
+        );
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .patch("/{id}/cancel", cancelledRequestId)
+            .then()
+            .statusCode(200);
+
+        List<Long> cancelledIds = given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .queryParam("mine", true)
+            .queryParam("status", LessonExchangeRequestStatus.CANCELLED.name())
+            .get()
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getList("id", Long.class);
+
+        assertThat(cancelledIds).contains(cancelledRequestId);
+    }
+
+    @Test
     @DisplayName("다른 봉사자도 상세 조회할 수 있다")
     void getDetail_asOtherVolunteer_returns200() {
-        Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(22));
+        Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(27));
 
         given()
             .basePath("/api/v1/lesson-exchange-requests")
