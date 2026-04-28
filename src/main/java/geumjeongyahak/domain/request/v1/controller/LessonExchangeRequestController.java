@@ -60,6 +60,7 @@ public class LessonExchangeRequestController {
             + "status 파라미터를 전달하면 해당 상태의 요청만 반환합니다. "
             + "status 파라미터가 없으면 CANCELLED 상태 요청은 기본 목록에서 제외됩니다. "
             + "응답의 반 이름은 현재 수업을 다시 조회하지 않고 생성/수정 당시 저장한 snapshot 값을 사용합니다. "
+            + "따라서 제안 수락 이후 실제 lesson 의 담당 교사가 변경되더라도 요청 화면에 보이는 반 이름은 기존 값이 유지됩니다. "
             + "조회 API는 side effect 를 발생시키지 않습니다."
     )
     @GetMapping

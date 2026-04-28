@@ -56,7 +56,8 @@ public class LessonExchangeProposalController {
         summary = "수업 교환 제안 목록 조회",
         description = "특정 수업 교환 요청에 등록된 제안 목록을 조회합니다. "
             + "교환형 제안과 대체형 제안을 함께 반환하며, 최신 생성 순으로 정렬됩니다. "
-            + "WITHDRAWN 상태 제안은 기본 목록에서 제외되며, 반 이름은 생성/수정 당시 저장한 snapshot 값을 사용합니다."
+            + "WITHDRAWN 상태 제안은 기본 목록에서 제외되며, 반 이름은 생성/수정 당시 저장한 snapshot 값을 사용합니다. "
+            + "따라서 제안 수락 이후 실제 lesson 의 담당 교사가 변경되더라도 제안 화면에 보이는 반 이름은 기존 값이 유지됩니다."
     )
     @GetMapping("/{requestId}/proposals")
     public ResponseEntity<List<LessonExchangeProposalResponse>> getLessonExchangeProposals(
@@ -98,7 +99,8 @@ public class LessonExchangeProposalController {
         summary = "수업 교환 제안 수락",
         description = "요청자가 APPROVED 상태의 수업 교환 요청에 등록된 ACTIVE 제안 하나를 수락합니다. "
             + "수락 시 요청은 COMPLETED, 선택된 제안은 ACCEPTED, 나머지 ACTIVE 제안은 CLOSED 상태로 변경되며 실제 수업 교환/대체가 반영됩니다. "
-            + "이때 실제 lesson 의 담당 교사는 변경되지만, 요청/제안 응답에 보이는 반 이름은 생성/수정 당시 저장한 snapshot 값을 그대로 유지합니다."
+            + "이때 실제 lesson 의 담당 교사는 변경되지만, 요청/제안 응답에 보이는 반 이름은 생성/수정 당시 저장한 snapshot 값을 그대로 유지합니다. "
+            + "즉 수락 이후 화면에서는 상태만 변경되고 기존 요청/제안의 표시 내용은 유지됩니다."
     )
     @PatchMapping("/{requestId}/proposals/{proposalId}/accept")
     public ResponseEntity<LessonExchangeProposalResponse> acceptLessonExchangeProposal(
