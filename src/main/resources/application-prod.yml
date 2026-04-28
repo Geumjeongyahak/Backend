@@ -7,7 +7,7 @@ spring:
   cloud:
     gcp:
       storage:
-        bucket: ${GCP_DEV_BUCKET_NAME}
+        bucket: ${GCP_PROD_BUCKET_NAME}
 
 management:
   endpoints:
