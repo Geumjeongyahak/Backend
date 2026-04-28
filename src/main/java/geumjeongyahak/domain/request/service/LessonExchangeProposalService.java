@@ -105,6 +105,19 @@ public class LessonExchangeProposalService {
         return LessonExchangeProposalResponse.from(saved, classroomName);
     }
 
+    public List<LessonExchangeProposalResponse> getLessonExchangeProposals(Long requestId) {
+        log.debug("수업 교환 제안 목록 조회 (requestId={})", requestId);
+
+        lessonExchangeRequestProxyService.getById(requestId);
+
+        return lessonExchangeProposalRepository.findAllByRequest_IdOrderByCreatedAtDesc(requestId).stream()
+            .map(proposal -> LessonExchangeProposalResponse.from(
+                proposal,
+                resolveProposalClassroomName(proposal)
+            ))
+            .toList();
+    }
+
     // 수업 교환 요청이 제안 가능 상태인지 확인 (APPROVED / 만료 기간 전)
     private void validateRequestIsProposable(LessonExchangeRequest request) {
         if (request.getStatus() != LessonExchangeRequestStatus.APPROVED) {
@@ -285,6 +298,20 @@ public class LessonExchangeProposalService {
             .map(lesson -> lesson.getSubject().getClassroom().getName())
             .findFirst()
             .orElse(null);
+    }
+
+    private String resolveProposalClassroomName(LessonExchangeProposal proposal) {
+        if (proposal.getProposalType() == LessonExchangeProposalType.SUBSTITUTION) {
+            return null;
+        }
+
+        return resolveClassroomName(getProposalLessons(
+            proposal.getProposedBy().getId(),
+            proposal.getLessonDate(),
+            proposal.getProposalScope(),
+            proposal.getStartPeriod(),
+            proposal.getEndPeriod()
+        ));
     }
 
     // 제안 수업 유형을 판단하는 메서드(대체형/교환형)

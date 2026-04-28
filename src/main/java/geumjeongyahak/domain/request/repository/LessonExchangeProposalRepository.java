@@ -2,6 +2,7 @@ package geumjeongyahak.domain.request.repository;
 
 import geumjeongyahak.domain.request.entity.LessonExchangeProposal;
 import geumjeongyahak.domain.request.enums.LessonExchangeProposalStatus;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LessonExchangeProposalRepository
@@ -12,4 +13,6 @@ public interface LessonExchangeProposalRepository
         Long proposedById,
         LessonExchangeProposalStatus status
     );
+
+    List<LessonExchangeProposal> findAllByRequest_IdOrderByCreatedAtDesc(Long requestId);
 }

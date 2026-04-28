@@ -15,6 +15,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/lesson-exchange-requests")
@@ -45,5 +47,22 @@ public class LessonExchangeProposalController {
             request
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+        summary = "수업 교환 제안 목록 조회",
+        description = "특정 수업 교환 요청에 등록된 제안 목록을 조회합니다. "
+            + "교환형 제안과 대체형 제안을 함께 반환하며, 최신 생성 순으로 정렬됩니다."
+    )
+    @GetMapping("/{requestId}/proposals")
+    public ResponseEntity<List<LessonExchangeProposalResponse>> getLessonExchangeProposals(
+        @PathVariable Long requestId
+    ) {
+        log.debug("GET /api/v1/lesson-exchange-requests/{}/proposals - 수업 교환 제안 목록 조회", requestId);
+        List<LessonExchangeProposalResponse> response = lessonExchangeProposalService.getLessonExchangeProposals(
+            requestId
+        );
+        return ResponseEntity.ok(response);
     }
 }
