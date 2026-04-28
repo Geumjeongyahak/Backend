@@ -55,8 +55,12 @@ public class LessonExchangeProposalService {
         validateNotOwnRequest(exchangeRequest, proposerId);
         validateNoDuplicateActiveProposal(requestId, proposerId);
 
-        LessonExchangeProposalType proposalType = resolveProposalType(request);
-        LessonExchangeScope proposalScope = resolveProposalScope(request);
+        LessonExchangeProposalType proposalType = resolveProposalType(request.lessonDate());
+        LessonExchangeScope proposalScope = resolveProposalScope(
+            request.lessonDate(),
+            request.startPeriod(),
+            request.endPeriod()
+        );
 
         String classroomName = null;
 
@@ -70,7 +74,13 @@ public class LessonExchangeProposalService {
                 request.endPeriod()
             );
 
-            validateNoTimeOverlapWithRequest(exchangeRequest, request, proposalScope);
+            validateNoTimeOverlapWithRequest(
+                exchangeRequest,
+                request.lessonDate(),
+                request.startPeriod(),
+                request.endPeriod(),
+                proposalScope
+            );
             validateLessonsBelongToSingleClassroom(proposalLessons);
             classroomName = resolveClassroomName(proposalLessons);
         } else {
@@ -218,42 +228,6 @@ public class LessonExchangeProposalService {
     }
 
     // 교환형 제안일 때, 요청 수업과 제안 수업의 교시가 겹치지 않는지 검증
-    private void validateNoTimeOverlapWithRequest(
-        LessonExchangeRequest exchangeRequest,
-        CreateLessonExchangeProposalRequest request,
-        LessonExchangeScope proposalScope
-    ) {
-        if (!exchangeRequest.getLessonDate().equals(request.lessonDate())) {
-            return;
-        }
-
-        int requestStartPeriod = resolveStartPeriod(
-            exchangeRequest.getScope(),
-            exchangeRequest.getStartPeriod()
-        );
-        int requestEndPeriod = resolveEndPeriod(
-            exchangeRequest.getScope(),
-            exchangeRequest.getEndPeriod()
-        );
-
-        int proposalStartPeriod = resolveStartPeriod(
-            proposalScope,
-            request.startPeriod()
-        );
-        int proposalEndPeriod = resolveEndPeriod(
-            proposalScope,
-            request.endPeriod()
-        );
-
-        boolean overlaps =
-            requestStartPeriod <= proposalEndPeriod
-                && requestEndPeriod >= proposalStartPeriod;
-
-        if (overlaps) {
-            throw new ProposalTimeOverlapWithRequestException();
-        }
-    }
-
     private void validateNoTimeOverlapWithRequest(
         LessonExchangeRequest exchangeRequest,
         LocalDate lessonDate,
@@ -428,16 +402,6 @@ public class LessonExchangeProposalService {
     }
 
     // 제안 수업 유형을 판단하는 메서드(대체형/교환형)
-    private LessonExchangeProposalType resolveProposalType(
-        CreateLessonExchangeProposalRequest request
-    ) {
-        if (request.lessonDate() == null) {
-            return LessonExchangeProposalType.SUBSTITUTION;
-        }
-
-        return LessonExchangeProposalType.EXCHANGE;
-    }
-
     private LessonExchangeProposalType resolveProposalType(LocalDate lessonDate) {
         if (lessonDate == null) {
             return LessonExchangeProposalType.SUBSTITUTION;
@@ -447,20 +411,6 @@ public class LessonExchangeProposalService {
     }
 
     // 제안 수업 범위를 판단하는 메서드(전체/부분)
-    private LessonExchangeScope resolveProposalScope(
-        CreateLessonExchangeProposalRequest request
-    ) {
-        if (request.lessonDate() == null) {
-            return null;
-        }
-
-        if (request.startPeriod() == null && request.endPeriod() == null) {
-            return LessonExchangeScope.FULL;
-        }
-
-        return LessonExchangeScope.PARTIAL;
-    }
-
     private LessonExchangeScope resolveProposalScope(
         LocalDate lessonDate,
         Integer startPeriod,
