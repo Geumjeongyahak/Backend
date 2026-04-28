@@ -1,5 +1,8 @@
 package geumjeongyahak.domain.lesson.service;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,5 +27,40 @@ public class LessonProxyService {
     public Lesson getActiveById(Long lessonId) {
         return lessonRepository.findByIdAndIsDeletedFalse(lessonId)
             .orElseThrow(() -> new LessonNotFoundException(lessonId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Lesson> getActiveLessonsByTeacherAndDate(Long teacherId, LocalDate date) {
+        return lessonRepository.findAllByTeacher_IdAndDateAndIsDeletedFalse(teacherId, date);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Lesson> getActiveLessonsByTeacherAndDateAndPeriodBetween(
+        Long teacherId,
+        LocalDate date,
+        Integer startPeriod,
+        Integer endPeriod
+    ) {
+        return lessonRepository.findAllByTeacher_IdAndDateAndPeriodBetweenAndIsDeletedFalse(
+            teacherId,
+            date,
+            startPeriod,
+            endPeriod
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsActiveLessonConflict(
+        Long teacherId,
+        LocalDate date,
+        LocalTime startTime,
+        LocalTime endTime
+    ) {
+        return lessonRepository.existsByTeacherIdAndDateAndIsDeletedFalseAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+            teacherId,
+            date,
+            endTime,
+            startTime
+        );
     }
 }
