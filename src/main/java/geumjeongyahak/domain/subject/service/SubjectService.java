@@ -15,12 +15,15 @@ import geumjeongyahak.domain.subject.entity.Subject;
 import geumjeongyahak.domain.subject.exception.InvalidSubjectScheduleException;
 import geumjeongyahak.domain.subject.exception.SubjectDuplicateException;
 import geumjeongyahak.domain.subject.exception.SubjectNotFoundException;
+import geumjeongyahak.common.exception.BusinessException;
+import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.domain.subject.event.SubjectCreatedEvent;
 import geumjeongyahak.domain.subject.repository.SubjectRepository;
 import geumjeongyahak.domain.subject.v1.dto.request.CreateSubjectRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectRequest;
 import geumjeongyahak.domain.subject.v1.dto.response.SubjectDetailResponse;
+import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.exception.UserNotFoundException;
 import geumjeongyahak.domain.users.repository.UserRepository;
@@ -49,6 +52,7 @@ public class SubjectService {
                 log.info("과목 등록 실패 - 교사를 찾을 수 없습니다. ID: {}", request.teacherId());
                 return new UserNotFoundException(request.teacherId());
             });
+        validateTeacherAssignable(teacher);
 
         // 같은 분반에서 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재하는지 확인
         if (subjectRepository.existsByClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqual(
@@ -154,6 +158,7 @@ public class SubjectService {
                     log.info("과목 PATCH 수정 실패 - 선생님을 찾을 수 없습니다. ID: {}", request.teacherId());
                     return new UserNotFoundException(request.teacherId());
                 });
+            validateTeacherAssignable(teacher);
         }
 
         // 요청 값이 null이면 기존 값 유지
@@ -247,6 +252,12 @@ public class SubjectService {
         }
         if (period != null && period < 1) {
             throw new InvalidSubjectScheduleException("period는 1 이상이어야 합니다.");
+        }
+    }
+
+    private void validateTeacherAssignable(User teacher) {
+        if (teacher.getRole() != RoleType.VOLUNTEER) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "봉사자 사용자만 교사로 배정할 수 있습니다.");
         }
     }
 }
