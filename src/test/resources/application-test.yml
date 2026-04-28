@@ -1,6 +1,10 @@
 spring:
   application:
     name: sonmoum-api-test
+  autoconfigure:
+    exclude:
+      - com.google.cloud.spring.autoconfigure.storage.GcpStorageAutoConfiguration
+      - com.google.cloud.spring.autoconfigure.core.GcpContextAutoConfiguration
 
   datasource:
     driver-class-name: org.h2.Driver

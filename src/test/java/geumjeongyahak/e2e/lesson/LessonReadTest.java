@@ -18,18 +18,19 @@ public class LessonReadTest extends LessonBaseTest {
     @Test
     @DisplayName("관리자 권한으로 전체 수업 목록(기간 조회) 성공(200 OK)")
     void getAllLessons_Success_Admin() {
+        createTrackedLessonFixture("read-list-admin-a", TEACHER_ID, "2042-05-12", "MONDAY", 1, "2027-05-12", "19:20:00", "20:00:00", 1);
+        createTrackedLessonFixture("read-list-admin-b", TEACHER2_ID, "2042-05-13", "TUESDAY", 2, "2027-05-13", "20:10:00", "20:50:00", 2);
+
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .queryParam("from", "2026-02-01")
-            .queryParam("to", "2026-02-28")
+            .queryParam("from", "2027-05-01")
+            .queryParam("to", "2027-05-31")
             .when()
             .get()
             .then()
             .statusCode(200)
-            // 리스트(배열) 반환 검증
             .body("$", is(notNullValue()))
-            .body("size()", is(3))
-            // 데이터가 있다면(시드에 따라) 최소 필드 형태 검증
+            .body("size()", is(2))
             .body("lessonId", everyItem(notNullValue()))
             .body("date", everyItem(notNullValue()))
             .body("period", everyItem(allOf(notNullValue(), anyOf(is(1), is(2), is(3)))))
@@ -40,10 +41,12 @@ public class LessonReadTest extends LessonBaseTest {
     @Test
     @DisplayName("일반 선생님 권한으로 전체 수업 목록(기간 조회) 성공(200 OK)")
     void getAllLessons_Success_Volunteer() {
+        createTrackedLessonFixture("read-list-volunteer", TEACHER_ID, "2042-05-14", "WEDNESDAY", 3, "2027-05-14", "19:20:00", "20:00:00", 1);
+
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
-            .queryParam("from", "2026-02-01")
-            .queryParam("to", "2026-02-28")
+            .queryParam("from", "2027-05-01")
+            .queryParam("to", "2027-05-31")
             .when()
             .get()
             .then()
@@ -99,16 +102,19 @@ public class LessonReadTest extends LessonBaseTest {
     @Test
     @DisplayName("내 수업 목록 조회 성공(200 OK) - 로그인 사용자")
     void getMyLessons_Success() {
+        createTrackedLessonFixture("read-my-a", TEACHER_ID, "2042-06-02", "MONDAY", 1, "2027-06-02", "19:20:00", "20:00:00", 1);
+        createTrackedLessonFixture("read-my-b", TEACHER_ID, "2042-06-03", "TUESDAY", 2, "2027-06-03", "20:10:00", "20:50:00", 2);
+        createTrackedLessonFixture("read-my-other", TEACHER2_ID, "2042-06-04", "WEDNESDAY", 3, "2027-06-04", "19:20:00", "20:00:00", 1);
+
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
-            .queryParam("from", "2026-02-01")
-            .queryParam("to", "2026-02-28")
+            .queryParam("from", "2027-06-01")
+            .queryParam("to", "2027-06-30")
             .when()
             .get("/me")
             .then()
             .statusCode(200)
             .body("$", notNullValue())
-            // 리스트(배열) 반환
             .body("size()", is(2))
             .body("lessonId", everyItem(notNullValue()))
             .body("date", everyItem(notNullValue()))
@@ -163,7 +169,17 @@ public class LessonReadTest extends LessonBaseTest {
     @Test
     @DisplayName("관리자는 타인의 수업 상세 조회 가능(200 OK)")
     void getLessonDetail_Admin_CanAccessOthersLesson() {
-        long othersLessonId = 2L;
+        long othersLessonId = createTrackedLessonFixture(
+            "read-detail-admin",
+            TEACHER2_ID,
+            "2042-07-07",
+            "MONDAY",
+            1,
+            "2027-07-07",
+            "19:20:00",
+            "20:00:00",
+            1
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -186,7 +202,17 @@ public class LessonReadTest extends LessonBaseTest {
     @Test
     @DisplayName("교사는 본인 수업 상세 조회 가능(200 OK)")
     void getLessonDetail_Volunteer_CanAccessMyLesson() {
-        long myLessonId = 1L;   // "teacher01" 의 lessonId: 1, 3
+        long myLessonId = createTrackedLessonFixture(
+            "read-detail-my",
+            TEACHER_ID,
+            "2042-07-08",
+            "TUESDAY",
+            2,
+            "2027-07-08",
+            "20:10:00",
+            "20:50:00",
+            2
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
@@ -216,7 +242,17 @@ public class LessonReadTest extends LessonBaseTest {
     @Test
     @DisplayName("교사는 타인의 수업 상세 조회 불가(404 Not Found)")
     void getLessonDetail_Volunteer_CannotAccessOthersLesson() {
-        long othersLessonId = 2L;   // "teacher02" 의 lessonId: 2
+        long othersLessonId = createTrackedLessonFixture(
+            "read-detail-other",
+            TEACHER2_ID,
+            "2042-07-09",
+            "WEDNESDAY",
+            3,
+            "2027-07-09",
+            "19:20:00",
+            "20:00:00",
+            1
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))

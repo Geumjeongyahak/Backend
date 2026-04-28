@@ -14,7 +14,18 @@ public class StudentAttendanceBulkUpdateTest extends LessonBaseTest {
     @Test
     @DisplayName("학생 출석 일괄 반영 후 조회 시에도 반영된 값이 유지된다")
     void updateStudentAttendances_ThenGet_ShouldPersist() {
-        long lessonId = 1L;     // "teacher01" 의 lessonId: 1, 3
+        long lessonId = createTrackedLessonFixtureWithAttendances(
+            "student-bulk-my-lesson",
+            TEACHER_ID,
+            "2042-04-07",
+            "MONDAY",
+            1,
+            "2027-04-07",
+            "19:20:00",
+            "20:00:00",
+            1,
+            1L, 2L
+        );
         long studentId = 2L;
 
         // 일괄 반영
@@ -54,7 +65,18 @@ public class StudentAttendanceBulkUpdateTest extends LessonBaseTest {
     @Test
     @DisplayName("학생 출석 일괄 반영 성공(200) - 관리자는 타인 수업도 가능")
     void updateStudentAttendances_Success_Admin_OthersLesson() {
-        long othersLessonId = 1L;
+        long othersLessonId = createTrackedLessonFixtureWithAttendances(
+            "student-bulk-admin-lesson",
+            TEACHER2_ID,
+            "2042-04-08",
+            "TUESDAY",
+            2,
+            "2027-04-08",
+            "20:10:00",
+            "20:50:00",
+            2,
+            1L, 2L
+        );
         long studentId = 2L;
 
         // 일괄 반영
@@ -92,7 +114,18 @@ public class StudentAttendanceBulkUpdateTest extends LessonBaseTest {
     @Test
     @DisplayName("학생 출석 일괄 반영 실패(404) - 다른 교사의 수업")
     void updateStudentAttendances_Fail_OthersTeacherLesson() {
-        long othersLessonId = 2L;   // "teacher02" 의 lessonId: 2
+        long othersLessonId = createTrackedLessonFixtureWithAttendances(
+            "student-bulk-other-lesson",
+            TEACHER2_ID,
+            "2042-04-09",
+            "WEDNESDAY",
+            3,
+            "2027-04-09",
+            "19:20:00",
+            "20:00:00",
+            1,
+            1L, 2L
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
@@ -114,7 +147,18 @@ public class StudentAttendanceBulkUpdateTest extends LessonBaseTest {
     @Test
     @DisplayName("학생 출석 일괄 반영 실패(404) - 수업에 없는 학생")
     void updateStudentAttendances_NotFound_StudentNotEnrolled() {
-        long lessonId = 1L;
+        long lessonId = createTrackedLessonFixtureWithAttendances(
+            "student-bulk-not-enrolled",
+            TEACHER_ID,
+            "2042-04-10",
+            "THURSDAY",
+            4,
+            "2027-04-10",
+            "19:20:00",
+            "20:00:00",
+            1,
+            1L, 2L
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))

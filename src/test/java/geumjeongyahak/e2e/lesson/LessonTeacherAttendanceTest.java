@@ -12,7 +12,17 @@ public class LessonTeacherAttendanceTest extends LessonBaseTest {
     @Test
     @DisplayName("교사 출석 처리 성공(200 OK) - 본인 수업")
     void updateTeacherAttendance_Success_MyLesson() {
-        long myLessonId = 1L;   // "teacher01" 의 lessonId: 1, 3
+        long myLessonId = createTrackedLessonFixture(
+            "attendance-my-lesson",
+            TEACHER_ID,
+            "2042-02-03",
+            "MONDAY",
+            1,
+            "2027-02-03",
+            "19:20:00",
+            "20:00:00",
+            1
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
@@ -32,7 +42,17 @@ public class LessonTeacherAttendanceTest extends LessonBaseTest {
     @Test
     @DisplayName("교사 출석 처리 실패(404/400) - 타인의 수업")
     void updateTeacherAttendance_Fail_NotMyLesson() {
-        long othersLessonId = 2L;   // "teacher02" 의 lessonId: 2
+        long othersLessonId = createTrackedLessonFixture(
+            "attendance-other-lesson",
+            TEACHER2_ID,
+            "2042-02-04",
+            "TUESDAY",
+            2,
+            "2027-02-04",
+            "20:10:00",
+            "20:50:00",
+            2
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
@@ -50,7 +70,17 @@ public class LessonTeacherAttendanceTest extends LessonBaseTest {
     @Test
     @DisplayName("관리자는 교사 출석 처리 성공(200 OK) - 타인 수업도 가능")
     void updateTeacherAttendance_Success_Admin_OthersLesson() {
-        long othersLessonId = 2L;
+        long othersLessonId = createTrackedLessonFixture(
+            "attendance-admin-lesson",
+            TEACHER2_ID,
+            "2042-02-05",
+            "WEDNESDAY",
+            3,
+            "2027-02-05",
+            "19:20:00",
+            "20:00:00",
+            1
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -85,7 +115,17 @@ public class LessonTeacherAttendanceTest extends LessonBaseTest {
     @Test
     @DisplayName("교사 출석 처리 실패(400 Bad Request) - status 누락")
     void updateTeacherAttendance_BadRequest_StatusNull() {
-        long myLessonId = 1L;
+        long myLessonId = createTrackedLessonFixture(
+            "attendance-blank",
+            TEACHER_ID,
+            "2042-02-06",
+            "THURSDAY",
+            4,
+            "2027-02-06",
+            "19:20:00",
+            "20:00:00",
+            1
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))

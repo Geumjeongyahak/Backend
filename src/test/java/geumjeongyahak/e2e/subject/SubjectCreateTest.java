@@ -14,6 +14,7 @@ public class SubjectCreateTest extends SubjectBaseTest {
 
     private static final long CLASSROOM_ID = 1L;
     private static final long TEACHER_ID = 2L;
+    private static final long GUEST_ID = 4L;
 
     private Map<String, Object> createRequest(String name, String startAt, String endAt, String dayOfWeek) {
         return Map.ofEntries(
@@ -182,6 +183,34 @@ public class SubjectCreateTest extends SubjectBaseTest {
             .then()
             .statusCode(409)
             .log().all();
+    }
+
+    @Test
+    @DisplayName("봉사자가 아닌 사용자를 교사로 지정하면 과목 생성 실패(400 Bad Request)")
+    void createSubject_BadRequest_WhenTeacherIsNotVolunteer() {
+        Map<String, Object> request = Map.ofEntries(
+            entry("classroomId", CLASSROOM_ID),
+            entry("teacherId", GUEST_ID),
+            entry("name", "잘못된 교사 배정"),
+            entry("startAt", "2026-03-02"),
+            entry("endAt", "2026-06-30"),
+            entry("times", 12),
+            entry("dayOfWeek", "MONDAY"),
+            entry("startTime", "20:10:00"),
+            entry("endTime", "20:50:00"),
+            entry("period", 2),
+            entry("description", "E2E 테스트 과목")
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .post()
+            .then()
+            .statusCode(400)
+            .body("code", is("VAL002"));
     }
 
     @Test

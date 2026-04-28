@@ -4,11 +4,19 @@ import static io.restassured.RestAssured.given;
 import static java.util.Map.entry;
 
 import io.restassured.RestAssured;
+import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.e2e.BaseE2ETest;
+import geumjeongyahak.domain.lesson.entity.StudentAttendance;
+import geumjeongyahak.domain.lesson.repository.LessonRepository;
+import geumjeongyahak.domain.lesson.repository.StudentAttendanceRepository;
+import geumjeongyahak.domain.student.repository.StudentRepository;
+import geumjeongyahak.e2e.util.TestLessonHelper;
 
 @Tag("lesson")
 public class LessonBaseTest extends BaseE2ETest {
@@ -16,18 +24,36 @@ public class LessonBaseTest extends BaseE2ETest {
     public static final String TEST_VOLUNTEER_USERNAME = "teacher01";
     protected static final long CLASSROOM_ID = 1L;
     protected static final long TEACHER_ID = 2L;
-    private static final AtomicInteger SUBJECT_SEQ = new AtomicInteger(0);
+    protected static final long TEACHER2_ID = 3L;
     protected String adminAccessToken;
     protected String volunteerAccessToken;
+
+    @Autowired
+    protected TestLessonHelper lessonHelper;
+
+    @Autowired
+    protected LessonRepository lessonRepository;
+
+    @Autowired
+    protected StudentRepository studentRepository;
+
+    @Autowired
+    protected StudentAttendanceRepository studentAttendanceRepository;
 
     @BeforeEach
     @Override
     protected void setUp() {
         super.setUp();
         RestAssured.basePath = "/api/v1/lessons";
-        this.adminAccessToken = userTestHelper.generateAccessToken(TEST_ADMIN_USERNAME);
+        this.adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
+        this.volunteerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_VOLUNTEER_USERNAME);
+    }
 
-        this.volunteerAccessToken = userTestHelper.generateAccessToken(TEST_VOLUNTEER_USERNAME);
+    @AfterEach
+    @Override
+    protected void tearDown() {
+        lessonHelper.clearAll(getAuthHeader(adminAccessToken));
+        super.tearDown();
     }
 
     protected Map<String, Object> createLessonRequest(
@@ -49,18 +75,21 @@ public class LessonBaseTest extends BaseE2ETest {
     }
 
     protected Long createSubjectAndGetId(String namePrefix) {
-        int seq = SUBJECT_SEQ.incrementAndGet();
-
+        long unique = System.nanoTime();
         String[] days = {"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"};
-        String dayOfWeek = days[seq % days.length];
-        int period = (seq % 6) + 1;
+        int dayIndex = Math.floorMod(Long.hashCode(unique), days.length);
+        String dayOfWeek = days[dayIndex];
+        int period = Math.floorMod(Long.hashCode(unique / 31), 6) + 1;
+        String uniqueDate = LocalDate.of(2040, 1, 1)
+            .plusDays(Math.floorMod(unique, 10_000))
+            .toString();
 
         Map<String, Object> request = Map.ofEntries(
             entry("classroomId", CLASSROOM_ID),
             entry("teacherId", TEACHER_ID),
-            entry("name", namePrefix + "-" + seq),
-            entry("startAt", "2026-03-02"),
-            entry("endAt", "2026-06-30"),
+            entry("name", namePrefix + "-" + unique),
+            entry("startAt", uniqueDate),
+            entry("endAt", uniqueDate),
             entry("times", 12),
             entry("dayOfWeek", dayOfWeek),
             entry("startTime", "20:10:00"),
@@ -84,6 +113,33 @@ public class LessonBaseTest extends BaseE2ETest {
         return extractId(body);
     }
 
+    protected Long createTrackedSubjectAndGetId(String namePrefix) {
+        return lessonHelper.createSubjectAndRegister(
+            getAuthHeader(adminAccessToken),
+            CLASSROOM_ID,
+            TEACHER_ID,
+            namePrefix
+        );
+    }
+
+    protected Long createTrackedSubjectAndGetId(
+        String name,
+        Long teacherId,
+        String date,
+        String dayOfWeek,
+        int period
+    ) {
+        return lessonHelper.createSubjectAndRegister(
+            getAuthHeader(adminAccessToken),
+            CLASSROOM_ID,
+            teacherId,
+            name,
+            date,
+            dayOfWeek,
+            period
+        );
+    }
+
     protected Long createLessonAndGetId(Map<String, Object> request, String token) {
         Map<String, Object> body = given()
             .basePath("/api/v1/lessons")
@@ -98,6 +154,75 @@ public class LessonBaseTest extends BaseE2ETest {
             .as(Map.class);
 
         return extractId(body);
+    }
+
+    protected Long createTrackedLessonAndGetId(
+        Long subjectId,
+        Long teacherId,
+        String date,
+        String startTime,
+        String endTime,
+        int period
+    ) {
+        return lessonHelper.createLessonAndRegister(
+            getAuthHeader(adminAccessToken),
+            subjectId,
+            teacherId,
+            date,
+            startTime,
+            endTime,
+            period
+        );
+    }
+
+    protected Long createTrackedLessonFixture(
+        String subjectName,
+        Long teacherId,
+        String subjectDate,
+        String subjectDayOfWeek,
+        int subjectPeriod,
+        String lessonDate,
+        String startTime,
+        String endTime,
+        int lessonPeriod
+    ) {
+        Long subjectId = createTrackedSubjectAndGetId(subjectName, teacherId, subjectDate, subjectDayOfWeek, subjectPeriod);
+        return createTrackedLessonAndGetId(subjectId, teacherId, lessonDate, startTime, endTime, lessonPeriod);
+    }
+
+    protected Long createTrackedLessonFixtureWithAttendances(
+        String subjectName,
+        Long teacherId,
+        String subjectDate,
+        String subjectDayOfWeek,
+        int subjectPeriod,
+        String lessonDate,
+        String startTime,
+        String endTime,
+        int lessonPeriod,
+        Long... studentIds
+    ) {
+        Long lessonId = createTrackedLessonFixture(
+            subjectName,
+            teacherId,
+            subjectDate,
+            subjectDayOfWeek,
+            subjectPeriod,
+            lessonDate,
+            startTime,
+            endTime,
+            lessonPeriod
+        );
+
+        var lesson = lessonRepository.findById(lessonId)
+            .orElseThrow(() -> new IllegalStateException("lesson not found: " + lessonId));
+
+        Arrays.stream(studentIds)
+            .map(studentRepository::getReferenceById)
+            .map(student -> new StudentAttendance(lesson, student))
+            .forEach(studentAttendanceRepository::save);
+
+        return lessonId;
     }
 
     protected void deleteLesson(Long lessonId, String token) {

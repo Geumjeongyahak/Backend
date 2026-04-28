@@ -4,7 +4,6 @@ import static io.restassured.RestAssured.given;
 import static java.util.Map.entry;
 
 import io.restassured.http.ContentType;
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -51,11 +50,11 @@ public abstract class RequestBaseTest extends BaseE2ETest {
     @Override
     protected void setUp() {
         super.setUp();
-        adminToken = userTestHelper.generateAccessToken(TEST_ADMIN_USERNAME);
-        userTestHelper.createTestUser("manager01", List.of(RoleType.ROLE_MANAGER));
-        managerToken = userTestHelper.generateAccessToken("manager01");
-        volunteerToken = userTestHelper.generateAccessToken(VOLUNTEER_USERNAME);
-        volunteer2Token = userTestHelper.generateAccessToken(VOLUNTEER2_USERNAME);
+        adminToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
+        userTestHelper.createTestUser("manager01", RoleType.MANAGER);
+        managerToken = userTestHelper.generateAccessTokenByNickname("manager01");
+        volunteerToken = userTestHelper.generateAccessTokenByNickname(VOLUNTEER_USERNAME);
+        volunteer2Token = userTestHelper.generateAccessTokenByNickname(VOLUNTEER2_USERNAME);
     }
 
     // ──────────────────────────────────────────────────────

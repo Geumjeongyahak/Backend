@@ -16,8 +16,6 @@ import geumjeongyahak.domain.channel.enums.ChannelWriterPolicy;
 import geumjeongyahak.domain.post.v1.dto.request.CreatePostRequest;
 import geumjeongyahak.domain.post.v1.dto.request.UpdatePostRequest;
 
-import java.util.List;
-
 @DisplayName("E2E: Post 생명주기 테스트")
 @ResourceLock("post-e2e-shared-state")
 class PostLifecycleTest extends BasePostTest {
@@ -132,8 +130,8 @@ class PostLifecycleTest extends BasePostTest {
     }
 
     private String createToken(String username) {
-        userTestHelper.createTestUser(username, List.of(RoleType.ROLE_GUEST));
-        return userTestHelper.generateAccessToken(username);
+        userTestHelper.createTestUser(username, RoleType.GUEST);
+        return userTestHelper.generateAccessTokenByNickname(username);
     }
 
     private Long createAllAuthenticatedChannel() {
