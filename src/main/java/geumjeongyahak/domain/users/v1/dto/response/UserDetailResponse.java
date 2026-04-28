@@ -1,7 +1,7 @@
 package geumjeongyahak.domain.users.v1.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import geumjeongyahak.domain.auth.v1.dto.response.RoleResponse;
+import geumjeongyahak.domain.auth.v1.dto.response.PermissionResponse;
 import geumjeongyahak.domain.users.entity.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -33,7 +33,7 @@ public record UserDetailResponse(
     Long departmentId,
 
     @Schema(description = "사용자 권한 목록")
-    List<RoleResponse> permissions,
+    List<PermissionResponse> permissions,
 
     @Schema(description = "생성 일시", example = "2024-01-01T12:00:00")
     LocalDateTime createdAt,
@@ -51,7 +51,7 @@ public record UserDetailResponse(
             user.getRole().name(),
             user.getDepartment() != null ? user.getDepartment().getId() : null,
             user.getPermissions().stream()
-                .map(permission -> new RoleResponse(
+                .map(permission -> new PermissionResponse(
                     permission.toAuthorityCode(),
                     permission.toAuthorityCode()
                 ))
