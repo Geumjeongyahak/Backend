@@ -96,6 +96,22 @@ public class LessonExchangeProposal extends BaseEntity {
         this.closedAt = LocalDateTime.now();
     }
 
+    public void update(
+        LessonExchangeProposalType proposalType,
+        LessonExchangeScope proposalScope,
+        LocalDate lessonDate,
+        Integer startPeriod,
+        Integer endPeriod,
+        String content
+    ) {
+        this.proposalType = proposalType;
+        this.proposalScope = proposalScope;
+        this.lessonDate = lessonDate;
+        this.startPeriod = startPeriod;
+        this.endPeriod = endPeriod;
+        this.content = content;
+    }
+
     private void validateActive() {
         if (this.status != LessonExchangeProposalStatus.ACTIVE) {
             throw new InvalidProposalStatusException();

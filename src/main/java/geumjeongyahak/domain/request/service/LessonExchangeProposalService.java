@@ -10,8 +10,10 @@ import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import geumjeongyahak.domain.request.exception.LessonExchangeProposal.*;
 import geumjeongyahak.domain.request.exception.LessonExchangeRequest.RequestLessonsNotFoundException;
+import geumjeongyahak.domain.request.exception.RequestForbiddenException;
 import geumjeongyahak.domain.request.repository.LessonExchangeProposalRepository;
 import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeProposalRequest;
+import geumjeongyahak.domain.request.v1.dto.request.UpdateLessonExchangeProposalRequest;
 import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeProposalResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
@@ -118,6 +120,74 @@ public class LessonExchangeProposalService {
             .toList();
     }
 
+    @Transactional
+    public LessonExchangeProposalResponse updateLessonExchangeProposal(
+        Long proposerId,
+        Long requestId,
+        Long proposalId,
+        UpdateLessonExchangeProposalRequest request
+    ) {
+        log.debug("수업 교환 제안 수정 (requestId={}, proposalId={}, proposerId={})", requestId, proposalId, proposerId);
+
+        LessonExchangeRequest exchangeRequest = lessonExchangeRequestProxyService.getById(requestId);
+        LessonExchangeProposal proposal = lessonExchangeProposalRepository.findByIdAndRequest_Id(proposalId, requestId)
+            .orElseThrow(() -> new ProposalNotFoundException(proposalId));
+
+        validateRequestIsProposable(exchangeRequest);
+        validateProposalOwnership(proposal, proposerId);
+        validateProposalIsActive(proposal);
+        // 수정은 기존 ACTIVE 제안 1건을 갱신하는 흐름이므로,
+        // 생성 시 적용한 "요청당 제안자별 ACTIVE 제안 1건만 허용" 정책을 그대로 유지
+        // 즉 여기서는 새 ACTIVE 제안을 추가하지 않으므로 중복 ACTIVE 제안 검증을 다시 수행하지 않음
+
+        LessonExchangeProposalType proposalType = resolveProposalType(request.lessonDate());
+        LessonExchangeScope proposalScope = resolveProposalScope(
+            request.lessonDate(),
+            request.startPeriod(),
+            request.endPeriod()
+        );
+
+        String classroomName = null;
+
+        if (proposalType == LessonExchangeProposalType.EXCHANGE) {
+            List<Lesson> proposalLessons = getProposalLessons(
+                proposerId,
+                request.lessonDate(),
+                proposalScope,
+                request.startPeriod(),
+                request.endPeriod()
+            );
+
+            validateNoTimeOverlapWithRequest(
+                exchangeRequest,
+                request.lessonDate(),
+                request.startPeriod(),
+                request.endPeriod(),
+                proposalScope
+            );
+            // 교환형 제안은 실제 제안 수업 집합이 존재하므로, 수정 후에도 단일 반 구성 여부를 다시 확인함
+            validateLessonsBelongToSingleClassroom(proposalLessons);
+            classroomName = resolveClassroomName(proposalLessons);
+        } else {
+            List<Lesson> requestLessons = getRequestLessons(exchangeRequest);
+            // 대체형 제안은 제안 자체에 대응하는 수업/반이 없으므로 classroom 단일성 검증은 다시 하지 않음
+            // 대신 요청 수업 시간대에 제안자의 기존 일정이 충돌하지 않는지만 확인함
+            validateNoScheduleConflict(proposerId, exchangeRequest.getLessonDate(), requestLessons);
+        }
+
+        proposal.update(
+            proposalType,
+            proposalScope,
+            request.lessonDate(),
+            request.startPeriod(),
+            request.endPeriod(),
+            request.content()
+        );
+
+        log.debug("수업 교환 제안 수정 완료 (requestId={}, proposalId={}, proposerId={})", requestId, proposalId, proposerId);
+        return LessonExchangeProposalResponse.from(proposal, classroomName);
+    }
+
     // 수업 교환 요청이 제안 가능 상태인지 확인 (APPROVED / 만료 기간 전)
     private void validateRequestIsProposable(LessonExchangeRequest request) {
         if (request.getStatus() != LessonExchangeRequestStatus.APPROVED) {
@@ -178,6 +248,37 @@ public class LessonExchangeProposalService {
         boolean overlaps =
             requestStartPeriod <= proposalEndPeriod
                 && requestEndPeriod >= proposalStartPeriod;
+
+        if (overlaps) {
+            throw new ProposalTimeOverlapWithRequestException();
+        }
+    }
+
+    private void validateNoTimeOverlapWithRequest(
+        LessonExchangeRequest exchangeRequest,
+        LocalDate lessonDate,
+        Integer startPeriod,
+        Integer endPeriod,
+        LessonExchangeScope proposalScope
+    ) {
+        if (!exchangeRequest.getLessonDate().equals(lessonDate)) {
+            return;
+        }
+
+        int requestStartPeriod = resolveStartPeriod(
+            exchangeRequest.getScope(),
+            exchangeRequest.getStartPeriod()
+        );
+        int requestEndPeriod = resolveEndPeriod(
+            exchangeRequest.getScope(),
+            exchangeRequest.getEndPeriod()
+        );
+
+        int proposalStartPeriod = resolveStartPeriod(proposalScope, startPeriod);
+        int proposalEndPeriod = resolveEndPeriod(proposalScope, endPeriod);
+
+        boolean overlaps = requestStartPeriod <= proposalEndPeriod
+            && requestEndPeriod >= proposalStartPeriod;
 
         if (overlaps) {
             throw new ProposalTimeOverlapWithRequestException();
@@ -314,11 +415,31 @@ public class LessonExchangeProposalService {
         ));
     }
 
+    private void validateProposalOwnership(LessonExchangeProposal proposal, Long proposerId) {
+        if (!proposal.getProposedBy().getId().equals(proposerId)) {
+            throw new RequestForbiddenException();
+        }
+    }
+
+    private void validateProposalIsActive(LessonExchangeProposal proposal) {
+        if (proposal.getStatus() != LessonExchangeProposalStatus.ACTIVE) {
+            throw new InvalidProposalStatusException();
+        }
+    }
+
     // 제안 수업 유형을 판단하는 메서드(대체형/교환형)
     private LessonExchangeProposalType resolveProposalType(
         CreateLessonExchangeProposalRequest request
     ) {
         if (request.lessonDate() == null) {
+            return LessonExchangeProposalType.SUBSTITUTION;
+        }
+
+        return LessonExchangeProposalType.EXCHANGE;
+    }
+
+    private LessonExchangeProposalType resolveProposalType(LocalDate lessonDate) {
+        if (lessonDate == null) {
             return LessonExchangeProposalType.SUBSTITUTION;
         }
 
@@ -334,6 +455,22 @@ public class LessonExchangeProposalService {
         }
 
         if (request.startPeriod() == null && request.endPeriod() == null) {
+            return LessonExchangeScope.FULL;
+        }
+
+        return LessonExchangeScope.PARTIAL;
+    }
+
+    private LessonExchangeScope resolveProposalScope(
+        LocalDate lessonDate,
+        Integer startPeriod,
+        Integer endPeriod
+    ) {
+        if (lessonDate == null) {
+            return null;
+        }
+
+        if (startPeriod == null && endPeriod == null) {
             return LessonExchangeScope.FULL;
         }
 

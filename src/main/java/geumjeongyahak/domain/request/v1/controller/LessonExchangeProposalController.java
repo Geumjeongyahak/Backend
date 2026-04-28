@@ -3,6 +3,7 @@ package geumjeongyahak.domain.request.v1.controller;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.request.service.LessonExchangeProposalService;
 import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeProposalRequest;
+import geumjeongyahak.domain.request.v1.dto.request.UpdateLessonExchangeProposalRequest;
 import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeProposalResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -62,6 +63,29 @@ public class LessonExchangeProposalController {
         log.debug("GET /api/v1/lesson-exchange-requests/{}/proposals - 수업 교환 제안 목록 조회", requestId);
         List<LessonExchangeProposalResponse> response = lessonExchangeProposalService.getLessonExchangeProposals(
             requestId
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+        summary = "수업 교환 제안 수정",
+        description = "인증된 사용자가 본인이 작성한 ACTIVE 상태의 수업 교환 제안을 수정합니다. "
+            + "입력 규칙은 제안 생성 API와 동일하며, 요청이 여전히 제안 가능 상태인지와 제안자가 실제 수업 조건을 만족하는지도 다시 검증합니다."
+    )
+    @PatchMapping("/{requestId}/proposals/{proposalId}")
+    public ResponseEntity<LessonExchangeProposalResponse> updateLessonExchangeProposal(
+        @PathVariable Long requestId,
+        @PathVariable Long proposalId,
+        @Valid @RequestBody UpdateLessonExchangeProposalRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/lesson-exchange-requests/{}/proposals/{} - 수업 교환 제안 수정", requestId, proposalId);
+        LessonExchangeProposalResponse response = lessonExchangeProposalService.updateLessonExchangeProposal(
+            userDetails.getUserId(),
+            requestId,
+            proposalId,
+            request
         );
         return ResponseEntity.ok(response);
     }
