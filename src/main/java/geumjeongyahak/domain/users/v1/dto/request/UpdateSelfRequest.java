@@ -10,6 +10,10 @@ public record UpdateSelfRequest(
         @Size(max = 50, message = "이름은 50자 이하여야 합니다.")
         String name,
 
+        @Schema(description = "닉네임", example = "까치")
+        @Size(max = 50, message = "닉네임은 50자 이하여야 합니다.")
+        String nickname, 
+
         @Schema(description = "전화번호", example = "010-9876-5432")
         @ValidPhoneNumber
         String phoneNumber,

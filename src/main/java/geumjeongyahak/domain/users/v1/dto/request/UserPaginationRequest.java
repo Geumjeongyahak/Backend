@@ -11,7 +11,4 @@ public class UserPaginationRequest extends BasePaginationRequest {
     public PageRequest toRequest() {
        return PageRequest.of(getPage(), getSize());
     }
-    /*
-      * filter, sort 등의 추가 필드가 필요한 경우 추가
-     */
 }
