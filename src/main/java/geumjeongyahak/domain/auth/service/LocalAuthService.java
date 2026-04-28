@@ -11,44 +11,41 @@ import geumjeongyahak.domain.auth.entity.UserCredential;
 import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.auth.exception.InvalidRefreshTokenException;
-import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalSignupRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.RefreshTokenRequest;
 import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.exception.DuplicateEmailException;
-import geumjeongyahak.domain.users.service.UserCrudService;
 import geumjeongyahak.domain.users.service.UserProxyService;
 
 import java.time.LocalDateTime;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class LocalLoginService {
+public class LocalAuthService {
     private final UserProxyService userProxyService;
-    private final UserCredentialRepository userCredentialRepository;
     private final UserCredentialService userCredentialService;
-    private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public TokenResponse login(LocalLoginRequest request) {
         log.debug("로그인 시도: {}", request.email());
 
-        UserCredential credential = userCredentialRepository.findByCredentialEmailAndProvider(request.email(), ProviderType.LOCAL)
-            .orElseThrow(() -> new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다."));
-        User user = credential.getUser();
-
+        if (!userCredentialService.existsByCredentialEmailAndProvider(request.email(), ProviderType.LOCAL)) {
+            throw new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.");
+        }
+        UserCredential credential = userCredentialService.getCredentialByCredentialEmailAndProvider(request.email(), ProviderType.LOCAL);
+        
         if (credential.getPasswordHash() == null || !passwordEncoder.matches(request.password(), credential.getPasswordHash())) {
-            log.warn("로그인 실패 - 잘못된 비밀번호: {}", request.email());
             throw new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
         credential.setLastLoginAt(LocalDateTime.now());
-        TokenResponse tokenResponse = createTokenResponse(user, credential.getId());
-        log.info("로그인 성공: userId={}, email={}", user.getId(), credential.getCredentialEmail());
+        TokenResponse tokenResponse = createTokenResponse(credential.getUser(), credential.getId());
+        log.info("로그인 성공: userId={}, email={}", credential.getUser().getId(), credential.getCredentialEmail());
         return tokenResponse;
     }
 
@@ -62,9 +59,10 @@ public class LocalLoginService {
 
         User user = User.builder()
             .name(request.name())
-            .nickname(UserCrudService.generateUniqueNickname(request.name(), userProxyService))
+            .nickname(request.nickname())
             .email(request.email())
             .phoneNumber(request.phoneNumber())
+            .profileImageUrl(request.profileImageUrl())
             .role(RoleType.VOLUNTEER)
             .build();
 
@@ -74,6 +72,7 @@ public class LocalLoginService {
             request.email(),
             request.password()
         );
+        
         TokenResponse tokenResponse = createTokenResponse(savedUser, credential.getId());
         log.info("회원가입 성공: userId={}, email={}", savedUser.getId(), request.email());
         return tokenResponse;
@@ -89,11 +88,20 @@ public class LocalLoginService {
         // 사용자 조회
         Long credentialId = refreshTokenService.getCredentialIdFromRefreshToken(request.refreshToken())
                 .orElseThrow(InvalidRefreshTokenException::new);
-        UserCredential credential = userCredentialRepository.findById(credentialId)
-            .orElseThrow(InvalidRefreshTokenException::new);
-        User user = credential.getUser();
+
+        
+        // 자격 증명 조회
+        UserCredential credential;
+        try {
+            credential = userCredentialService.getById(credentialId);
+        } catch (Exception e) {
+            log.warn("토큰 재발급 실패 - 자격 증명 조회 실패: credentialId={}", credentialId);
+            throw new InvalidRefreshTokenException();
+        }
+
 
         // 새로운 토큰 생성 (Refresh Token Rotation)
+        User user = credential.getUser();
         TokenResponse tokenResponse = createTokenResponse(user, credentialId);
 
         log.info("토큰 재발급 성공: credentialId={}, userId={}", credentialId, user.getId());

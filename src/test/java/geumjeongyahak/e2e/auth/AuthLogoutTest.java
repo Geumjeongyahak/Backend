@@ -170,8 +170,10 @@ class AuthLogoutTest extends AuthBaseTest {
         // 회원가입
         LocalSignupRequest signupReq = new LocalSignupRequest(
                 "password123!",
+                "multi-device-test",
                 "멀티 디바이스 테스트",
                 uniqueUsername + "@test.com",
+                null,
                 "010-1234-5678"
         );
 

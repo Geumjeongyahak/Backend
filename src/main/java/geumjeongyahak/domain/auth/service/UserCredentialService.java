@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.auth.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,13 +24,57 @@ public class UserCredentialService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
+    public UserCredential getById(Long credentialId) {
+        return userCredentialRepository.findById(credentialId)
+            .orElseThrow(CredentialNotFoundException::new);
+    }
+
+    @Transactional(readOnly = true)
     public List<UserCredential> getAllCredentialsByUserId(Long userId) {
         return userCredentialRepository.findAllByUserId(userId);
     }
 
     @Transactional(readOnly = true)
+    public UserCredential getCredentialByUserIdAndProvider(Long userId, ProviderType provider) {
+        return userCredentialRepository.findByUserIdAndProvider(userId, provider)
+            .orElseThrow(CredentialNotFoundException::new);
+    }
+
+    @Transactional(readOnly = true)
+    public UserCredential getCredentialByCredentialEmailAndProvider(String email, ProviderType provider) {
+        return userCredentialRepository.findByCredentialEmailAndProvider(email, provider)
+            .orElseThrow(CredentialNotFoundException::new);
+    }
+    
+    @Transactional(readOnly = true)
     public boolean hasCredentialForProvider(Long userId, ProviderType provider) {
         return userCredentialRepository.existsByUserIdAndProvider(userId, provider);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsByCredentialEmail(String email) {
+        return userCredentialRepository.existsByCredentialEmail(email);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsByCredentialEmailAndProvider(String email, ProviderType provider) {
+        return userCredentialRepository.existsByCredentialEmailAndProvider(email, provider);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsByProviderUserIdAndProvider(String providerUserId, ProviderType provider) {
+        return userCredentialRepository.existsByProviderUserIdAndProvider(providerUserId, provider);
+    }
+
+    @Transactional(readOnly = true)
+    public UserCredential getCredentialByProviderUserIdAndProvider(String providerUserId, ProviderType provider) {
+        return userCredentialRepository.findByProviderUserIdAndProvider(providerUserId, provider)
+            .orElseThrow(CredentialNotFoundException::new);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<UserCredential> findOptionalByCredentialEmailAndProvider(String email, ProviderType provider) {
+        return userCredentialRepository.findByCredentialEmailAndProvider(email, provider);
     }
 
     @Transactional
@@ -46,11 +91,10 @@ public class UserCredentialService {
                 "이미 가입된 계정입니다."
             );
         }
-        if (userCredentialRepository.existsByCredentialEmailAndProvider(email, ProviderType.LOCAL)) {
-            log.info("로컬 로그인 자격 증명 생성 실패 - 이미 가입된 로컬 계정: email: {}", email);
-            throw new DuplicateCredentialException(
-                "이미 가입된 계정입니다."
-            );
+
+        if (existsByCredentialEmailAndProvider(email, ProviderType.LOCAL)) {
+            log.info("로컬 로그인 자격 증명 생성 실패 - 이미 가입된 로컬 이메일: email: {}", email);
+            throw new DuplicateCredentialException();
         }
 
         UserCredential credential = UserCredential.local(
@@ -72,18 +116,22 @@ public class UserCredentialService {
         boolean emailVerified
     ) {
         log.info("Google 로그인 자격 증명 생성 요청 - userId: {}, nickname: {}", user.getId(), user.getNickname());
+
         if (hasCredentialForProvider(user.getId(), ProviderType.GOOGLE)) {
             log.info("Google 로그인 자격 증명 생성 실패 - 이미 Google 계정으로 가입된 사용자: userId: {}, nickname: {}", user.getId(), user.getNickname());
             throw new DuplicateCredentialException(
                 "이미 Google 계정으로 가입된 사용자입니다."
             );
-        }        
+        }
 
-        if (userCredentialRepository.existsByCredentialEmailAndProvider(credentialEmail, ProviderType.GOOGLE)) {
-            log.info("Google 로그인 자격 증명 생성 실패 - 이미 가입된 Google 계정: email: {}", credentialEmail);
-            throw new DuplicateCredentialException(
-                "이미 가입된 Google 계정입니다."
-            );
+        if (existsByCredentialEmailAndProvider(credentialEmail, ProviderType.GOOGLE)) {
+            log.info("Google 로그인 자격 증명 생성 실패 - 이미 가입된 Google 이메일: email: {}", credentialEmail);
+            throw new DuplicateCredentialException();
+        }
+
+        if (existsByProviderUserIdAndProvider(providerUserId, ProviderType.GOOGLE)) {
+            log.info("Google 로그인 자격 증명 생성 실패 - 이미 가입된 Google providerUserId: {}", providerUserId);
+            throw new DuplicateCredentialException();
         }
         
         UserCredential credential = UserCredential.google(
@@ -114,15 +162,12 @@ public class UserCredentialService {
         log.info("로컬 로그인 이메일 업데이트 요청 - userId: {}, nickname: {}", user.getId(), user.getNickname());
         UserCredential credential = userCredentialRepository.findByUserIdAndProvider(user.getId(), ProviderType.LOCAL)
             .orElseThrow(CredentialNotFoundException::new);
-
         if (newEmail.equals(credential.getCredentialEmail())) {
             return;
         }
-
-        if (userCredentialRepository.existsByCredentialEmailAndProvider(newEmail, ProviderType.LOCAL)) {
+        if (existsByCredentialEmailAndProvider(newEmail, ProviderType.LOCAL)) {
             throw new DuplicateCredentialException("이미 가입된 계정입니다.");
         }
-
         credential.setCredentialEmail(newEmail);
         credential.setEmailVerified(false);
         userCredentialRepository.save(credential);

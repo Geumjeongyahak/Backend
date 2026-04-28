@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import geumjeongyahak.common.security.service.CustomUserDetails;
-import geumjeongyahak.domain.auth.service.LocalLoginService;
+import geumjeongyahak.domain.auth.service.LocalAuthService;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalSignupRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LogoutRequest;
@@ -23,8 +23,8 @@ import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 @Tag(name = "Auth", description = "인증 API")
-public class AuthController {
-    private final LocalLoginService localLoginService;
+public class LocalAuthController {
+    private final LocalAuthService localLoginService;
 
     @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인합니다.")
     @PostMapping("/login")

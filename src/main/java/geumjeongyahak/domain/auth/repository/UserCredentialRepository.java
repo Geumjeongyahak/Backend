@@ -15,9 +15,15 @@ public interface UserCredentialRepository extends JpaRepository<UserCredential, 
     
     Optional<UserCredential> findByCredentialEmailAndProvider(String credentialEmail, ProviderType provider);
     
+    boolean existsByCredentialEmail(String credentialEmail);
+
     boolean existsByUserIdAndProvider(Long userId, ProviderType provider);
     
     boolean existsByCredentialEmailAndProvider(String credentialEmail, ProviderType provider);
+
+    Optional<UserCredential> findByProviderUserIdAndProvider(String providerUserId, ProviderType provider);
+
+    boolean existsByProviderUserIdAndProvider(String providerUserId, ProviderType provider);
 
     void deleteAllByUserId(Long userId);
 }
