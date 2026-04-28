@@ -34,6 +34,7 @@ public class LessonExchangeProposalController {
             + "lessonDate를 입력하면 교환형 제안으로 처리됩니다. "
             + "lessonDate를 입력하지 않으면 대체형 제안으로 처리됩니다. "
             + "교환형 제안의 반 이름은 생성 시점의 표시값을 snapshot 으로 함께 저장하며, 이후 실제 수업 교사가 변경되더라도 제안 화면에는 기존 값이 유지됩니다. "
+            + "대체형 제안은 제안 자체에 대응하는 교환 수업이 없으므로 반 이름을 별도로 저장하거나 반환하지 않습니다. "
             + "교환형 제안에서 startPeriod/endPeriod를 입력하지 않으면 하루 전체 수업 제안으로 처리됩니다."
     )
     @PostMapping("/{requestId}/proposals")
@@ -57,6 +58,7 @@ public class LessonExchangeProposalController {
         description = "특정 수업 교환 요청에 등록된 제안 목록을 조회합니다. "
             + "교환형 제안과 대체형 제안을 함께 반환하며, 최신 생성 순으로 정렬됩니다. "
             + "WITHDRAWN 상태 제안은 기본 목록에서 제외되며, 반 이름은 생성/수정 당시 저장한 snapshot 값을 사용합니다. "
+            + "대체형 제안의 반 이름은 null 로 반환됩니다. "
             + "따라서 제안 수락 이후 실제 lesson 의 담당 교사가 변경되더라도 제안 화면에 보이는 반 이름은 기존 값이 유지됩니다."
     )
     @GetMapping("/{requestId}/proposals")
@@ -75,7 +77,8 @@ public class LessonExchangeProposalController {
         summary = "수업 교환 제안 수정",
         description = "인증된 사용자가 본인이 작성한 ACTIVE 상태의 수업 교환 제안을 수정합니다. "
             + "입력 규칙은 제안 생성 API와 동일하며, 요청이 여전히 제안 가능 상태인지와 제안자가 실제 수업 조건을 만족하는지도 다시 검증합니다. "
-            + "교환형 제안의 반 이름 snapshot 도 함께 갱신되며, 이후 조회 시에는 최신 수정 기준의 표시값이 유지됩니다."
+            + "교환형 제안의 반 이름 snapshot 도 함께 갱신되며, 대체형 제안은 반 이름 없이 유지됩니다. "
+            + "이후 조회 시에는 최신 수정 기준의 표시값이 유지됩니다."
     )
     @PatchMapping("/{requestId}/proposals/{proposalId}")
     public ResponseEntity<LessonExchangeProposalResponse> updateLessonExchangeProposal(
