@@ -26,12 +26,12 @@ import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
 public class AuthController {
     private final LocalLoginService localLoginService;
 
-    @Operation(summary = "로그인", description = "사용자 아이디와 비밀번호로 로그인합니다.")
+    @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인합니다.")
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(
             @Valid @RequestBody LocalLoginRequest request
     ) {
-        log.debug("POST /api/v1/auth/login - 로그인 요청: {}", request.username());
+        log.debug("POST /api/v1/auth/login - 로그인 요청: {}", request.email());
         return ResponseEntity.ok(localLoginService.login(request));
     }
 
@@ -40,7 +40,7 @@ public class AuthController {
     public ResponseEntity<TokenResponse> signup(
             @Valid @RequestBody LocalSignupRequest request
     ) {
-        log.debug("POST /api/v1/auth/signup - 회원가입 요청: {}", request.username());
+        log.debug("POST /api/v1/auth/signup - 회원가입 요청: {}", request.email());
         return ResponseEntity.status(HttpStatus.CREATED).body(localLoginService.signup(request));
     }
 

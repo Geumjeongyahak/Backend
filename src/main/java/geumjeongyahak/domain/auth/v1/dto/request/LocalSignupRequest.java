@@ -7,11 +7,6 @@ import geumjeongyahak.common.validation.annotation.ValidEmail;
 import geumjeongyahak.common.validation.annotation.ValidPhoneNumber;
 
 public record LocalSignupRequest(
-        @Schema(description = "사용자 아이디", example = "user1324")
-        @NotBlank(message = "ID는 필수입니다.")
-        @Size(min = 8, message = "사용자 아이디는 8자 이상이어야 합니다.")
-        String username,
-
         @Schema(description = "비밀번호", example = "password123!")
         @NotBlank(message = "비밀번호는 필수입니다.")
         @Size(min = 8, message = "비밀번호는 8자 이상이어야 합니다.")
@@ -23,6 +18,7 @@ public record LocalSignupRequest(
         String name,
 
         @Schema(description = "이메일", example = "user@example.com")
+        @NotBlank(message = "이메일은 필수입니다.")
         @ValidEmail
         String email,
 
