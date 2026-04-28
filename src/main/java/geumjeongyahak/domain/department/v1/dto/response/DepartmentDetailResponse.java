@@ -2,7 +2,7 @@ package geumjeongyahak.domain.department.v1.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
-import geumjeongyahak.domain.auth.v1.dto.response.RoleResponse;
+import geumjeongyahak.domain.auth.v1.dto.response.PermissionResponse;
 import geumjeongyahak.domain.department.entity.Department;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.v1.dto.response.UserSimpleResponse;
@@ -24,7 +24,7 @@ public record DepartmentDetailResponse (
         String description,
 
         @Schema(description = "부서 권한 목록")
-        List<RoleResponse> permissions,
+        List<PermissionResponse> permissions,
 
         @Schema(description = "부서에 속한 사용자 목록")
         List<UserSimpleResponse> users,
@@ -41,7 +41,7 @@ public record DepartmentDetailResponse (
                     department.getName(),
                     department.getDescription(),
                     department.getPermissions().stream()
-                            .map(permission -> new RoleResponse(
+                            .map(permission -> new PermissionResponse(
                                     permission.toAuthorityCode(),
                                     permission.toAuthorityCode()
                             ))
