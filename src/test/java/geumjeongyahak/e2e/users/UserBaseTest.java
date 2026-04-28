@@ -6,8 +6,6 @@ import org.junit.jupiter.api.Tag;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.e2e.BaseE2ETest;
 
-import java.util.List;
-
 @Tag("user")
 public abstract class UserBaseTest extends BaseE2ETest {
 
@@ -20,8 +18,14 @@ public abstract class UserBaseTest extends BaseE2ETest {
     protected void setUp() {
         super.setUp();
         RestAssured.basePath = "/api/v1/users";
-        this.userTestHelper.createTestUser(TEST_VOLUNTEER_USERNAME, List.of(RoleType.ROLE_VOLUNTEER));
-        this.adminAccessToken = userTestHelper.generateAccessToken(TEST_ADMIN_USERNAME);
-        this.volunteerAccessToken = userTestHelper.generateAccessToken(TEST_VOLUNTEER_USERNAME);
+        this.userTestHelper.createTestUser(
+            TEST_VOLUNTEER_USERNAME,
+            TEST_VOLUNTEER_USERNAME,
+            TEST_VOLUNTEER_USERNAME + "@test.com",
+            "pw_" + TEST_VOLUNTEER_USERNAME,
+            RoleType.VOLUNTEER
+        );
+        this.adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
+        this.volunteerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_VOLUNTEER_USERNAME);
     }
 }
