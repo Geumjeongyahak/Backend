@@ -89,4 +89,26 @@ public class LessonExchangeProposalController {
         );
         return ResponseEntity.ok(response);
     }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+        summary = "수업 교환 제안 철회",
+        description = "인증된 사용자가 본인이 작성한 ACTIVE 상태의 수업 교환 제안을 철회합니다. "
+            + "철회 시 제안 상태는 WITHDRAWN 으로 변경되고 철회 시각이 기록됩니다."
+    )
+    @PatchMapping("/{requestId}/proposals/{proposalId}/withdraw")
+    public ResponseEntity<LessonExchangeProposalResponse> withdrawLessonExchangeProposal(
+        @PathVariable Long requestId,
+        @PathVariable Long proposalId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/lesson-exchange-requests/{}/proposals/{}/withdraw - 수업 교환 제안 철회",
+            requestId, proposalId);
+        LessonExchangeProposalResponse response = lessonExchangeProposalService.withdrawLessonExchangeProposal(
+            userDetails.getUserId(),
+            requestId,
+            proposalId
+        );
+        return ResponseEntity.ok(response);
+    }
 }

@@ -198,6 +198,27 @@ public class LessonExchangeProposalService {
         return LessonExchangeProposalResponse.from(proposal, classroomName);
     }
 
+    @Transactional
+    public LessonExchangeProposalResponse withdrawLessonExchangeProposal(
+        Long proposerId,
+        Long requestId,
+        Long proposalId
+    ) {
+        log.debug("수업 교환 제안 철회 (requestId={}, proposalId={}, proposerId={})", requestId, proposalId, proposerId);
+
+        lessonExchangeRequestProxyService.getById(requestId);
+        LessonExchangeProposal proposal = lessonExchangeProposalRepository.findByIdAndRequest_Id(proposalId, requestId)
+            .orElseThrow(() -> new ProposalNotFoundException(proposalId));
+
+        validateProposalOwnership(proposal, proposerId);
+        validateProposalIsActive(proposal);
+
+        proposal.withdraw();
+
+        log.debug("수업 교환 제안 철회 완료 (requestId={}, proposalId={}, proposerId={})", requestId, proposalId, proposerId);
+        return LessonExchangeProposalResponse.from(proposal, resolveProposalClassroomName(proposal));
+    }
+
     // 수업 교환 요청이 제안 가능 상태인지 확인 (APPROVED / 만료 기간 전)
     private void validateRequestIsProposable(LessonExchangeRequest request) {
         if (request.getStatus() != LessonExchangeRequestStatus.APPROVED) {
