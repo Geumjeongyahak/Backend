@@ -1,7 +1,9 @@
 package geumjeongyahak.e2e.request.lessonexchange;
 
+import geumjeongyahak.domain.request.repository.LessonExchangeProposalRepository;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import geumjeongyahak.domain.request.repository.LessonExchangeRequestRepository;
+import geumjeongyahak.domain.request.service.LessonExchangeRequestService;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.AfterEach;
@@ -11,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,12 +30,24 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     @Autowired
     private LessonExchangeRequestRepository lessonExchangeRequestRepository;
 
+    @Autowired
+    private LessonExchangeProposalRepository lessonExchangeProposalRepository;
+
+    @Autowired
+    private LessonExchangeRequestService lessonExchangeRequestService;
+
     private final List<Long> subjectIds = new ArrayList<>();
     private final List<Long> lessonIds = new ArrayList<>();
     private final List<Long> requestIds = new ArrayList<>();
+    private final List<Long> proposalIds = new ArrayList<>();
 
     @AfterEach
     void cleanup() {
+        proposalIds.forEach(proposalId -> {
+            if (lessonExchangeProposalRepository.existsById(proposalId)) {
+                lessonExchangeProposalRepository.deleteById(proposalId);
+            }
+        });
         requestIds.forEach(requestId -> {
             if (lessonExchangeRequestRepository.existsById(requestId)) {
                 lessonExchangeRequestRepository.deleteById(requestId);
@@ -204,6 +219,89 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .patch("/{id}/reject", 99999L)
             .then()
             .statusCode(404);
+    }
+
+    @Test
+    @DisplayName("자동 만료 처리 시 만료 시각이 지난 요청은 EXPIRED 로 변경된다")
+    void expireExpiredRequests_changesExpiredRequestStatus() {
+        Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(12));
+        setRequestExpiresAt(requestId, LocalDateTime.now().minusMinutes(1));
+
+        int expiredCount = lessonExchangeRequestService.expireExpiredLessonExchangeRequests();
+
+        assertThat(expiredCount).isEqualTo(1);
+        assertThat(lessonExchangeRequestRepository.findById(requestId).orElseThrow().getStatus())
+            .isEqualTo(LessonExchangeRequestStatus.EXPIRED);
+    }
+
+    @Test
+    @DisplayName("자동 만료 처리 시 승인된 요청의 ACTIVE 제안들도 함께 CLOSED 된다")
+    void expireApprovedRequest_closesActiveProposals() {
+        Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(13));
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{id}/approve", requestId)
+            .then()
+            .statusCode(200);
+
+        Long proposalId = given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
+            .contentType(ContentType.JSON)
+            .body(Map.of("content", "만료 후 종료될 제안"))
+            .post("/{requestId}/proposals", requestId)
+            .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
+        proposalIds.add(proposalId);
+
+        setRequestExpiresAt(requestId, LocalDateTime.now().minusMinutes(1));
+
+        int expiredCount = lessonExchangeRequestService.expireExpiredLessonExchangeRequests();
+
+        assertThat(expiredCount).isEqualTo(1);
+        assertThat(lessonExchangeRequestRepository.findById(requestId).orElseThrow().getStatus())
+            .isEqualTo(LessonExchangeRequestStatus.EXPIRED);
+        var proposal = lessonExchangeProposalRepository.findById(proposalId).orElseThrow();
+        assertThat(proposal.getStatus().name()).isEqualTo("CLOSED");
+        assertThat(proposal.getClosedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("자동 만료 처리 시 아직 만료되지 않은 요청은 그대로 유지된다")
+    void expireExpiredRequests_keepsNotExpiredRequestUntouched() {
+        Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(14));
+
+        int expiredCount = lessonExchangeRequestService.expireExpiredLessonExchangeRequests();
+
+        assertThat(expiredCount).isZero();
+        assertThat(lessonExchangeRequestRepository.findById(requestId).orElseThrow().getStatus())
+            .isEqualTo(LessonExchangeRequestStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("자동 만료 처리 시 이미 처리된 요청은 그대로 유지된다")
+    void expireExpiredRequests_keepsAlreadyProcessedRequestUntouched() {
+        Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(15));
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .patch("/{id}/cancel", requestId)
+            .then()
+            .statusCode(200);
+
+        setRequestExpiresAt(requestId, LocalDateTime.now().minusMinutes(1));
+
+        int expiredCount = lessonExchangeRequestService.expireExpiredLessonExchangeRequests();
+
+        assertThat(expiredCount).isZero();
+        assertThat(lessonExchangeRequestRepository.findById(requestId).orElseThrow().getStatus())
+            .isEqualTo(LessonExchangeRequestStatus.CANCELLED);
     }
 
     @Test
@@ -489,6 +587,21 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
         );
         requestIds.add(requestId);
         return requestId;
+    }
+
+    private void setRequestExpiresAt(Long requestId, LocalDateTime expiresAt) {
+        var request = lessonExchangeRequestRepository.findById(requestId).orElseThrow();
+        request.update(
+            request.getLessonDate(),
+            request.getTitle(),
+            request.getClassroomNameSnapshot(),
+            request.getContent(),
+            request.getScope(),
+            request.getStartPeriod(),
+            request.getEndPeriod(),
+            expiresAt
+        );
+        lessonExchangeRequestRepository.save(request);
     }
 
     private Long registerSubject(long classroomId, long teacherId) {

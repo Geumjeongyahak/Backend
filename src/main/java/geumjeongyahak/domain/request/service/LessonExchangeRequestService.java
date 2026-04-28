@@ -2,7 +2,9 @@ package geumjeongyahak.domain.request.service;
 
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
+import geumjeongyahak.domain.request.entity.LessonExchangeProposal;
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
+import geumjeongyahak.domain.request.enums.LessonExchangeProposalStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import geumjeongyahak.domain.request.exception.LessonExchangeRequest.*;
@@ -248,6 +250,24 @@ public class LessonExchangeRequestService {
         return LessonExchangeRequestDetailResponse.from(exchangeRequest);
     }
 
+    @Transactional
+    public int expireExpiredLessonExchangeRequests() {
+        LocalDateTime now = LocalDateTime.now();
+        List<LessonExchangeRequest> expiredRequests =
+            lessonExchangeRequestRepository.findAllByStatusInAndExpiresAtBefore(
+                List.of(LessonExchangeRequestStatus.PENDING, LessonExchangeRequestStatus.APPROVED),
+                now
+            );
+
+        expiredRequests.forEach(this::expireRequest);
+
+        if (!expiredRequests.isEmpty()) {
+            log.info("수업 교환 요청 자동 만료 처리 완료 (count={}, expiredAt={})", expiredRequests.size(), now);
+        }
+
+        return expiredRequests.size();
+    }
+
     // 교환 대상 수업 정책 반영 여부 (현재 기준 4일 이후 수업부터 교환 요청 가능)
     private void validateLessonWithPolicy(LocalDate lessonDate) {
         LocalDate today = LocalDate.now();
@@ -348,6 +368,17 @@ public class LessonExchangeRequestService {
         // 기존의 부분 교환 요청과 새 교환 요청의 범위가 겹치는 경우
         return existing.getStartPeriod() <= newEndPeriod
             && existing.getEndPeriod() >= newStartPeriod;
+    }
+
+    private void expireRequest(LessonExchangeRequest request) {
+        request.expire();
+        closeActiveProposals(request);
+    }
+
+    private void closeActiveProposals(LessonExchangeRequest request) {
+        request.getProposals().stream()
+            .filter(proposal -> proposal.getStatus() == LessonExchangeProposalStatus.ACTIVE)
+            .forEach(LessonExchangeProposal::close);
     }
 
     private List<Lesson> getTargetLessons(
