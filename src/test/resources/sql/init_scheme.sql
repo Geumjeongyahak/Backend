@@ -240,7 +240,7 @@ CREATE TABLE lesson_exchange_proposals (
     FOREIGN KEY (proposed_by) REFERENCES users(id)
 );
 
-CREATE INDEX idx_lesson_exchange_requests_lesson_id ON lesson_exchange_requests(lesson_id);
+CREATE INDEX idx_lesson_exchange_requests_lesson_date ON lesson_exchange_requests(lesson_date);
 CREATE INDEX idx_lesson_exchange_requests_requested_by ON lesson_exchange_requests(requested_by);
 
 CREATE TABLE purchase_requests (
