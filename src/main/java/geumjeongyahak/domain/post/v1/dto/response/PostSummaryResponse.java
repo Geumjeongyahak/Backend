@@ -42,7 +42,13 @@ public record PostSummaryResponse(
         boolean isPinned,
 
         @Schema(description = "누적 조회수입니다. 목록에서 인기 글 판단이나 우측 정보 컬럼에 활용할 수 있습니다.", example = "146")
-        long viewCount
+        long viewCount,
+
+        @Schema(description = "게시글 생성 시각입니다. 목록에서 최신 글 판단이나 정렬 기준으로 활용할 수 있습니다.", example = "2026-04-10T19:30:00")
+        String createdAt,
+
+        @Schema(description = "마지막 수정 시각입니다. 수정이 없으면 생성 시각과 같을 수 있습니다. 목록에서 최신 글 판단이나 정렬 기준으로 활용할 수 있습니다.", example = "2026-04-10T19:30:00")
+        String updatedAt
 ) {
     public static PostSummaryResponse from(Post post) {
         return new PostSummaryResponse(
@@ -56,7 +62,9 @@ public record PostSummaryResponse(
                 post.getAuthor().getId(),
                 post.getAuthor().getName(),
                 post.isPinned(),
-                post.getViewCount()
+                post.getViewCount(),
+                post.getCreatedAt().toString(),
+                post.getUpdatedAt().toString()
         );
     }
 }
