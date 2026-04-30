@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.post.service;
 
+import geumjeongyahak.common.security.service.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
@@ -22,12 +23,12 @@ public class PostSearchSpecificationBuilder {
 
     private final ChannelProxyService channelProxyService;
 
-    public Specification<Post> build(PostSearchRequest request) {
+    public Specification<Post> build(PostSearchRequest request, CustomUserDetails userDetails) {
         Specification<Post> spec = PostSpecs.withoutDeleted()
                 .and(PostSpecs.hasVisibleChannel());
 
         if (request.getChannelId() != null) {
-            channelProxyService.getReadableById(request.getChannelId());
+            channelProxyService.getActiveById(request.getChannelId());
             spec = spec.and(PostSpecs.hasChannelId(request.getChannelId()));
         }
         if (request.getAuthor() != null && !request.getAuthor().isBlank()) {
@@ -40,13 +41,13 @@ public class PostSearchSpecificationBuilder {
             spec = spec.and(PostSpecs.containsContent(request.getContent()));
         }
         if (request.getPostType() != null && !request.getPostType().isBlank()) {
-            spec = spec.and(PostSpecs.hasPostType(parsePostType(request.getPostType())));
+            spec = spec.and(PostSpecs.hasPostType(PostType.valueOf(request.getPostType())));
         }
         if (request.getStatus() != null && !request.getStatus().isBlank()) {
-            spec = spec.and(PostSpecs.hasStatus(parsePostStatus(request.getStatus())));
+            spec = spec.and(PostSpecs.hasStatus(PostStatus.valueOf(request.getStatus())));
         }
         if (request.getChannelType() != null && !request.getChannelType().isBlank()) {
-            spec = spec.and(PostSpecs.hasChannelType(parseChannelType(request.getChannelType())));
+            spec = spec.and(PostSpecs.hasChannelType(ChannelType.valueOf(request.getChannelType())));
         }
         if (request.getClassroomId() != null) {
             spec = spec.and(PostSpecs.hasChannelType(ChannelType.CLASSROOM))
@@ -60,29 +61,5 @@ public class PostSearchSpecificationBuilder {
             spec = spec.and(PostSpecs.hasIsPinned(request.getIsPinned()));
         }
         return spec;
-    }
-
-    private PostStatus parsePostStatus(String status) {
-        try {
-            return PostStatus.valueOf(status);
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 게시글 상태입니다.");
-        }
-    }
-
-    private PostType parsePostType(String postType) {
-        try {
-            return PostType.valueOf(postType);
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 게시글 유형입니다.");
-        }
-    }
-
-    private ChannelType parseChannelType(String channelType) {
-        try {
-            return ChannelType.valueOf(channelType);
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 채널 유형입니다.");
-        }
     }
 }

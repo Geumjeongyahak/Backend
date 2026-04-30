@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.post.repository;
 
 import org.springframework.data.jpa.domain.Specification;
+import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.post.entity.Post;
 import geumjeongyahak.domain.post.enums.PostStatus;
@@ -18,7 +19,8 @@ public final class PostSpecs {
     public static Specification<Post> hasVisibleChannel() {
         return (root, query, cb) -> cb.and(
                 cb.isFalse(root.get("channel").get("isDeleted")),
-                cb.isTrue(root.get("channel").get("isActive"))
+                cb.isTrue(root.get("channel").get("isActive")),
+                cb.notEqual(root.get("channel").get("accessLevel"), ChannelAccessLevel.CLOSED)
         );
     }
 

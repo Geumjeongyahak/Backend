@@ -11,6 +11,7 @@ import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.channel.entity.Channel;
+import geumjeongyahak.domain.channel.service.ChannelAccessService;
 import geumjeongyahak.domain.channel.service.ChannelProxyService;
 import geumjeongyahak.domain.post.entity.Post;
 import geumjeongyahak.domain.post.event.PostChangedEvent;
@@ -38,8 +39,8 @@ import java.time.LocalDateTime;
 public class PostCrudService {
     private final PostRepository postRepository;
     private final ChannelProxyService channelProxyService;
+    private final ChannelAccessService channelAccessService;
     private final UserProxyService userProxyService;
-    private final PostPermissionService postPermissionService;
     private final PostSearchSpecificationBuilder postSearchSpecificationBuilder;
     private final EventPublisher eventPublisher;
 
@@ -47,17 +48,15 @@ public class PostCrudService {
     public PostDetailResponse createPost(Long channelId, CustomUserDetails userDetails, CreatePostRequest request) {
         User author = userProxyService.findById(userDetails.getUserId())
                 .orElseThrow(() -> new UserNotFoundException(userDetails.getUserId()));
-        Channel channel = channelProxyService.getReadableById(channelId);
-
-        postPermissionService.validateCreatePermission(userDetails, channel);
+        Channel channel = channelProxyService.getActiveById(channelId);
 
         Post savedPost = postRepository.save(Post.builder()
                 .channel(channel)
                 .author(author)
                 .title(request.title())
                 .contentHtml(request.contentHtml())
-                .postType(parsePostType(request.postType()))
-                .status(resolveStatus(request.status()))
+                .postType(PostType.valueOf(request.postType()))
+                .status(request.status() == null ? PostStatus.PUBLISHED : PostStatus.valueOf(request.status()))
                 .isPinned(request.isPinned())
                 .allowComment(request.allowComment())
                 .build());
@@ -66,10 +65,8 @@ public class PostCrudService {
         return PostDetailResponse.from(savedPost);
     }
 
-    public PaginationResponse<PostSummaryResponse> getPosts(Long channelId, PostSearchRequest request) {
-        channelProxyService.getReadableById(channelId);
-
-        Specification<Post> spec = postSearchSpecificationBuilder.build(request)
+    public PaginationResponse<PostSummaryResponse> getPosts(Long channelId, CustomUserDetails userDetails, PostSearchRequest request) {
+        Specification<Post> spec = postSearchSpecificationBuilder.build(request, userDetails)
                 .and(PostSpecs.hasChannelId(channelId));
 
         return PaginationResponse.from(
@@ -78,16 +75,15 @@ public class PostCrudService {
         );
     }
 
-    public PaginationResponse<PostSummaryResponse> getPosts(PostSearchRequest request) {
+    public PaginationResponse<PostSummaryResponse> getPosts(CustomUserDetails userDetails, PostSearchRequest request) {
         return PaginationResponse.from(
-                postRepository.findAll(postSearchSpecificationBuilder.build(request), request.toRequest()),
+                postRepository.findAll(postSearchSpecificationBuilder.build(request, userDetails), request.toRequest()),
                 PostSummaryResponse::from
         );
     }
 
     @Transactional
     public PostDetailResponse getPost(Long channelId, Long postId) {
-        channelProxyService.getReadableById(channelId);
         Post post = getPostWithoutDeleted(channelId, postId);
         post.incrementViewCount();
         return PostDetailResponse.from(post);
@@ -100,9 +96,8 @@ public class PostCrudService {
             Long postId,
             UpdatePostRequest request
     ) {
-        channelProxyService.getReadableById(channelId);
         Post post = getPostWithoutDeleted(channelId, postId);
-        postPermissionService.validateEditPermission(userDetails, post);
+        channelAccessService.validateCanManagePost(userDetails, post);
 
         if (!hasAnyUpdate(request)) {
             throw new BusinessException(CommonErrorCode.NO_CHANGES_DETECTED);
@@ -111,8 +106,8 @@ public class PostCrudService {
         post.update(
                 request.title(),
                 request.contentHtml(),
-                parsePostType(request.postType()),
-                parsePostStatus(request.status()),
+                request.postType() == null ? null : PostType.valueOf(request.postType()),
+                request.status() == null ? null : PostStatus.valueOf(request.status()),
                 request.isPinned(),
                 request.allowComment()
         );
@@ -124,9 +119,8 @@ public class PostCrudService {
 
     @Transactional
     public void deletePost(Long channelId, CustomUserDetails userDetails, Long postId) {
-        channelProxyService.getReadableById(channelId);
         Post post = getPostWithoutDeleted(channelId, postId);
-        postPermissionService.validateEditPermission(userDetails, post);
+        channelAccessService.validateCanManagePost(userDetails, post);
         post.delete();
         postRepository.save(post);
         publishPostChangedEvent(channelId);
@@ -155,31 +149,5 @@ public class PostCrudService {
                 .map(Post::getCreatedAt)
                 .orElse(null);
         eventPublisher.publish(new PostChangedEvent(channelId, lastPostedAt));
-    }
-
-    private PostStatus resolveStatus(String status) {
-        return status == null ? PostStatus.PUBLISHED : parsePostStatus(status);
-    }
-
-    private PostStatus parsePostStatus(String status) {
-        if (status == null) {
-            return null;
-        }
-        try {
-            return PostStatus.valueOf(status);
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 게시글 상태입니다.");
-        }
-    }
-
-    private PostType parsePostType(String postType) {
-        if (postType == null) {
-            return null;
-        }
-        try {
-            return PostType.valueOf(postType);
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 게시글 유형입니다.");
-        }
     }
 }
