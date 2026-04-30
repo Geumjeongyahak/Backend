@@ -10,11 +10,13 @@ import java.time.LocalDateTime;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, String> {
 
-    void deleteByUserId(Long userId);
+    void deleteByCredentialId(Long credentialId);
+
+    void deleteByCredentialIdIn(Iterable<Long> credentialIds);
 
     @Modifying
     @Query("DELETE FROM RefreshToken r WHERE r.expiryDate < :now")
     void deleteExpiredTokens(@Param("now") LocalDateTime now);
 
-    boolean existsByUserId(Long userId);
+    boolean existsByCredentialId(Long credentialId);
 }

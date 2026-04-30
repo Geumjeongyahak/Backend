@@ -15,7 +15,7 @@ import geumjeongyahak.domain.department.v1.dto.request.CreateDepartmentRequest;
 import geumjeongyahak.domain.department.v1.dto.request.UpdateDepartmentRequest;
 import geumjeongyahak.domain.department.v1.dto.response.DepartmentDetailResponse;
 import geumjeongyahak.domain.department.v1.dto.response.DepartmentListResponse;
-import geumjeongyahak.domain.department.v1.dto.response.DepartmentResponse;
+import geumjeongyahak.domain.department.v1.dto.response.DepartmentSimpleResponse;
 
 @Slf4j
 @RestController
@@ -49,24 +49,24 @@ public class DepartmentController {
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "부서 생성", description = "새로운 부서를 생성합니다.")
     @PostMapping
-    public ResponseEntity<DepartmentResponse> createDepartment(
+    public ResponseEntity<DepartmentSimpleResponse> createDepartment(
             @Valid @RequestBody CreateDepartmentRequest request
     ) {
         log.debug("POST /api/v1/departments - 부서 생성 요청: {}", request.name());
-        DepartmentResponse response = departmentCrudService.createDepartment(request);
+        DepartmentSimpleResponse response = departmentCrudService.createDepartment(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "부서 수정", description = "부서 정보를 수정합니다.")
     @PutMapping("/{id}")
-    public ResponseEntity<DepartmentResponse> updateDepartment(
+    public ResponseEntity<DepartmentSimpleResponse> updateDepartment(
             @Parameter(description = "부서 ID", example = "1")
             @PathVariable Long id,
             @Valid @RequestBody UpdateDepartmentRequest request
     ) {
         log.debug("PUT /api/v1/departments/{} - 부서 수정 요청", id);
-        DepartmentResponse response = departmentCrudService.updateDepartment(id, request);
+        DepartmentSimpleResponse response = departmentCrudService.updateDepartment(id, request);
         return ResponseEntity.ok(response);
     }
 

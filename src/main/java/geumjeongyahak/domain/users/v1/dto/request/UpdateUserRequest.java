@@ -5,13 +5,16 @@ import geumjeongyahak.common.validation.annotation.ValidPhoneNumber;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import geumjeongyahak.common.validation.annotation.ValidRole;
-import geumjeongyahak.domain.auth.enums.RoleLevel;
 
 @Schema(description = "사용자 정보 수정 요청 DTO")
 public record UpdateUserRequest(
     @Schema(description = "이름", example = "홍길동")
     @Size(max = 50, message = "이름은 50자 이하여야 합니다.")
     String name,
+
+    @Schema(description = "닉네임", example = "까치")
+    @Size(max = 50, message = "닉네임은 50자 이하여야 합니다.")
+    String nickname,
 
     @Schema(description = "전화번호", example = "010-9876-5432")
     @ValidPhoneNumber
@@ -25,7 +28,10 @@ public record UpdateUserRequest(
     String password,
 
     @Schema(description = "기본 역할", examples = { "ADMIN", "MANAGER", "VOLUNTEER", "GUEST" })
-    @ValidRole(levels = { RoleLevel.BASIC })
-    String role
+    @ValidRole
+    String role,
+
+    @Schema(description = "부서 ID", example = "1")
+    Long departmentId
 ) {
 }

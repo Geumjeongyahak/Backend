@@ -12,7 +12,17 @@ public class LessonStatusUpdateTest extends LessonBaseTest {
     @Test
     @DisplayName("수업 상태 변경 성공(200) - 교사(본인 수업) + 재조회로 반영 확인")
     void updateLessonStatus_Success_MyLesson_ThenGet() {
-        long lessonId = 1L;
+        long lessonId = createTrackedLessonFixture(
+            "status-my-lesson",
+            TEACHER_ID,
+            "2042-01-06",
+            "MONDAY",
+            1,
+            "2027-01-06",
+            "19:20:00",
+            "20:00:00",
+            1
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
@@ -41,7 +51,17 @@ public class LessonStatusUpdateTest extends LessonBaseTest {
     @Test
     @DisplayName("수업 상태 변경 실패(404) - 교사(타인 수업)")
     void updateLessonStatus_Fail_OthersLesson() {
-        long othersLessonId = 2L;
+        long othersLessonId = createTrackedLessonFixture(
+            "status-other-lesson",
+            TEACHER2_ID,
+            "2042-01-07",
+            "TUESDAY",
+            2,
+            "2027-01-07",
+            "20:10:00",
+            "20:50:00",
+            2
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
@@ -59,7 +79,17 @@ public class LessonStatusUpdateTest extends LessonBaseTest {
     @Test
     @DisplayName("수업 상태 변경 성공(200) - 관리자(타인 수업도 가능)")
     void updateLessonStatus_Success_Admin_OthersLesson() {
-        long othersLessonId = 1L;
+        long othersLessonId = createTrackedLessonFixture(
+            "status-admin-lesson",
+            TEACHER2_ID,
+            "2042-01-08",
+            "WEDNESDAY",
+            3,
+            "2027-01-08",
+            "19:20:00",
+            "20:00:00",
+            1
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -93,7 +123,17 @@ public class LessonStatusUpdateTest extends LessonBaseTest {
     @Test
     @DisplayName("수업 상태 변경 실패(400) - status 누락")
     void updateLessonStatus_BadRequest_StatusNull() {
-        long lessonId = 1L;
+        long lessonId = createTrackedLessonFixture(
+            "status-blank",
+            TEACHER_ID,
+            "2042-01-09",
+            "THURSDAY",
+            4,
+            "2027-01-09",
+            "19:20:00",
+            "20:00:00",
+            1
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))

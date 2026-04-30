@@ -26,7 +26,11 @@ public class SecurityProperties {
 
         private String secret;
 
+        private String jweSecret;
+
         private long accessExpSeconds;
+
+        private long oauth2TempExpSeconds;
 
         private long refreshExpSeconds;
     }

@@ -38,11 +38,36 @@ public class JwtTokenProvider {
         return createToken(subject, securityProperties.getJwt().getAccessExpSeconds());
     }
 
+    public String createOAuth2TempToken(String subject, String email) {
+        Instant now = Instant.now();
+        Instant exp = now.plusSeconds(securityProperties.getJwt().getOauth2TempExpSeconds());
+        return Jwts.builder()
+            .subject(subject)
+            .claim("email", email)
+            .issuedAt(Date.from(now))
+            .expiration(Date.from(exp))
+            .signWith(signingKey())
+            .compact();
+    }
+
     public String createToken(String subject, long expSeconds) {
         Instant now = Instant.now();
         Instant exp = now.plusSeconds(expSeconds);
         return Jwts.builder()
             .subject(subject)
+            .issuer("geumjeongyahak")
+            .issuedAt(Date.from(now))
+            .expiration(Date.from(exp))
+            .signWith(signingKey())
+            .compact();
+    }
+
+    public String createToken(String subject, long expSeconds, String issuer) {
+        Instant now = Instant.now();
+        Instant exp = now.plusSeconds(expSeconds);
+        return Jwts.builder()
+            .subject(subject)
+            .issuer(issuer)
             .issuedAt(Date.from(now))
             .expiration(Date.from(exp))
             .signWith(signingKey())
@@ -60,6 +85,10 @@ public class JwtTokenProvider {
 
     public String getSubject(String token) {
         return parse(token).getPayload().getSubject();
+    }
+
+    public String getEmail(String token) {
+        return parse(token).getPayload().get("email", String.class);
     }
 
     private Jws<Claims> parse(String token) {

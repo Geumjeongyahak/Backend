@@ -1,7 +1,5 @@
 package geumjeongyahak.e2e.file;
 
-import java.util.List;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -28,8 +26,8 @@ public abstract class BaseFileTest extends BaseE2ETest {
         super.setUp();
         RestAssured.basePath = "/api/v1/files";
 
-        userTestHelper.createTestUser(TEST_FILE_USER, List.of(RoleType.ROLE_VOLUNTEER));
-        userAccessToken = userTestHelper.generateAccessToken(TEST_FILE_USER);
+        userTestHelper.createTestUser(TEST_FILE_USER, RoleType.VOLUNTEER);
+        userAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_FILE_USER);
     }
 
     @AfterEach

@@ -1,12 +1,29 @@
 package geumjeongyahak.domain.users.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
+import geumjeongyahak.domain.auth.entity.UserCredential;
+import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.base.entity.BaseEntity;
+import geumjeongyahak.domain.department.entity.Department;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.Setter;
 
-import java.util.Collection;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 @Entity
@@ -14,69 +31,84 @@ import java.util.Set;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseEntity {
+    @Setter
+    @Column(nullable = false, length = 50, unique = true)
+    private String nickname;
 
     @Setter
     @Column(nullable = false, length = 50)
     private String name;
-
-    @Column(nullable = false, unique = true, length = 50)
-    private String username;
-
-    @Setter
-    @Column(length = 512)
-    private String passwordHash;
 
     @Setter
     @Column(length = 20)
     private String phoneNumber;
 
     @Setter
-    @Column(unique = true, length = 100)
+    @Column(unique = true, length = 100, name = "primary_email")
     private String email;
 
     @Setter
-    @Column(unique = true, length = 100)
-    private String gmail;
+    @Column(length = 255, name = "profile_image_url")
+    private String profileImageUrl;
 
     @Setter
-    @Column(length = 512)
-    private String clientId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id", nullable = true)
+    private Department department;
 
+    @Setter
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private RoleType role = RoleType.GUEST;
 
-    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER,
-            orphanRemoval = true,cascade = CascadeType.ALL)
-    private Set<UserRole> roles = new HashSet<>();
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, orphanRemoval = true, cascade = CascadeType.ALL)
+    private Set<UserCredential> credentials = new HashSet<>();
 
-    public void addRole(RoleType roleType) {
-        this.roles.add(new UserRole(this, roleType));
-    }
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, orphanRemoval = true, cascade = CascadeType.ALL)
+    private Set<UserPermission> permissions = new HashSet<>();
 
-    public void removeRole(RoleType roleType) {
-        this.roles.remove(new UserRole(this, roleType));
-    }
-
-    public boolean hasRole(RoleType roleType) {
-        return this.roles.contains(new UserRole(this, roleType));
-    }
-
-    @Builder(builderMethodName = "localBuilder")
-    public static User createLocalUser(
-            @NonNull String name,
-            @NonNull String username,
-            @NonNull String passwordHash,
-            String email,
-            String phoneNumber,
-            Collection<RoleType> roles
+    @Builder
+    public User(
+        @NonNull String nickname,
+        @NonNull String name,
+        String phoneNumber,
+        String email,
+        String profileImageUrl,
+        Department department,
+        RoleType role
     ) {
-        User user = new User();
-        user.name = name;
-        user.username = username;
-        user.passwordHash = passwordHash;
-        user.phoneNumber = phoneNumber;
-        user.email = email;
-        if (roles != null) {
-            for (RoleType roleType : roles) user.addRole(roleType);
-        }
-        return user;
+        this.nickname = nickname;
+        this.name = name;
+        this.phoneNumber = phoneNumber;
+        this.email = email;
+        this.profileImageUrl = profileImageUrl;
+        this.department = department;
+        this.role = (role != null) ? role : RoleType.VOLUNTEER;
+    }
+
+    public String getUsername() {
+        return findLocalCredential()
+            .map(UserCredential::getCredentialEmail)
+            .orElse(null);
+    }
+
+    public String getPasswordHash() {
+        return findLocalCredential()
+            .map(UserCredential::getPasswordHash)
+            .orElse(null);
+    }
+
+    public void addCredential(UserCredential credential) {
+        this.credentials.add(credential);
+    }
+
+    public void addPermission(UserPermission permission) {
+        this.permissions.add(permission);
+    }
+
+    private Optional<UserCredential> findLocalCredential() {
+        return credentials.stream()
+            .filter(credential -> credential.getProvider() == ProviderType.LOCAL)
+            .findFirst();
     }
 }

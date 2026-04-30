@@ -9,8 +9,6 @@ import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.e2e.BaseE2ETest;
 import geumjeongyahak.e2e.util.TestChannelHelper;
 
-import java.util.List;
-
 @Tag("channel")
 public abstract class BaseChannelTest extends BaseE2ETest {
     protected static final String TEST_CHANNEL_ADMIN_USERNAME = "channelAdminUser1234";
@@ -28,11 +26,11 @@ public abstract class BaseChannelTest extends BaseE2ETest {
         super.setUp();
         RestAssured.basePath = "/api/v1/channels";
 
-        userTestHelper.createTestUser(TEST_CHANNEL_ADMIN_USERNAME, List.of(RoleType.ROLE_ADMIN));
-        userTestHelper.createTestUser(TEST_CHANNEL_GUEST_USERNAME, List.of(RoleType.ROLE_GUEST));
+        userTestHelper.createTestUser(TEST_CHANNEL_ADMIN_USERNAME, RoleType.ADMIN);
+        userTestHelper.createTestUser(TEST_CHANNEL_GUEST_USERNAME, RoleType.GUEST);
 
-        adminAccessToken = userTestHelper.generateAccessToken(TEST_CHANNEL_ADMIN_USERNAME);
-        guestAccessToken = userTestHelper.generateAccessToken(TEST_CHANNEL_GUEST_USERNAME);
+        adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_CHANNEL_ADMIN_USERNAME);
+        guestAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_CHANNEL_GUEST_USERNAME);
     }
 
     @AfterEach

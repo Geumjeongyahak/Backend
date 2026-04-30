@@ -29,7 +29,8 @@ class DepartmentUpdateTest extends DepartmentBaseTest {
     void updateDepartment_Success_AllFields() {
         UpdateDepartmentRequest req = new UpdateDepartmentRequest(
                 "수정된 부서명",
-                "수정된 설명"
+                "수정된 설명",
+                null
         );
 
         given()
@@ -51,6 +52,7 @@ class DepartmentUpdateTest extends DepartmentBaseTest {
     void updateDepartment_Success_NameOnly() {
         UpdateDepartmentRequest req = new UpdateDepartmentRequest(
                 "이름만 수정",
+                null,
                 null
         );
 
@@ -72,7 +74,8 @@ class DepartmentUpdateTest extends DepartmentBaseTest {
     void updateDepartment_Success_DescriptionOnly() {
         UpdateDepartmentRequest req = new UpdateDepartmentRequest(
                 null,
-                "설명만 수정"
+                "설명만 수정",
+                null
         );
 
         given()
@@ -93,7 +96,8 @@ class DepartmentUpdateTest extends DepartmentBaseTest {
     void updateDepartment_Forbidden() {
         UpdateDepartmentRequest req = new UpdateDepartmentRequest(
                 "수정 시도",
-                "금지된 수정"
+                "금지된 수정",
+                null
         );
 
         given()
@@ -113,7 +117,8 @@ class DepartmentUpdateTest extends DepartmentBaseTest {
     void updateDepartment_Unauthorized() {
         UpdateDepartmentRequest req = new UpdateDepartmentRequest(
                 "수정 시도",
-                "인증 없음"
+                "인증 없음",
+                null
         );
 
         given()
@@ -132,7 +137,8 @@ class DepartmentUpdateTest extends DepartmentBaseTest {
         Long nonExistentId = 99999L;
         UpdateDepartmentRequest req = new UpdateDepartmentRequest(
                 "수정 시도",
-                "존재하지 않음"
+                "존재하지 않음",
+                null
         );
 
         given()

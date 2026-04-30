@@ -10,7 +10,6 @@ import geumjeongyahak.common.validation.validator.RoleValidator;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
-import geumjeongyahak.domain.auth.enums.RoleLevel;
 
 @Documented
 @Constraint(validatedBy = RoleValidator.class)
@@ -18,7 +17,7 @@ import geumjeongyahak.domain.auth.enums.RoleLevel;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ValidRole {
     String message() default "유효하지 않은 역할(Role) 입니다.";
-    RoleLevel[] levels() default { RoleLevel.BASIC, RoleLevel.DEPARTMENT, RoleLevel.ADDITIONAL };
+    String value() default ""; // 단일 역할 검증용
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 }

@@ -3,456 +3,255 @@ package geumjeongyahak.e2e.users;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import geumjeongyahak.domain.auth.enums.RoleType;
-import geumjeongyahak.domain.users.v1.dto.request.AddSubRoleRequest;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
-import geumjeongyahak.domain.users.v1.dto.request.RemoveSubRoleRequest;
-import geumjeongyahak.domain.users.v1.dto.response.UserResponse;
-
+import geumjeongyahak.domain.users.v1.dto.request.UserPermissionRequest;
+import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
-@DisplayName("E2E: User SubRole 관리 테스트")
+@DisplayName("E2E: User Permission 관리 테스트")
 class UserSubRoleTest extends UserBaseTest {
 
+    private Long createVolunteer() {
+        String unique = "permtest" + System.currentTimeMillis();
+        CreateUserRequest req = new CreateUserRequest(
+            unique + "@test.com",
+            unique,
+            "Permission Test User",
+            "password123!",
+            "010-1234-5678",
+            "VOLUNTEER",
+            null
+        );
+
+        var user = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .extract()
+            .as(UserDetailResponse.class);
+
+        userTestHelper.setUser(user.nickname());
+        return user.id();
+    }
+
     @Test
-    @DisplayName("사용자 역할 목록 조회 성공(200 OK)")
-    void getUserRoles_Success() {
-        // admin 사용자의 역할 조회 (초기 상태: ROLE_ADMIN만 있음)
+    @DisplayName("사용자 권한 목록 조회 성공(200 OK)")
+    void getPermissions_Success() {
+        Long userId = createVolunteer();
+
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
         .when()
-            .get("/{userId}/roles", 1L)  // admin user ID
+            .get("/{userId}/permissions", userId)
         .then()
             .statusCode(200)
-            .body("size()", greaterThan(0))
-            .body("[0].name", notNullValue())
+            .body("$", notNullValue())
             .log().all();
     }
 
     @Test
-    @DisplayName("일반 사용자 권한으로 역할 조회 실패(403 Forbidden)")
-    void getUserRoles_Forbidden() {
+    @DisplayName("일반 사용자 권한으로 권한 목록 조회 실패(403 Forbidden)")
+    void getPermissions_Forbidden() {
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
         .when()
-            .get("/{userId}/roles", 1L)
+            .get("/{userId}/permissions", 1L)
         .then()
             .statusCode(403)
-            .body("code", equalTo("AUTHZ001"))  // ACCESS_DENIED
+            .body("code", equalTo("AUTHZ001"))
             .log().all();
     }
 
     @Test
-    @DisplayName("하위권한 추가 성공 - TEACHER 역할(200 OK)")
-    void addSubRole_Success_Teacher() {
-        // 테스트용 사용자 생성
-        String uniqueUsername = "subrole" + System.currentTimeMillis();
-        CreateUserRequest createReq = new CreateUserRequest(
-                uniqueUsername + "@test.com",
-                "password123!",
-                "SubRole Test User",
-                uniqueUsername + "@test.com",
-                "010-1234-5678",
-                RoleType.ROLE_VOLUNTEER.name()
-        );
-
-        var user = given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType(ContentType.JSON)
-            .body(createReq)
-        .when()
-            .post()
-        .then()
-            .statusCode(201)
-            .extract()
-            .as(UserResponse.class);
-
-        userTestHelper.setUser(user.username());
-
-        // TEACHER 하위권한 추가
-        AddSubRoleRequest addReq = new AddSubRoleRequest("TEACHER");
+    @DisplayName("권한 추가 성공(200 OK)")
+    void addPermission_Success() {
+        Long userId = createVolunteer();
+        UserPermissionRequest req = new UserPermissionRequest("lesson:write:*");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType(ContentType.JSON)
-            .body(addReq)
+            .body(req)
         .when()
-            .post("/{userId}/roles", user.id())
+            .post("/{userId}/permissions", userId)
         .then()
             .statusCode(200)
-            .body("size()", equalTo(2))  // ROLE_VOLUNTEER + TEACHER
-            .body("find { it.name == 'TEACHER' }", notNullValue())
+            .body("size()", equalTo(1))
+            .body("[0].code", equalTo("lesson:write:*"))
             .log().all();
     }
 
     @Test
-    @DisplayName("하위권한 추가 성공 - DEPT_GENERAL_AFFAIRS 역할(200 OK)")
-    void addSubRole_Success_DeptGeneralAffairs() {
-        // 테스트용 사용자 생성
-        String uniqueUsername = "deptfinance" + System.currentTimeMillis();
-        CreateUserRequest createReq = new CreateUserRequest(
-                uniqueUsername + "@test.com",
-                "password123!",
-                "Dept Finance Test User",
-                uniqueUsername + "@test.com",
-                "010-1234-5678",
-                RoleType.ROLE_VOLUNTEER.name()
-        );
-
-        var user = given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType(ContentType.JSON)
-            .body(createReq)
-        .when()
-            .post()
-        .then()
-            .statusCode(201)
-            .extract()
-            .as(UserResponse.class);
-
-        userTestHelper.setUser(user.username());
-
-        // DEPT_GENERAL_AFFAIRS 하위권한 추가
-        AddSubRoleRequest addReq = new AddSubRoleRequest("DEPT_GENERAL_AFFAIRS");
+    @DisplayName("여러 권한 추가 성공(200 OK)")
+    void addMultiplePermissions_Success() {
+        Long userId = createVolunteer();
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType(ContentType.JSON)
-            .body(addReq)
+            .body(new UserPermissionRequest("lesson:write:*"))
         .when()
-            .post("/{userId}/roles", user.id())
-        .then()
-            .statusCode(200)
-            .body("size()", equalTo(2))  // ROLE_VOLUNTEER + DEPT_GENERAL_AFFAIRS
-            .body("find { it.name == 'DEPT_GENERAL_AFFAIRS' }", notNullValue())
-            .log().all();
-    }
-
-    @Test
-    @DisplayName("여러 하위권한 추가 성공(200 OK)")
-    void addSubRole_Success_Multiple() {
-        // 테스트용 사용자 생성
-        String uniqueUsername = "multirole" + System.currentTimeMillis();
-        CreateUserRequest createReq = new CreateUserRequest(
-                uniqueUsername + "@test.com",
-                "password123!",
-                "Multi Role Test User",
-                uniqueUsername + "@test.com",
-                "010-1234-5678",
-                RoleType.ROLE_VOLUNTEER.name()
-        );
-
-        var user = given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType(ContentType.JSON)
-            .body(createReq)
-        .when()
-            .post()
-        .then()
-            .statusCode(201)
-            .extract()
-            .as(UserResponse.class);
-
-        userTestHelper.setUser(user.username());
-
-        // TEACHER 추가
-        given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType(ContentType.JSON)
-            .body(new AddSubRoleRequest("TEACHER"))
-        .when()
-            .post("/{userId}/roles", user.id())
+            .post("/{userId}/permissions", userId)
         .then()
             .statusCode(200);
 
-        // DEPT_EDUCATION_RESEARCH 추가
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType(ContentType.JSON)
-            .body(new AddSubRoleRequest("DEPT_EDUCATION_RESEARCH"))
+            .body(new UserPermissionRequest("department:read:*"))
         .when()
-            .post("/{userId}/roles", user.id())
+            .post("/{userId}/permissions", userId)
         .then()
             .statusCode(200)
-            .body("size()", equalTo(3))  // ROLE_VOLUNTEER + TEACHER + DEPT_EDUCATION_RESEARCH
+            .body("size()", equalTo(2))
             .log().all();
     }
 
     @Test
-    @DisplayName("기본 역할 추가 시도 실패(400 Bad Request)")
-    void addSubRole_CannotAddBaseRole() {
-        String uniqueUsername = "baserole" + System.currentTimeMillis();
-        CreateUserRequest createReq = new CreateUserRequest(
-                uniqueUsername + "@test.com",
-                "password123!",
-                "Base Role Test User",
-                uniqueUsername + "@test.com",
-                "010-1234-5678",
-                RoleType.ROLE_VOLUNTEER.name()
-        );
-
-        var user = given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType(ContentType.JSON)
-            .body(createReq)
-        .when()
-            .post()
-        .then()
-            .statusCode(201)
-            .extract()
-            .as(UserResponse.class);
-
-        userTestHelper.setUser(user.username());
-
-        // ROLE_ADMIN (기본 역할) 추가 시도
-        AddSubRoleRequest addReq = new AddSubRoleRequest("ROLE_ADMIN");
+    @DisplayName("중복 권한 추가 시 멱등성 보장(200 OK, 중복 없음)")
+    void addPermission_Idempotent() {
+        Long userId = createVolunteer();
+        UserPermissionRequest req = new UserPermissionRequest("lesson:write:*");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType(ContentType.JSON)
-            .body(addReq)
+            .body(req)
         .when()
-            .post("/{userId}/roles", user.id())
-        .then()
-            .statusCode(400)
-            .body("code", equalTo("VAL001"))  // CANNOT_ASSIGN_BASE_ROLE
-            .log().all();
-    }
-
-    @Test
-    @DisplayName("이미 부여된 역할 중복 추가 실패(409 Conflict)")
-    void addSubRole_RoleAlreadyAssigned() {
-        String uniqueUsername = "duplicate" + System.currentTimeMillis();
-        CreateUserRequest createReq = new CreateUserRequest(
-                uniqueUsername + "@test.com",
-                "password123!",
-                "Duplicate Role Test User",
-                uniqueUsername + "@test.com",
-                "010-1234-5678",
-                RoleType.ROLE_VOLUNTEER.name()
-        );
-
-        var user = given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType(ContentType.JSON)
-            .body(createReq)
-        .when()
-            .post()
-        .then()
-            .statusCode(201)
-            .extract()
-            .as(UserResponse.class);
-
-        userTestHelper.setUser(user.username());
-
-        // TEACHER 추가
-        given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType(ContentType.JSON)
-            .body(new AddSubRoleRequest("TEACHER"))
-        .when()
-            .post("/{userId}/roles", user.id())
+            .post("/{userId}/permissions", userId)
         .then()
             .statusCode(200);
 
-        // TEACHER 중복 추가 시도
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType(ContentType.JSON)
-            .body(new AddSubRoleRequest("TEACHER"))
+            .body(req)
         .when()
-            .post("/{userId}/roles", user.id())
-        .then()
-            .statusCode(409)
-            .body("code", equalTo("BIZ-01-003"))  // ROLE_ALREADY_ASSIGNED
-            .log().all();
-    }
-
-    @Test
-    @DisplayName("하위권한 제거 성공(200 OK)")
-    void removeSubRole_Success() {
-        // 테스트용 사용자 생성 및 하위권한 추가
-        String uniqueUsername = "removerole" + System.currentTimeMillis();
-        CreateUserRequest createReq = new CreateUserRequest(
-                uniqueUsername + "@test.com",
-                "password123!",
-                "Remove Role Test User",
-                uniqueUsername + "@test.com",
-                "010-1234-5678",
-                RoleType.ROLE_VOLUNTEER.name()
-        );
-
-        var user = given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType(ContentType.JSON)
-            .body(createReq)
-        .when()
-            .post()
-        .then()
-            .statusCode(201)
-            .extract()
-            .as(UserResponse.class);
-
-        userTestHelper.setUser(user.username());
-
-        // TEACHER 추가
-        given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType(ContentType.JSON)
-            .body(new AddSubRoleRequest("TEACHER"))
-        .when()
-            .post("/{userId}/roles", user.id())
-        .then()
-            .statusCode(200);
-
-        // TEACHER 제거
-        RemoveSubRoleRequest removeReq = new RemoveSubRoleRequest("TEACHER");
-
-        given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType(ContentType.JSON)
-            .body(removeReq)
-        .when()
-            .delete("/{userId}/roles", user.id())
+            .post("/{userId}/permissions", userId)
         .then()
             .statusCode(200)
-//            .body("size()", equalTo(1))  // ROLE_VOLUNTEER만 남음
-//            .body("find { it.name == 'TEACHER' }", nullValue())
+            .body("size()", equalTo(1))
             .log().all();
     }
 
     @Test
-    @DisplayName("기본 역할 제거 시도 실패(400 Bad Request)")
-    void removeSubRole_CannotRemoveBaseRole() {
-        // ROLE_VOLUNTEER (기본 역할) 제거 시도
-        String uniqueUsername = "removebase" + System.currentTimeMillis();
-        CreateUserRequest createReq = new CreateUserRequest(
-                uniqueUsername + "@test.com",
-                "password123!",
-                "Remove Base Test User",
-                uniqueUsername + "@test.com",
-                "010-1234-5678",
-                RoleType.ROLE_VOLUNTEER.name()
-        );
-
-        var user = given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType(ContentType.JSON)
-            .body(createReq)
-        .when()
-            .post()
-        .then()
-            .statusCode(201)
-            .extract()
-            .as(UserResponse.class);
-
-        userTestHelper.setUser(user.username());
-
-        RemoveSubRoleRequest removeReq = new RemoveSubRoleRequest("ROLE_VOLUNTEER");
+    @DisplayName("유효하지 않은 권한 코드로 권한 추가 실패(400 Bad Request)")
+    void addPermission_InvalidCode() {
+        Long userId = createVolunteer();
+        String invalidJson = """
+            {"permissionCode": "INVALID_FORMAT"}
+            """;
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType(ContentType.JSON)
-            .body(removeReq)
+            .body(invalidJson)
         .when()
-            .delete("/{userId}/roles", user.id())
+            .post("/{userId}/permissions", userId)
         .then()
             .statusCode(400)
-            .body("code", equalTo("VAL001"))  // 유효성 검사 오류
+            .body("code", equalTo("VAL001"))
             .log().all();
     }
 
     @Test
-    @DisplayName("부여되지 않은 역할 제거 시도 실패(400 Bad Request)")
-    void removeSubRole_RoleNotAssigned() {
-        String uniqueUsername = "notassigned" + System.currentTimeMillis();
-        CreateUserRequest createReq = new CreateUserRequest(
-                uniqueUsername + "@test.com",
-                "password123!",
-                "Not Assigned Test User",
-                uniqueUsername + "@test.com",
-                "010-1234-5678",
-                RoleType.ROLE_VOLUNTEER.name()
-        );
-
-        var user = given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType(ContentType.JSON)
-            .body(createReq)
-        .when()
-            .post()
-        .then()
-            .statusCode(201)
-            .extract()
-            .as(UserResponse.class);
-
-        userTestHelper.setUser(user.username());
-
-        // 부여되지 않은 TEACHER 제거 시도
-        RemoveSubRoleRequest removeReq = new RemoveSubRoleRequest("TEACHER");
+    @DisplayName("존재하지 않는 사용자에게 권한 추가 실패(404 Not Found)")
+    void addPermission_UserNotFound() {
+        UserPermissionRequest req = new UserPermissionRequest("lesson:write:*");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType(ContentType.JSON)
-            .body(removeReq)
+            .body(req)
         .when()
-            .delete("/{userId}/roles", user.id())
-        .then()
-            .statusCode(400)
-            .body("code", equalTo("VAL-01-001"))  // ROLE_NOT_ASSIGNED
-            .log().all();
-    }
-
-    @Test
-    @DisplayName("존재하지 않는 사용자에게 역할 추가 실패(404 Not Found)")
-    void addSubRole_UserNotFound() {
-        AddSubRoleRequest addReq = new AddSubRoleRequest("TEACHER");
-
-        given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType(ContentType.JSON)
-            .body(addReq)
-        .when()
-            .post("/{userId}/roles", 99999L)  // 존재하지 않는 ID
+            .post("/{userId}/permissions", 99999L)
         .then()
             .statusCode(404)
-            .body("code", equalTo("RES-01-001"))  // USER_NOT_FOUND
             .log().all();
     }
 
     @Test
-    @DisplayName("일반 사용자 권한으로 역할 추가 실패(403 Forbidden)")
-    void addSubRole_Forbidden() {
-        AddSubRoleRequest addReq = new AddSubRoleRequest("TEACHER");
+    @DisplayName("일반 사용자 권한으로 권한 추가 실패(403 Forbidden)")
+    void addPermission_Forbidden() {
+        UserPermissionRequest req = new UserPermissionRequest("lesson:write:*");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
             .contentType(ContentType.JSON)
-            .body(addReq)
+            .body(req)
         .when()
-            .post("/{userId}/roles", 1L)
+            .post("/{userId}/permissions", 1L)
         .then()
             .statusCode(403)
-            .body("code", equalTo("AUTHZ001"))  // ACCESS_DENIED
+            .body("code", equalTo("AUTHZ001"))
             .log().all();
     }
 
     @Test
-    @DisplayName("일반 사용자 권한으로 역할 제거 실패(403 Forbidden)")
-    void removeSubRole_Forbidden() {
-        RemoveSubRoleRequest removeReq = new RemoveSubRoleRequest("TEACHER");
+    @DisplayName("권한 제거 성공(200 OK)")
+    void removePermission_Success() {
+        Long userId = createVolunteer();
+        UserPermissionRequest req = new UserPermissionRequest("lesson:write:*");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .post("/{userId}/permissions", userId)
+        .then()
+            .statusCode(200);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .delete("/{userId}/permissions", userId)
+        .then()
+            .statusCode(200)
+            .body("size()", equalTo(0))
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 권한 제거 시 멱등성 보장(200 OK)")
+    void removePermission_Idempotent() {
+        Long userId = createVolunteer();
+        UserPermissionRequest req = new UserPermissionRequest("lesson:write:*");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .delete("/{userId}/permissions", userId)
+        .then()
+            .statusCode(200)
+            .body("size()", equalTo(0))
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("일반 사용자 권한으로 권한 제거 실패(403 Forbidden)")
+    void removePermission_Forbidden() {
+        UserPermissionRequest req = new UserPermissionRequest("lesson:write:*");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
             .contentType(ContentType.JSON)
-            .body(removeReq)
+            .body(req)
         .when()
-            .delete("/{userId}/roles", 1L)
+            .delete("/{userId}/permissions", 1L)
         .then()
             .statusCode(403)
-            .body("code", equalTo("AUTHZ001"))  // ACCESS_DENIED
+            .body("code", equalTo("AUTHZ001"))
             .log().all();
     }
 }
