@@ -285,7 +285,7 @@ CREATE INDEX idx_subject_exchange_requests_subject_id ON subject_exchange_reques
 CREATE INDEX idx_subject_exchange_requests_requested_by ON subject_exchange_requests(requested_by);
 
 CREATE TABLE files (
-    id            UUID PRIMARY KEY,
+    id            UUID DEFAULT random_uuid() PRIMARY KEY,
     storage_key   VARCHAR(500) NOT NULL,
     bucket        VARCHAR(100) NOT NULL,
     original_name VARCHAR(255),
