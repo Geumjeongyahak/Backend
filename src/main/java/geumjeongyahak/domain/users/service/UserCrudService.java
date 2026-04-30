@@ -55,15 +55,15 @@ public class UserCrudService {
 
     @Transactional
     public UserDetailResponse createUser(CreateUserRequest request) {
-        log.info("사용자 생성 요청 - nickname: {}", request.nickname());
+        log.debug("사용자 생성 요청 - nickname: {}", request.nickname());
         
         if (userProxyService.existsByNickname(request.nickname())) {
-            log.info("사용자 생성 실패 - 중복된 Nickname: {}", request.nickname());
+            log.debug("사용자 생성 실패 - 중복된 Nickname: {}", request.nickname());
             throw new DuplicateNicknameException(request.nickname());
         }
 
         if (userProxyService.existsByEmail(request.email())) {
-            log.info("사용자 생성 실패 - 중복된 Email: {}", request.email());
+            log.debug("사용자 생성 실패 - 중복된 Email: {}", request.email());
             throw new DuplicateEmailException(request.email());
         }
 
@@ -93,11 +93,11 @@ public class UserCrudService {
 
     @Transactional
     public UserDetailResponse updateUser(Long userId, UpdateUserRequest request) {
-        log.info("사용자 수정 요청 - ID: {}", userId);
+        log.debug("사용자 수정 요청 - ID: {}", userId);
 
         User user = userRepository.findById(userId)
             .orElseThrow(() -> {
-                log.warn("사용자 수정 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
+                log.debug("사용자 수정 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
                 return new UserNotFoundException(userId);
             });
         updateUserInternal(user,
@@ -115,11 +115,11 @@ public class UserCrudService {
 
     @Transactional
     public UserDetailResponse updateUser(Long userId, UpdateSelfRequest request) {
-        log.info("본인 사용자 수정 요청 - ID: {}", userId);
+        log.debug("본인 사용자 수정 요청 - ID: {}", userId);
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> {
-                    log.warn("본인 사용자 수정 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
+                    log.debug("본인 사용자 수정 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
                     return new UserNotFoundException(userId);
                 });
         updateUserInternal(user,
@@ -131,7 +131,7 @@ public class UserCrudService {
                 Optional.empty(), // 본인 수정 시 역할 변경 불가
                 Optional.empty()  // 본인 수정 시 부서 변경 불가
         );
-        log.info("본인 사용자 수정 완료 - ID: {}, Username: {}", user.getId(), user.getNickname());
+        log.debug("본인 사용자 수정 완료 - ID: {}, Username: {}", user.getId(), user.getNickname());
         return UserDetailResponse.from(user);
     }
 
@@ -189,9 +189,9 @@ public class UserCrudService {
 
     @Transactional
     public void deleteUserById(Long userId) {
-        log.info("사용자 삭제 요청 - ID: {}", userId);
+        log.debug("사용자 삭제 요청 - ID: {}", userId);
         if (!userRepository.existsById(userId)) {
-            log.warn("사용자 삭제 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
+            log.debug("사용자 삭제 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
             throw new UserNotFoundException(userId);
         }
         userRepository.deleteById(userId);
