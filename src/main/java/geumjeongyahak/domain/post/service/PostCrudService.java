@@ -11,7 +11,6 @@ import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.channel.entity.Channel;
-import geumjeongyahak.domain.channel.service.ChannelAccessService;
 import geumjeongyahak.domain.channel.service.ChannelProxyService;
 import geumjeongyahak.domain.post.entity.Post;
 import geumjeongyahak.domain.post.event.PostChangedEvent;
@@ -39,7 +38,6 @@ import java.time.LocalDateTime;
 public class PostCrudService {
     private final PostRepository postRepository;
     private final ChannelProxyService channelProxyService;
-    private final ChannelAccessService channelAccessService;
     private final UserProxyService userProxyService;
     private final PostSearchSpecificationBuilder postSearchSpecificationBuilder;
     private final EventPublisher eventPublisher;
@@ -97,7 +95,6 @@ public class PostCrudService {
             UpdatePostRequest request
     ) {
         Post post = getPostWithoutDeleted(channelId, postId);
-        channelAccessService.validateCanManagePost(userDetails, post);
 
         if (!hasAnyUpdate(request)) {
             throw new BusinessException(CommonErrorCode.NO_CHANGES_DETECTED);
@@ -120,7 +117,6 @@ public class PostCrudService {
     @Transactional
     public void deletePost(Long channelId, CustomUserDetails userDetails, Long postId) {
         Post post = getPostWithoutDeleted(channelId, postId);
-        channelAccessService.validateCanManagePost(userDetails, post);
         post.delete();
         postRepository.save(post);
         publishPostChangedEvent(channelId);

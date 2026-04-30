@@ -5,7 +5,6 @@ import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.auth.exception.AuthErrorCode;
-import geumjeongyahak.domain.channel.service.ChannelAccessService;
 import geumjeongyahak.domain.comment.entity.Comment;
 import geumjeongyahak.domain.comment.exception.CommentErrorCode;
 import geumjeongyahak.domain.comment.repository.CommentRepository;
@@ -28,7 +27,6 @@ import java.util.List;
 public class CommentCrudService {
 
     private final CommentRepository commentRepository;
-    private final ChannelAccessService channelAccessService;
     private final PostProxyService postProxyService;
     private final UserProxyService userProxyService;
 
@@ -66,8 +64,6 @@ public class CommentCrudService {
     public void deleteComment(Long channelId, Long postId, Long commentId, CustomUserDetails userDetails) {
         postProxyService.getActiveByChannelId(channelId, postId);
         Comment comment = getActiveComment(postId, commentId);
-
-        channelAccessService.validateCanManageComment(userDetails, comment);
 
         comment.delete();
         commentRepository.save(comment);
