@@ -1,5 +1,7 @@
 package geumjeongyahak.domain.post.v1.dto.request;
 
+import geumjeongyahak.common.validation.annotation.ValidPostStatus;
+import geumjeongyahak.common.validation.annotation.ValidPostType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -47,6 +49,7 @@ public class PostSearchRequest extends BasePaginationRequest {
                     """,
             example = "NOTICE"
     )
+    @ValidPostType
     private String postType;
 
     @Schema(
@@ -56,6 +59,7 @@ public class PostSearchRequest extends BasePaginationRequest {
                     """,
             example = "PUBLISHED"
     )
+    @ValidPostStatus
     private String status;
 
     @Schema(

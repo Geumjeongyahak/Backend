@@ -20,7 +20,7 @@ public record PostSummaryResponse(
         @Schema(description = "목록 화면에 함께 표시할 채널 이름입니다.", example = "공지사항")
         String channelName,
 
-        @Schema(description = "채널 유형입니다. 전체/반/부서 게시판 구분에 사용할 수 있습니다.", example = "ALL")
+        @Schema(description = "채널 유형입니다. 공지/반/부서/커스텀 게시판 구분에 사용할 수 있습니다.", example = "NOTICE")
         String channelType,
 
         @Schema(description = "게시글 제목입니다.", example = "4월 운영 공지")

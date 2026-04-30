@@ -1,5 +1,7 @@
 package geumjeongyahak.domain.post.v1.dto.request;
 
+import geumjeongyahak.common.validation.annotation.ValidPostStatus;
+import geumjeongyahak.common.validation.annotation.ValidPostType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -44,6 +46,7 @@ public record CreatePostRequest(
                 example = "NOTICE"
         )
         @NotNull(message = "게시글 유형은 필수입니다.")
+        @ValidPostType
         String postType,
 
         @Schema(
@@ -54,6 +57,7 @@ public record CreatePostRequest(
                         """,
                 example = "PUBLISHED"
         )
+        @ValidPostStatus
         String status,
 
         @Schema(

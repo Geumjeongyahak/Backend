@@ -22,7 +22,7 @@ public record PostDetailResponse(
         @Schema(description = "게시글이 속한 채널의 표시 이름입니다.", example = "공지사항")
         String channelName,
 
-        @Schema(description = "채널 유형입니다. 화면에서 전역/반/부서 게시판 구분에 사용할 수 있습니다.", example = "ALL")
+        @Schema(description = "채널 유형입니다. 화면에서 공지/반/부서/커스텀 게시판 구분에 사용할 수 있습니다.", example = "NOTICE")
         String channelType,
 
         @Schema(description = "게시글 제목입니다.", example = "4월 운영 공지")

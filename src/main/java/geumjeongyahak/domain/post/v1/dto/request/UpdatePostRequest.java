@@ -1,5 +1,7 @@
 package geumjeongyahak.domain.post.v1.dto.request;
 
+import geumjeongyahak.common.validation.annotation.ValidPostStatus;
+import geumjeongyahak.common.validation.annotation.ValidPostType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 
@@ -28,12 +30,14 @@ public record UpdatePostRequest(
                 description = "변경할 게시글 유형입니다. 일반 글을 공지로 올리거나, 공지를 일반 글로 전환할 때 사용할 수 있습니다.",
                 example = "NOTICE"
         )
+        @ValidPostType
         String postType,
 
         @Schema(
                 description = "변경할 게시글 상태입니다. 운영 정책에 따라 게시 상태 전환에 활용할 수 있습니다.",
                 example = "PUBLISHED"
         )
+        @ValidPostStatus
         String status,
 
         @Schema(
