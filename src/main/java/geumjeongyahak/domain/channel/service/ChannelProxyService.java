@@ -8,11 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Channel 도메인의 Proxy Service.
- * 다른 도메인에서 채널 엔티티 로드가 필요할 때 사용한다.
- * 접근 권한 검증은 @RequireChannelAccess AOP가 담당한다.
- */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)

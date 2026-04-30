@@ -1,11 +1,14 @@
 package geumjeongyahak.domain.channel.v1.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.domain.Sort;
 import geumjeongyahak.common.exception.BadRequestException;
 import geumjeongyahak.common.exception.CommonErrorCode;
+import geumjeongyahak.common.validation.annotation.ValidChannelManagementMode;
+import geumjeongyahak.common.validation.annotation.ValidChannelType;
 import geumjeongyahak.common.validation.annotation.ValidSortField;
 
 import java.util.ArrayList;
@@ -28,12 +31,24 @@ public class ChannelListRequest {
     @Schema(
             description = """
                     채널 유형 필터입니다.
-                    ALL, CLASSROOM, DEPARTMENT, CUSTOM 중 하나를 입력하면 해당 유형만 조회합니다.
+                    NOTICE, CLASSROOM, DEPARTMENT, CUSTOM 중 하나를 입력하면 해당 유형만 조회합니다.
                     예를 들어 반 게시판만 보고 싶으면 CLASSROOM, 부서 게시판만 보고 싶으면 DEPARTMENT를 사용합니다.
                     """,
             example = "CLASSROOM"
     )
+    @ValidChannelType
     private String channelType;
+
+    @Schema(
+            description = """
+                    채널 관리 방식 필터입니다.
+                    SYSTEM_MANAGED 또는 USER_MANAGED 중 하나를 입력하면 해당 관리 방식만 조회합니다.
+                    운영자가 만든 커스텀 채널만 보려면 USER_MANAGED를 사용합니다.
+                    """,
+            example = "USER_MANAGED"
+    )
+    @ValidChannelManagementMode
+    private String managementMode;
 
     @Schema(
             description = "활성 상태 필터입니다. true이면 현재 사용 가능한 채널만, false이면 숨김 상태 채널만 조회합니다. 운영 중단 채널 점검 시 유용합니다.",
@@ -71,26 +86,26 @@ public class ChannelListRequest {
             description = """
                     정렬 조건입니다.
                     '필드명,방향' 형식을 세미콜론(;)으로 이어서 여러 개 지정할 수 있습니다.
-                    허용 필드: id, name, slug, sortOrder, lastPostedAt, createdAt, updatedAt
+                    허용 필드: id, name, lastPostedAt, createdAt, updatedAt
 
                     예:
-                    - sortOrder,ASC
-                    - sortOrder,ASC;createdAt,DESC
+                    - createdAt,DESC
+                    - lastPostedAt,DESC;createdAt,DESC
 
-                    값을 주지 않으면 기본값으로 sortOrder 오름차순, id 오름차순이 적용됩니다.
+                    값을 주지 않으면 기본값으로 createdAt 내림차순, id 내림차순이 적용됩니다.
                     관리자 화면에서는 최근 게시 채널 우선 확인을 위해 lastPostedAt,DESC 같은 정렬도 유용합니다.
                     """,
-            example = "sortOrder,ASC;lastPostedAt,DESC"
+            example = "lastPostedAt,DESC;createdAt,DESC"
     )
-    @ValidSortField(fields = {"id", "name", "slug", "sortOrder", "lastPostedAt", "createdAt", "updatedAt"})
+    @ValidSortField(fields = {"id", "name", "lastPostedAt", "createdAt", "updatedAt"})
     private String sort;
 
     public Sort toSort() {
         List<Sort.Order> orders = toSortOrders(this.sort);
         if (orders.isEmpty()) {
             orders = List.of(
-                    Sort.Order.asc("sortOrder"),
-                    Sort.Order.asc("id")
+                    Sort.Order.desc("createdAt"),
+                    Sort.Order.desc("id")
             );
         }
         return Sort.by(orders);
