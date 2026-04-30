@@ -4,8 +4,6 @@ import geumjeongyahak.common.security.service.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
-import geumjeongyahak.common.exception.BusinessException;
-import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.channel.service.ChannelProxyService;
 import geumjeongyahak.domain.post.entity.Post;
@@ -24,11 +22,30 @@ public class PostSearchSpecificationBuilder {
     private final ChannelProxyService channelProxyService;
 
     public Specification<Post> build(PostSearchRequest request, CustomUserDetails userDetails) {
+        // 1. 기본 필터: 삭제되지 않은 게시글 + 삭제되지 않은 채널
         Specification<Post> spec = PostSpecs.withoutDeleted()
-                .and(PostSpecs.hasVisibleChannel());
+                .and((root, query, cb) -> cb.isFalse(root.get("channel").get("isDeleted")));
 
+        // 2. 가시성 필터 (ADMIN 및 권한 보유자 대응)
+        if (userDetails == null) {
+            // 미인증: 공개 채널만 노출
+            spec = spec.and(PostSpecs.hasPublicAccess());
+        } else if (!userDetails.isAdmin()) {
+            // ADMIN이 아닌 경우
+            if (!hasWildcardPostPermission(userDetails)) {
+                // 전체 조회 권한(*)이 없는 경우: 공개 채널 + 개별 권한 있는 채널만 노출
+                java.util.List<Long> allowedIds = extractAllowedChannelIds(userDetails);
+                Specification<Post> visibility = PostSpecs.hasPublicAccess();
+                if (!allowedIds.isEmpty()) {
+                    visibility = visibility.or(PostSpecs.hasAnyChannelId(allowedIds));
+                }
+                spec = spec.and(visibility);
+            }
+            // 전체 조회 권한(*)이 있으면 추가 가시성 필터 없이 모든 비삭제 채널 노출
+        }
+
+        // 3. 요청 조건 필터
         if (request.getChannelId() != null) {
-            channelProxyService.getActiveById(request.getChannelId());
             spec = spec.and(PostSpecs.hasChannelId(request.getChannelId()));
         }
         if (request.getAuthor() != null && !request.getAuthor().isBlank()) {
@@ -61,5 +78,23 @@ public class PostSearchSpecificationBuilder {
             spec = spec.and(PostSpecs.hasIsPinned(request.getIsPinned()));
         }
         return spec;
+    }
+
+    private boolean hasWildcardPostPermission(CustomUserDetails userDetails) {
+        return userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().startsWith("post:read:*") ||
+                               a.getAuthority().startsWith("post:write:*") ||
+                               a.getAuthority().startsWith("post:manage:*"));
+    }
+
+    private java.util.List<Long> extractAllowedChannelIds(CustomUserDetails userDetails) {
+        return userDetails.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .filter(a -> a.startsWith("post:read:") || a.startsWith("post:write:") || a.startsWith("post:manage:"))
+                .map(a -> a.substring(a.lastIndexOf(":") + 1))
+                .filter(id -> !id.equals("*"))
+                .map(Long::valueOf)
+                .distinct()
+                .toList();
     }
 }

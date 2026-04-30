@@ -16,6 +16,17 @@ public final class PostSpecs {
         return (root, query, cb) -> cb.isFalse(root.get("isDeleted"));
     }
 
+    public static Specification<Post> hasPublicAccess() {
+        return (root, query, cb) -> cb.and(
+                cb.isTrue(root.get("channel").get("isActive")),
+                cb.notEqual(root.get("channel").get("accessLevel"), ChannelAccessLevel.CLOSED)
+        );
+    }
+
+    public static Specification<Post> hasAnyChannelId(java.util.Collection<Long> channelIds) {
+        return (root, query, cb) -> root.get("channel").get("id").in(channelIds);
+    }
+
     public static Specification<Post> hasVisibleChannel() {
         return (root, query, cb) -> cb.and(
                 cb.isFalse(root.get("channel").get("isDeleted")),

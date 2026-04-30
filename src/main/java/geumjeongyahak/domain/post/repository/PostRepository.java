@@ -6,6 +6,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+
 import geumjeongyahak.domain.post.entity.Post;
 
 import java.util.Optional;
@@ -22,4 +24,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
 
     // 이벤트용: createdAt만 사용하므로 fetch join 불필요
     Optional<Post> findFirstByChannelIdAndIsDeletedFalseOrderByCreatedAtDescIdDesc(Long channelId);
+
+    @Query("select p.author.id from Post p where p.id = :id and p.isDeleted = false")
+    Optional<Long> findAuthorIdById(@org.springframework.data.repository.query.Param("id") Long id);
 }

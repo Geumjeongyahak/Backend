@@ -7,12 +7,11 @@ import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
-import geumjeongyahak.domain.channel.annotation.RequireChannelAccess;
-import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
 import geumjeongyahak.domain.post.service.PostCrudService;
 import geumjeongyahak.domain.post.v1.dto.request.CreatePostRequest;
 import geumjeongyahak.domain.post.v1.dto.request.PostSearchRequest;
@@ -34,7 +33,7 @@ import geumjeongyahak.domain.post.v1.dto.response.PostSummaryResponse;
 public class PostController {
     private final PostCrudService postCrudService;
 
-    @RequireChannelAccess(minLevel = ChannelAccessLevel.READ_WRITE)
+    @PreAuthorize("@channelAccess.can('write', #channelId, principal)")
     @Operation(
             summary = "게시글 생성",
             description = """
@@ -62,7 +61,7 @@ public class PostController {
         );
     }
 
-    @RequireChannelAccess(minLevel = ChannelAccessLevel.READ_ONLY)
+    @PreAuthorize("@channelAccess.can('read', #channelId, principal)")
     @Operation(
             summary = "게시글 목록 조회",
             description = """
@@ -84,7 +83,7 @@ public class PostController {
         return ResponseEntity.ok(postCrudService.getPosts(channelId, userDetails, request));
     }
 
-    @RequireChannelAccess(minLevel = ChannelAccessLevel.READ_ONLY)
+    @PreAuthorize("@channelAccess.can('read', #channelId, principal)")
     @Operation(
             summary = "게시글 상세 조회",
             description = """
@@ -102,7 +101,7 @@ public class PostController {
         return ResponseEntity.ok(postCrudService.getPost(channelId, postId));
     }
 
-    @RequireChannelAccess(minLevel = ChannelAccessLevel.READ_ONLY)
+    @PreAuthorize("@channelAccess.can('manage', #channelId, principal) or @postAccess.can(#postId, principal)")
     @Operation(
             summary = "게시글 수정",
             description = """
@@ -128,7 +127,7 @@ public class PostController {
         );
     }
 
-    @RequireChannelAccess(minLevel = ChannelAccessLevel.READ_ONLY)
+    @PreAuthorize("@channelAccess.can('manage', #channelId, principal) or @postAccess.can(#postId, principal)")
     @Operation(
             summary = "게시글 삭제",
             description = """
