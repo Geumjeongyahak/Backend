@@ -16,4 +16,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     // 단건 조회: author(권한 검사) + parentComment(대댓글 깊이 검사) fetch join
     @EntityGraph(attributePaths = {"author", "parentComment"})
     Optional<Comment> findByIdAndPostId(Long commentId, Long postId);
+
+    @org.springframework.data.jpa.repository.Query("select c.author.id from Comment c where c.id = :id and c.isDeleted = false")
+    Optional<Long> findAuthorIdById(@org.springframework.data.repository.query.Param("id") Long id);
 }

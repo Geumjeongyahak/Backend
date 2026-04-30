@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,8 +16,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import geumjeongyahak.common.security.service.CustomUserDetails;
-import geumjeongyahak.domain.channel.annotation.RequireChannelAccess;
-import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
 import geumjeongyahak.domain.comment.service.CommentCrudService;
 import geumjeongyahak.domain.comment.v1.dto.request.CreateCommentRequest;
 import geumjeongyahak.domain.comment.v1.dto.response.CommentResponse;
@@ -37,7 +36,7 @@ public class CommentController {
 
     private final CommentCrudService commentCrudService;
 
-    @RequireChannelAccess(minLevel = ChannelAccessLevel.READ_COMMENT)
+    @PreAuthorize("@channelAccess.canWriteComment(#channelId, principal)")
     @Operation(
             summary = "댓글 생성",
             description = """
@@ -62,7 +61,7 @@ public class CommentController {
                 .body(commentCrudService.createComment(channelId, postId, userDetails, request));
     }
 
-    @RequireChannelAccess(minLevel = ChannelAccessLevel.READ_ONLY)
+    @PreAuthorize("@channelAccess.can('read', #channelId, principal)")
     @Operation(
             summary = "댓글 목록 조회",
             description = """
@@ -84,7 +83,7 @@ public class CommentController {
         return ResponseEntity.ok(commentCrudService.getComments(channelId, postId));
     }
 
-    @RequireChannelAccess(minLevel = ChannelAccessLevel.READ_ONLY)
+    @PreAuthorize("@channelAccess.can('manage', #channelId, principal) or @commentAccess.can(#commentId, principal)")
     @Operation(
             summary = "댓글 삭제",
             description = """
