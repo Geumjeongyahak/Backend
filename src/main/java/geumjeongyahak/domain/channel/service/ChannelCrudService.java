@@ -1,24 +1,25 @@
 package geumjeongyahak.domain.channel.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.CommonErrorCode;
-import geumjeongyahak.common.exception.DuplicateResourceException;
+import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
-import geumjeongyahak.domain.channel.exception.ChannelErrorCode;
 import geumjeongyahak.domain.channel.entity.Channel;
+import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
+import geumjeongyahak.domain.channel.enums.ChannelManagementMode;
 import geumjeongyahak.domain.channel.enums.ChannelType;
-import geumjeongyahak.domain.channel.enums.ChannelWriterPolicy;
+import geumjeongyahak.domain.channel.exception.ChannelErrorCode;
 import geumjeongyahak.domain.channel.repository.ChannelRepository;
 import geumjeongyahak.domain.channel.repository.ChannelSpecs;
 import geumjeongyahak.domain.channel.v1.dto.request.ChannelListRequest;
 import geumjeongyahak.domain.channel.v1.dto.request.CreateChannelRequest;
 import geumjeongyahak.domain.channel.v1.dto.request.UpdateChannelRequest;
 import geumjeongyahak.domain.channel.v1.dto.response.ChannelResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,53 +29,49 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ChannelCrudService {
+
     private final ChannelRepository channelRepository;
-    private final ChannelRefIdResolver channelRefIdResolver;
+    private final ChannelAccessService channelAccessService;
 
     @Transactional
     public ChannelResponse createChannel(CreateChannelRequest request) {
-        log.debug("채널 생성 시도: slug={}", request.slug());
-
-        validateDuplicateSlug(request.slug(), null);
-        ChannelType channelType = parseChannelType(request.channelType());
+        log.debug("커스텀 채널 생성 요청: {}", request.name());
 
         Channel channel = channelRepository.save(Channel.builder()
                 .name(request.name())
-                .slug(request.slug())
                 .description(request.description())
-                .channelType(channelType)
-                .refId(channelRefIdResolver.resolve(
-                        channelType,
-                        request.classroomId(),
-                        request.departmentId(),
-                        request.customRefId()
-                ))
-                .writerPolicy(resolveWriterPolicy(request.writerPolicy()))
+                .channelType(ChannelType.CUSTOM)
+                .managementMode(ChannelManagementMode.USER_MANAGED)
+                .refId(null)
+                .accessLevel(ChannelAccessLevel.valueOf(request.accessLevel()))
                 .isDefault(request.isDefault())
                 .isActive(request.isActive())
-                .sortOrder(request.sortOrder())
                 .build());
 
-        log.info("채널 생성 성공: id={}, slug={}", channel.getId(), channel.getSlug());
+        log.info("커스텀 채널 생성 성공: id={}", channel.getId());
         return ChannelResponse.from(channel);
     }
 
-    public ChannelResponse getChannel(Long id) {
-        return ChannelResponse.from(getChannelWithoutDeleted(id));
+    public ChannelResponse getChannel(Long id, CustomUserDetails userDetails) {
+        Channel channel = getChannelWithoutDeleted(id);
+        return ChannelResponse.from(channel);
     }
 
-    public List<ChannelResponse> getChannels(ChannelListRequest request) {
-        log.debug("채널 목록 조회 시도: type={}, active={}", request.getChannelType(), request.getIsActive());
-
+    public List<ChannelResponse> getChannels(ChannelListRequest request, CustomUserDetails userDetails) {
         Specification<Channel> spec = ChannelSpecs.withoutDeleted();
 
         if (request.getName() != null && !request.getName().isBlank()) {
             spec = spec.and(ChannelSpecs.containsName(request.getName()));
         }
         if (request.getChannelType() != null && !request.getChannelType().isBlank()) {
-            spec = spec.and(ChannelSpecs.hasChannelType(parseChannelType(request.getChannelType())));
+            spec = spec.and(ChannelSpecs.hasChannelType(ChannelType.valueOf(request.getChannelType())));
         }
-        spec = spec.and(ChannelSpecs.hasIsActive(request.getIsActive() != null ? request.getIsActive() : true));
+        if (request.getManagementMode() != null && !request.getManagementMode().isBlank()) {
+            spec = spec.and(ChannelSpecs.hasManagementMode(ChannelManagementMode.valueOf(request.getManagementMode())));
+        }
+        if (request.getIsActive() != null) {
+            spec = spec.and(ChannelSpecs.hasIsActive(request.getIsActive()));
+        }
         if (request.getIsDefault() != null) {
             spec = spec.and(ChannelSpecs.hasIsDefault(request.getIsDefault()));
         }
@@ -88,52 +85,26 @@ public class ChannelCrudService {
         }
 
         return channelRepository.findAll(spec, request.toSort()).stream()
+                .filter(channel -> channelAccessService.canRead(userDetails, channel))
                 .map(ChannelResponse::from)
                 .toList();
     }
 
     @Transactional
     public ChannelResponse updateChannel(Long id, UpdateChannelRequest request) {
-        log.debug("채널 수정 시도: id={}", id);
-
-        Channel channel = getActiveChannel(id);
+        Channel channel = getUserManagedChannel(id);
         boolean isUpdated = false;
 
         if (request.name() != null) {
             channel.setName(request.name());
             isUpdated = true;
         }
-        if (request.slug() != null) {
-            validateDuplicateSlug(request.slug(), id);
-            channel.setSlug(request.slug());
-            isUpdated = true;
-        }
         if (request.description() != null) {
             channel.setDescription(request.description());
             isUpdated = true;
         }
-        if (request.channelType() != null) {
-            channel.setChannelType(parseChannelType(request.channelType()));
-            isUpdated = true;
-        }
-        if (request.writerPolicy() != null) {
-            channel.setWriterPolicy(resolveWriterPolicy(request.writerPolicy()));
-            isUpdated = true;
-        }
-        if (request.channelType() != null
-                || request.classroomId() != null
-                || request.departmentId() != null
-                || request.customRefId() != null) {
-            ChannelType effectiveType = request.channelType() != null
-                    ? parseChannelType(request.channelType())
-                    : channel.getChannelType();
-            channel.setRefId(channelRefIdResolver.resolveForUpdate(
-                    channel,
-                    effectiveType,
-                    request.classroomId(),
-                    request.departmentId(),
-                    request.customRefId()
-            ));
+        if (request.accessLevel() != null) {
+            channel.setAccessLevel(ChannelAccessLevel.valueOf(request.accessLevel()));
             isUpdated = true;
         }
         if (request.isDefault() != null) {
@@ -144,49 +115,27 @@ public class ChannelCrudService {
             channel.setActive(request.isActive());
             isUpdated = true;
         }
-        if (request.sortOrder() != null) {
-            channel.setSortOrder(request.sortOrder());
-            isUpdated = true;
-        }
 
         if (!isUpdated) {
             throw new BusinessException(CommonErrorCode.NO_CHANGES_DETECTED);
         }
 
-        Channel updated = channelRepository.save(channel);
-        log.info("채널 수정 성공: id={}", updated.getId());
-        return ChannelResponse.from(updated);
-    }
-
-    @Transactional
-    public ChannelResponse hideChannel(Long id) {
-        log.debug("채널 숨김 시도: id={}", id);
-        Channel channel = getActiveChannel(id);
-        channel.setActive(false);
-        return ChannelResponse.from(channelRepository.save(channel));
-    }
-
-    @Transactional
-    public ChannelResponse showChannel(Long id) {
-        log.debug("채널 표시 시도: id={}", id);
-        Channel channel = getActiveChannel(id);
-        channel.setActive(true);
+        log.info("커스텀 채널 수정 성공: id={}", channel.getId());
         return ChannelResponse.from(channelRepository.save(channel));
     }
 
     @Transactional
     public void deleteChannel(Long id) {
-        log.debug("채널 삭제 시도: id={}", id);
-        Channel channel = getActiveChannel(id);
+        Channel channel = getUserManagedChannel(id);
         channel.setDeleted(true);
         channel.setActive(false);
         channelRepository.save(channel);
-        log.info("채널 삭제 성공: id={}", id);
+        log.info("커스텀 채널 삭제 성공: id={}", id);
     }
 
     @Transactional
     public void updateLastPostedAt(Long channelId, LocalDateTime postedAt) {
-        Channel channel = getActiveChannel(channelId);
+        Channel channel = getChannelWithoutDeleted(channelId);
         channel.setLastPostedAt(postedAt);
         channelRepository.save(channel);
     }
@@ -202,38 +151,11 @@ public class ChannelCrudService {
         return channel;
     }
 
-    private Channel getActiveChannel(Long id) {
+    private Channel getUserManagedChannel(Long id) {
         Channel channel = getChannelWithoutDeleted(id);
+        if (channel.getManagementMode() != ChannelManagementMode.USER_MANAGED) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "시스템 채널은 일반 채널 관리 API로 수정하거나 삭제할 수 없습니다.");
+        }
         return channel;
-    }
-
-    private void validateDuplicateSlug(String slug, Long id) {
-        boolean isDuplicate = id == null
-                ? channelRepository.existsBySlugAndIsDeletedFalse(slug)
-                : channelRepository.existsBySlugAndIdNotAndIsDeletedFalse(slug, id);
-
-        if (isDuplicate) {
-            throw new DuplicateResourceException(ChannelErrorCode.DUPLICATE_CHANNEL);
-        }
-    }
-
-    private ChannelWriterPolicy resolveWriterPolicy(String writerPolicy) {
-        if (writerPolicy == null) {
-            return ChannelWriterPolicy.ALL_AUTHENTICATED;
-        }
-
-        try {
-            return ChannelWriterPolicy.valueOf(writerPolicy);
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 채널 작성 권한 정책입니다.");
-        }
-    }
-
-    private ChannelType parseChannelType(String channelType) {
-        try {
-            return ChannelType.valueOf(channelType);
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 채널 유형입니다.");
-        }
     }
 }

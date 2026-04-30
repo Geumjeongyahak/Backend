@@ -1,25 +1,26 @@
 package geumjeongyahak.domain.channel.service;
 
+import geumjeongyahak.common.exception.ResourceNotFoundException;
+import geumjeongyahak.domain.channel.entity.Channel;
+import geumjeongyahak.domain.channel.exception.ChannelErrorCode;
+import geumjeongyahak.domain.channel.repository.ChannelRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import geumjeongyahak.common.exception.ResourceNotFoundException;
-import geumjeongyahak.domain.channel.exception.ChannelErrorCode;
-import geumjeongyahak.domain.channel.entity.Channel;
-import geumjeongyahak.domain.channel.repository.ChannelRepository;
 
 /**
  * Channel 도메인의 Proxy Service.
- * 다른 도메인에서 채널 참조 조회가 필요할 때 사용한다.
+ * 다른 도메인에서 채널 엔티티 로드가 필요할 때 사용한다.
+ * 접근 권한 검증은 @RequireChannelAccess AOP가 담당한다.
  */
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ChannelProxyService {
 
     private final ChannelRepository channelRepository;
 
-    @Transactional(readOnly = true)
-    public Channel getReadableById(Long channelId) {
+    public Channel getActiveById(Long channelId) {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new ResourceNotFoundException(ChannelErrorCode.CHANNEL_NOT_FOUND));
 
