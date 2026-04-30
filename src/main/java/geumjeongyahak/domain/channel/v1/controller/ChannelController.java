@@ -11,7 +11,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import geumjeongyahak.common.security.service.CustomUserDetails;
-import geumjeongyahak.domain.channel.annotation.RequireChannelAccess;
 import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
 import geumjeongyahak.domain.channel.service.ChannelCrudService;
 import geumjeongyahak.domain.channel.v1.dto.request.ChannelListRequest;
@@ -64,7 +63,7 @@ public class ChannelController {
         return ResponseEntity.ok(channelCrudService.getChannels(request, userDetails));
     }
 
-    @RequireChannelAccess(minLevel = ChannelAccessLevel.READ_ONLY, channelIdParam = "id")
+    @PreAuthorize("@channelAccess.can('read', #id, principal)")
     @Operation(
             summary = "채널 단건 조회",
             description = """

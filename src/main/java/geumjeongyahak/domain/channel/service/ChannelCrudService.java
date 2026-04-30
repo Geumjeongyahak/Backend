@@ -4,6 +4,8 @@ import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
+import geumjeongyahak.domain.base.enums.ActionType;
+import geumjeongyahak.domain.base.enums.ResourceType;
 import geumjeongyahak.domain.channel.entity.Channel;
 import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
 import geumjeongyahak.domain.channel.enums.ChannelManagementMode;
@@ -31,7 +33,7 @@ import java.util.List;
 public class ChannelCrudService {
 
     private final ChannelRepository channelRepository;
-    private final ChannelAccessService channelAccessService;
+    private final ChannelAccessChecker channelAccess;
 
     @Transactional
     public ChannelResponse createChannel(CreateChannelRequest request) {
@@ -85,7 +87,7 @@ public class ChannelCrudService {
         }
 
         return channelRepository.findAll(spec, request.toSort()).stream()
-                .filter(channel -> channelAccessService.canRead(userDetails, channel))
+                .filter(channel -> channelAccess.can(channel, ActionType.READ, userDetails))
                 .map(ChannelResponse::from)
                 .toList();
     }
