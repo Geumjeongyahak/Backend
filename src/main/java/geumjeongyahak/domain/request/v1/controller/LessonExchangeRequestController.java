@@ -28,9 +28,14 @@ import java.util.List;
 @Tag(name = "LessonExchangeRequest", description = "수업 교환 요청 API")
 public class LessonExchangeRequestController {
 
+    private static final String TEACHER_OR_HIGHER_ACCESS =
+        "hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN')";
+    private static final String MANAGER_OR_HIGHER_ACCESS =
+        "hasRole('MANAGER') or hasRole('ADMIN')";
+
     private final LessonExchangeRequestService lessonExchangeRequestService;
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "수업 교환 요청 생성",
         description = "인증된 사용자가 자신이 담당 중인 수업에 대해서만 수업 교환 요청을 생성합니다. "
@@ -53,7 +58,7 @@ public class LessonExchangeRequestController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "수업 교환 요청 목록 조회",
         description = "수업 교환 요청 목록을 조회합니다. 모든 교원은 모든 요청을 조회할 수 있습니다. "
@@ -77,7 +82,7 @@ public class LessonExchangeRequestController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "수업 교환 요청 상세 조회",
         description = "수업 교환 요청 단건을 조회합니다. 모든 교원은 모든 요청을 조회할 수 있습니다. "
@@ -96,7 +101,7 @@ public class LessonExchangeRequestController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "수업 교환 요청 수정",
         description = "인증된 사용자가 본인이 생성한 PENDING 상태의 수업 교환 요청을 수정합니다. "
@@ -117,7 +122,7 @@ public class LessonExchangeRequestController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "수업 교환 요청 취소",
         description = "인증된 사용자가 본인이 생성한 PENDING 상태의 수업 교환 요청을 취소합니다. "
@@ -136,7 +141,7 @@ public class LessonExchangeRequestController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @PreAuthorize(MANAGER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "수업 교환 요청 승인",
         description = "ADMIN 또는 MANAGER 가 PENDING 상태의 수업 교환 요청을 승인합니다. "
@@ -156,7 +161,7 @@ public class LessonExchangeRequestController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @PreAuthorize(MANAGER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "수업 교환 요청 반려",
         description = "ADMIN 또는 MANAGER 가 PENDING 상태의 수업 교환 요청을 반려합니다. "

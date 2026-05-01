@@ -25,9 +25,12 @@ import java.util.List;
 @Tag(name = "LessonExchangeProposal", description = "수업 교환 제안 API")
 public class LessonExchangeProposalController {
 
+    private static final String TEACHER_OR_HIGHER_ACCESS =
+        "hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN')";
+
     private final LessonExchangeProposalService lessonExchangeProposalService;
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "수업 교환 제안 생성",
         description = "인증된 사용자가 APPROVED 상태의 수업 교환 요청에 대해 교환 제안을 생성합니다. "
@@ -52,7 +55,7 @@ public class LessonExchangeProposalController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "수업 교환 제안 목록 조회",
         description = "특정 수업 교환 요청에 등록된 제안 목록을 조회합니다. "
@@ -72,7 +75,7 @@ public class LessonExchangeProposalController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "수업 교환 제안 수정",
         description = "인증된 사용자가 본인이 작성한 ACTIVE 상태의 수업 교환 제안을 수정합니다. "
@@ -97,7 +100,7 @@ public class LessonExchangeProposalController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "수업 교환 제안 수락",
         description = "요청자가 APPROVED 상태의 수업 교환 요청에 등록된 ACTIVE 제안 하나를 수락합니다. "
@@ -121,7 +124,7 @@ public class LessonExchangeProposalController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "수업 교환 제안 철회",
         description = "인증된 사용자가 본인이 작성한 ACTIVE 상태의 수업 교환 제안을 철회합니다. "
