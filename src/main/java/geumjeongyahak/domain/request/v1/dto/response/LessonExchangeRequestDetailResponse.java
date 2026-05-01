@@ -58,16 +58,16 @@ public record LessonExchangeRequestDetailResponse(
     @Schema(description = "교환 완료 시각")
     LocalDateTime completedAt,
 
+    @Schema(description = "요청 취소 시각")
+    LocalDateTime cancelledAt,
+
     @Schema(description = "생성 시각")
     LocalDateTime createdAt
 ) {
-    public static LessonExchangeRequestDetailResponse from(
-        LessonExchangeRequest r,
-        String classroomName
-    ) {
+    public static LessonExchangeRequestDetailResponse from(LessonExchangeRequest r) {
         return new LessonExchangeRequestDetailResponse(
             r.getId(),
-            classroomName,
+            r.getClassroomNameSnapshot(),
             r.getLessonDate(),
             r.getRequestedBy().getId(),
             r.getRequestedBy().getName(),
@@ -82,6 +82,7 @@ public record LessonExchangeRequestDetailResponse(
             r.getProcessedBy() != null ? r.getProcessedBy().getName() : null,
             r.getRejectionNote(),
             r.getCompletedAt(),
+            r.getCancelledAt(),
             r.getCreatedAt()
         );
     }

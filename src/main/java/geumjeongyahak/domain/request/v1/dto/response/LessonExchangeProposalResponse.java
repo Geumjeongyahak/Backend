@@ -59,14 +59,11 @@ public record LessonExchangeProposalResponse(
     @Schema(description = "생성 시각")
     LocalDateTime createdAt
 ) {
-    public static LessonExchangeProposalResponse from(
-        LessonExchangeProposal proposal,
-        String classroomName
-    ) {
+    public static LessonExchangeProposalResponse from(LessonExchangeProposal proposal) {
         return new LessonExchangeProposalResponse(
             proposal.getId(),
             proposal.getRequest().getId(),
-            classroomName,
+            proposal.getClassroomNameSnapshot(),
             proposal.getProposedBy().getId(),
             proposal.getProposedBy().getName(),
             proposal.getProposalType(),

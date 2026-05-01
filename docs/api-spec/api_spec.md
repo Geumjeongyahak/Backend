@@ -11,21 +11,15 @@
 | 항목 | 값 |
 |------|-----|
 | Base URL | `/api/v1` |
-| 인증 방식 | Session-based (Cookie) |
+| 인증 방식 | JWT Bearer Token |
 | Content-Type | `application/json` |
 | API 문서 | Swagger UI (`/swagger-ui.html`) |
 
 ### 1.2 응답 형식
 
-```json
-// 성공
-{ "success": true, "data": { ... }, "error": null }
-
-// 실패
-{ "success": false, "data": null, "error": { "code": "ERROR_CODE", "message": "..." } }
-```
-
-- `error.code`는 클라이언트 분기 기준으로 사용합니다.
+- 성공 응답은 각 컨트롤러가 DTO 또는 리스트를 직접 반환합니다.
+- 실패 응답은 전역 예외 처리기를 통해 공통 에러 형식으로 반환됩니다.
+- 인증이 필요한 API는 `Authorization: Bearer {accessToken}` 헤더를 사용합니다.
 - 공통/인증 에러 규칙은 [Error Codes](../error_codes.md)를 기준으로 봅니다.
 
 ## 2. 문서 읽는 순서
@@ -44,6 +38,7 @@
 - [Departments](../api/Departments.md)
 - [Classrooms](../api/Classrooms.md)
 - [Students](../api/Students.md)
+- [Requests](../api/Requests.md)
 - [Channels](../api/Channels.md)
 - [Posts](../api/Posts.md)
 - [Comments](../api/Comments.md)

@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.stereotype.Component;
 
 /**
@@ -23,7 +24,7 @@ public class TestLessonHelper {
 
     private static final LocalDate SUBJECT_BASE_DATE = LocalDate.of(2050, 1, 1);
     private static final LocalDate LESSON_BASE_DATE = LocalDate.of(2026, 8, 1);
-    private static final String[] DAYS = {"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"};
+    private static final AtomicLong SUBJECT_SEQUENCE = new AtomicLong();
     private final List<Long> createdSubjectIds = new ArrayList<>();
     private final List<Long> createdLessonIds = new ArrayList<>();
 
@@ -43,25 +44,20 @@ public class TestLessonHelper {
      * @param teacherId 담당 교사 ID
      */
     public Long createSubjectAndGetId(String authHeader, long classroomId, long teacherId) {
-        long unique = System.nanoTime();
-        int dayIndex = Math.floorMod(Long.hashCode(unique), DAYS.length);
-        String dayOfWeek = DAYS[dayIndex];
-        int period = Math.floorMod(Long.hashCode(unique / 31), 6) + 1;
-
-        // seq마다 고유한 단일-날짜 범위 사용 → classroom+dayOfWeek+period 중복 방지
-        String uniqueDate = SUBJECT_BASE_DATE.plusDays(Math.floorMod(unique, 10_000)).toString();
+        long sequence = SUBJECT_SEQUENCE.incrementAndGet();
+        LocalDate uniqueDate = SUBJECT_BASE_DATE.plusDays(sequence);
 
         Map<String, Object> req = Map.ofEntries(
             entry("classroomId", classroomId),
             entry("teacherId", teacherId),
-            entry("name", "Request테스트과목-" + unique),
-            entry("startAt", uniqueDate),
-            entry("endAt", uniqueDate),
+            entry("name", "Request테스트과목-" + sequence),
+            entry("startAt", uniqueDate.toString()),
+            entry("endAt", uniqueDate.toString()),
             entry("times", 12),
-            entry("dayOfWeek", dayOfWeek),
+            entry("dayOfWeek", uniqueDate.getDayOfWeek().name()),
             entry("startTime", "09:00:00"),
             entry("endTime", "10:00:00"),
-            entry("period", period),
+            entry("period", 1),
             entry("description", "Request E2E 테스트용 임시 과목")
         );
 
@@ -84,20 +80,17 @@ public class TestLessonHelper {
         long teacherId,
         String namePrefix
     ) {
-        long unique = System.nanoTime();
-        int dayIndex = Math.floorMod(Long.hashCode(unique), DAYS.length);
-        String dayOfWeek = DAYS[dayIndex];
-        int period = Math.floorMod(Long.hashCode(unique / 31), 6) + 1;
-        String uniqueDate = SUBJECT_BASE_DATE.plusDays(Math.floorMod(unique, 10_000)).toString();
+        long sequence = SUBJECT_SEQUENCE.incrementAndGet();
+        LocalDate uniqueDate = SUBJECT_BASE_DATE.plusDays(sequence);
 
         return createSubjectAndRegister(
             authHeader,
             classroomId,
             teacherId,
-            namePrefix + "-" + unique,
-            uniqueDate,
-            dayOfWeek,
-            period
+            namePrefix + "-" + sequence,
+            uniqueDate.toString(),
+            uniqueDate.getDayOfWeek().name(),
+            1
         );
     }
 
