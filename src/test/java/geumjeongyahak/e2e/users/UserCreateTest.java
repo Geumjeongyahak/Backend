@@ -3,9 +3,8 @@ package geumjeongyahak.e2e.users;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
-import geumjeongyahak.domain.users.v1.dto.response.UserResponse;
+import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
@@ -19,11 +18,12 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "manager" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                "password123!",
+                uniqueUsername,
                 "Manager User",
-                uniqueUsername + "@test.com",
+                "password123!",
                 "010-1234-5678",
-                RoleType.ROLE_MANAGER.name()
+                "MANAGER",
+                null
         );
 
         var res = given()
@@ -35,16 +35,15 @@ class UserCreateTest extends UserBaseTest {
         .then()
             .statusCode(201)
             .body("id", notNullValue())
-            .body("username", equalTo(uniqueUsername + "@test.com"))
+            .body("email", equalTo(uniqueUsername + "@test.com"))
+            .body("nickname", equalTo(uniqueUsername))
             .body("name", equalTo("Manager User"))
-            .body("roles", notNullValue())
-            .body("roles.size()", equalTo(1))
-            .body("roles[0].name", equalTo("ROLE_MANAGER"))
+            .body("role", equalTo("MANAGER"))
             .log().all()
             .extract()
-            .as(UserResponse.class);
+            .as(UserDetailResponse.class);
 
-        userTestHelper.setUser(res.username());
+        userTestHelper.setUser(res.nickname());
     }
 
     @Test
@@ -53,11 +52,12 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "volunteer" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                "password123!",
+                uniqueUsername,
                 "Volunteer User",
-                uniqueUsername + "@test.com",
+                "password123!",
                 "010-2222-3333",
-                RoleType.ROLE_VOLUNTEER.name()
+                "VOLUNTEER",
+                null
         );
 
         var res = given()
@@ -68,12 +68,12 @@ class UserCreateTest extends UserBaseTest {
             .post()
         .then()
             .statusCode(201)
-            .body("roles[0].name", equalTo("ROLE_VOLUNTEER"))
+            .body("role", equalTo("VOLUNTEER"))
             .log().all()
             .extract()
-            .as(UserResponse.class);
+            .as(UserDetailResponse.class);
 
-        userTestHelper.setUser(res.username());
+        userTestHelper.setUser(res.nickname());
     }
 
     @Test
@@ -82,11 +82,12 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "guest" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                "password123!",
+                uniqueUsername,
                 "Guest User",
-                uniqueUsername + "@test.com",
+                "password123!",
                 "010-3333-4444",
-                RoleType.ROLE_GUEST.name()
+                "GUEST",
+                null
         );
 
         var res = given()
@@ -97,12 +98,12 @@ class UserCreateTest extends UserBaseTest {
             .post()
         .then()
             .statusCode(201)
-            .body("roles[0].name", equalTo("ROLE_GUEST"))
+            .body("role", equalTo("GUEST"))
             .log().all()
             .extract()
-            .as(UserResponse.class);
+            .as(UserDetailResponse.class);
 
-        userTestHelper.setUser(res.username());
+        userTestHelper.setUser(res.nickname());
     }
 
     @Test
@@ -111,11 +112,12 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "minimal" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                "password123!",
+                uniqueUsername,
                 "Minimal User",
-                null,  // email optional
+                "password123!",
                 null,  // phoneNumber optional
-                RoleType.ROLE_GUEST.name()
+                "GUEST",
+                null
         );
 
         var res = given()
@@ -126,14 +128,13 @@ class UserCreateTest extends UserBaseTest {
             .post()
         .then()
             .statusCode(201)
-            .body("username", equalTo(uniqueUsername + "@test.com"))
-            .body("email", nullValue())
+            .body("email", equalTo(uniqueUsername + "@test.com"))
             .body("phoneNumber", nullValue())
             .log().all()
             .extract()
-            .as(UserResponse.class);
+            .as(UserDetailResponse.class);
 
-        userTestHelper.setUser(res.username());
+        userTestHelper.setUser(res.nickname());
     }
 
     @Test
@@ -142,11 +143,12 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "forbidden" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                "password123!",
+                uniqueUsername,
                 "Forbidden User",
-                uniqueUsername + "@test.com",
+                "password123!",
                 "010-1234-5678",
-                RoleType.ROLE_GUEST.name()
+                "GUEST",
+                null
         );
 
         given()
@@ -167,11 +169,12 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "unauthorized" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                "password123!",
+                uniqueUsername,
                 "Unauthorized User",
-                uniqueUsername + "@test.com",
+                "password123!",
                 "010-1234-5678",
-                RoleType.ROLE_GUEST.name()
+                "GUEST",
+                null
         );
 
         given()
@@ -187,14 +190,15 @@ class UserCreateTest extends UserBaseTest {
     @Test
     @DisplayName("중복된 username으로 User 생성 실패(409 Conflict)")
     void createUser_DuplicateUsername() {
-        // 기존 admin 사용자와 동일한 username 사용
+        // 기존 admin 사용자와 동일한 nickname 사용
         CreateUserRequest req = new CreateUserRequest(
-                TEST_ADMIN_USERNAME,  // 이미 존재하는 username
-                "password123!",
-                "Duplicate User",
                 "duplicate@test.com",
+                TEST_ADMIN_USERNAME,  // 이미 존재하는 nickname
+                "Duplicate User",
+                "password123!",
                 "010-1234-5678",
-                RoleType.ROLE_GUEST.name()
+                "GUEST",
+                null
         );
 
         given()
@@ -236,11 +240,12 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "shortpw" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                "short",  // 8자 미만
+                uniqueUsername,
                 "Short Password User",
-                uniqueUsername + "@test.com",
+                "short",  // 8자 미만
                 "010-1234-5678",
-                RoleType.ROLE_GUEST.name()
+                "GUEST",
+                null
         );
 
         given()
@@ -260,12 +265,13 @@ class UserCreateTest extends UserBaseTest {
     void createUser_InvalidEmail() {
         String uniqueUsername = "invalidemail" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
-                uniqueUsername + "@test.com",
-                "password123!",
-                "Invalid Email User",
                 "invalid-email-format",  // 잘못된 이메일 형식
+                uniqueUsername,
+                "Invalid Email User",
+                "password123!",
                 "010-1234-5678",
-                RoleType.ROLE_GUEST.name()
+                "GUEST",
+                null
         );
 
         given()
@@ -286,11 +292,12 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "invalidphone" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                "password123!",
+                uniqueUsername,
                 "Invalid Phone User",
-                uniqueUsername + "@test.com",
+                "password123!",
                 "invalid-phone",  // 잘못된 전화번호 형식
-                RoleType.ROLE_GUEST.name()
+                "GUEST",
+                null
         );
 
         given()
@@ -311,11 +318,12 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "invalidrole" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                "password123!",
+                uniqueUsername,
                 "Invalid Role User",
-                uniqueUsername + "@test.com",
+                "password123!",
                 "010-1234-5678",
-                "INVALID_ROLE"  // 존재하지 않는 역할
+                "INVALID_ROLE",  // 존재하지 않는 역할
+                null
         );
 
         given()

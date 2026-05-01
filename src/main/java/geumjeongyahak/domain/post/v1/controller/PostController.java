@@ -69,7 +69,7 @@ public class PostController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         return ResponseEntity.status(HttpStatus.CREATED).body(
-                postCrudService.createPost(channelId, userDetails.getUserId(), userDetails.isAdminOrManager(), request)
+                postCrudService.createPost(channelId, userDetails, request)
         );
     }
 
@@ -177,8 +177,7 @@ public class PostController {
         return ResponseEntity.ok(
                 postCrudService.updatePost(
                         channelId,
-                        userDetails.getUserId(),
-                        userDetails.isAdminOrManager(),
+                        userDetails,
                         postId,
                         request
                 )
@@ -215,7 +214,7 @@ public class PostController {
             @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        postCrudService.deletePost(channelId, userDetails.getUserId(), userDetails.isAdminOrManager(), postId);
+        postCrudService.deletePost(channelId, userDetails, postId);
         return ResponseEntity.noContent().build();
     }
 }

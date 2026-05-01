@@ -13,8 +13,10 @@ import lombok.RequiredArgsConstructor;
 public class CustomUserDetails implements UserDetails {
 
     private final Long userId;
+    private final Long credentialId;
     private final String username;
     private final String password;
+    private final Long departmentId;
     private final Collection<? extends GrantedAuthority> authorities;
 
     @Override

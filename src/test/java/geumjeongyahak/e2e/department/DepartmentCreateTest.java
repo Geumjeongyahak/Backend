@@ -4,7 +4,7 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import geumjeongyahak.domain.department.v1.dto.request.CreateDepartmentRequest;
-import geumjeongyahak.domain.department.v1.dto.response.DepartmentResponse;
+import geumjeongyahak.domain.department.v1.dto.response.DepartmentSimpleResponse;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
@@ -18,7 +18,8 @@ class DepartmentCreateTest extends DepartmentBaseTest {
         String uniqueName = "개발팀_" + System.currentTimeMillis();
         CreateDepartmentRequest req = new CreateDepartmentRequest(
                 uniqueName,
-                "소프트웨어 개발을 담당하는 팀"
+                "소프트웨어 개발을 담당하는 팀",
+                null
         );
 
         var res = given()
@@ -34,7 +35,7 @@ class DepartmentCreateTest extends DepartmentBaseTest {
             .body("description", equalTo("소프트웨어 개발을 담당하는 팀"))
             .log().all()
             .extract()
-            .as(DepartmentResponse.class);
+            .as(DepartmentSimpleResponse.class);
 
         departmentTestHelper.setDepartment(res.id());
     }
@@ -48,7 +49,8 @@ class DepartmentCreateTest extends DepartmentBaseTest {
             String uniqueName = dept + "_" + System.currentTimeMillis();
             CreateDepartmentRequest req = new CreateDepartmentRequest(
                     uniqueName,
-                    uniqueName + " 설명"
+                    uniqueName + " 설명",
+                    null
             );
 
             var res = given()
@@ -62,7 +64,7 @@ class DepartmentCreateTest extends DepartmentBaseTest {
                 .body("name", equalTo(uniqueName))
                 .log().all()
                 .extract()
-                .as(DepartmentResponse.class);
+                .as(DepartmentSimpleResponse.class);
 
             departmentTestHelper.setDepartment(res.id());
         }
@@ -74,7 +76,8 @@ class DepartmentCreateTest extends DepartmentBaseTest {
         String uniqueName = "금지된팀_" + System.currentTimeMillis();
         CreateDepartmentRequest req = new CreateDepartmentRequest(
                 uniqueName,
-                "생성 금지된 팀"
+                "생성 금지된 팀",
+                null
         );
 
         given()
@@ -95,7 +98,8 @@ class DepartmentCreateTest extends DepartmentBaseTest {
         String uniqueName = "인증없음팀_" + System.currentTimeMillis();
         CreateDepartmentRequest req = new CreateDepartmentRequest(
                 uniqueName,
-                "인증 없는 요청"
+                "인증 없는 요청",
+                null
         );
 
         given()
@@ -134,7 +138,8 @@ class DepartmentCreateTest extends DepartmentBaseTest {
     void createDepartment_BlankName() {
         CreateDepartmentRequest req = new CreateDepartmentRequest(
                 "",
-                "빈 이름"
+                "빈 이름",
+                null
         );
 
         given()
@@ -155,7 +160,8 @@ class DepartmentCreateTest extends DepartmentBaseTest {
         String uniqueName = "빈설명팀_" + System.currentTimeMillis();
         CreateDepartmentRequest req = new CreateDepartmentRequest(
                 uniqueName,
-                ""
+                "",
+                null
         );
 
         given()

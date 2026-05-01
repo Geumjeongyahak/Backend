@@ -1,78 +1,102 @@
--- username : admin1234, password : admin1234
-INSERT INTO users (id, username, name, password_hash) VALUES
-    (1, 'admin1234', 'Administrator', '$2a$10$A0Av/dPBUz5uoDmp0Z/2S.dsMzOWFL5gLK7CrXmQp6Rw2vqWulapi');
+-- 1. Departments
+INSERT INTO departments (id, name, description) VALUES
+    (1, '교무기획부', '기관의 교육 운영 계획 수립, 교무 일정 조정, 학사 운영 정책 기획을 담당하는 부서'),
+    (2, '교육연구부', '교육 프로그램 연구, 수업 품질 개선, 커리큘럼 개발과 자료 분석을 담당하는 부서'),
+    (3, '생활안전부', '학생 생활지도, 안전 관리, 생활 지원 체계 운영을 담당하는 부서'),
+    (4, '총무부', '기관의 행정 운영, 문서 관리, 내부 지원과 총무 업무를 담당하는 부서'),
+    (5, '홍보부', '기관 홍보, 대외 소통, 행사 안내와 홍보 콘텐츠 운영을 담당하는 부서'),
+    (6, '편집부', '소식지, 게시글, 각종 문서와 콘텐츠의 편집 및 제작을 담당하는 부서');
+ALTER TABLE departments ALTER COLUMN id RESTART WITH 7;
 
--- username : teacher01, password : teacher01
-INSERT INTO users (id, username, name, password_hash) VALUES
-    (2, 'teacher01', '홍길동', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu');
+-- 2. Users
+-- admin1234 / admin1234
+INSERT INTO users (id, nickname, name, primary_email, role, department_id) VALUES
+    (1, 'admin1234', '관리자', 'admin@test.com', 'ADMIN', 4);
 
--- username : teacher02, password : teacher02
-INSERT INTO users (id, username, name, password_hash) VALUES
-    (3, 'teacher02', '김철수', '$2a$12$jNEpPdWPB8WX6kOR/t9cru3Lz7WwZRw3KHfgoRJBg0ddWUFnymr/O');
+-- teacher01 / teacher01
+INSERT INTO users (id, nickname, name, primary_email, role, department_id) VALUES
+    (2, 'teacher01', '홍길동', 'teacher01@test.com', 'VOLUNTEER', 2);
 
-INSERT INTO students (id, name, phone_number, description, status) VALUES
-    (1, 'TestStudent', '010-1234-5678', '테스트 학생입니다.', 'ENROLLED');
+-- teacher02 / teacher02
+INSERT INTO users (id, nickname, name, primary_email, role, department_id) VALUES
+    (3, 'teacher02', '김철수', 'teacher02@test.com', 'VOLUNTEER', 2);
 
-INSERT INTO roles (id, name, description) VALUES
-    (1, 'ROLE_ADMIN', '기본 권한, 모든 권한을 가진 관리자'),
-    (2, 'ROLE_MANAGER', '기본 권한, 일부 관리 권한을 가진 매니저'),
-    (3, 'ROLE_VOLUNTEER', '기본 권한, 제한된 권한을 가진 기관의 자원 봉사자'),
-    (4, 'ROLE_GUEST', '기본 권한, 읽기 전용 접근 권한을 가진 손님'),
-    (1001, 'DEPT_ADMIN', '부서 권한, 총무 부서의 관리 권한'),
-    (1002, 'DEPT_HR', '부서 권한, 인사 부서의 관리 권한'),
-    (1003, 'DEPT_FINANCE', '부서 권한, 재무 부서의 관리 권한'),
-    (1004, 'DEPT_IT', '부서 권한, IT 부서의 관리 권한'),
-    (1005, 'DEPT_MARKETING', '부서 권한, 마케팅 부서의 관리 권한'),
-    (1006, 'DEPT_ACADEMIC', '부서 권한, 학사 부서의 관리 권한'),
-    (2001, 'TEACHER', '부가 권한, 교사 직책의 권한');
+-- guest01 / guest01
+INSERT INTO users (id, nickname, name, primary_email, role, department_id) VALUES
+    (4, 'guest01', '이영희', 'guest01@test.com', 'GUEST', NULL);
 
-INSERT INTO user_roles (user_id, role_id) VALUES
-    (1, 1);  -- Assign ADMIN role to the admin user
+ALTER TABLE users ALTER COLUMN id RESTART WITH 5;
 
-INSERT INTO departments (name, description) VALUES
-    ('총무부', '기관의 총무 업무를 담당하는 부서'),
-    ( '인사부', '기관의 인사 관리를 담당하는 부서'),
-    ( '재무부', '기관의 재무 관리를 담당하는 부서'),
-    ( 'IT부', '기관의 정보기술 관리를 담당하는 부서'),
-    ( '마케팅부', '기관의 마케팅 및 홍보를 담당하는 부서'),
-    ( '학사부', '기관의 학사 관리를 담당하는 부서');
+-- 3. User Credentials
+INSERT INTO user_credentials (id, user_id, provider, credential_email, password_hash, email_verified) VALUES
+    (1, 1, 'LOCAL', 'admin@test.com', '$2a$10$A0Av/dPBUz5uoDmp0Z/2S.dsMzOWFL5gLK7CrXmQp6Rw2vqWulapi', TRUE),
+    (2, 2, 'LOCAL', 'teacher01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
+    (3, 3, 'LOCAL', 'teacher02@test.com', '$2a$12$jNEpPdWPB8WX6kOR/t9cru3Lz7WwZRw3KHfgoRJBg0ddWUFnymr/O', TRUE),
+    (4, 4, 'LOCAL', 'guest01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE);
+ALTER TABLE user_credentials ALTER COLUMN id RESTART WITH 5;
 
+-- 4. Department Permissions
+INSERT INTO department_permissions (department_id, permission_code) VALUES
+    (1, 'department:read:*'),
+    (1, 'department:write:*'),
+    (2, 'post:read:*'),
+    (2, 'post:write:*'),
+    (4, 'file:read:*'),
+    (4, 'file:write:*');
 
-INSERT INTO user_roles (user_id, role_id) VALUES
-    (2, 3);  -- teacher01 유저에게 ROLE_VOLUNTEER 권한 부여
+-- 5. User Permissions
+INSERT INTO user_permissions (user_id, permission_code) VALUES
+    (2, 'lesson:write:1');
 
-INSERT INTO user_roles (user_id, role_id) VALUES
-    (3, 3);  -- teacher02 유저에게 ROLE_VOLUNTEER 권한 부여
-
+-- 6. Classrooms
 INSERT INTO classrooms (id, name, type, description)
 VALUES
-    (1, '벚꽃반', 'WEEKDAY', '기초 한글'),
-    (2, '장미반', 'WEEKDAY', '초등 저학년 수준'),
+    (1, '벚꽃반', 'WEEKDAY', '평일 기초 학습반'),
+    (2, '장미반', 'WEEKDAY', '평일 초급 학습반'),
     (3, '스마트폰반', 'WEEKEND', '스마트폰 기능/앱 사용');
+ALTER TABLE classrooms ALTER COLUMN id RESTART WITH 4;
 
-INSERT INTO subjects
-(id, class_id, teacher_id, name, start_at, end_at, times, day_of_week, start_time, end_time, period, description)
+-- 7. Channels
+INSERT INTO channels (id, name, slug, description, channel_type, ref_id, writer_policy, is_default, is_active, sort_order)
+VALUES
+    (1, '전체보기', 'all', '전체 게시글을 조회하는 기본 채널', 'ALL', NULL, 'ALL_AUTHENTICATED', TRUE, TRUE, 0),
+    (2, '공지사항', 'notice', '기관 전체 공지사항 채널', 'ALL', NULL, 'ADMIN_MANAGER_ONLY', TRUE, TRUE, 1),
+    (3, '벚꽃반', 'classroom-1', '벚꽃반 게시판', 'CLASSROOM', 1, 'CLASSROOM_MANAGER_TEACHER_ONLY', TRUE, TRUE, 10),
+    (4, '장미반', 'classroom-2', '장미반 게시판', 'CLASSROOM', 2, 'CLASSROOM_MANAGER_TEACHER_ONLY', TRUE, TRUE, 11),
+    (5, '스마트폰반', 'classroom-3', '스마트폰반 게시판', 'CLASSROOM', 3, 'CLASSROOM_MANAGER_TEACHER_ONLY', TRUE, TRUE, 12),
+    (6, '교무기획부', 'department-1', '교무기획부 게시판', 'DEPARTMENT', 1, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 30),
+    (7, '교육연구부', 'department-2', '교육연구부 게시판', 'DEPARTMENT', 2, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 31),
+    (8, '생활안전부', 'department-3', '생활안전부 게시판', 'DEPARTMENT', 3, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 32),
+    (9, '총무부', 'department-4', '총무부 게시판', 'DEPARTMENT', 4, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 33),
+    (10, '홍보부', 'department-5', '홍보부 게시판', 'DEPARTMENT', 5, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 34),
+    (11, '편집부', 'department-6', '편집부 게시판', 'DEPARTMENT', 6, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 35);
+ALTER TABLE channels ALTER COLUMN id RESTART WITH 12;
+
+-- 8. Subjects
+INSERT INTO subjects (id, class_id, teacher_id, name, start_at, end_at, times, day_of_week, start_time, end_time, period, description)
 VALUES
     (1, 1, 2, '한글 기초', '2026-02-01', '2026-06-30', 20, 'FRIDAY',  '19:20:00', '20:00:00', 1, '기초 한글 수업'),
     (2, 2, 3, '수학 기초', '2026-02-01', '2026-06-30', 20, 'FRIDAY',  '20:10:00', '20:50:00', 2, '기초 수학 수업'),
     (3, 3, 2, '스마트폰 활용', '2026-02-01', '2026-06-30', 12, 'SATURDAY','19:20:00', '20:00:00', 1, '스마트폰 사용법');
+ALTER TABLE subjects ALTER COLUMN id RESTART WITH 4;
 
-INSERT INTO lessons
-(id, subject_id, teacher_id, period, date, start_time, end_time, status, teacher_attendance)
+-- 9. Lessons
+INSERT INTO lessons (id, subject_id, teacher_id, period, date, start_time, end_time, status, teacher_attendance)
 VALUES
-    -- 2026-02-13(금) 벚꽃반 1교시
     (1, 1, 2, 1, '2026-02-13', '19:20:00', '20:00:00', 'SCHEDULED', 'ABSENT'),
-    -- 2026-02-13(금) 장미반 2교시
     (2, 2, 3, 2, '2026-02-13', '20:10:00', '20:50:00', 'SCHEDULED', 'ABSENT'),
-    -- 2026-02-14(토) 스마트폰반 1교시
     (3, 3, 2, 1, '2026-02-14', '19:20:00', '20:00:00', 'SCHEDULED', 'ABSENT');
+ALTER TABLE lessons ALTER COLUMN id RESTART WITH 4;
 
+-- 10. Students
 INSERT INTO students (id, name, phone_number, description, status)
 VALUES
-    (2, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),
-    (3, '박민수', '010-4444-4444', '기초반', 'ENROLLED');
+    (1, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),
+    (2, '박민수', '010-4444-4444', '기초반', 'ENROLLED');
+ALTER TABLE students ALTER COLUMN id RESTART WITH 3;
 
+-- 11. Student Attendances
 INSERT INTO student_attendances (lesson_id, student_id, status, memo)
 VALUES
-    (1, 2, 'ABSENT', NULL),
-    (1, 3, 'ABSENT', NULL);
+    (1, 1, 'ABSENT', NULL),
+    (1, 2, 'ABSENT', NULL);

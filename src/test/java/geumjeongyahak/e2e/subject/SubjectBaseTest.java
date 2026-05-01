@@ -24,8 +24,8 @@ public class SubjectBaseTest extends BaseE2ETest {
         super.setUp();
         RestAssured.basePath = "/api/v1/subjects";
         cleanSubjectTables();
-        this.adminAccessToken = userTestHelper.generateAccessToken(TEST_ADMIN_USERNAME);
-        this.volunteerAccessToken = userTestHelper.generateAccessToken(TEST_VOLUNTEER_USERNAME);
+        this.adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
+        this.volunteerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_VOLUNTEER_USERNAME);
     }
 
     private void cleanSubjectTables() {

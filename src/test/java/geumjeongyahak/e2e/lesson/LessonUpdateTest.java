@@ -3,36 +3,18 @@ package geumjeongyahak.e2e.lesson;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 @DisplayName("E2E: Lesson 부분 수정(PATCH) 테스트")
 public class LessonUpdateTest extends LessonBaseTest {
 
-    private final List<Long> createdLessonIds = new ArrayList<>();
-
-    @AfterEach
-    void cleanup() {
-        for (Long lessonId : createdLessonIds) {
-            deleteLesson(lessonId, adminAccessToken);
-        }
-        createdLessonIds.clear();
-    }
-
     @Test
     @DisplayName("관리자: date/startTime/endTime만 부분 수정 성공(200)")
     void patchLesson_success_partialFields() {
-        Long subjectId = createSubjectAndGetId("국어");
-
-        Long lessonId = createLessonAndGetId(
-            createLessonRequest(subjectId, TEACHER_ID, "2026-02-20", "19:20:00", "20:00:00", 1),
-            adminAccessToken
-        );
-        createdLessonIds.add(lessonId);
+        Long subjectId = createTrackedSubjectAndGetId("국어");
+        Long lessonId = createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-20", "19:20:00", "20:00:00", 1);
 
         Map<String, Object> patch = Map.of(
             "date", "2026-02-21",
@@ -56,13 +38,8 @@ public class LessonUpdateTest extends LessonBaseTest {
     @Test
     @DisplayName("관리자: startTime만 바꿔서 start>=end 되면 400")
     void patchLesson_invalidTime_400() {
-        Long subjectId = createSubjectAndGetId("수학");
-
-        Long lessonId = createLessonAndGetId(
-            createLessonRequest(subjectId, TEACHER_ID, "2026-02-22", "19:20:00", "20:00:00", 1),
-            adminAccessToken
-        );
-        createdLessonIds.add(lessonId);
+        Long subjectId = createTrackedSubjectAndGetId("수학");
+        Long lessonId = createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-22", "19:20:00", "20:00:00", 1);
 
         // endTime은 기존(20:00)인데 startTime을 20:00으로 바꾸면 invalid
         Map<String, Object> patch = Map.of("startTime", "20:00:00");
@@ -80,19 +57,9 @@ public class LessonUpdateTest extends LessonBaseTest {
     @Test
     @DisplayName("관리자: 다른 수업과 겹치게 부분 수정하면 409")
     void patchLesson_conflict_409() {
-        Long subjectId = createSubjectAndGetId("영어");
-
-        Long lessonA = createLessonAndGetId(
-            createLessonRequest(subjectId, TEACHER_ID, "2026-02-23", "19:00:00", "20:00:00", 1),
-            adminAccessToken
-        );
-        createdLessonIds.add(lessonA);
-
-        Long lessonB = createLessonAndGetId(
-            createLessonRequest(subjectId, TEACHER_ID, "2026-02-23", "20:10:00", "21:00:00", 2),
-            adminAccessToken
-        );
-        createdLessonIds.add(lessonB);
+        Long subjectId = createTrackedSubjectAndGetId("영어");
+        createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-23", "19:00:00", "20:00:00", 1);
+        Long lessonB = createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-23", "20:10:00", "21:00:00", 2);
 
         // B를 A와 겹치도록 start/end만 수정
         Map<String, Object> patch = Map.of(
@@ -113,13 +80,8 @@ public class LessonUpdateTest extends LessonBaseTest {
     @Test
     @DisplayName("봉사자: 부분 수정 실패(403)")
     void patchLesson_forbidden_403() {
-        Long subjectId = createSubjectAndGetId("사회");
-
-        Long lessonId = createLessonAndGetId(
-            createLessonRequest(subjectId, TEACHER_ID, "2026-02-24", "19:20:00", "20:00:00", 1),
-            adminAccessToken
-        );
-        createdLessonIds.add(lessonId);
+        Long subjectId = createTrackedSubjectAndGetId("사회");
+        Long lessonId = createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-24", "19:20:00", "20:00:00", 1);
 
         Map<String, Object> patch = Map.of("period", 2);
 

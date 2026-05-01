@@ -1,12 +1,13 @@
 package geumjeongyahak.e2e.util;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import geumjeongyahak.common.security.jwt.JwtTokenProvider;
 import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
+import geumjeongyahak.domain.auth.service.UserCredentialService;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.repository.UserRepository;
+import geumjeongyahak.common.security.jwt.JwtTokenProvider;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -16,64 +17,106 @@ import java.util.Map;
 @Transactional
 public class TestUserHelper {
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final UserCredentialRepository userCredentialRepository;
+    private final UserCredentialService userCredentialService;
     private final JwtTokenProvider jwtTokenProvider;
     private final Map<String, User> userCache;
 
     public TestUserHelper(
             UserRepository userRepository,
-            PasswordEncoder passwordEncoder,
+            UserCredentialRepository userCredentialRepository,
+            UserCredentialService userCredentialService,
             JwtTokenProvider jwtTokenProvider
     ) {
         this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.userCredentialRepository = userCredentialRepository;
+        this.userCredentialService = userCredentialService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.userCache = new HashMap<>();
     }
 
-    public User createTestUser(String name, String username, String password, Collection<RoleType> roles) {
-        return userCache.computeIfAbsent(username, key -> {
-            User user = User.localBuilder()
-                    .username(username)
-                    .passwordHash(passwordEncoder.encode(password))
-                    .name(name)
-                    .roles(roles)
-                    .build();
-            return userRepository.save(user);
-        });
+    public User createTestUser(String nickname, String name, String email, String password, RoleType role) {
+        if (userCache.containsKey(nickname)) {
+            return userCache.get(nickname);
+        }
+        
+        User user = User.builder()
+                .nickname(nickname)
+                .name(name)
+                .email(email)
+                .role(role)
+                .build();
+        User savedUser = userRepository.save(user);
+        
+        userCredentialService.createLocalCredential(savedUser, email, password);
+        
+        userCache.put(nickname, savedUser);
+        return savedUser;
     }
 
-    public User createTestUser(String username, Collection<RoleType> roles) {
-        return createTestUser(username, username, getDefaultPassword(username), roles);
-    }
-    public void setUser(String username) {
-        userRepository.findByUsername(username)
-            .ifPresent(user -> userCache.put(username, user));
+    public User createTestUser(String nickname, RoleType role) {
+        return createTestUser(nickname, nickname, nickname + "@test.com", getDefaultPassword(nickname), role);
     }
 
-    public User getUser(String username) {
-        return userCache.get(username);
+    public User createTestUser(String nickname, Collection<RoleType> roles) {
+        RoleType role = (roles != null && !roles.isEmpty()) ? roles.iterator().next() : RoleType.VOLUNTEER;
+        return createTestUser(nickname, role);
     }
 
-    public String getDefaultPassword(String username) {
-        return "pw_" + username;
+    public void setUser(String nickname) {
+        userRepository.findByNickname(nickname)
+            .ifPresent(user -> userCache.put(nickname, user));
     }
 
-    public String generateAccessToken(String username) {
-        return jwtTokenProvider.createAccessToken(username);
+    public User getUser(String nickname) {
+        User user = userCache.get(nickname);
+        if (user == null) {
+            userRepository.findByNickname(nickname)
+                .ifPresent(u -> userCache.put(nickname, u));
+            user = userCache.get(nickname);
+        }
+        return user;
     }
 
-    public String generateToken(String username, Long expSeconds) {
-        return jwtTokenProvider.createToken(username, expSeconds);
+    public String getDefaultPassword(String nickname) {
+        if ("admin1234".equals(nickname)) return "admin1234";
+        if ("teacher01".equals(nickname)) return "teacher01";
+        if ("teacher02".equals(nickname)) return "teacher02";
+        return "pw_" + nickname;
     }
+
+    public String generateAccessToken(Long userId) {
+        return jwtTokenProvider.createAccessToken(String.valueOf(userId));
+    }
+
+    public String generateToken(Long userId, Long expSeconds) {
+        return jwtTokenProvider.createToken(String.valueOf(userId), expSeconds);
+    }
+
+    public String generateAccessTokenByNickname(String nickname) {
+        User user = getUser(nickname);
+        if (user == null) {
+            throw new IllegalArgumentException("User not found: " + nickname);
+        }
+        return generateAccessToken(user.getId());
+    }
+
+    public String generateAccessTokenByNickname(String nickname, Long expSeconds) {
+        User user = getUser(nickname);
+        if (user == null) {
+            throw new IllegalArgumentException("User not found: " + nickname);
+        }
+        return generateToken(user.getId(), expSeconds);
+    }   
 
     public void clearAll() {
-        // ID로 삭제하여 영속성 컨텍스트 문제 방지
         userCache.values().stream()
                 .map(User::getId)
-                .filter(id -> id != null)
-                .forEach(userRepository::deleteById);
+                .filter(id -> id != null && id > 4)
+                .forEach(id -> {
+                    userCredentialRepository.deleteAllByUserId(id);
+                    userRepository.deleteById(id);
+                });
         userCache.clear();
     }
-
 }

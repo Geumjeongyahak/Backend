@@ -8,10 +8,12 @@ import org.springframework.util.StringUtils;
 import geumjeongyahak.common.security.config.SecurityProperties;
 import geumjeongyahak.domain.auth.entity.RefreshToken;
 import geumjeongyahak.domain.auth.repository.RefreshTokenRepository;
+import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,19 +23,19 @@ import java.util.UUID;
 public class RefreshTokenService {
 
     private final RefreshTokenRepository refreshTokenRepository;
+    private final UserCredentialRepository userCredentialRepository;
     private final SecurityProperties securityProperties;
 
     /**
      * Refresh Token 생성 및 DB 저장
-     * @param userId 사용자 ID
+     * @param credentialId 자격 증명 ID
      * @return 생성된 Refresh Token 문자열
      */
     @Transactional
-    public String createRefreshToken(Long userId) {
-        log.debug("Refresh Token 생성 요청: userId={}", userId);
+    public String createRefreshToken(Long credentialId) {
+        log.debug("Refresh Token 생성 요청: credentialId={}", credentialId);
 
-        // 기존 Refresh Token이 있다면 삭제 (한 사용자당 하나의 Refresh Token만 유지)
-        refreshTokenRepository.deleteByUserId(userId);
+        refreshTokenRepository.deleteByCredentialId(credentialId);
 
         // 새로운 Refresh Token 생성
         Instant now = Instant.now();
@@ -45,13 +47,13 @@ public class RefreshTokenService {
 
         RefreshToken refreshToken = RefreshToken.builder()
                 .token(tokenValue)
-                .userId(userId)
+                .credentialId(credentialId)
                 .expiryDate(expiryDate)
                 .build();
 
         refreshTokenRepository.save(refreshToken);
 
-        log.debug("Refresh Token 생성 완료: userId={}, expiresAt={}", userId, expiryDate);
+        log.debug("Refresh Token 생성 완료: credentialId={}, expiresAt={}", credentialId, expiryDate);
         return tokenValue;
     }
 
@@ -75,17 +77,17 @@ public class RefreshTokenService {
     }
 
     /**
-     * Refresh Token으로 사용자 ID 조회
+     * Refresh Token으로 credential ID 조회
      * @param token Refresh Token 문자열
-     * @return 사용자 ID (Optional)
+     * @return credential ID (Optional)
      */
     @Transactional(readOnly = true)
-    public Optional<Long> getUserIdFromRefreshToken(String token) {
-        log.debug("Refresh Token에서 사용자 ID 조회: token={}", token);
+    public Optional<Long> getCredentialIdFromRefreshToken(String token) {
+        log.debug("Refresh Token에서 credential ID 조회: token={}", token);
 
         return refreshTokenRepository.findById(token)
                 .filter(rt -> !rt.isExpired())
-                .map(RefreshToken::getUserId);
+                .map(RefreshToken::getCredentialId);
     }
 
     /**
@@ -109,8 +111,12 @@ public class RefreshTokenService {
     @Transactional
     public void deleteRefreshTokenByUserId(Long userId) {
         log.debug("사용자 ID로 Refresh Token 삭제: userId={}", userId);
-
-        refreshTokenRepository.deleteByUserId(userId);
+        List<Long> credentialIds = userCredentialRepository.findAllByUserId(userId).stream()
+            .map(credential -> credential.getId())
+            .toList();
+        if (!credentialIds.isEmpty()) {
+            refreshTokenRepository.deleteByCredentialIdIn(credentialIds);
+        }
         log.info("사용자의 모든 Refresh Token 삭제 완료: userId={}", userId);
     }
 
@@ -127,12 +133,12 @@ public class RefreshTokenService {
 
     /**
      * Refresh Token이 존재하는지 확인
-     * @param userId 사용자 ID
+     * @param credentialId 자격 증명 ID
      * @return 존재하면 true
      */
     @Transactional(readOnly = true)
-    public boolean existsByUserId(Long userId) {
-        return refreshTokenRepository.existsByUserId(userId);
+    public boolean existsByCredentialId(Long credentialId) {
+        return refreshTokenRepository.existsByCredentialId(credentialId);
     }
 
     /**

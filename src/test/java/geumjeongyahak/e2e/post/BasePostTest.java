@@ -14,8 +14,6 @@ import geumjeongyahak.e2e.util.TestChannelHelper;
 import geumjeongyahak.e2e.util.TestCommentHelper;
 import geumjeongyahak.e2e.util.TestPostHelper;
 
-import java.util.List;
-
 @Tag("post")
 public abstract class BasePostTest extends BaseE2ETest {
     protected static final String TEST_POST_ADMIN_USERNAME = "postAdminUser1234";
@@ -42,11 +40,11 @@ public abstract class BasePostTest extends BaseE2ETest {
     protected void setUp() {
         super.setUp();
 
-        userTestHelper.createTestUser(TEST_POST_ADMIN_USERNAME, List.of(RoleType.ROLE_ADMIN));
-        userTestHelper.createTestUser(TEST_POST_GUEST_USERNAME, List.of(RoleType.ROLE_GUEST));
+        userTestHelper.createTestUser(TEST_POST_ADMIN_USERNAME, RoleType.ADMIN);
+        userTestHelper.createTestUser(TEST_POST_GUEST_USERNAME, RoleType.GUEST);
 
-        adminAccessToken = userTestHelper.generateAccessToken(TEST_POST_ADMIN_USERNAME);
-        guestAccessToken = userTestHelper.generateAccessToken(TEST_POST_GUEST_USERNAME);
+        adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_POST_ADMIN_USERNAME);
+        guestAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_POST_GUEST_USERNAME);
 
         Channel channel = channelRepository.save(Channel.builder()
                 .name("테스트 공지 채널")

@@ -13,7 +13,7 @@ public class LessonNoteE2ETest extends LessonBaseTest {
     @Test
     @DisplayName("교사: 수업일지 저장 후 조회 시 반영된다(200)")
     void upsertAndGetNote_Teacher_MyLesson() {
-        long lessonId = 1L;
+        long lessonId = createIsolatedLesson(TEACHER_ID, "note-my-lesson");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
@@ -41,7 +41,7 @@ public class LessonNoteE2ETest extends LessonBaseTest {
     @Test
     @DisplayName("교사: 타인 수업 메모 조회/수정 불가(404)")
     void note_Teacher_OthersLesson_ForbiddenAsNotFound() {
-        long othersLessonId = 2L;
+        long othersLessonId = createIsolatedLesson(3L, "note-other-lesson");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
@@ -65,7 +65,7 @@ public class LessonNoteE2ETest extends LessonBaseTest {
     @Test
     @DisplayName("관리자: 타인 수업 메모 저장/조회 가능(200)")
     void note_Admin_OthersLesson_Success() {
-        long othersLessonId = 1L;
+        long othersLessonId = createIsolatedLesson(3L, "note-admin-lesson");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -92,7 +92,7 @@ public class LessonNoteE2ETest extends LessonBaseTest {
     @Test
     @DisplayName("메모 저장 실패(400) - note 공백")
     void upsertNote_BadRequest_BlankNote() {
-        long lessonId = 1L;
+        long lessonId = createIsolatedLesson(TEACHER_ID, "note-blank");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
@@ -104,5 +104,29 @@ public class LessonNoteE2ETest extends LessonBaseTest {
             .put("/{lessonId}/note", lessonId)
             .then()
             .statusCode(400);
+    }
+
+    private Long createIsolatedLesson(Long teacherId, String namePrefix) {
+        long unique = System.nanoTime();
+        String uniqueDate = "2041-01-" + String.format("%02d", (Math.floorMod(unique, 20)) + 1);
+        String[] days = {"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"};
+        String dayOfWeek = days[Math.floorMod(Long.hashCode(unique), days.length)];
+        int period = Math.floorMod(Long.hashCode(unique / 31), 6) + 1;
+        Long subjectId = createTrackedSubjectAndGetId(
+            namePrefix + "-" + unique,
+            teacherId,
+            uniqueDate,
+            dayOfWeek,
+            period
+        );
+
+        return createTrackedLessonAndGetId(
+            subjectId,
+            teacherId,
+            "2026-09-" + String.format("%02d", (Math.floorMod(unique, 20)) + 1),
+            "19:20:00",
+            "20:00:00",
+            1
+        );
     }
 }

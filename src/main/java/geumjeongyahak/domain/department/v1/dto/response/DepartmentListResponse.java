@@ -8,13 +8,12 @@ import java.util.List;
 @Schema(description = "부서 목록 응답")
 public record DepartmentListResponse (
     @Schema(description = "부서 목록")
-    List<DepartmentResponse> departments
+    List<DepartmentSimpleResponse> departments
 ) {
     public static DepartmentListResponse from(List<Department> departments) {
-        List<DepartmentResponse> departmentResponses = departments.stream()
-                .map(DepartmentResponse::from)
+        List<DepartmentSimpleResponse> departmentResponses = departments.stream()
+                .map(DepartmentSimpleResponse::from)
                 .toList();
         return new DepartmentListResponse(departmentResponses);
     }
 }
-

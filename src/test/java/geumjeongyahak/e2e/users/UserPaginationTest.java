@@ -4,9 +4,8 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
-import geumjeongyahak.domain.users.v1.dto.response.UserResponse;
+import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
@@ -19,15 +18,15 @@ class UserPaginationTest extends UserBaseTest {
     protected void setUp() {
         super.setUp();
 
-        // 테스트용 사용자 여러 명 생성 (페이지네이션 테스트를 위해)
         for (int i = 1; i <= 15; i++) {
             CreateUserRequest req = new CreateUserRequest(
+                    "pagetest" + i + "@test.com",
+                    "pagetest" + i,
                     "Page Test User " + i,
-                    "pagetest" + i + "@test.com",
                     "pw_pagetest" + i,
-                    "pagetest" + i + "@test.com",
                     "010-" + String.format("%04d", i) + "-5678",
-                    RoleType.ROLE_GUEST.name()
+                    "GUEST",
+                    null
             );
 
             var createdUser = given()
@@ -39,9 +38,9 @@ class UserPaginationTest extends UserBaseTest {
             .then()
                 .statusCode(201)
                 .extract()
-                .as(UserResponse.class);
+                .as(UserDetailResponse.class);
 
-            userTestHelper.setUser(createdUser.username());
+            userTestHelper.setUser(createdUser.nickname());
         }
     }
 
@@ -84,7 +83,7 @@ class UserPaginationTest extends UserBaseTest {
     @DisplayName("두 번째 페이지 조회 성공(200 OK)")
     void getAllUsers_SecondPage() {
         int pageSize = 5;
-        int pageNumber = 1; // 0-based, so 1 is the second page
+        int pageNumber = 1;
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -120,7 +119,6 @@ class UserPaginationTest extends UserBaseTest {
     @Test
     @DisplayName("마지막 페이지 조회 성공(200 OK)")
     void getAllUsers_LastPage() {
-        // 먼저 전체 페이지 수 확인
         int totalPages = given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .queryParam("size", 5)
@@ -131,7 +129,6 @@ class UserPaginationTest extends UserBaseTest {
             .extract()
             .path("totalPages");
 
-        // 마지막 페이지 조회
         int lastPageNumber = totalPages - 1;
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
