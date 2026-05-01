@@ -27,6 +27,7 @@ import geumjeongyahak.domain.post.v1.dto.response.PostSummaryResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.exception.UserNotFoundException;
 import geumjeongyahak.domain.users.service.UserProxyService;
+import geumjeongyahak.common.security.service.CustomUserDetails;
 
 import java.time.LocalDateTime;
 
@@ -43,12 +44,12 @@ public class PostCrudService {
     private final EventPublisher eventPublisher;
 
     @Transactional
-    public PostDetailResponse createPost(Long channelId, Long userId, boolean isAdminOrManager, CreatePostRequest request) {
-        User author = userProxyService.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+    public PostDetailResponse createPost(Long channelId, CustomUserDetails userDetails, CreatePostRequest request) {
+        User author = userProxyService.findById(userDetails.getUserId())
+                .orElseThrow(() -> new UserNotFoundException(userDetails.getUserId()));
         Channel channel = channelProxyService.getReadableById(channelId);
 
-        postPermissionService.validateCreatePermission(userId, isAdminOrManager, channel);
+        postPermissionService.validateCreatePermission(userDetails, channel);
 
         Post savedPost = postRepository.save(Post.builder()
                 .channel(channel)
@@ -95,14 +96,13 @@ public class PostCrudService {
     @Transactional
     public PostDetailResponse updatePost(
             Long channelId,
-            Long userId,
-            boolean isAdminOrManager,
+            CustomUserDetails userDetails,
             Long postId,
             UpdatePostRequest request
     ) {
         channelProxyService.getReadableById(channelId);
         Post post = getPostWithoutDeleted(channelId, postId);
-        postPermissionService.validateEditPermission(userId, isAdminOrManager, post);
+        postPermissionService.validateEditPermission(userDetails, post);
 
         if (!hasAnyUpdate(request)) {
             throw new BusinessException(CommonErrorCode.NO_CHANGES_DETECTED);
@@ -123,10 +123,10 @@ public class PostCrudService {
     }
 
     @Transactional
-    public void deletePost(Long channelId, Long userId, boolean isAdminOrManager, Long postId) {
+    public void deletePost(Long channelId, CustomUserDetails userDetails, Long postId) {
         channelProxyService.getReadableById(channelId);
         Post post = getPostWithoutDeleted(channelId, postId);
-        postPermissionService.validateEditPermission(userId, isAdminOrManager, post);
+        postPermissionService.validateEditPermission(userDetails, post);
         post.delete();
         postRepository.save(post);
         publishPostChangedEvent(channelId);

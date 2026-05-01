@@ -35,7 +35,7 @@
 | Lessons | Student Attendances | lesson_id | 수업별 학생 출석 |
 | Lessons | Lesson Reviews | lesson_id | 수업별 수업 일지 |
 | Lessons | Absence Requests | lesson_id | 수업별 결석 요청 |
-| Lessons | Lesson Exchange Requests | lesson_id | 수업별 교환 요청 |
+| Lesson Exchange Requests | Lesson Exchange Proposals | request_id | 교환 요청별 제안 |
 | Subjects | Purchase Requests | subject_id | 과목별 기자재 구입 요청 |
 | Purchase Requests | Purchase Receipts | purchase_request_id | 구입 요청별 영수증 |
 | Users | 각종 요청들 | requested_by | 요청자 |
@@ -76,20 +76,20 @@ erDiagram
 
     %% 요청들
     lessons ||--o{ absence_requests : "has"
-    lessons ||--o{ lesson_exchange_requests : "has"
+    users ||--o{ lesson_exchange_requests : "requests"
+    lesson_exchange_requests ||--o{ lesson_exchange_proposals : "has"
+    users ||--o{ lesson_exchange_proposals : "proposes"
     subjects ||--o{ purchase_requests : "has"
     purchase_requests ||--o{ purchase_receipts : "has"
 
     %% 엔티티 정의
     users {
         bigint id PK
-        varchar username UK
+        varchar nickname UK
         varchar name
-        varchar email UK
-        varchar gmail UK
-        varchar password_hash
+        varchar primary_email UK
         varchar phone_number
-        varchar client_id
+        varchar role
     }
 
     roles {
@@ -163,8 +163,18 @@ erDiagram
 
     lesson_exchange_requests {
         bigint id PK
-        bigint lesson_id FK
+        date lesson_date
         bigint requested_by FK
+        varchar title
+        varchar status
+        varchar scope
+    }
+
+    lesson_exchange_proposals {
+        bigint id PK
+        bigint request_id FK
+        bigint proposed_by FK
+        varchar proposal_type
         varchar status
     }
 
@@ -361,21 +371,58 @@ erDiagram
 
 ### 3.12 수업 교환 요청 (lesson_exchange_requests)
 
-교사(봉사자)는 수업을 교환할 때 이를 요청하기 위해 사용하는 엔티티입니다.
+교사(봉사자)는 특정 날짜의 자신의 수업 범위에 대해 수업 교환을 요청할 때 사용하는 엔티티입니다.
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
 | id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
-| lesson_id | BIGINT | FOREIGN KEY | 수업 ID |
+| lesson_date | DATE | NOT NULL | 교환 대상 수업 날짜 |
 | requested_by | BIGINT | FOREIGN KEY | 수업 교환 요청자 ID |
 | title | VARCHAR(255) | NOT NULL | 수업 교환 요청 제목 |
+| classroom_name_snapshot | VARCHAR(255) | NOT NULL | 생성/수정 시점 반 이름 snapshot |
 | content | TEXT | NOT NULL | 수업 교환 요청 내용 |
 | status | VARCHAR(20) | NOT NULL | 수업 교환 요청 상태 |
-| approval_at | TIMESTAMP | NULL | 수업 교환 요청 승인일시 |
-| approval_by | BIGINT | FOREIGN KEY | 수업 교환 요청 승인자 ID |
-| note | TEXT | NULL | 추가 정보(관리자가 기입) |
+| scope | VARCHAR(20) | NOT NULL | 교환 범위 (`FULL`, `PARTIAL`) |
+| start_period | INTEGER | NULL | 부분 교환 시작 교시 |
+| end_period | INTEGER | NULL | 부분 교환 종료 교시 |
+| expires_at | TIMESTAMP | NOT NULL | 제안 가능 만료 시각 |
+| processed_at | TIMESTAMP | NULL | 승인/반려 처리 시각 |
+| processed_by | BIGINT | FOREIGN KEY | 승인/반려 처리자 ID |
+| completed_at | TIMESTAMP | NULL | 제안 수락 완료 시각 |
+| cancelled_at | TIMESTAMP | NULL | 요청 취소 시각 |
+| rejection_note | TEXT | NULL | 반려 사유 |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
+
+**상태 규칙:**
+- `PENDING` → `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED`
+- `APPROVED` → `COMPLETED`, `EXPIRED`
+
+### 3.12.1 수업 교환 제안 (lesson_exchange_proposals)
+
+승인된 수업 교환 요청에 대해 다른 봉사자가 교환형 또는 대체형 제안을 등록할 때 사용하는 엔티티입니다.
+
+| 필드명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
+| request_id | BIGINT | FOREIGN KEY, NOT NULL | 대상 수업 교환 요청 ID |
+| proposed_by | BIGINT | FOREIGN KEY, NOT NULL | 제안자 ID |
+| proposal_type | VARCHAR(20) | NOT NULL | 제안 타입 (`EXCHANGE`, `SUBSTITUTION`) |
+| proposal_scope | VARCHAR(20) | NULL | 교환형 제안 범위 (`FULL`, `PARTIAL`) |
+| lesson_date | DATE | NULL | 교환형 제안 수업 날짜 |
+| start_period | INTEGER | NULL | 교환형 제안 시작 교시 |
+| end_period | INTEGER | NULL | 교환형 제안 종료 교시 |
+| content | TEXT | NOT NULL | 제안 내용 |
+| classroom_name_snapshot | VARCHAR(255) | NULL | 교환형 제안의 반 이름 snapshot |
+| status | VARCHAR(20) | NOT NULL | 제안 상태 |
+| accepted_at | TIMESTAMP | NULL | 제안 수락 시각 |
+| withdrawn_at | TIMESTAMP | NULL | 제안 철회 시각 |
+| closed_at | TIMESTAMP | NULL | 제안 종료 시각 |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
+| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
+
+**상태 규칙:**
+- `ACTIVE` → `WITHDRAWN`, `ACCEPTED`, `CLOSED`
 
 ### 3.13 기자재 구입 요청 (purchase_requests)
 

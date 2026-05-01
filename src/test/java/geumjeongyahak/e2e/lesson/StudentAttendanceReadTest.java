@@ -15,7 +15,18 @@ public class StudentAttendanceReadTest extends LessonBaseTest {
     @Test
     @DisplayName("학생 출석부 조회 성공(200 OK) - 교사(본인 수업)")
     void getStudentAttendances_Success_MyLesson() {
-        long myLessonId = 1L;   // "teacher01" 의 lessonId: 1, 3
+        long myLessonId = createTrackedLessonFixtureWithAttendances(
+            "student-read-my-lesson",
+            TEACHER_ID,
+            "2042-03-03",
+            "MONDAY",
+            1,
+            "2027-03-03",
+            "19:20:00",
+            "20:00:00",
+            1,
+            1L, 2L
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
@@ -34,7 +45,18 @@ public class StudentAttendanceReadTest extends LessonBaseTest {
     @Test
     @DisplayName("학생 출석부 조회 실패(404/400) - 교사(타인 수업)")
     void getStudentAttendances_Fail_NotMyLesson() {
-        long othersLessonId = 2L;   // "teacher02" 의 lessonId: 2
+        long othersLessonId = createTrackedLessonFixtureWithAttendances(
+            "student-read-other-lesson",
+            TEACHER2_ID,
+            "2042-03-04",
+            "TUESDAY",
+            2,
+            "2027-03-04",
+            "20:10:00",
+            "20:50:00",
+            2,
+            1L, 2L
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
@@ -48,7 +70,18 @@ public class StudentAttendanceReadTest extends LessonBaseTest {
     @Test
     @DisplayName("학생 출석부 조회 성공(200 OK) - 관리자(타인 수업도 가능)")
     void getStudentAttendances_Success_Admin_OthersLesson() {
-        long othersLessonId = 2L;
+        long othersLessonId = createTrackedLessonFixtureWithAttendances(
+            "student-read-admin-lesson",
+            TEACHER2_ID,
+            "2042-03-05",
+            "WEDNESDAY",
+            3,
+            "2027-03-05",
+            "19:20:00",
+            "20:00:00",
+            1,
+            1L, 2L
+        );
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))

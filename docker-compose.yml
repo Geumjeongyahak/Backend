@@ -1,0 +1,11 @@
+services:
+  app:
+    image: ${APP_IMAGE:-ghcr.io/geumjeongyahak/backend:latest}
+    build:
+      context: .
+      dockerfile: infra/app/Dockerfile
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+    ports:
+      - "${APP_PORT:-8080}:8080"

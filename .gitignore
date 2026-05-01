@@ -38,6 +38,7 @@ out/
 
 ## 기본 환경 설정 관련
 .env
+.env.*
 .devdbrc
 .claude/settings.local.json
 .secret

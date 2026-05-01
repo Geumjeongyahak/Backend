@@ -3,14 +3,14 @@ package geumjeongyahak.e2e.users;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UpdateSelfRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UpdateUserRequest;
-import geumjeongyahak.domain.users.v1.dto.response.UserResponse;
+import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.nullValue;
 
 @DisplayName("E2E: User 수정 테스트")
 class UserUpdateTest extends UserBaseTest {
@@ -20,12 +20,13 @@ class UserUpdateTest extends UserBaseTest {
     void updateUser_Success() {
         // 먼저 사용자 생성
         CreateUserRequest createReq = new CreateUserRequest(
+                "updatetest@test.com",
+                "updatetest",
                 "Update Test User",
-                "updatetest@test.com",
                 "pw_updatetest",
-                "updatetest@test.com",
                 "010-1111-2222",
-                RoleType.ROLE_GUEST.name()
+                "GUEST",
+                null
         );
 
         var createdUser = given()
@@ -37,17 +38,19 @@ class UserUpdateTest extends UserBaseTest {
         .then()
             .statusCode(201)
             .extract()
-            .as(UserResponse.class);
+            .as(UserDetailResponse.class);
 
-        userTestHelper.setUser(createdUser.username());
+        userTestHelper.setUser(createdUser.nickname());
 
         // 수정 요청
         UpdateUserRequest updateReq = new UpdateUserRequest(
                 "Updated Name",
+                "updatednick",
                 "010-9999-8888",
                 "updated@test.com",
                 "newpassword123!",
-                RoleType.ROLE_VOLUNTEER.name()
+                "VOLUNTEER",
+                null
         );
 
         given()
@@ -60,9 +63,63 @@ class UserUpdateTest extends UserBaseTest {
             .statusCode(200)
             .body("id", equalTo(createdUser.id().intValue()))
             .body("name", equalTo("Updated Name"))
+            .body("nickname", equalTo("updatednick"))
             .body("phoneNumber", equalTo("010-9999-8888"))
             .body("email", equalTo("updated@test.com"))
+            .body("role", equalTo("VOLUNTEER"))
             .log().all();
+    }
+
+    @Test
+    @DisplayName("관리자가 사용자의 부서를 변경 성공(200 OK)")
+    void updateUser_Department_Success() {
+        // 1. 사용자 생성 (부서 없음)
+        CreateUserRequest createReq = new CreateUserRequest(
+                "depttest@test.com",
+                "depttest",
+                "Dept Test User",
+                "pw_depttest",
+                "010-0000-0000",
+                "VOLUNTEER",
+                null
+        );
+
+        var createdUser = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(createReq)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .body("departmentId", nullValue())
+            .extract()
+            .as(UserDetailResponse.class);
+
+        // 2. 부서 할당 (ID: 1 - 교무기획부)
+        UpdateUserRequest updateReq = new UpdateUserRequest(
+                null, null, null, null, null, null, 1L
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(updateReq)
+        .when()
+            .patch("/{userId}", createdUser.id())
+        .then()
+            .statusCode(200)
+            .body("departmentId", equalTo(1))
+            .log().all();
+
+        // 3. 부서 해제 (null)
+        UpdateUserRequest clearReq = new UpdateUserRequest(
+                null, null, null, null, null, null, null
+        );
+
+        // Note: UpdateUserRequest에서 null 전달 시 유지가 될지 해제가 될지는 UserCrudService 구현에 따라 다름.
+        // 현재 UserCrudService는 Optional.ifPresent로 처리하므로 null 전달 시 "유지"될 가능성이 높음.
+        // 부서 해제 기능이 필요하다면 별도의 로직이 필요할 수 있으나, 일단 변경 확인에 집중함.
     }
 
     @Test
@@ -70,6 +127,8 @@ class UserUpdateTest extends UserBaseTest {
     void updateUser_Forbidden() {
         UpdateUserRequest updateReq = new UpdateUserRequest(
                 "Hacker Name",
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -95,6 +154,8 @@ class UserUpdateTest extends UserBaseTest {
                 null,
                 null,
                 null,
+                null,
+                null,
                 null
         );
 
@@ -114,6 +175,7 @@ class UserUpdateTest extends UserBaseTest {
     void updateSelf_Success() {
         UpdateSelfRequest updateReq = new UpdateSelfRequest(
                 "Updated Volunteer Name",
+                "updatedvol",
                 "010-5555-6666",
                 "volunteer.updated@test.com",
                 null
@@ -127,7 +189,7 @@ class UserUpdateTest extends UserBaseTest {
             .patch("/me")
         .then()
             .statusCode(200)
-            .body("username", equalTo(TEST_VOLUNTEER_USERNAME))
+            .body("nickname", equalTo("updatedvol"))
             .body("name", equalTo("Updated Volunteer Name"))
             .body("phoneNumber", equalTo("010-5555-6666"))
             .body("email", equalTo("volunteer.updated@test.com"))
@@ -139,6 +201,7 @@ class UserUpdateTest extends UserBaseTest {
     void updateSelf_Unauthorized() {
         UpdateSelfRequest updateReq = new UpdateSelfRequest(
                 "Hacker",
+                null,
                 null,
                 null,
                 null

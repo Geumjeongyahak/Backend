@@ -4,7 +4,6 @@ import static io.restassured.RestAssured.given;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
-import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import geumjeongyahak.domain.auth.enums.RoleType;
@@ -24,10 +23,10 @@ public abstract class StudentBaseTest extends BaseE2ETest {
     protected void setUp() {
         super.setUp();
         RestAssured.basePath = "/api/v1/students";
-        this.adminAccessToken = userTestHelper.generateAccessToken(TEST_ADMIN_USERNAME);
+        this.adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
 
-        this.userTestHelper.createTestUser(TEST_VOLUNTEER_USERNAME, List.of(RoleType.ROLE_VOLUNTEER));
-        this.volunteerAccessToken = userTestHelper.generateAccessToken(TEST_VOLUNTEER_USERNAME);
+        this.userTestHelper.createTestUser(TEST_VOLUNTEER_USERNAME, RoleType.VOLUNTEER);
+        this.volunteerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_VOLUNTEER_USERNAME);
     }
 
     protected StudentResponse createStudent(String name, String phoneNumber) {

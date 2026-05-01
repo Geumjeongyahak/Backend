@@ -3,10 +3,9 @@ package geumjeongyahak.e2e.util;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import geumjeongyahak.domain.department.entity.Department;
-import geumjeongyahak.domain.department.entity.UserDepartment;
 import geumjeongyahak.domain.department.repository.DepartmentRepository;
-import geumjeongyahak.domain.department.repository.UserDepartmentRepository;
 import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.users.repository.UserRepository;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,18 +14,16 @@ import java.util.Map;
 @Transactional
 public class TestDepartmentHelper {
     private final DepartmentRepository departmentRepository;
-    private final UserDepartmentRepository userDepartmentRepository;
+    private final UserRepository userRepository;
     private final Map<String, Department> departmentCache;
-    private final Map<String, UserDepartment> userDepartmentCache;
 
     public TestDepartmentHelper(
             DepartmentRepository departmentRepository,
-            UserDepartmentRepository userDepartmentRepository
+            UserRepository userRepository
     ) {
         this.departmentRepository = departmentRepository;
-        this.userDepartmentRepository = userDepartmentRepository;
+        this.userRepository = userRepository;
         this.departmentCache = new HashMap<>();
-        this.userDepartmentCache = new HashMap<>();
     }
 
     public Department createTestDepartment(String name, String description) {
@@ -49,29 +46,18 @@ public class TestDepartmentHelper {
     }
 
     public void joinDepartment(User user, Department department) {
-        String key = user.getId() + "_" + department.getId();
-        UserDepartment userDepartment = new UserDepartment(user, department);
-        UserDepartment saved = userDepartmentRepository.save(userDepartment);
-        userDepartmentRepository.flush();  // 즉시 DB에 반영
-        userDepartmentCache.put(key, saved);
+        user.setDepartment(department);
+        userRepository.saveAndFlush(user);
     }
 
     public void clearAll() {
-        // 캐시된 Department의 모든 UserDepartment 삭제 (API로 참여시킨 것 포함)
-        if (!userDepartmentCache.isEmpty()) {
-            userDepartmentRepository.deleteAll(
-                userDepartmentCache.values().stream()
-                        .filter(ud -> ud.getId() != null)
-                        .toList()
-            );
-        }
-        // Department 삭제
-        if  (!departmentCache.isEmpty()) {
+        if (!departmentCache.isEmpty()) {
             departmentRepository.deleteAll(
                 departmentCache.values().stream()
                         .filter(d -> d.getId() != null)
                         .toList()
             );
         }
+        departmentCache.clear();
     }
 }

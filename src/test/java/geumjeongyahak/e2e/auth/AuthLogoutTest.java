@@ -20,7 +20,7 @@ class AuthLogoutTest extends AuthBaseTest {
     void logout_Success() {
         // 로그인
         LocalLoginRequest loginReq = new LocalLoginRequest(
-                TEST_ADMIN_USERNAME,
+                TEST_ADMIN_EMAIL,
                 TEST_ADMIN_PASSWORD
         );
 
@@ -122,7 +122,7 @@ class AuthLogoutTest extends AuthBaseTest {
     void logout_AlreadyLoggedOut() {
         // 로그인
         LocalLoginRequest loginReq = new LocalLoginRequest(
-                TEST_ADMIN_USERNAME,
+                TEST_ADMIN_EMAIL,
                 TEST_ADMIN_PASSWORD
         );
 
@@ -169,10 +169,11 @@ class AuthLogoutTest extends AuthBaseTest {
 
         // 회원가입
         LocalSignupRequest signupReq = new LocalSignupRequest(
-                uniqueUsername,
                 "password123!",
+                "multi-device-test",
                 "멀티 디바이스 테스트",
                 uniqueUsername + "@test.com",
+                null,
                 "010-1234-5678"
         );
 
@@ -186,11 +187,9 @@ class AuthLogoutTest extends AuthBaseTest {
             .extract()
             .as(TokenResponse.class);
 
-        userTestHelper.setUser(uniqueUsername);
-
         // 추가 로그인 (다른 디바이스 시뮬레이션)
         LocalLoginRequest loginReq = new LocalLoginRequest(
-                uniqueUsername,
+                uniqueUsername + "@test.com",
                 "password123!"
         );
 
@@ -268,7 +267,7 @@ class AuthLogoutTest extends AuthBaseTest {
     @DisplayName("만료된 Access Token으로 전체 디바이스 로그아웃 실패(401 Unauthorized)")
     void logoutAllDevices_ExpiredToken() {
         // 만료된 토큰 시뮬레이션 (짧은 만료 시간으로 생성)
-        String expiredToken = userTestHelper.generateToken(TEST_ADMIN_USERNAME, -1L);
+        String expiredToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME, -1L);
 
         given()
             .header(AUTH_HEADER, getAuthHeader(expiredToken))

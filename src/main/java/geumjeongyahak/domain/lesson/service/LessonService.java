@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import geumjeongyahak.common.exception.BusinessException;
+import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.enums.TeacherAttendanceStatus;
@@ -22,6 +24,7 @@ import geumjeongyahak.domain.lesson.v1.dto.request.UpdateLessonRequest;
 import geumjeongyahak.domain.lesson.v1.dto.response.LessonDetailResponse;
 import geumjeongyahak.domain.lesson.v1.dto.response.LessonNoteResponse;
 import geumjeongyahak.domain.lesson.v1.dto.response.LessonSummaryResponse;
+import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.subject.entity.Subject;
 import geumjeongyahak.domain.subject.exception.SubjectNotFoundException;
 import geumjeongyahak.domain.subject.repository.SubjectRepository;
@@ -58,6 +61,7 @@ public class LessonService {
                 log.info("수업 생성 실패 - 교사를 찾을 수 없습니다. ID: {}", request.teacherId());
                 return new UserNotFoundException(request.teacherId());
             });
+        validateTeacherAssignable(teacher);
 
         // 같은 teacher + 같은 date 기준 겹치는 시간이 있는지 확인
         if (lessonRepository.existsByTeacherIdAndDateAndIsDeletedFalseAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
@@ -191,6 +195,7 @@ public class LessonService {
                     log.info("수업 수정 실패 - 교사를 찾을 수 없습니다. ID: {}", newTeacherId);
                     return new UserNotFoundException(newTeacherId);
                 });
+            validateTeacherAssignable(teacher);
         }
 
         // 변경 반영
@@ -284,6 +289,7 @@ public class LessonService {
             .orElseThrow(() -> new SubjectNotFoundException(subjectId));
         User teacher = userRepository.findById(teacherId)
             .orElseThrow(() -> new UserNotFoundException(teacherId));
+        validateTeacherAssignable(teacher);
 
         List<LocalDate> dates = startAt.datesUntil(endAt.plusDays(1))
             .filter(d -> d.getDayOfWeek() == dayOfWeek)
@@ -318,24 +324,22 @@ public class LessonService {
         lesson.updateTeacherAttendance(TeacherAttendanceStatus.EXCUSED);
     }
 
+    private void validateTeacherAssignable(User teacher) {
+        if (teacher.getRole() != RoleType.VOLUNTEER) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "봉사자 사용자만 교사로 배정할 수 있습니다.");
+        }
+    }
+
     /**
-     * 수업 교환 승인 이벤트 처리용 - 수업 담당 교사를 변경한다.
+     * 수업 교환 제안 수락 이벤트 처리용 - 대상 수업의 담당 교사를 변경한다.
      */
     @Transactional
-    public void applyTeacherExchange(Long lessonId, Long requesterId, Long newTeacherId) {
-        log.debug("담당 교사 교환 처리 (lessonId={}, requesterId={}, newTeacherId={})",
-            lessonId, requesterId, newTeacherId);
+    public void applyTeacherExchange(Long lessonId, Long newTeacherId) {
+        log.debug("담당 교사 교환 처리 (lessonId={}, newTeacherId={})", lessonId, newTeacherId);
         Lesson lesson = lessonRepository.findById(lessonId)
             .orElseThrow(() -> new LessonNotFoundException(lessonId));
-        User requester = userRepository.findById(requesterId)
-            .orElseThrow(() -> new UserNotFoundException(requesterId));
         User newTeacher = userRepository.findById(newTeacherId)
             .orElseThrow(() -> new UserNotFoundException(newTeacherId));
-
-        lessonRepository.findByTeacherIdAndDateAndStartTimeAndEndTimeAndIsDeletedFalse(
-            newTeacherId, lesson.getDate(), lesson.getStartTime(), lesson.getEndTime()
-        ).filter(counterpartLesson -> !counterpartLesson.getId().equals(lessonId))
-            .ifPresent(counterpartLesson -> counterpartLesson.changeTeacher(requester));
 
         lesson.changeTeacher(newTeacher);
     }

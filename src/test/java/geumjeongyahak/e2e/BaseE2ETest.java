@@ -22,6 +22,7 @@ public abstract class BaseE2ETest {
     public static final Logger log = LoggerFactory.getLogger(BaseE2ETest.class);
     public static final String AUTH_HEADER = "Authorization";
     public static final String TEST_ADMIN_USERNAME = "admin1234";
+    public static final String TEST_ADMIN_EMAIL = "admin@test.com";
     public static final String TEST_ADMIN_PASSWORD = "admin1234";
 
     @Autowired
@@ -34,6 +35,7 @@ public abstract class BaseE2ETest {
     protected void setUp() {
         log.info("포트 {} 에서 E2E 테스트 시작", port);
         RestAssured.baseURI = "http://localhost" + ":" + port;
+        RestAssured.basePath = "";
         log.info("RestAssured.baseURI 설정: {}", RestAssured.baseURI);
     }
 

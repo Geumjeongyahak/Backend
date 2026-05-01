@@ -1,10 +1,14 @@
 package geumjeongyahak.common.security.service;
 
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
 
+import geumjeongyahak.domain.auth.enums.ProviderType;
+import geumjeongyahak.domain.auth.entity.UserCredential;
+import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
 import geumjeongyahak.domain.users.entity.User;
-import geumjeongyahak.domain.users.repository.UserRepository;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -18,24 +22,45 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private final UserRepository userRepository;
+    private final UserCredentialRepository userCredentialRepository;
 
     @Override
     @Transactional(readOnly = true)
-    public UserDetails loadUserByUsername(String userName) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(userName)
-            .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + userName));
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        UserCredential credential = userCredentialRepository.findByCredentialEmailAndProvider(email, ProviderType.LOCAL)
+            .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + email));
+        return toUserDetails(credential);
+    }
 
-        // Combine Role + Permissions into authorities
-        Collection<GrantedAuthority> authorities = user.getRoles()
+    @Transactional(readOnly = true)
+    public UserDetails loadUserByUserId(Long userId) throws UsernameNotFoundException {
+        UserCredential credential = userCredentialRepository.findByUserIdAndProvider(userId, ProviderType.LOCAL)
+            .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + userId));
+        return toUserDetails(credential);
+    }
+
+    private UserDetails toUserDetails(UserCredential credential) {
+        User user = credential.getUser();
+        Collection<GrantedAuthority> authorities = new LinkedHashSet<>();
+        authorities.add(user.getRole().getAuthority());
+        authorities.addAll(user.getPermissions()
+            .stream()
+            .map(permission -> new SimpleGrantedAuthority(permission.toAuthorityCode()))
+            .collect(Collectors.toSet()));
+
+        if (user.getDepartment() != null) {
+            authorities.addAll(user.getDepartment().getPermissions()
                 .stream()
-                .map(role -> role.getRoleType().getAuthority())
-                .collect(Collectors.toSet());
+                .map(permission -> new SimpleGrantedAuthority(permission.toAuthorityCode()))
+                .collect(Collectors.toSet()));
+        }
 
         return new CustomUserDetails(
             user.getId(),
-            user.getUsername(),
-            user.getPasswordHash(),
+            credential.getId(),
+            credential.getCredentialEmail(),
+            credential.getPasswordHash(),
+            user.getDepartment() != null ? user.getDepartment().getId() : null,
             authorities
         );
     }

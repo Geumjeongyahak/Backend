@@ -7,6 +7,7 @@
 - [Departments](./Departments.md)
 - [Classrooms](./Classrooms.md)
 - [Students](./Students.md)
+- [Requests](./Requests.md)
 - [Channels](./Channels.md)
 - [Posts](./Posts.md)
 - [Comments](./Comments.md)

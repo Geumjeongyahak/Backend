@@ -19,7 +19,7 @@ class AuthRefreshTest extends AuthBaseTest {
     void refreshToken_Success() {
         // 먼저 로그인하여 토큰 획득
         LocalLoginRequest loginReq = new LocalLoginRequest(
-                TEST_ADMIN_USERNAME,
+                TEST_ADMIN_EMAIL,
                 TEST_ADMIN_PASSWORD
         );
 
@@ -122,7 +122,7 @@ class AuthRefreshTest extends AuthBaseTest {
     void refreshToken_LoggedOutToken() {
         // 로그인
         LocalLoginRequest loginReq = new LocalLoginRequest(
-                TEST_ADMIN_USERNAME,
+                TEST_ADMIN_EMAIL,
                 TEST_ADMIN_PASSWORD
         );
 
@@ -171,7 +171,7 @@ class AuthRefreshTest extends AuthBaseTest {
     void refreshToken_MultipleTimes() {
         // 로그인
         LocalLoginRequest loginReq = new LocalLoginRequest(
-                TEST_ADMIN_USERNAME,
+                TEST_ADMIN_EMAIL,
                 TEST_ADMIN_PASSWORD
         );
 
