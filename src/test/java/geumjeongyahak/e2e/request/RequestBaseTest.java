@@ -36,6 +36,7 @@ import static java.util.Map.entry;
 @Tag("request")
 public abstract class RequestBaseTest extends BaseE2ETest {
 
+    protected static final String GUEST_USERNAME = "guest01";
     protected static final String VOLUNTEER_USERNAME = "teacher01";   // id=2
     protected static final String VOLUNTEER2_USERNAME = "teacher02";  // id=3
     protected static final long CLASSROOM_ID = 1L;
@@ -48,6 +49,7 @@ public abstract class RequestBaseTest extends BaseE2ETest {
 
     protected String adminToken;
     protected String managerToken;
+    protected String guestToken;
     protected String volunteerToken;   // teacher01
     protected String volunteer2Token;  // teacher02
 
@@ -58,6 +60,7 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         adminToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
         userTestHelper.createTestUser("manager01", RoleType.MANAGER);
         managerToken = userTestHelper.generateAccessTokenByNickname("manager01");
+        guestToken = userTestHelper.generateAccessTokenByNickname(GUEST_USERNAME);
         volunteerToken = userTestHelper.generateAccessTokenByNickname(VOLUNTEER_USERNAME);
         volunteer2Token = userTestHelper.generateAccessTokenByNickname(VOLUNTEER2_USERNAME);
     }

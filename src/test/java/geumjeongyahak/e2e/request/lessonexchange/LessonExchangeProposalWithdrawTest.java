@@ -91,6 +91,25 @@ class LessonExchangeProposalWithdrawTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("게스트는 수업 교환 제안을 철회할 수 없다 -> 403")
+    void withdrawProposal_asGuest_returns403() {
+        Long requestId = createApprovedFullRequest(LocalDate.now().plusDays(8));
+        Long proposalId = createProposal(
+            requestId,
+            getAuthHeader(volunteer2Token),
+            Map.of("content", "게스트 철회 방지 제안")
+        );
+        proposalIds.add(proposalId);
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .patch("/{requestId}/proposals/{proposalId}/withdraw", requestId, proposalId)
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
     @DisplayName("이미 철회된 제안을 다시 철회하면 -> 409")
     void withdrawAlreadyWithdrawnProposal_returns409() {
         Long requestId = createApprovedFullRequest(LocalDate.now().plusDays(8));

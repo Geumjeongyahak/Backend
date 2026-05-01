@@ -532,6 +532,40 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("게스트는 수업 교환 요청을 수정할 수 없다 -> 403")
+    void updateRequest_asGuest_returns403() {
+        LocalDate lessonDate = LocalDate.now().plusDays(22);
+        createFullDayLessons(TEACHER_ID, lessonDate);
+
+        Long requestId = createLessonExchangeRequest(
+            getAuthHeader(volunteerToken),
+            lessonDate,
+            "게스트 수정 방지 요청",
+            "게스트는 수정할 수 없습니다.",
+            null,
+            null,
+            lessonDate.minusDays(3).atTime(22, 0)
+        );
+        requestIds.add(requestId);
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .contentType(ContentType.JSON)
+            .body(buildLessonExchangeRequestBody(
+                lessonDate,
+                "게스트 수정 시도",
+                "수정 불가",
+                null,
+                null,
+                lessonDate.minusDays(3).atTime(21, 0)
+            ))
+            .patch("/{id}", requestId)
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
     @DisplayName("승인된 요청은 수정할 수 없다 -> 409")
     void updateApprovedRequest_returns409() {
         LocalDate lessonDate = LocalDate.now().plusDays(22);

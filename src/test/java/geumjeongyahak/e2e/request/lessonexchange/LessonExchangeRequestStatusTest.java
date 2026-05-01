@@ -328,6 +328,19 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("게스트는 수업 교환 요청 목록을 조회할 수 없다 -> 403")
+    void getList_asGuest_returns403() {
+        createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(13));
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .get()
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
     @DisplayName("기본 목록 조회에서는 CANCELLED 요청이 제외된다")
     void getList_defaultView_excludesCancelledRequests() {
         Long visibleRequestId = createPendingFullRequest(
@@ -555,6 +568,19 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .body("id", equalTo(requestId.intValue()))
             .body("requestedByName", equalTo("홍길동"));
+    }
+
+    @Test
+    @DisplayName("게스트는 수업 교환 요청 상세를 조회할 수 없다 -> 403")
+    void getDetail_asGuest_returns403() {
+        Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(28));
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .get("/{id}", requestId)
+            .then()
+            .statusCode(403);
     }
 
     @Test

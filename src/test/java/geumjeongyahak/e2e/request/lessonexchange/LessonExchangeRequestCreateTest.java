@@ -131,6 +131,26 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("게스트는 수업 교환 요청 생성 불가 -> 403")
+    void createRequest_asGuest_returns403() {
+        LocalDate lessonDate = LocalDate.now().plusDays(5);
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "lessonDate", lessonDate.toString(),
+                "title", "게스트 요청",
+                "content", "게스트는 요청을 생성할 수 없습니다.",
+                "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
+            ))
+            .post()
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
     @DisplayName("요청자 본인 수업이 없는 날짜로 생성 시도 -> 403")
     void createRequest_withoutOwnLessons_returns403() {
         LocalDate lessonDate = LocalDate.now().plusDays(5);

@@ -164,6 +164,19 @@ class LessonExchangeProposalReadTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("게스트는 수업 교환 제안 목록을 조회할 수 없다 -> 403")
+    void getProposals_asGuest_returns403() {
+        Long requestId = createApprovedFullRequest(LocalDate.now().plusDays(10));
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .get("/{requestId}/proposals", requestId)
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
     @DisplayName("존재하지 않는 요청의 제안 목록 조회 -> 404")
     void getProposals_requestNotFound_returns404() {
         given()

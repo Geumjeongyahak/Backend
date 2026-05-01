@@ -199,6 +199,31 @@ class LessonExchangeRequestCancelTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("게스트는 수업 교환 요청을 취소할 수 없다 -> 403")
+    void cancelRequest_asGuest_returns403() {
+        LocalDate lessonDate = LocalDate.now().plusDays(11);
+        createFullDayLessons(TEACHER_ID, lessonDate);
+
+        Long requestId = createLessonExchangeRequest(
+            getAuthHeader(volunteerToken),
+            lessonDate,
+            "게스트 취소 방지 요청",
+            "게스트는 취소할 수 없습니다.",
+            null,
+            null,
+            lessonDate.minusDays(3).atTime(22, 0)
+        );
+        requestIds.add(requestId);
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .patch("/{id}/cancel", requestId)
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
     @DisplayName("승인된 요청 취소 시도 -> 409")
     void cancelApprovedRequest_returns409() {
         LocalDate lessonDate = LocalDate.now().plusDays(11);

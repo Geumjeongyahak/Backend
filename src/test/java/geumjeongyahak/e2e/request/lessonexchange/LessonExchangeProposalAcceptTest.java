@@ -176,6 +176,28 @@ class LessonExchangeProposalAcceptTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("게스트는 수업 교환 제안을 수락할 수 없다 -> 403")
+    void acceptProposal_asGuest_returns403() {
+        LocalDate requestDate = LocalDate.now().plusDays(11);
+        registerLesson(registerSubject(CLASSROOM_ID, TEACHER_ID), TEACHER_ID, requestDate, "09:00:00", "09:50:00", 1);
+        Long requestId = createApprovedRequest(requestDate, null, null);
+
+        Long proposalId = createProposal(
+            requestId,
+            getAuthHeader(volunteer2Token),
+            Map.of("content", "게스트 수락 방지 테스트")
+        );
+        proposalIds.add(proposalId);
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .patch("/{requestId}/proposals/{proposalId}/accept", requestId, proposalId)
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
     @DisplayName("이미 비활성 상태의 제안은 수락할 수 없다 -> 409")
     void acceptWithdrawnProposal_returns409() {
         LocalDate requestDate = LocalDate.now().plusDays(11);

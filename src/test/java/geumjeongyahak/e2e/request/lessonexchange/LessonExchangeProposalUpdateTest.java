@@ -196,6 +196,27 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("게스트는 수업 교환 제안을 수정할 수 없다 -> 403")
+    void updateProposal_asGuest_returns403() {
+        Long requestId = createApprovedFullRequest(LocalDate.now().plusDays(12));
+        Long proposalId = createProposal(
+            requestId,
+            getAuthHeader(volunteer2Token),
+            Map.of("content", "게스트 수정 방지 제안")
+        );
+        proposalIds.add(proposalId);
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("content", "게스트 수정 시도"))
+            .patch("/{requestId}/proposals/{proposalId}", requestId, proposalId)
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
     @DisplayName("이미 비활성 상태의 제안은 수정할 수 없다 -> 409")
     void updateWithdrawnProposal_returns409() {
         Long requestId = createApprovedFullRequest(LocalDate.now().plusDays(12));
