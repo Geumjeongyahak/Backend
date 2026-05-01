@@ -26,7 +26,7 @@ import static java.util.Map.entry;
  *   <li>TEACHER_ID  = 2 (teacher01 / ROLE_VOLUNTEER)</li>
  *   <li>TEACHER2_ID = 3 (teacher02 / ROLE_VOLUNTEER)</li>
  *   <li>CLASSROOM_ID = 1 (벚꽃반)</li>
- *   <li>SUBJECT_ID = 1  (teacher01 담당 – 과목 기반 요청 재사용)</li>
+ *   <li>SUBJECT_ID = 1  (teacher01 담당 - 구입 요청 재사용)</li>
  * </ul>
  *
  * <h3>레슨 기반 요청 주의사항</h3>
@@ -154,22 +154,4 @@ public abstract class RequestBaseTest extends BaseE2ETest {
             .getLong("id");
     }
 
-    protected Long createSubjectExchangeRequest(String authHeader, Long subjectId,
-        String title, String content) {
-        return given()
-            .basePath("/api/v1/subject-exchange-requests")
-            .header(AUTH_HEADER, authHeader)
-            .contentType(ContentType.JSON)
-            .body(Map.ofEntries(
-                entry("subjectId", subjectId),
-                entry("title", title),
-                entry("content", content)
-            ))
-            .post()
-            .then()
-            .statusCode(201)
-            .extract()
-            .jsonPath()
-            .getLong("id");
-    }
 }
