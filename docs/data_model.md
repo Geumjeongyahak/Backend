@@ -36,7 +36,6 @@
 | Lessons | Lesson Reviews | lesson_id | 수업별 수업 일지 |
 | Lessons | Absence Requests | lesson_id | 수업별 결석 요청 |
 | Lessons | Lesson Exchange Requests | lesson_id | 수업별 교환 요청 |
-| Subjects | Subject Exchange Requests | subject_id | 과목별 교환 요청 |
 | Subjects | Purchase Requests | subject_id | 과목별 기자재 구입 요청 |
 | Purchase Requests | Purchase Receipts | purchase_request_id | 구입 요청별 영수증 |
 | Users | 각종 요청들 | requested_by | 요청자 |
@@ -78,7 +77,6 @@ erDiagram
     %% 요청들
     lessons ||--o{ absence_requests : "has"
     lessons ||--o{ lesson_exchange_requests : "has"
-    subjects ||--o{ subject_exchange_requests : "has"
     subjects ||--o{ purchase_requests : "has"
     purchase_requests ||--o{ purchase_receipts : "has"
 
@@ -166,13 +164,6 @@ erDiagram
     lesson_exchange_requests {
         bigint id PK
         bigint lesson_id FK
-        bigint requested_by FK
-        varchar status
-    }
-
-    subject_exchange_requests {
-        bigint id PK
-        bigint subject_id FK
         bigint requested_by FK
         varchar status
     }
@@ -386,26 +377,7 @@ erDiagram
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
-### 3.13 과목 교환 요청 (subject_exchange_requests)
-
-교사(봉사자)가 과목을 교환할 때 이를 요청하기 위해 사용하는 엔티티입니다. 과목 교환 시에는 
-해당 일자 이후의 수업이 모두 교환되어야 합니다.
-
-| 필드명 | 데이터 타입 | 제약조건 | 설명 |
-|--------|-------------|----------|------|
-| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
-| subject_id | BIGINT | FOREIGN KEY | 과목 ID |
-| requested_by | BIGINT | FOREIGN KEY | 과목 교환 요청자 ID |
-| title | VARCHAR(255) | NOT NULL | 과목 교환 요청 제목 |
-| content | TEXT | NOT NULL | 과목 교환 요청 내용 |
-| status | VARCHAR(20) | NOT NULL | 과목 교환 요청 상태 |
-| approval_at | TIMESTAMP | NULL | 과목 교환 요청 승인일시 |
-| approval_by | BIGINT | FOREIGN KEY | 과목 교환 요청 승인자 ID |
-| note | TEXT | NULL | 추가 정보(관리자가 기입) |
-| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
-| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
-
-### 3.14 기자재 구입 요청 (purchase_requests)
+### 3.13 기자재 구입 요청 (purchase_requests)
 
 봉사자 혹은 관리자가 수업에 필요한 기자재를 구입하기 위해 사용하는 엔티티입니다. 
 
@@ -424,7 +396,7 @@ erDiagram
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
-### 3.15 기자재 영수증 (purchase_receipts)
+### 3.14 기자재 영수증 (purchase_receipts)
 
 봉사자 혹은 관리자가 수업에 필요한 기자재를 구입한 후 이를 영수증으로 기록하기 위해 사용하는 엔티티입니다. 물품 구입 후 영수증을 이미지로 첨부하여 기록합니다. 이는 s3에 저장됩니다.
 

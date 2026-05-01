@@ -28,7 +28,8 @@ spring:
     gcp:
       project-id: ${GCP_PROJECT_ID:}
       credentials:
-        location: ${GCP_CREDENTIALS_PATH:}
+        location:
+        encoded-key:
       storage:
         bucket: ${GCP_DEV_BUCKET_NAME:}
 server:

@@ -9,7 +9,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import geumjeongyahak.domain.lesson.service.LessonService;
 import geumjeongyahak.domain.request.event.AbsenceApprovedEvent;
 import geumjeongyahak.domain.request.event.LessonExchangeApprovedEvent;
-import geumjeongyahak.domain.request.event.SubjectApprovedEvent;
 
 @Slf4j
 @Service
@@ -33,13 +32,4 @@ public class RequestEventHandler {
         lessonService.applyTeacherExchange(event.getLessonId(), event.getRequesterId(), event.getNewTeacherId());
     }
 
-    @Transactional
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
-    public void handleSubjectApproved(SubjectApprovedEvent event) {
-        log.info("과목 교환 승인 이벤트 처리 - 수업 교사 일괄 변경 (subjectId={}, newTeacherId={}, from={})",
-            event.getSubjectId(), event.getNewTeacherId(), event.getApprovalDate());
-        lessonService.applyTeacherChangeFromSubjectApproval(
-            event.getSubjectId(), event.getNewTeacherId(), event.getApprovalDate()
-        );
-    }
 }

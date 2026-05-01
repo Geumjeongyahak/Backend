@@ -308,24 +308,6 @@ public class LessonService {
     }
 
     /**
-     * 과목 교환 승인 이벤트 처리용 - 과목의 승인일 이후 모든 수업의 담당 교사를 변경한다.
-     */
-    @Transactional
-    public void applyTeacherChangeFromSubjectApproval(Long subjectId, Long newTeacherId, LocalDate from) {
-        log.debug("과목 수업 교사 일괄 변경 (subjectId={}, newTeacherId={}, from={})", subjectId, newTeacherId, from);
-        Subject subject = subjectRepository.findById(subjectId)
-            .orElseThrow(() -> new SubjectNotFoundException(subjectId));
-        User newTeacher = userRepository.findById(newTeacherId)
-            .orElseThrow(() -> new UserNotFoundException(newTeacherId));
-        subject.changeTeacher(newTeacher);
-        List<Lesson> lessons = lessonRepository.findAllBySubjectIdAndDateGreaterThanEqualAndIsDeletedFalse(subjectId, from);
-        lessons.forEach(lesson -> lesson.changeTeacher(newTeacher));
-        subjectRepository.save(subject);
-        lessonRepository.saveAll(lessons);
-        log.debug("과목 수업 교사 일괄 변경 완료 (변경된 수업={}건)", lessons.size());
-    }
-
-    /**
      * 결석 승인 이벤트 처리용 - 수업 교사 출석 상태를 공결(EXCUSED)로 변경한다.
      */
     @Transactional
