@@ -157,7 +157,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .body("status", equalTo("APPROVED"))
             .body("processedAt", notNullValue())
-            .body("processedByName", equalTo("Administrator"));
+            .body("processedByName", equalTo("관리자"));
     }
 
     @Test
