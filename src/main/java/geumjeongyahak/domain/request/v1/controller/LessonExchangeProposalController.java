@@ -33,7 +33,7 @@ public class LessonExchangeProposalController {
     @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "수업 교환 제안 생성",
-        description = "인증된 사용자가 APPROVED 상태의 수업 교환 요청에 대해 교환 제안을 생성합니다. "
+        description = "교사 이상 권한(VOLUNTEER, MANAGER, ADMIN)을 가진 사용자가 APPROVED 상태의 수업 교환 요청에 대해 교환 제안을 생성합니다. "
             + "lessonDate를 입력하면 교환형 제안으로 처리됩니다. "
             + "lessonDate를 입력하지 않으면 대체형 제안으로 처리됩니다. "
             + "교환형 제안의 반 이름은 생성 시점의 표시값을 snapshot 으로 함께 저장하며, 이후 실제 수업 교사가 변경되더라도 제안 화면에는 기존 값이 유지됩니다. "
@@ -78,7 +78,7 @@ public class LessonExchangeProposalController {
     @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "수업 교환 제안 수정",
-        description = "인증된 사용자가 본인이 작성한 ACTIVE 상태의 수업 교환 제안을 수정합니다. "
+        description = "교사 이상 권한(VOLUNTEER, MANAGER, ADMIN)을 가진 사용자가 본인이 작성한 ACTIVE 상태의 수업 교환 제안을 수정합니다. "
             + "입력 규칙은 제안 생성 API와 동일하며, 요청이 여전히 제안 가능 상태인지와 제안자가 실제 수업 조건을 만족하는지도 다시 검증합니다. "
             + "교환형 제안의 반 이름 snapshot 도 함께 갱신되며, 대체형 제안은 반 이름 없이 유지됩니다. "
             + "이후 조회 시에는 최신 수정 기준의 표시값이 유지됩니다."
@@ -127,7 +127,7 @@ public class LessonExchangeProposalController {
     @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "수업 교환 제안 철회",
-        description = "인증된 사용자가 본인이 작성한 ACTIVE 상태의 수업 교환 제안을 철회합니다. "
+        description = "교사 이상 권한(VOLUNTEER, MANAGER, ADMIN)을 가진 사용자가 본인이 작성한 ACTIVE 상태의 수업 교환 제안을 철회합니다. "
             + "철회 시 제안 상태는 WITHDRAWN 으로 변경되고 철회 시각이 기록됩니다."
     )
     @PatchMapping("/{requestId}/proposals/{proposalId}/withdraw")

@@ -6,6 +6,7 @@
 
 ## 1. 역할과 범위
 
+- 교사 이상 권한(`VOLUNTEER`, `MANAGER`, `ADMIN`) 사용자가 수업 교환 요청/제안 기능에 접근할 수 있습니다.
 - 봉사자가 자신의 수업에 대해 교환 요청을 생성, 수정, 취소합니다.
 - 관리자/매니저가 요청을 승인/반려합니다.
 - 다른 봉사자가 승인된 요청에 교환 제안을 생성, 수정, 철회합니다.
@@ -76,12 +77,12 @@
 
 | API | 권한 |
 |---|---|
-| 요청 생성/수정/취소 | 인증 사용자(요청자 본인 조건 추가) |
-| 요청 목록/상세 조회 | 인증 사용자 |
+| 요청 생성/수정/취소 | 교사 이상 권한 + 요청자 본인 조건 |
+| 요청 목록/상세 조회 | 교사 이상 권한 |
 | 요청 승인/반려 | `ADMIN`, `MANAGER` |
-| 제안 생성/수정/철회 | 인증 사용자(제안자 본인 조건 추가) |
-| 제안 목록 조회 | 인증 사용자 |
-| 제안 수락 | 인증 사용자(요청자 본인 조건 추가) |
+| 제안 생성/수정/철회 | 교사 이상 권한 + 제안자 본인 조건 |
+| 제안 목록 조회 | 교사 이상 권한 |
+| 제안 수락 | 교사 이상 권한 + 요청자 본인 조건 |
 
 ## 4. 수업 교환 요청 API
 
@@ -89,7 +90,7 @@
 
 - **URL**: `/api/v1/lesson-exchange-requests`
 - **Method**: `POST`
-- **Description**: 본인이 담당하는 수업에 대해 수업 교환 요청을 생성합니다.
+- **Description**: 교사 이상 권한 사용자가 본인이 담당하는 수업에 대해 수업 교환 요청을 생성합니다.
 
 ### Request Body 예시
 
@@ -122,7 +123,7 @@
 
 - **URL**: `/api/v1/lesson-exchange-requests`
 - **Method**: `GET`
-- **Description**: 수업 교환 요청 목록을 조회합니다.
+- **Description**: 교사 이상 권한 사용자가 수업 교환 요청 목록을 조회합니다.
 
 ### Query Parameters
 
@@ -135,13 +136,13 @@
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}`
 - **Method**: `GET`
-- **Description**: 수업 교환 요청 단건 상세를 조회합니다.
+- **Description**: 교사 이상 권한 사용자가 수업 교환 요청 단건 상세를 조회합니다.
 
 ## 4.4 요청 수정
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}`
 - **Method**: `PATCH`
-- **Description**: 요청자 본인이 `PENDING` 상태 요청을 수정합니다.
+- **Description**: 교사 이상 권한의 요청자 본인이 `PENDING` 상태 요청을 수정합니다.
 
 ### 구현 기준 동작
 
@@ -153,7 +154,7 @@
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/cancel`
 - **Method**: `PATCH`
-- **Description**: 요청자 본인이 `PENDING` 상태 요청을 취소합니다.
+- **Description**: 교사 이상 권한의 요청자 본인이 `PENDING` 상태 요청을 취소합니다.
 
 ### Side Effects
 
@@ -196,7 +197,7 @@
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/proposals`
 - **Method**: `POST`
-- **Description**: 승인된 요청에 대해 교환형 또는 대체형 제안을 생성합니다.
+- **Description**: 교사 이상 권한 사용자가 승인된 요청에 대해 교환형 또는 대체형 제안을 생성합니다.
 
 ### 교환형 예시
 
@@ -227,13 +228,13 @@
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/proposals`
 - **Method**: `GET`
-- **Description**: 특정 요청에 등록된 제안 목록을 최신순으로 조회합니다.
+- **Description**: 교사 이상 권한 사용자가 특정 요청에 등록된 제안 목록을 최신순으로 조회합니다.
 
 ## 5.3 제안 수정
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/proposals/{proposalId}`
 - **Method**: `PATCH`
-- **Description**: 제안자 본인이 `ACTIVE` 제안을 수정합니다.
+- **Description**: 교사 이상 권한의 제안자 본인이 `ACTIVE` 제안을 수정합니다.
 
 ### 구현 기준 동작
 
@@ -245,7 +246,7 @@
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/proposals/{proposalId}/withdraw`
 - **Method**: `PATCH`
-- **Description**: 제안자 본인이 `ACTIVE` 제안을 철회합니다.
+- **Description**: 교사 이상 권한의 제안자 본인이 `ACTIVE` 제안을 철회합니다.
 
 ### Side Effects
 
@@ -256,7 +257,7 @@
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/proposals/{proposalId}/accept`
 - **Method**: `PATCH`
-- **Description**: 요청자가 `ACTIVE` 제안 하나를 수락합니다.
+- **Description**: 교사 이상 권한의 요청자가 `ACTIVE` 제안 하나를 수락합니다.
 
 ### Side Effects
 
