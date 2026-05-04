@@ -42,10 +42,15 @@ import geumjeongyahak.domain.lesson.v1.dto.response.StudentAttendanceResponse;
 @Tag(name = "Lesson", description = "수업 관리 API")
 public class LessonController {
 
+    private static final String TEACHER_OR_HIGHER_ACCESS =
+        "hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN')";
+    private static final String MANAGER_OR_HIGHER_ACCESS =
+        "hasRole('MANAGER') or hasRole('ADMIN')";
+
     private final LessonService lessonService;
     private final StudentAttendanceService studentAttendanceService;
 
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @PreAuthorize(MANAGER_OR_HIGHER_ACCESS)
     @Operation(summary = "수업 생성", description = "수업을 생성합니다.")
     @PostMapping
     public ResponseEntity<LessonDetailResponse> createLesson(
@@ -72,7 +77,7 @@ public class LessonController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(summary = "내 수업 목록 조회", description = "내 수업 목록을 조회합니다.")
     @GetMapping("/me")
     public ResponseEntity<List<LessonSummaryResponse>> getMyLessons(
@@ -84,7 +89,7 @@ public class LessonController {
         return ResponseEntity.ok(responses);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(summary = "수업 상세 조회", description = "수업 상세 정보를 조회합니다.")
     @GetMapping("/{lessonId}")
     public ResponseEntity<LessonDetailResponse> getLessonDetail(
@@ -92,12 +97,16 @@ public class LessonController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("GET /api/v1/lessons/{} - 수업 상세 조회 요청", lessonId);
-        boolean isAdmin = userDetails.isAdmin();
-        LessonDetailResponse response = lessonService.getLessonDetail(userDetails.getUserId(), lessonId, isAdmin);
+        boolean canAccessAnyLesson = userDetails.isAdminOrManager();
+        LessonDetailResponse response = lessonService.getLessonDetail(
+            userDetails.getUserId(),
+            lessonId,
+            canAccessAnyLesson
+        );
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(summary = "학생 출석부 조회", description = "수업의 학생 출석부를 조회합니다.")
     @GetMapping("/{lessonId}/student-attendances")
     public ResponseEntity<List<StudentAttendanceResponse>> getStudentAttendances(
@@ -105,16 +114,16 @@ public class LessonController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("GET /api/v1/lessons/{}/student-attendances - 학생 출석부 조회 요청", lessonId);
-        boolean isAdmin = userDetails.isAdmin();
+        boolean canAccessAnyLesson = userDetails.isAdminOrManager();
         List<StudentAttendanceResponse> response = studentAttendanceService.getStudentAttendances(
             userDetails.getUserId(),
             lessonId,
-            isAdmin
+            canAccessAnyLesson
         );
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(summary = "수업 노트 조회", description = "수업 노트를 조회합니다.")
     @GetMapping("/{lessonId}/note")
     public ResponseEntity<LessonNoteResponse> getNote(
@@ -122,15 +131,15 @@ public class LessonController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("GET /api/v1/lessons/{}/note - 수업 노트 조회 요청", lessonId);
-        boolean isAdmin = userDetails.isAdmin();
+        boolean canAccessAnyLesson = userDetails.isAdminOrManager();
 
         LessonNoteResponse response = lessonService.getNote(
-            userDetails.getUserId(), lessonId, isAdmin
+            userDetails.getUserId(), lessonId, canAccessAnyLesson
         );
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @PreAuthorize(MANAGER_OR_HIGHER_ACCESS)
     @Operation(summary = "수업 수정", description = "수업을 수정합니다.")
     @PatchMapping("/{lessonId}")
     public ResponseEntity<LessonDetailResponse> updateLesson(
@@ -142,7 +151,7 @@ public class LessonController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(summary = "교사 출석 처리", description = "교사 출석 상태를 처리합니다.")
     @PatchMapping("/{lessonId}/teacher-attendance")
     public ResponseEntity<LessonDetailResponse> updateLessonAttendance(
@@ -152,17 +161,17 @@ public class LessonController {
     ) {
         log.debug("PATCH /api/v1/lessons/{}/teacher-attendance - 교사 출석 처리 요청 (status={})",
             lessonId, request.status());
-        boolean isAdmin = userDetails.isAdmin();
+        boolean canAccessAnyLesson = userDetails.isAdminOrManager();
         LessonDetailResponse response = lessonService.updateTeacherAttendance(
             userDetails.getUserId(),
             lessonId,
             request.status(),
-            isAdmin
+            canAccessAnyLesson
         );
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(summary = "학생 출석 처리", description = "학생 출석 상태를 처리합니다.")
     @PatchMapping("/{lessonId}/student-attendances")
     public ResponseEntity<List<StudentAttendanceResponse>> updateStudentAttendance(
@@ -171,17 +180,17 @@ public class LessonController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PATCH /api/v1/lessons/{}/student-attendances - 학생 출석 처리 요청", lessonId);
-        boolean isAdmin = userDetails.isAdmin();
+        boolean canAccessAnyLesson = userDetails.isAdminOrManager();
         List<StudentAttendanceResponse> response = studentAttendanceService.updateStudentAttendances(
             userDetails.getUserId(),
             lessonId,
             request,
-            isAdmin
+            canAccessAnyLesson
         );
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(summary = "수업 상태 변경", description = "수업 상태를 변경합니다.")
     @PatchMapping("/{lessonId}/status")
     public ResponseEntity<LessonDetailResponse> updateLessonStatus(
@@ -190,17 +199,17 @@ public class LessonController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PATCH /api/v1/lessons/{}/status - 수업 상태 변경 요청", lessonId);
-        boolean isAdmin = userDetails.isAdmin();
+        boolean canAccessAnyLesson = userDetails.isAdminOrManager();
         LessonDetailResponse response = lessonService.updateLessonStatus(
             userDetails.getUserId(),
             lessonId,
             request.status(),
-            isAdmin
+            canAccessAnyLesson
         );
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(summary = "수업 노트 업데이트", description = "수업 노트를 업데이트합니다.")
     @PutMapping("/{lessonId}/note")
     public ResponseEntity<LessonNoteResponse> upsertNote(
@@ -209,15 +218,15 @@ public class LessonController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PUT /api/v1/lessons/{}/note - 수업 노트 업데이트 요청", lessonId);
-        boolean isAdmin = userDetails.isAdmin();
+        boolean canAccessAnyLesson = userDetails.isAdminOrManager();
 
         LessonNoteResponse response = lessonService.upsertNote(
-            userDetails.getUserId(), lessonId, request.note(), isAdmin
+            userDetails.getUserId(), lessonId, request.note(), canAccessAnyLesson
         );
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(MANAGER_OR_HIGHER_ACCESS)
     @Operation(summary = "수업 삭제", description = "수업을 삭제합니다.")
     @DeleteMapping("/{lessonId}")
     public ResponseEntity<Void> deleteLesson(@PathVariable Long lessonId) {
