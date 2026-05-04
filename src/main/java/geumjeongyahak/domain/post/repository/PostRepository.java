@@ -7,8 +7,10 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import geumjeongyahak.domain.post.entity.Post;
+import geumjeongyahak.domain.post.enums.PostStatus;
 
 import java.util.Optional;
 
@@ -22,8 +24,13 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     @EntityGraph(attributePaths = {"channel", "author"})
     Optional<Post> findByIdAndChannelId(Long id, Long channelId);
 
+    // 상세 응답용: attachments + file까지 한 번에 fetch (N+1 방지)
+    @EntityGraph(attributePaths = {"channel", "author", "postAttachments", "postAttachments.file"})
+    @Query("SELECT p FROM Post p WHERE p.id = :id AND p.channel.id = :channelId")
+    Optional<Post> findWithAttachmentsByIdAndChannelId(@Param("id") Long id, @Param("channelId") Long channelId);
+
     // 이벤트용: createdAt만 사용하므로 fetch join 불필요
-    Optional<Post> findFirstByChannelIdAndIsDeletedFalseOrderByCreatedAtDescIdDesc(Long channelId);
+    Optional<Post> findFirstByChannelIdAndStatusAndIsDeletedFalseOrderByCreatedAtDescIdDesc(Long channelId, PostStatus status);
 
     @Query("select p.author.id from Post p where p.id = :id and p.isDeleted = false")
     Optional<Long> findAuthorIdById(@org.springframework.data.repository.query.Param("id") Long id);

@@ -5,7 +5,6 @@ import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.post.entity.Post;
 import geumjeongyahak.domain.post.enums.PostStatus;
-import geumjeongyahak.domain.post.enums.PostType;
 
 public final class PostSpecs {
 
@@ -60,10 +59,6 @@ public final class PostSpecs {
 
     public static Specification<Post> containsContent(String contentKeyword) {
         return (root, query, cb) -> cb.like(root.get("contentHtml"), "%" + contentKeyword + "%");
-    }
-
-    public static Specification<Post> hasPostType(PostType postType) {
-        return (root, query, cb) -> cb.equal(root.get("postType"), postType);
     }
 
     public static Specification<Post> hasStatus(PostStatus status) {

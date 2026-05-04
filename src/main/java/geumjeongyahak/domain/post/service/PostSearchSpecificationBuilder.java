@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.post.entity.Post;
 import geumjeongyahak.domain.post.enums.PostStatus;
-import geumjeongyahak.domain.post.enums.PostType;
 import geumjeongyahak.domain.post.repository.PostSpecs;
 import geumjeongyahak.domain.post.v1.dto.request.PostSearchRequest;
 
@@ -54,9 +53,6 @@ public class PostSearchSpecificationBuilder {
         }
         if (request.getContent() != null && !request.getContent().isBlank()) {
             spec = spec.and(PostSpecs.containsContent(request.getContent()));
-        }
-        if (request.getPostType() != null && !request.getPostType().isBlank()) {
-            spec = spec.and(PostSpecs.hasPostType(PostType.valueOf(request.getPostType())));
         }
         if (request.getStatus() != null && !request.getStatus().isBlank()) {
             spec = spec.and(PostSpecs.hasStatus(PostStatus.valueOf(request.getStatus())));
