@@ -114,9 +114,9 @@ public class LessonService {
             .toList();
     }
 
-    public LessonDetailResponse getLessonDetail(Long teacherId, Long lessonId, boolean isAdmin) {
+    public LessonDetailResponse getLessonDetail(Long teacherId, Long lessonId, boolean canAccessAnyLesson) {
         log.debug("수업 상세 조회 요청");
-        Optional<Lesson> lessonOpt = isAdmin
+        Optional<Lesson> lessonOpt = canAccessAnyLesson
             ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
             : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId);
 
@@ -129,9 +129,9 @@ public class LessonService {
     }
 
     @Transactional(readOnly = true)
-    public LessonNoteResponse getNote(Long teacherId, Long lessonId, boolean isAdmin) {
+    public LessonNoteResponse getNote(Long teacherId, Long lessonId, boolean canAccessAnyLesson) {
         log.debug("수업 노트 조회 요청 (lessonId={})", lessonId);
-        Lesson lesson = (isAdmin
+        Lesson lesson = (canAccessAnyLesson
             ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
             : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> new LessonNotFoundException(lessonId));
@@ -209,10 +209,10 @@ public class LessonService {
         Long teacherId,
         Long lessonId,
         TeacherAttendanceStatus status,
-        boolean isAdmin
+        boolean canAccessAnyLesson
     ) {
         log.debug("교사 출석 처리 요청 (status={})", status);
-        Lesson lesson = (isAdmin
+        Lesson lesson = (canAccessAnyLesson
             ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
             : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> {
@@ -229,10 +229,10 @@ public class LessonService {
         Long teacherId,
         Long lessonId,
         LessonStatus status,
-        boolean isAdmin
+        boolean canAccessAnyLesson
     ) {
         log.debug("수업 상태 변경 요청 (lessonId={})", lessonId);
-        Lesson lesson = (isAdmin
+        Lesson lesson = (canAccessAnyLesson
             ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
             : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> {
@@ -249,10 +249,10 @@ public class LessonService {
         Long teacherId,
         Long lessonId,
         String note,
-        boolean isAdmin
+        boolean canAccessAnyLesson
     ) {
         log.debug("수업 노트 업데이트 요청 (lessonId={})", lessonId);
-        Lesson lesson = (isAdmin
+        Lesson lesson = (canAccessAnyLesson
             ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
             : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> {

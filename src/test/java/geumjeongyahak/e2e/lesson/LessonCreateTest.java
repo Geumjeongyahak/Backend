@@ -19,12 +19,23 @@ public class LessonCreateTest extends LessonBaseTest {
     }
 
     @Test
+    @DisplayName("매니저 권한으로 수업 생성 성공(201)")
+    void createLesson_success_manager() {
+        Long subjectId = createTrackedSubjectAndGetId("매니저 생성");
+        Map<String, Object> request = createLessonRequest(
+            subjectId, TEACHER2_ID, "2026-02-21", "19:20:00", "20:00:00", 1
+        );
+
+        createLessonAndGetId(request, managerAccessToken);
+    }
+
+    @Test
     @DisplayName("일반 봉사자 권한으로 수업 생성 실패(403)")
     void createLesson_forbidden_volunteer() {
         Long subjectId = createTrackedSubjectAndGetId("수학");
 
         Map<String, Object> request = createLessonRequest(
-            subjectId, TEACHER_ID, "2026-02-21", "19:20:00", "20:00:00", 1
+            subjectId, TEACHER_ID, "2026-02-22", "19:20:00", "20:00:00", 1
         );
 
         given()
@@ -43,7 +54,7 @@ public class LessonCreateTest extends LessonBaseTest {
         Long subjectId = createTrackedSubjectAndGetId("영어");
 
         Map<String, Object> request = createLessonRequest(
-            subjectId, TEACHER_ID, "2026-02-22", "19:20:00", "20:00:00", 1
+            subjectId, TEACHER_ID, "2026-02-23", "19:20:00", "20:00:00", 1
         );
 
         given()
@@ -61,7 +72,7 @@ public class LessonCreateTest extends LessonBaseTest {
         Long subjectId = createTrackedSubjectAndGetId("사회");
 
         Map<String, Object> request = createLessonRequest(
-            subjectId, TEACHER_ID, "2026-02-23", "20:00:00", "19:20:00", 1
+            subjectId, TEACHER_ID, "2026-02-24", "20:00:00", "19:20:00", 1
         );
 
         given()
@@ -78,7 +89,7 @@ public class LessonCreateTest extends LessonBaseTest {
     @DisplayName("같은 teacher + 같은 date에 시간 겹치면 409")
     void createLesson_conflict_overlappingTime() {
         Long subjectId = createTrackedSubjectAndGetId("과학");
-        String date = LocalDate.of(2026, 2, 24).toString();
+        String date = LocalDate.of(2026, 2, 25).toString();
 
         // 수업 생성
         createTrackedLessonAndGetId(subjectId, TEACHER_ID, date, "19:00:00", "21:00:00", 1);
@@ -104,7 +115,7 @@ public class LessonCreateTest extends LessonBaseTest {
         Long subjectId = createTrackedSubjectAndGetId("비정상 교사 배정");
 
         Map<String, Object> request = createLessonRequest(
-            subjectId, GUEST_ID, "2026-02-25", "19:20:00", "20:00:00", 1
+            subjectId, GUEST_ID, "2026-02-26", "19:20:00", "20:00:00", 1
         );
 
         given()

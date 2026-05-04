@@ -9,13 +9,13 @@ import java.time.LocalDate;
 @ValidLessonExchangeProposalInput
 public record UpdateLessonExchangeProposalRequest(
 
-    @Schema(description = "제안 수업 날짜", example = "2026-06-10")
+    @Schema(description = "제안 수업 날짜", example = "2026-06-17")
     LocalDate lessonDate,
 
-    @Schema(description = "제안 시작 교시", example = "1")
+    @Schema(description = "제안 시작 교시. 교환형 전체 제안이면 입력하지 않습니다.", example = "1")
     Integer startPeriod,
 
-    @Schema(description = "제안 종료 교시", example = "2")
+    @Schema(description = "제안 종료 교시. 교환형 전체 제안이면 입력하지 않습니다.", example = "3")
     Integer endPeriod,
 
     @NotBlank

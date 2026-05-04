@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.e2e.BaseE2ETest;
+import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.lesson.entity.StudentAttendance;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
 import geumjeongyahak.domain.lesson.repository.StudentAttendanceRepository;
@@ -22,10 +23,12 @@ import geumjeongyahak.e2e.util.TestLessonHelper;
 public class LessonBaseTest extends BaseE2ETest {
 
     public static final String TEST_VOLUNTEER_USERNAME = "teacher01";
+    public static final String TEST_MANAGER_USERNAME = "manager01";
     protected static final long CLASSROOM_ID = 1L;
     protected static final long TEACHER_ID = 2L;
     protected static final long TEACHER2_ID = 3L;
     protected String adminAccessToken;
+    protected String managerAccessToken;
     protected String volunteerAccessToken;
 
     @Autowired
@@ -46,6 +49,8 @@ public class LessonBaseTest extends BaseE2ETest {
         super.setUp();
         RestAssured.basePath = "/api/v1/lessons";
         this.adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
+        userTestHelper.createTestUser(TEST_MANAGER_USERNAME, RoleType.MANAGER);
+        this.managerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_MANAGER_USERNAME);
         this.volunteerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_VOLUNTEER_USERNAME);
     }
 

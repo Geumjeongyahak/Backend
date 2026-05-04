@@ -296,34 +296,21 @@ public class LessonEventHandler {
 
 ```java
 public enum RoleType {
-    // 기본 역할 (level 0)
-    ADMIN(1L),           // 관리자 - 시스템 전체 관리
-    MANAGER(2L),         // 매니저 - 중간 관리자
-    VOLUNTEER(3L),       // 봉사자 - 수업 진행
-    GUEST(4L),           // 게스트 - 제한적 접근
-
-    // 부서 역할 (level 1-999)
-    DEPT_FINANCE(1001L),   // 재정 부서
-    DEPT_ACADEMIC(1002L),  // 학사 부서
-    DEPT_IT(1003L),        // IT 부서
-    DEPT_SUPPORT(1004L),   // 지원 부서
-
-    // 교육 역할 (level 1000+)
-    TEACHER(2001L);        // 교사
+    ADMIN,      // 관리자 - 시스템 전체 관리
+    MANAGER,    // 매니저 - 운영 관리
+    VOLUNTEER,  // 봉사자 - 수업 진행
+    GUEST;      // 게스트 - 제한적 접근
 
     public String getAuthority() {
-        // level % 1000 == 0 → "ROLE_" prefix 추가
-        // level % 1000 != 0 → prefix 없음
-        if (this.level == 0) return "ROLE_" + this.name();
-        return this.name();
+        return "ROLE_" + this.name();
     }
 }
 ```
 
 **특징:**
-- 한 사용자는 여러 역할을 동시에 가질 수 있음 (N:M 관계)
-- 역할별 권한은 Spring Security의 `hasRole()`, `hasAuthority()`로 검증
-- 기본 역할은 `ROLE_` prefix, 부서/교육 역할은 prefix 없음
+- 사용자는 하나의 기본 역할을 가짐
+- 역할별 권한은 Spring Security의 `hasRole()`로 검증
+- 모든 역할은 `ROLE_` prefix가 붙은 권한으로 매핑됨
 
 ### 4.3 권한 검증
 
@@ -333,20 +320,15 @@ public enum RoleType {
 @GetMapping("/api/v1/users")
 public List<UserResponse> getAllUsers() { ... }
 
-// VOLUNTEER 또는 ADMIN 역할 접근 가능
-@PreAuthorize("hasRole('VOLUNTEER') or hasRole('ADMIN')")
+// VOLUNTEER, MANAGER, ADMIN 역할 접근 가능
+@PreAuthorize("hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN')")
 @GetMapping("/api/v1/lessons/my")
 public List<LessonResponse> getMyLessons() { ... }
 
-// 재정 부서 역할 필요
-@PreAuthorize("hasAuthority('DEPT_FINANCE')")
-@GetMapping("/api/v1/finance/reports")
-public FinanceReport getReport() { ... }
-
-// 복합 권한 (ADMIN이거나 TEACHER 역할)
-@PreAuthorize("hasRole('ADMIN') or hasAuthority('TEACHER')")
-@PostMapping("/api/v1/lessons/{id}/reviews")
-public LessonReview createReview() { ... }
+// MANAGER 이상 역할 접근 가능
+@PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
+@PostMapping("/api/v1/lessons")
+public LessonResponse createLesson() { ... }
 ```
 
 ### 4.4 Refresh Token 관리

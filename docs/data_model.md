@@ -46,16 +46,14 @@
 
 | 엔티티 A | 엔티티 B | 조인 테이블 | 설명 |
 |----------|----------|-------------|------|
-| Users | Roles | user_roles | 사용자별 역할 부여 |
 | Students | Lessons | student_enrollments | 학생 수업 등록 |
 
 ### 2.2 ERD 다이어그램
 
 ```mermaid
 erDiagram
-    %% 사용자 및 역할 관리
-    users ||--o{ user_roles : "has"
-    roles ||--o{ user_roles : "assigned to"
+    %% 사용자 및 권한 관리
+    users ||--o{ user_permissions : "has"
 
     %% 분반 및 과목
     classrooms ||--o{ subjects : "contains"
@@ -92,16 +90,10 @@ erDiagram
         varchar role
     }
 
-    roles {
-        bigint id PK
-        varchar name UK
-        text description
-    }
-
-    user_roles {
+    user_permissions {
         bigint id PK
         bigint user_id FK
-        bigint role_id FK
+        varchar permission_code
     }
 
     classrooms {
@@ -212,39 +204,31 @@ erDiagram
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
-### 3.2 역할 (Roles)
+### 3.2 역할 (RoleType)
 
-사용자의 역할을 정의하는 엔티티입니다. RoleType Enum으로 관리되며, 각 역할은 고유 ID를 가집니다.
+사용자의 기본 역할은 `users.role` 컬럼에 저장되며, `RoleType` Enum으로 관리됩니다.
 
-**역할 계층 구조:**
-- **기본 역할 (level 1-999)**: ADMIN(1), MANAGER(2), VOLUNTEER(3), GUEST(4)
-- **부서 역할 (level 1001-1999)**: DEPT_FINANCE(1001), DEPT_ACADEMIC(1002), DEPT_IT(1003), DEPT_SUPPORT(1004)
-- **교육 역할 (level 2001-)**: TEACHER(2001)
+**역할 목록:**
+- `ADMIN`: 관리자
+- `MANAGER`: 매니저
+- `VOLUNTEER`: 봉사자
+- `GUEST`: 게스트
 
-| 필드명 | 데이터 타입 | 제약조건 | 설명 |
-|--------|-------------|----------|------|
-| id | BIGINT | PRIMARY KEY | 역할 고유 ID (RoleType Enum에서 정의) |
-| name | VARCHAR(50) | UNIQUE, NOT NULL | 역할 이름 (RoleType) |
-| description | TEXT | NULL | 역할 설명 |
+**Spring Security 권한 매핑:**
+- 모든 역할은 `ROLE_` prefix를 가진 권한으로 매핑됩니다.
+- 예: `ADMIN` -> `ROLE_ADMIN`, `MANAGER` -> `ROLE_MANAGER`, `VOLUNTEER` -> `ROLE_VOLUNTEER`
 
-### 3.3 사용자 역할 조인 테이블 (user_roles)
+### 3.3 사용자 개별 권한 (user_permissions)
 
-사용자와 역할의 다대다 관계를 관리하는 조인 테이블입니다. 한 사용자는 여러 역할을 가질 수 있습니다.
+역할 외에 사용자별 세부 권한을 관리하는 테이블입니다.
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
 | id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
 | user_id | BIGINT | FOREIGN KEY, NOT NULL | 사용자 ID |
-| role_id | BIGINT | FOREIGN KEY, NOT NULL | 역할 ID (RoleType Enum ID) |
+| permission_code | VARCHAR(100) | NOT NULL | 권한 코드 |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
-
-**제약조건:**
-- UNIQUE (user_id, role_id): 동일한 사용자에게 동일한 역할이 중복 부여되지 않음
-
-**Spring Security 권한 매핑:**
-- 기본 역할 (level % 1000 == 0): `ROLE_` prefix 추가 (예: ROLE_ADMIN, ROLE_VOLUNTEER)
-- 부서/교육 역할 (level % 1000 != 0): prefix 없음 (예: DEPT_FINANCE, TEACHER)
 
 ### 3.4 분반(classrooms)
 
