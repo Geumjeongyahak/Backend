@@ -4,33 +4,24 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import geumjeongyahak.common.security.service.CustomUserDetails;
-import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.post.service.PostCrudService;
 import geumjeongyahak.domain.post.v1.dto.request.CreatePostRequest;
-import geumjeongyahak.domain.post.v1.dto.request.PostSearchRequest;
+import geumjeongyahak.domain.post.v1.dto.request.PinPostRequest;
 import geumjeongyahak.domain.post.v1.dto.request.UpdatePostRequest;
 import geumjeongyahak.domain.post.v1.dto.response.PostDetailResponse;
-import geumjeongyahak.domain.post.v1.dto.response.PostSummaryResponse;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/channels/{channelId}/posts")
-@Tag(
-        name = "Post",
-        description = """
-                특정 채널 하위에서 게시글을 생성, 조회, 수정, 삭제하는 API입니다.
-                공지사항 채널, 반 게시판, 부서 게시판 같은 실제 게시판 화면의 글 단위를 다룰 때 사용합니다.
-                채널 자체 설정은 Channel API가 담당하고, 이 API는 해당 채널 안의 게시글 데이터만 관리합니다.
-                """
-)
-public class PostController {
+@Tag(name = "Post", description = "채널 내 게시글 API")
+public class PostWriteController {
+
     private final PostCrudService postCrudService;
 
     @PreAuthorize("@channelAccess.can('write', #channelId, principal)")
@@ -42,7 +33,6 @@ public class PostController {
                     동작 방식:
                     - channelId는 경로로 전달되며, 요청 본문에는 포함하지 않습니다.
                     - 작성 권한은 채널의 accessLevel과 permission 규칙을 함께 기준으로 검증됩니다.
-                    - 게시글 생성 직후 상세 응답이 반환됩니다.
 
                     사이드 이펙트:
                     - posts 테이블에 새 레코드가 생성됩니다.
@@ -59,46 +49,6 @@ public class PostController {
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 postCrudService.createPost(channelId, userDetails, request)
         );
-    }
-
-    @PreAuthorize("@channelAccess.can('read', #channelId, principal)")
-    @Operation(
-            summary = "게시글 목록 조회",
-            description = """
-                    특정 채널에 속한 게시글 목록을 페이지네이션하여 조회합니다.
-
-                    동작 방식:
-                    - 고정 글이 먼저 정렬되고, 그다음 최신 생성 글 순으로 내려옵니다.
-
-                    사이드 이펙트:
-                    - 읽기 전용입니다. 조회수는 상세 조회 시점에만 증가합니다.
-                    """
-    )
-    @GetMapping
-    public ResponseEntity<PaginationResponse<PostSummaryResponse>> getPosts(
-            @PathVariable Long channelId,
-            @ParameterObject @Valid PostSearchRequest request,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        return ResponseEntity.ok(postCrudService.getPosts(channelId, userDetails, request));
-    }
-
-    @PreAuthorize("@channelAccess.can('read', #channelId, principal)")
-    @Operation(
-            summary = "게시글 상세 조회",
-            description = """
-                    특정 채널에 속한 게시글 상세 정보를 조회합니다.
-
-                    사이드 이펙트:
-                    - 조회 성공 시 해당 게시글의 조회수가 1 증가합니다.
-                    """
-    )
-    @GetMapping("/{postId}")
-    public ResponseEntity<PostDetailResponse> getPost(
-            @PathVariable Long channelId,
-            @PathVariable Long postId
-    ) {
-        return ResponseEntity.ok(postCrudService.getPost(channelId, postId));
     }
 
     @PreAuthorize("@channelAccess.can('manage', #channelId, principal) or @postAccess.can(#postId, principal)")
@@ -122,9 +72,30 @@ public class PostController {
             @Valid @RequestBody UpdatePostRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ResponseEntity.ok(
-                postCrudService.updatePost(channelId, userDetails, postId, request)
-        );
+        return ResponseEntity.ok(postCrudService.updatePost(channelId, userDetails, postId, request));
+    }
+
+    @PreAuthorize("@channelAccess.can('manage', #channelId, principal)")
+    @Operation(
+            summary = "게시글 고정/고정 해제",
+            description = """
+                    게시글의 상단 고정 여부를 설정합니다.
+
+                    동작 방식:
+                    - isPinned=true이면 게시판 목록 최상단에 고정됩니다.
+                    - isPinned=false이면 고정이 해제됩니다.
+
+                    제약 사항:
+                    - 채널 관리 권한(manage)이 있어야 합니다.
+                    """
+    )
+    @PutMapping("/{postId}/pin")
+    public ResponseEntity<PostDetailResponse> pinPost(
+            @PathVariable Long channelId,
+            @PathVariable Long postId,
+            @Valid @RequestBody PinPostRequest request
+    ) {
+        return ResponseEntity.ok(postCrudService.pinPost(channelId, postId, request.isPinned()));
     }
 
     @PreAuthorize("@channelAccess.can('manage', #channelId, principal) or @postAccess.can(#postId, principal)")
