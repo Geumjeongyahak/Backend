@@ -42,7 +42,7 @@ public class DepartmentCrudService {
         departmentPermissionService.replacePermissions(department, request.permissions());
         Department savedDepartment = departmentRepository.save(department);
         
-        eventPublisher.publish(new DepartmentCreatedEvent(savedDepartment.getId()));
+        eventPublisher.publish(new DepartmentCreatedEvent(savedDepartment.getId(), savedDepartment.getName()));
         
         log.info("부서 생성 완료 - ID: {}", savedDepartment.getId());
         return DepartmentSimpleResponse.from(savedDepartment);

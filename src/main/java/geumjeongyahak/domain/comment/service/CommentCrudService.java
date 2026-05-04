@@ -4,7 +4,6 @@ import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.common.security.service.CustomUserDetails;
-import geumjeongyahak.domain.auth.exception.AuthErrorCode;
 import geumjeongyahak.domain.comment.entity.Comment;
 import geumjeongyahak.domain.comment.exception.CommentErrorCode;
 import geumjeongyahak.domain.comment.repository.CommentRepository;
@@ -37,7 +36,7 @@ public class CommentCrudService {
                 .orElseThrow(() -> new UserNotFoundException(userDetails.getUserId()));
 
         if (!post.isAllowComment()) {
-            throw new BusinessException(AuthErrorCode.ACCESS_DENIED);
+            throw new BusinessException(CommonErrorCode.INVALID_STATE, "댓글이 비활성화된 게시글에는 댓글을 작성할 수 없습니다.");
         }
 
         Comment parentComment = resolveParentComment(postId, request.parentCommentId());

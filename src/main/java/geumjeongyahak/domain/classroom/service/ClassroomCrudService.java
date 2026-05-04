@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+
+import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.DuplicateResourceException;
@@ -12,6 +14,7 @@ import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.exception.ClassroomErrorCode;
 import geumjeongyahak.domain.classroom.enums.ClassroomType;
+import geumjeongyahak.domain.classroom.event.ClassroomCreatedEvent;
 import geumjeongyahak.domain.classroom.repository.ClassroomRepository;
 import geumjeongyahak.domain.classroom.repository.specification.ClassroomSpecs;
 import geumjeongyahak.domain.classroom.v1.dto.request.ClassroomPaginationRequest;
@@ -25,13 +28,13 @@ import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomResponse;
 @RequiredArgsConstructor
 public class ClassroomCrudService {
     private final ClassroomRepository classroomRepository;
+    private final EventPublisher eventPublisher;
 
     public ClassroomDetailResponse createClassroom(CreateClassroomRequest request) {
         log.debug("분반 생성 시도: {}", request.name());
 
         if (classroomRepository.existsByName(request.name())) {
             // TODO: soft delete된 분반이 있을 경우 복구하는 로직 추가 고려(논의 필요)
-
             log.info("분반 생성 실패 - 중복된 이름: {}", request.name());
             throw new DuplicateResourceException(ClassroomErrorCode.DUPLICATE_CLASSROOM);
         }
@@ -41,7 +44,7 @@ public class ClassroomCrudService {
                 .type(ClassroomType.valueOf(request.type()))
                 .description(request.description())
                 .build());
-
+        eventPublisher.publish(new ClassroomCreatedEvent(classroom.getId(), classroom.getName()));
         log.info("분반 생성 성공: {}", classroom.getName());
         return ClassroomDetailResponse.from(classroom);
     }

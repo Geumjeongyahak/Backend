@@ -5,8 +5,6 @@ import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
 import geumjeongyahak.domain.channel.enums.ChannelManagementMode;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.channel.repository.ChannelRepository;
-import geumjeongyahak.domain.classroom.entity.Classroom;
-import geumjeongyahak.domain.department.entity.Department;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,26 +19,26 @@ public class SystemChannelService {
     private final ChannelRepository channelRepository;
 
     @Transactional
-    public Channel ensureDepartmentChannel(Department department) {
-        return channelRepository.findByChannelTypeAndRefIdAndIsDeletedFalse(ChannelType.DEPARTMENT, department.getId())
+    public Channel ensureDepartmentChannel(Long departmentId, String departmentName) {
+        return channelRepository.findByChannelTypeAndRefIdAndIsDeletedFalse(ChannelType.DEPARTMENT, departmentId)
                 .orElseGet(() -> createSystemChannel(
-                        department.getName(),
-                        department.getName() + " 부서 전용 채널",
+                        departmentName,
+                        departmentName + " 부서 전용 채널",
                         ChannelType.DEPARTMENT,
-                        department.getId(),
+                        departmentId,
                         false,
                         ChannelAccessLevel.READ_WRITE
                 ));
     }
 
     @Transactional
-    public Channel ensureClassroomChannel(Classroom classroom) {
-        return channelRepository.findByChannelTypeAndRefIdAndIsDeletedFalse(ChannelType.CLASSROOM, classroom.getId())
+    public Channel ensureClassroomChannel(Long classroomId, String classroomName) {
+        return channelRepository.findByChannelTypeAndRefIdAndIsDeletedFalse(ChannelType.CLASSROOM, classroomId)
                 .orElseGet(() -> createSystemChannel(
-                        classroom.getName(),
-                        classroom.getName() + " 분반 전용 채널",
+                        classroomName,
+                        classroomName + " 분반 전용 채널",
                         ChannelType.CLASSROOM,
-                        classroom.getId(),
+                        classroomId,
                         false,
                         ChannelAccessLevel.READ_WRITE
                 ));

@@ -1,11 +1,12 @@
 package geumjeongyahak.domain.post.service;
 
 import geumjeongyahak.common.security.service.CustomUserDetails;
-import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 import geumjeongyahak.domain.channel.enums.ChannelType;
-import geumjeongyahak.domain.channel.service.ChannelProxyService;
 import geumjeongyahak.domain.post.entity.Post;
 import geumjeongyahak.domain.post.enums.PostStatus;
 import geumjeongyahak.domain.post.enums.PostType;
@@ -16,10 +17,7 @@ import geumjeongyahak.domain.post.v1.dto.request.PostSearchRequest;
  * 게시글 검색 조건을 Specification 으로 변환한다.
  */
 @Component
-@RequiredArgsConstructor
 public class PostSearchSpecificationBuilder {
-
-    private final ChannelProxyService channelProxyService;
 
     public Specification<Post> build(PostSearchRequest request, CustomUserDetails userDetails) {
         // 1. 기본 필터: 삭제되지 않은 게시글 + 삭제되지 않은 채널
@@ -87,7 +85,7 @@ public class PostSearchSpecificationBuilder {
                                a.getAuthority().startsWith("post:manage:*"));
     }
 
-    private java.util.List<Long> extractAllowedChannelIds(CustomUserDetails userDetails) {
+    private List<Long> extractAllowedChannelIds(CustomUserDetails userDetails) {
         return userDetails.getAuthorities().stream()
                 .map(org.springframework.security.core.GrantedAuthority::getAuthority)
                 .filter(a -> a.startsWith("post:read:") || a.startsWith("post:write:") || a.startsWith("post:manage:"))
