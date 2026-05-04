@@ -13,7 +13,7 @@ import lombok.NonNull;
 import lombok.Setter;
 import geumjeongyahak.domain.base.entity.BaseEntity;
 import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
-import geumjeongyahak.domain.channel.enums.ChannelManagementMode;
+import geumjeongyahak.domain.channel.enums.ChannelBindingType;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 
 import java.time.LocalDateTime;
@@ -39,8 +39,8 @@ public class Channel extends BaseEntity {
 
     @Setter
     @Enumerated(EnumType.STRING)
-    @Column(name = "management_mode", nullable = false, length = 20)
-    private ChannelManagementMode managementMode;
+    @Column(name = "binding_type", nullable = false, length = 20)
+    private ChannelBindingType bindingType;
 
     @Setter
     @Column(name = "ref_id")
@@ -72,7 +72,7 @@ public class Channel extends BaseEntity {
             @NonNull String name,
             String description,
             @NonNull ChannelType channelType,
-            @NonNull ChannelManagementMode managementMode,
+            @NonNull ChannelBindingType bindingType,
             Long refId,
             ChannelAccessLevel accessLevel,
             Boolean isDefault,
@@ -81,12 +81,16 @@ public class Channel extends BaseEntity {
         this.name = name;
         this.description = description;
         this.channelType = channelType;
-        this.managementMode = managementMode;
+        this.bindingType = bindingType;
         this.refId = refId;
         this.accessLevel = accessLevel == null ? ChannelAccessLevel.READ_WRITE : accessLevel;
         this.isDefault = isDefault != null && isDefault;
         this.isActive = isActive == null || isActive;
         this.isDeleted = false;
         this.lastPostedAt = null;
+    }
+
+    public boolean isDomainLinked() {
+        return this.bindingType == ChannelBindingType.DOMAIN_LINKED;
     }
 }
