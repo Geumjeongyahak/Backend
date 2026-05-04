@@ -5,10 +5,9 @@ import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.base.enums.ActionType;
-import geumjeongyahak.domain.base.enums.ResourceType;
 import geumjeongyahak.domain.channel.entity.Channel;
 import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
-import geumjeongyahak.domain.channel.enums.ChannelManagementMode;
+import geumjeongyahak.domain.channel.enums.ChannelBindingType;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.channel.exception.ChannelErrorCode;
 import geumjeongyahak.domain.channel.repository.ChannelRepository;
@@ -43,7 +42,7 @@ public class ChannelCrudService {
                 .name(request.name())
                 .description(request.description())
                 .channelType(ChannelType.CUSTOM)
-                .managementMode(ChannelManagementMode.USER_MANAGED)
+                .bindingType(ChannelBindingType.STANDALONE)
                 .refId(null)
                 .accessLevel(ChannelAccessLevel.valueOf(request.accessLevel()))
                 .isDefault(request.isDefault())
@@ -68,8 +67,8 @@ public class ChannelCrudService {
         if (request.getChannelType() != null && !request.getChannelType().isBlank()) {
             spec = spec.and(ChannelSpecs.hasChannelType(ChannelType.valueOf(request.getChannelType())));
         }
-        if (request.getManagementMode() != null && !request.getManagementMode().isBlank()) {
-            spec = spec.and(ChannelSpecs.hasManagementMode(ChannelManagementMode.valueOf(request.getManagementMode())));
+        if (request.getBindingType() != null && !request.getBindingType().isBlank()) {
+            spec = spec.and(ChannelSpecs.hasBindingType(ChannelBindingType.valueOf(request.getBindingType())));
         }
         if (request.getIsActive() != null) {
             spec = spec.and(ChannelSpecs.hasIsActive(request.getIsActive()));
@@ -94,7 +93,7 @@ public class ChannelCrudService {
 
     @Transactional
     public ChannelResponse updateChannel(Long id, UpdateChannelRequest request) {
-        Channel channel = getUserManagedChannel(id);
+        Channel channel = getStandaloneChannel(id);
         boolean isUpdated = false;
 
         if (request.name() != null) {
@@ -128,7 +127,7 @@ public class ChannelCrudService {
 
     @Transactional
     public void deleteChannel(Long id) {
-        Channel channel = getUserManagedChannel(id);
+        Channel channel = getStandaloneChannel(id);
         channel.setDeleted(true);
         channel.setActive(false);
         channelRepository.save(channel);
@@ -153,10 +152,10 @@ public class ChannelCrudService {
         return channel;
     }
 
-    private Channel getUserManagedChannel(Long id) {
+    private Channel getStandaloneChannel(Long id) {
         Channel channel = getChannelWithoutDeleted(id);
-        if (channel.getManagementMode() != ChannelManagementMode.USER_MANAGED) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "시스템 채널은 일반 채널 관리 API로 수정하거나 삭제할 수 없습니다.");
+        if (channel.getBindingType() != ChannelBindingType.STANDALONE) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "도메인 연동 채널은 일반 채널 관리 API로 수정하거나 삭제할 수 없습니다.");
         }
         return channel;
     }

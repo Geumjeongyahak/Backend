@@ -47,3 +47,5 @@ out/
 docs/issue/*
 docs/pr/*
 src/test/resources/images/*
+
+.codex

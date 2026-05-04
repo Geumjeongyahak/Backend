@@ -2,7 +2,7 @@ package geumjeongyahak.domain.channel.repository;
 
 import org.springframework.data.jpa.domain.Specification;
 import geumjeongyahak.domain.channel.entity.Channel;
-import geumjeongyahak.domain.channel.enums.ChannelManagementMode;
+import geumjeongyahak.domain.channel.enums.ChannelBindingType;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 
 public final class ChannelSpecs {
@@ -22,8 +22,8 @@ public final class ChannelSpecs {
         return (root, query, cb) -> cb.equal(root.get("channelType"), channelType);
     }
 
-    public static Specification<Channel> hasManagementMode(ChannelManagementMode managementMode) {
-        return (root, query, cb) -> cb.equal(root.get("managementMode"), managementMode);
+    public static Specification<Channel> hasBindingType(ChannelBindingType bindingType) {
+        return (root, query, cb) -> cb.equal(root.get("bindingType"), bindingType);
     }
 
     public static Specification<Channel> hasIsActive(Boolean isActive) {

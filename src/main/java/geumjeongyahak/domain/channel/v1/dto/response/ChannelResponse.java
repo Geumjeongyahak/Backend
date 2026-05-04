@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Schema(
         description = """
                 채널 단건 조회/목록 조회/생성/수정 응답에 공통으로 사용되는 채널 응답 DTO입니다.
-                채널의 표시 정보, 관리 방식, 소속 대상, 접근 수준, 활성 상태, 최근 게시 시각을 함께 제공합니다.
+                채널의 표시 정보, 연동 구분, 소속 대상, 접근 수준, 활성 상태, 최근 게시 시각을 함께 제공합니다.
                 관리자 화면에서는 이 응답만으로 채널의 운영 범위와 현재 상태를 파악할 수 있습니다.
                 """
 )
@@ -25,8 +25,8 @@ public record ChannelResponse(
         @Schema(description = "채널 유형입니다. NOTICE, CLASSROOM, DEPARTMENT, CUSTOM 중 하나입니다.", example = "NOTICE")
         String channelType,
 
-        @Schema(description = "채널 관리 방식입니다. SYSTEM_MANAGED 또는 USER_MANAGED 입니다.", example = "SYSTEM_MANAGED")
-        String managementMode,
+        @Schema(description = "채널 연동 구분입니다. STANDALONE 또는 DOMAIN_LINKED 입니다.", example = "STANDALONE")
+        String bindingType,
 
         @Schema(description = "분반/부서 등 시스템 채널이 참조하는 대상 ID입니다. 커스텀 채널은 null입니다.", example = "3", nullable = true)
         Long refId,
@@ -57,7 +57,7 @@ public record ChannelResponse(
                 channel.getName(),
                 channel.getDescription(),
                 channel.getChannelType().name(),
-                channel.getManagementMode().name(),
+                channel.getBindingType().name(),
                 channel.getRefId(),
                 channel.getAccessLevel().name(),
                 channel.isDefault(),

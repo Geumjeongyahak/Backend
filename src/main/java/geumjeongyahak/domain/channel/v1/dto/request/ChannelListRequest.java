@@ -1,13 +1,12 @@
 package geumjeongyahak.domain.channel.v1.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.domain.Sort;
 import geumjeongyahak.common.exception.BadRequestException;
 import geumjeongyahak.common.exception.CommonErrorCode;
-import geumjeongyahak.common.validation.annotation.ValidChannelManagementMode;
+import geumjeongyahak.common.validation.annotation.ValidChannelBindingType;
 import geumjeongyahak.common.validation.annotation.ValidChannelType;
 import geumjeongyahak.common.validation.annotation.ValidSortField;
 
@@ -41,14 +40,14 @@ public class ChannelListRequest {
 
     @Schema(
             description = """
-                    채널 관리 방식 필터입니다.
-                    SYSTEM_MANAGED 또는 USER_MANAGED 중 하나를 입력하면 해당 관리 방식만 조회합니다.
-                    운영자가 만든 커스텀 채널만 보려면 USER_MANAGED를 사용합니다.
+                    채널 연동 구분 필터입니다.
+                    STANDALONE 또는 DOMAIN_LINKED 중 하나를 입력하면 해당 범위만 조회합니다.
+                    공지/이벤트/자료실/커스텀 채널만 보려면 STANDALONE, 분반/부서 연동 채널만 보려면 DOMAIN_LINKED를 사용합니다.
                     """,
-            example = "USER_MANAGED"
+            example = "DOMAIN_LINKED"
     )
-    @ValidChannelManagementMode
-    private String managementMode;
+    @ValidChannelBindingType
+    private String bindingType;
 
     @Schema(
             description = "활성 상태 필터입니다. true이면 현재 사용 가능한 채널만, false이면 숨김 상태 채널만 조회합니다. 운영 중단 채널 점검 시 유용합니다.",
