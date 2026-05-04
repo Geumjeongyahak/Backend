@@ -4,8 +4,9 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import geumjeongyahak.domain.channel.entity.Channel;
+import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
+import geumjeongyahak.domain.channel.enums.ChannelManagementMode;
 import geumjeongyahak.domain.channel.enums.ChannelType;
-import geumjeongyahak.domain.channel.enums.ChannelWriterPolicy;
 import geumjeongyahak.domain.post.v1.dto.request.CreatePostRequest;
 
 import static io.restassured.RestAssured.given;
@@ -44,23 +45,21 @@ public class PostBoardQueryTest extends BasePostTest {
     void getBoardPosts_WithBoardFilters_Success() {
         Channel classroomChannel = channelRepository.save(Channel.builder()
                 .name("겨울반 게시판")
-                .slug("classroom-board-" + System.currentTimeMillis())
                 .description("반별 게시판")
                 .channelType(ChannelType.CLASSROOM)
+                .managementMode(ChannelManagementMode.SYSTEM_MANAGED)
                 .refId(101L)
-                .writerPolicy(ChannelWriterPolicy.ALL_AUTHENTICATED)
+                .accessLevel(ChannelAccessLevel.READ_WRITE)
                 .isActive(true)
-                .sortOrder(2)
                 .build());
         Channel departmentChannel = channelRepository.save(Channel.builder()
                 .name("교육연구부 게시판")
-                .slug("department-board-" + System.currentTimeMillis())
                 .description("부서 게시판")
                 .channelType(ChannelType.DEPARTMENT)
+                .managementMode(ChannelManagementMode.SYSTEM_MANAGED)
                 .refId(201L)
-                .writerPolicy(ChannelWriterPolicy.ALL_AUTHENTICATED)
+                .accessLevel(ChannelAccessLevel.READ_WRITE)
                 .isActive(true)
-                .sortOrder(3)
                 .build());
 
         testChannelHelper.registerChannel(classroomChannel.getId());
@@ -79,7 +78,7 @@ public class PostBoardQueryTest extends BasePostTest {
                 .statusCode(200)
                 .body("content", hasSize(1))
                 .body("content[0].title", equalTo("전체 공지"))
-                .body("content[0].channelType", equalTo("ALL"));
+                .body("content[0].channelType", equalTo("NOTICE"));
 
         given()
                 .header(AUTH_HEADER, getAuthHeader(adminAccessToken))

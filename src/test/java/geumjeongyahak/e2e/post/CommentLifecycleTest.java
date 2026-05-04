@@ -11,8 +11,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.channel.entity.Channel;
+import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
+import geumjeongyahak.domain.channel.enums.ChannelManagementMode;
 import geumjeongyahak.domain.channel.enums.ChannelType;
-import geumjeongyahak.domain.channel.enums.ChannelWriterPolicy;
 import geumjeongyahak.domain.comment.v1.dto.request.CreateCommentRequest;
 import geumjeongyahak.domain.post.v1.dto.request.CreatePostRequest;
 
@@ -108,13 +109,13 @@ class CommentLifecycleTest extends BasePostTest {
     private Long createAllAuthenticatedChannel() {
         Channel channel = channelRepository.save(Channel.builder()
             .name("댓글 테스트 게시판")
-            .slug("comment-open-" + System.nanoTime())
             .description("Comment lifecycle 테스트 채널")
-            .channelType(ChannelType.ALL)
-            .writerPolicy(ChannelWriterPolicy.ALL_AUTHENTICATED)
+            .channelType(ChannelType.CUSTOM)
+            .managementMode(ChannelManagementMode.USER_MANAGED)
+            .accessLevel(ChannelAccessLevel.READ_WRITE)
+            .refId(null)
             .isDefault(false)
             .isActive(true)
-            .sortOrder(3)
             .build());
         testChannelHelper.registerChannel(channel.getId());
         return channel.getId();

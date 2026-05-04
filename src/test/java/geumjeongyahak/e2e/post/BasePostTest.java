@@ -6,8 +6,9 @@ import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.channel.entity.Channel;
+import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
+import geumjeongyahak.domain.channel.enums.ChannelManagementMode;
 import geumjeongyahak.domain.channel.enums.ChannelType;
-import geumjeongyahak.domain.channel.enums.ChannelWriterPolicy;
 import geumjeongyahak.domain.channel.repository.ChannelRepository;
 import geumjeongyahak.e2e.BaseE2ETest;
 import geumjeongyahak.e2e.util.TestChannelHelper;
@@ -48,13 +49,13 @@ public abstract class BasePostTest extends BaseE2ETest {
 
         Channel channel = channelRepository.save(Channel.builder()
                 .name("테스트 공지 채널")
-                .slug("test-notice-" + System.currentTimeMillis())
                 .description("Post E2E 테스트용 공지 채널")
-                .channelType(ChannelType.ALL)
-                .writerPolicy(ChannelWriterPolicy.ADMIN_MANAGER_ONLY)
+                .channelType(ChannelType.NOTICE)
+                .managementMode(ChannelManagementMode.SYSTEM_MANAGED)
+                .accessLevel(ChannelAccessLevel.READ_ONLY)
+                .refId(null)
                 .isDefault(false)
                 .isActive(true)
-                .sortOrder(1)
                 .build());
         noticeChannelId = channel.getId();
         testChannelHelper.registerChannel(noticeChannelId);
