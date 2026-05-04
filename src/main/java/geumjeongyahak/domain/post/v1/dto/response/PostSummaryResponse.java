@@ -7,7 +7,7 @@ import geumjeongyahak.domain.post.entity.Post;
         description = """
                 게시글 목록 응답 DTO입니다.
                 게시판 리스트 화면에서 필요한 최소 정보만 담아 전송합니다.
-                제목, 작성자, 채널 정보, 공지 여부, 조회수 같은 목록 렌더링용 요약 데이터에 집중합니다.
+                제목, 작성자, 채널 정보, 고정 여부, 조회수, 썸네일 같은 목록 렌더링용 요약 데이터에 집중합니다.
                 """
 )
 public record PostSummaryResponse(
@@ -26,9 +26,6 @@ public record PostSummaryResponse(
         @Schema(description = "게시글 제목입니다.", example = "4월 운영 공지")
         String title,
 
-        @Schema(description = "게시글 유형입니다.", example = "NOTICE")
-        String postType,
-
         @Schema(description = "게시글 상태입니다.", example = "PUBLISHED")
         String status,
 
@@ -44,6 +41,9 @@ public record PostSummaryResponse(
         @Schema(description = "누적 조회수입니다. 목록에서 인기 글 판단이나 우측 정보 컬럼에 활용할 수 있습니다.", example = "146")
         long viewCount,
 
+        @Schema(description = "대표 썸네일 URL입니다. 없으면 null일 수 있습니다.", nullable = true, example = "https://cdn.example.com/posts/thumbnail.png")
+        String thumbnailUrl,
+
         @Schema(description = "게시글 생성 시각입니다. 목록에서 최신 글 판단이나 정렬 기준으로 활용할 수 있습니다.", example = "2026-04-10T19:30:00")
         String createdAt,
 
@@ -57,12 +57,12 @@ public record PostSummaryResponse(
                 post.getChannel().getName(),
                 post.getChannel().getChannelType().name(),
                 post.getTitle(),
-                post.getPostType().name(),
                 post.getStatus().name(),
                 post.getAuthor().getId(),
                 post.getAuthor().getName(),
                 post.isPinned(),
                 post.getViewCount(),
+                post.getThumbnailUrl(),
                 post.getCreatedAt().toString(),
                 post.getUpdatedAt().toString()
         );

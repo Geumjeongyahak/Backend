@@ -1,7 +1,6 @@
 package geumjeongyahak.domain.post.v1.dto.request;
 
 import geumjeongyahak.common.validation.annotation.ValidPostStatus;
-import geumjeongyahak.common.validation.annotation.ValidPostType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -41,16 +40,6 @@ public class PostSearchRequest extends BasePaginationRequest {
             example = "운영 일정"
     )
     private String content;
-
-    @Schema(
-            description = """
-                    게시글 유형 필터입니다.
-                    NOTICE만 조회하면 공지사항 탭, GENERAL만 조회하면 일반 글 탭처럼 활용할 수 있습니다.
-                    """,
-            example = "NOTICE"
-    )
-    @ValidPostType
-    private String postType;
 
     @Schema(
             description = """
