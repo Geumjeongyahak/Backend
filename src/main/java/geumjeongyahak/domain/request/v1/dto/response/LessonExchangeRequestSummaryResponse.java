@@ -11,7 +11,7 @@ public record LessonExchangeRequestSummaryResponse(
     @Schema(description = "요청 ID", example = "1")
     Long id,
 
-    @Schema(description = "반 이름", example = "개나리반")
+    @Schema(description = "반 이름", example = "벚꽃반")
     String classroomName,
 
     @Schema(description = "요청자 이름", example = "홍길동")

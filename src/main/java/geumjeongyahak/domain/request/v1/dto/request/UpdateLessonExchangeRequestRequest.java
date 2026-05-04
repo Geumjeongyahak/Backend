@@ -24,14 +24,14 @@ public record UpdateLessonExchangeRequestRequest(
     @Schema(description = "요청 내용", example = "개인 사정으로 교환 요청 내용을 수정합니다.")
     String content,
 
-    @Schema(description = "교환 시작 교시", example = "1")
+    @Schema(description = "교환 시작 교시. 전체 교환이면 입력하지 않습니다.", example = "1")
     Integer startPeriod,
 
-    @Schema(description = "교환 종료 교시", example = "2")
+    @Schema(description = "교환 종료 교시. 전체 교환이면 입력하지 않습니다.", example = "3")
     Integer endPeriod,
 
     @NotNull
     @Future
-    @Schema(description = "요청 만료 시각", example = "2026-06-01T22:00:00")
+    @Schema(description = "요청 만료 시각", example = "2026-06-07T22:00:00")
     LocalDateTime expiresAt
 ) {}

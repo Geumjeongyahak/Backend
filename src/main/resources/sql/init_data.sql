@@ -90,18 +90,21 @@ ALTER SEQUENCE channels_id_seq RESTART WITH 18;
 -- 8. Subjects
 INSERT INTO subjects (id, class_id, teacher_id, name, start_at, end_at, times, day_of_week, start_time, end_time, period, description)
 VALUES
-    (1, 1, 2, '한글 기초', '2026-02-01', '2026-06-30', 20, 'FRIDAY',  '19:20:00', '20:00:00', 1, '기초 한글 수업'),
-    (2, 2, 3, '수학 기초', '2026-02-01', '2026-06-30', 20, 'FRIDAY',  '20:10:00', '20:50:00', 2, '기초 수학 수업'),
+    (1, 1, 2, '한글 기초', '2026-02-01', '2026-06-30', 20, 'WEDNESDAY',  '19:20:00', '20:00:00', 1, '기초 한글 수업'),
+    (2, 2, 3, '수학 기초', '2026-02-01', '2026-06-30', 20, 'WEDNESDAY',  '19:20:00', '20:00:00', 1, '기초 수학 수업'),
     (3, 8, 2, '스마트폰 활용', '2026-02-01', '2026-06-30', 12, 'SATURDAY','19:20:00', '20:00:00', 1, '스마트폰 사용법');
 ALTER SEQUENCE subjects_id_seq RESTART WITH 4;
 
 -- 9. Lessons
 INSERT INTO lessons (id, subject_id, teacher_id, period, date, start_time, end_time, status, teacher_attendance)
 VALUES
-    (1, 1, 2, 1, '2026-02-13', '19:20:00', '20:00:00', 'SCHEDULED', 'ABSENT'),
-    (2, 2, 3, 2, '2026-02-13', '20:10:00', '20:50:00', 'SCHEDULED', 'ABSENT'),
-    (3, 3, 2, 1, '2026-02-14', '19:20:00', '20:00:00', 'SCHEDULED', 'ABSENT');
-ALTER SEQUENCE lessons_id_seq RESTART WITH 4;
+    (1, 1, 2, 1, '2026-06-10', '19:20:00', '20:00:00', 'SCHEDULED', 'ABSENT'),
+    (2, 1, 2, 2, '2026-06-10', '20:10:00', '20:50:00', 'SCHEDULED', 'ABSENT'),
+    (3, 1, 2, 3, '2026-06-10', '21:00:00', '21:40:00', 'SCHEDULED', 'ABSENT'),
+    (4, 2, 3, 1, '2026-06-17', '19:20:00', '20:00:00', 'SCHEDULED', 'ABSENT'),
+    (5, 2, 3, 2, '2026-06-17', '20:10:00', '20:50:00', 'SCHEDULED', 'ABSENT'),
+    (6, 2, 3, 3, '2026-06-17', '21:00:00', '21:40:00', 'SCHEDULED', 'ABSENT');
+ALTER SEQUENCE lessons_id_seq RESTART WITH 7;
 
 -- 10. Students
 INSERT INTO students (id, name, phone_number, description, status)
