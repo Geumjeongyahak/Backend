@@ -12,7 +12,7 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.channel.entity.Channel;
 import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
-import geumjeongyahak.domain.channel.enums.ChannelManagementMode;
+import geumjeongyahak.domain.channel.enums.ChannelBindingType;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.comment.v1.dto.request.CreateCommentRequest;
 import geumjeongyahak.domain.post.v1.dto.request.CreatePostRequest;
@@ -111,7 +111,7 @@ class CommentLifecycleTest extends BasePostTest {
             .name("댓글 테스트 게시판")
             .description("Comment lifecycle 테스트 채널")
             .channelType(ChannelType.CUSTOM)
-            .managementMode(ChannelManagementMode.USER_MANAGED)
+            .bindingType(ChannelBindingType.STANDALONE)
             .accessLevel(ChannelAccessLevel.READ_WRITE)
             .refId(null)
             .isDefault(false)
@@ -128,10 +128,10 @@ class CommentLifecycleTest extends BasePostTest {
             .body(new CreatePostRequest(
                 "댓글 테스트 게시글",
                 "<p>댓글 테스트 본문</p>",
-                "GENERAL",
                 "PUBLISHED",
                 false,
-                true
+                true,
+                null
             ))
         .when()
             .post("/api/v1/channels/{channelId}/posts", channelId)

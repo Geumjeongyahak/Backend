@@ -7,12 +7,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.channel.entity.Channel;
 import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
-import geumjeongyahak.domain.channel.enums.ChannelManagementMode;
+import geumjeongyahak.domain.channel.enums.ChannelBindingType;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.channel.repository.ChannelRepository;
 import geumjeongyahak.e2e.BaseE2ETest;
 import geumjeongyahak.e2e.util.TestChannelHelper;
 import geumjeongyahak.e2e.util.TestCommentHelper;
+import geumjeongyahak.e2e.util.TestFileHelper;
 import geumjeongyahak.e2e.util.TestPostHelper;
 
 @Tag("post")
@@ -26,6 +27,9 @@ public abstract class BasePostTest extends BaseE2ETest {
 
     @Autowired
     protected TestPostHelper testPostHelper;
+
+    @Autowired
+    protected TestFileHelper testFileHelper;
 
     @Autowired
     protected TestChannelHelper testChannelHelper;
@@ -51,7 +55,7 @@ public abstract class BasePostTest extends BaseE2ETest {
                 .name("테스트 공지 채널")
                 .description("Post E2E 테스트용 공지 채널")
                 .channelType(ChannelType.NOTICE)
-                .managementMode(ChannelManagementMode.SYSTEM_MANAGED)
+                .bindingType(ChannelBindingType.STANDALONE)
                 .accessLevel(ChannelAccessLevel.READ_ONLY)
                 .refId(null)
                 .isDefault(false)
@@ -66,6 +70,7 @@ public abstract class BasePostTest extends BaseE2ETest {
     protected void tearDown() {
         testCommentHelper.clearAll();
         testPostHelper.clearAll();
+        testFileHelper.clearAll();
         testChannelHelper.clearAll();
         super.tearDown();
     }
