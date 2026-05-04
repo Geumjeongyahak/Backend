@@ -57,7 +57,7 @@ class ChannelLifecycleTest extends BaseChannelTest {
             .body("name", equalTo("수정 후 채널"))
             .body("description", equalTo("설명이 수정되었습니다."))
             .body("channelType", equalTo("CUSTOM"))
-            .body("managementMode", equalTo("USER_MANAGED"))
+            .body("bindingType", equalTo("STANDALONE"))
             .body("accessLevel", equalTo("READ_WRITE"))
             .body("isDefault", equalTo(true))
             .body("isActive", equalTo(true));

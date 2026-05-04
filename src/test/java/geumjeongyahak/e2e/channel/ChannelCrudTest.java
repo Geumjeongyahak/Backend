@@ -36,7 +36,7 @@ public class ChannelCrudTest extends BaseChannelTest {
                 .body("name", equalTo("테스트 공지 채널"))
                 .body("description", equalTo("공지 테스트용 채널"))
                 .body("channelType", equalTo("CUSTOM"))
-                .body("managementMode", equalTo("USER_MANAGED"))
+                .body("bindingType", equalTo("STANDALONE"))
                 .body("accessLevel", equalTo("READ_ONLY"))
                 .extract()
                 .jsonPath()
@@ -53,7 +53,7 @@ public class ChannelCrudTest extends BaseChannelTest {
                 .body("id", equalTo(channelId.intValue()))
                 .body("description", equalTo("공지 테스트용 채널"))
                 .body("channelType", equalTo("CUSTOM"))
-                .body("managementMode", equalTo("USER_MANAGED"))
+                .body("bindingType", equalTo("STANDALONE"))
                 .body("accessLevel", equalTo("READ_ONLY"));
     }
 
