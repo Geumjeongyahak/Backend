@@ -2,15 +2,12 @@ package geumjeongyahak.e2e.post;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.notNullValue;
 
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
-import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.domain.post.v1.dto.request.PublishPostRequest;
-import geumjeongyahak.e2e.util.TestFileHelper;
 
 @DisplayName("E2E: Post 파일 및 썸네일 테스트")
 @ResourceLock("post-e2e-shared-state")

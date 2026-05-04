@@ -11,7 +11,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import geumjeongyahak.common.security.service.CustomUserDetails;
-import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
 import geumjeongyahak.domain.channel.service.ChannelCrudService;
 import geumjeongyahak.domain.channel.v1.dto.request.ChannelListRequest;
 import geumjeongyahak.domain.channel.v1.dto.response.ChannelResponse;

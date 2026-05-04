@@ -8,10 +8,8 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
-import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.domain.post.v1.dto.request.SaveDraftRequest;
 import geumjeongyahak.domain.post.v1.dto.request.PublishPostRequest;
-import geumjeongyahak.e2e.util.TestFileHelper;
 
 @DisplayName("E2E: Post 초안 라이프사이클 테스트")
 @ResourceLock("post-e2e-shared-state")
