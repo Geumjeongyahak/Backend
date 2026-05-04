@@ -66,26 +66,28 @@ VALUES
 ALTER SEQUENCE classrooms_id_seq RESTART WITH 10;
 
 -- 7. Channels
-INSERT INTO channels (id, name, slug, description, channel_type, ref_id, writer_policy, is_default, is_active, sort_order)
+INSERT INTO channels (id, name, description, channel_type, binding_type, ref_id, access_level, is_default, is_active)
 VALUES
-    (1, '전체보기', 'all', '전체 게시글을 조회하는 기본 채널', 'ALL', NULL, 'ALL_AUTHENTICATED', TRUE, TRUE, 0),
-    (2, '공지사항', 'notice', '기관 전체 공지사항 채널', 'ALL', NULL, 'ADMIN_MANAGER_ONLY', TRUE, TRUE, 1),
-    (3, '벚꽃반', 'classroom-1', '벚꽃반 게시판', 'CLASSROOM', 1, 'CLASSROOM_MANAGER_TEACHER_ONLY', TRUE, TRUE, 10),
-    (4, '개나리반', 'classroom-2', '개나리반 게시판', 'CLASSROOM', 2, 'CLASSROOM_MANAGER_TEACHER_ONLY', TRUE, TRUE, 11),
-    (5, '민들레반', 'classroom-3', '민들레반 게시판', 'CLASSROOM', 3, 'CLASSROOM_MANAGER_TEACHER_ONLY', TRUE, TRUE, 12),
-    (6, '동백반', 'classroom-4', '동백반 게시판', 'CLASSROOM', 4, 'CLASSROOM_MANAGER_TEACHER_ONLY', TRUE, TRUE, 13),
-    (7, '해바라기반', 'classroom-5', '해바라기반 게시판', 'CLASSROOM', 5, 'CLASSROOM_MANAGER_TEACHER_ONLY', TRUE, TRUE, 14),
-    (8, '국화반', 'classroom-6', '국화반 게시판', 'CLASSROOM', 6, 'CLASSROOM_MANAGER_TEACHER_ONLY', TRUE, TRUE, 15),
-    (9, '주말 영어반', 'classroom-7', '주말 영어반 게시판', 'CLASSROOM', 7, 'CLASSROOM_MANAGER_TEACHER_ONLY', TRUE, TRUE, 16),
-    (10, '주말 스마트폰반', 'classroom-8', '주말 스마트폰반 게시판', 'CLASSROOM', 8, 'CLASSROOM_MANAGER_TEACHER_ONLY', TRUE, TRUE, 17),
-    (11, '겨울반', 'classroom-9', '겨울반 게시판', 'CLASSROOM', 9, 'CLASSROOM_MANAGER_TEACHER_ONLY', TRUE, TRUE, 18),
-    (12, '교무기획부', 'department-1', '교무기획부 게시판', 'DEPARTMENT', 1, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 30),
-    (13, '교육연구부', 'department-2', '교육연구부 게시판', 'DEPARTMENT', 2, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 31),
-    (14, '생활안전부', 'department-3', '생활안전부 게시판', 'DEPARTMENT', 3, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 32),
-    (15, '총무부', 'department-4', '총무부 게시판', 'DEPARTMENT', 4, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 33),
-    (16, '홍보부', 'department-5', '홍보부 게시판', 'DEPARTMENT', 5, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 34),
-    (17, '편집부', 'department-6', '편집부 게시판', 'DEPARTMENT', 6, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 35);
-ALTER SEQUENCE channels_id_seq RESTART WITH 18;
+    (1, '전체보기', '전체 게시글을 조회하는 기본 채널', 'ALL', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE),
+    (2, '공지사항', '기관 전체 공지사항 채널', 'NOTICE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE),
+    (3, '자료실', '교육 자료 및 양식 자료실', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE),
+    (4, '행사안내', '주요 행사 및 일정 안내', 'EVENT', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE),
+    (5, '벚꽃반', '벚꽃반 전용 채널', 'CLASSROOM', 'DOMAIN_LINKED', 1, 'READ_WRITE', FALSE, TRUE),
+    (6, '개나리반', '개나리반 전용 채널', 'CLASSROOM', 'DOMAIN_LINKED', 2, 'READ_WRITE', FALSE, TRUE),
+    (7, '민들레반', '민들레반 전용 채널', 'CLASSROOM', 'DOMAIN_LINKED', 3, 'READ_WRITE', FALSE, TRUE),
+    (8, '동백반', '동백반 전용 채널', 'CLASSROOM', 'DOMAIN_LINKED', 4, 'READ_WRITE', FALSE, TRUE),
+    (9, '해바라기반', '해바라기반 전용 채널', 'CLASSROOM', 'DOMAIN_LINKED', 5, 'READ_WRITE', FALSE, TRUE),
+    (10, '국화반', '국화반 전용 채널', 'CLASSROOM', 'DOMAIN_LINKED', 6, 'READ_WRITE', FALSE, TRUE),
+    (11, '주말 영어반', '주말 영어반 전용 채널', 'CLASSROOM', 'DOMAIN_LINKED', 7, 'READ_WRITE', FALSE, TRUE),
+    (12, '주말 스마트폰반', '주말 스마트폰반 전용 채널', 'CLASSROOM', 'DOMAIN_LINKED', 8, 'READ_WRITE', FALSE, TRUE),
+    (13, '겨울반', '겨울반 전용 채널', 'CLASSROOM', 'DOMAIN_LINKED', 9, 'READ_WRITE', FALSE, TRUE),
+    (14, '교무기획부', '교무기획부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 1, 'READ_WRITE', FALSE, TRUE),
+    (15, '교육연구부', '교육연구부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 2, 'READ_WRITE', FALSE, TRUE),
+    (16, '생활안전부', '생활안전부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 3, 'READ_WRITE', FALSE, TRUE),
+    (17, '총무부', '총무부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 4, 'READ_WRITE', FALSE, TRUE),
+    (18, '홍보부', '홍보부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 5, 'READ_WRITE', FALSE, TRUE),
+    (19, '편집부', '편집부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 6, 'READ_WRITE', FALSE, TRUE);
+ALTER SEQUENCE channels_id_seq RESTART WITH 20;
 
 -- 8. Subjects
 INSERT INTO subjects (id, class_id, teacher_id, name, start_at, end_at, times, day_of_week, start_time, end_time, period, description)
