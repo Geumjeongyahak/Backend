@@ -63,12 +63,12 @@ public class ClassroomController {
 
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(summary = "교실 수정", description = "기존 교실 정보를 수정합니다.")
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<ClassroomDetailResponse> updateClassroom(
         @PathVariable Long id,
         @Valid @RequestBody UpdateClassroomRequest request
     ) {
-        log.debug("PUT /api/v1/classrooms/{} - 교실 수정 요청: {}", id, request.name());
+        log.debug("PATCH /api/v1/classrooms/{} - 교실 수정 요청: {}", id, request.name());
         return ResponseEntity.ok(
             classroomCrudService.updateClassroom(id, request)
         );

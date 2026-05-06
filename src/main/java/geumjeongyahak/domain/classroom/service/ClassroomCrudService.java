@@ -1,11 +1,10 @@
 package geumjeongyahak.domain.classroom.service;
 
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import geumjeongyahak.common.exception.BusinessException;
-import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.DuplicateResourceException;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
@@ -80,29 +79,35 @@ public class ClassroomCrudService {
     public ClassroomDetailResponse updateClassroom(Long id, UpdateClassroomRequest request) {
         log.debug("분반 수정 시도: {}, {}, {}", request.name(), request.type(), request.description());
 
-        boolean isUpdated = false;
         Classroom classroom = getClassroomWithoutDeleted(id);
+        String newName = request.name();
+        ClassroomType newType = request.type() != null ? ClassroomType.valueOf(request.type()) : null;
+        String newDescription = request.description();
 
-        if (request.name() != null) {
-            if (classroomRepository.existsByNameAndIdNot(request.name(), id)) {
-                log.info("분반 수정 실패 - 중복된 이름: {}", request.name());
+        boolean nameChanged = newName != null && !newName.equals(classroom.getName());
+        boolean typeChanged = newType != null && newType != classroom.getType();
+        boolean descriptionChanged = newDescription != null
+            && !Objects.equals(newDescription, classroom.getDescription());
+
+        if (!nameChanged && !typeChanged && !descriptionChanged) {
+            log.debug("분반 수정 요청에 변경된 값이 없어 기존 리소스를 반환합니다: {}", classroom.getName());
+            return ClassroomDetailResponse.from(classroom);
+        }
+
+        if (nameChanged) {
+            if (classroomRepository.existsByNameAndIdNot(newName, id)) {
+                log.info("분반 수정 실패 - 중복된 이름: {}", newName);
                 throw new DuplicateResourceException(ClassroomErrorCode.DUPLICATE_CLASSROOM);
             }
-            classroom.setName(request.name());
-            isUpdated = true;
+            classroom.setName(newName);
         }
-        if (request.type() != null) {
-            classroom.setType(ClassroomType.valueOf(request.type()));
-            isUpdated = true;
+        if (typeChanged) {
+            classroom.setType(newType);
         }
-        if (request.description() != null) {
-            classroom.setDescription(request.description());
-            isUpdated = true;
+        if (descriptionChanged) {
+            classroom.setDescription(newDescription);
         }
-        if (!isUpdated) {
-            log.info("분반 수정 실패 - 변경된 값이 없음: {}", classroom.getName());
-            throw new BusinessException(CommonErrorCode.NO_CHANGES_DETECTED);
-        }
+
         classroomRepository.save(classroom);
         log.info("분반 수정 성공: {}", classroom.getName());
         return ClassroomDetailResponse.from(classroom);

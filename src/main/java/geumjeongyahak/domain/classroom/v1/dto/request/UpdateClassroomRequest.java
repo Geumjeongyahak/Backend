@@ -15,7 +15,7 @@ public record UpdateClassroomRequest(
         @ValidClassroomType
         String type,
 
-        @Schema(description = "반 설명", example = "초등 수준의 기초 교육을 제공하는 반")
+        @Schema(description = "반 설명. 값을 생략하면 기존 설명을 유지하고, 빈 문자열을 전달하면 설명을 비웁니다.", example = "초등 수준의 기초 교육을 제공하는 반")
         String description
 ) {
 
