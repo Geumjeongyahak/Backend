@@ -26,9 +26,13 @@ public class StudentAttendanceService {
     private final LessonRepository lessonRepository;
     private final StudentAttendanceRepository studentAttendanceRepository;
 
-    public List<StudentAttendanceResponse> getStudentAttendances(Long teacherId, Long lessonId, boolean isAdmin) {
+    public List<StudentAttendanceResponse> getStudentAttendances(
+        Long teacherId,
+        Long lessonId,
+        boolean canAccessAnyLesson
+    ) {
         log.debug("학생 출석부 조회 요청 (lessonId={})", lessonId);
-        Lesson lesson = (isAdmin
+        Lesson lesson = (canAccessAnyLesson
             ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
             : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> {
@@ -47,10 +51,10 @@ public class StudentAttendanceService {
         Long teacherId,
         Long lessonId,
         UpdateStudentAttendancesRequest request,
-        boolean isAdmin
+        boolean canAccessAnyLesson
     ) {
         log.debug("학생 출석 처리 요청 (lessonId={})", lessonId);
-        Lesson lesson = (isAdmin
+        Lesson lesson = (canAccessAnyLesson
             ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
             : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> {

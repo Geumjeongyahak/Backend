@@ -114,9 +114,9 @@ public class LessonService {
             .toList();
     }
 
-    public LessonDetailResponse getLessonDetail(Long teacherId, Long lessonId, boolean isAdmin) {
+    public LessonDetailResponse getLessonDetail(Long teacherId, Long lessonId, boolean canAccessAnyLesson) {
         log.debug("수업 상세 조회 요청");
-        Optional<Lesson> lessonOpt = isAdmin
+        Optional<Lesson> lessonOpt = canAccessAnyLesson
             ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
             : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId);
 
@@ -129,9 +129,9 @@ public class LessonService {
     }
 
     @Transactional(readOnly = true)
-    public LessonNoteResponse getNote(Long teacherId, Long lessonId, boolean isAdmin) {
+    public LessonNoteResponse getNote(Long teacherId, Long lessonId, boolean canAccessAnyLesson) {
         log.debug("수업 노트 조회 요청 (lessonId={})", lessonId);
-        Lesson lesson = (isAdmin
+        Lesson lesson = (canAccessAnyLesson
             ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
             : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> new LessonNotFoundException(lessonId));
@@ -209,10 +209,10 @@ public class LessonService {
         Long teacherId,
         Long lessonId,
         TeacherAttendanceStatus status,
-        boolean isAdmin
+        boolean canAccessAnyLesson
     ) {
         log.debug("교사 출석 처리 요청 (status={})", status);
-        Lesson lesson = (isAdmin
+        Lesson lesson = (canAccessAnyLesson
             ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
             : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> {
@@ -229,10 +229,10 @@ public class LessonService {
         Long teacherId,
         Long lessonId,
         LessonStatus status,
-        boolean isAdmin
+        boolean canAccessAnyLesson
     ) {
         log.debug("수업 상태 변경 요청 (lessonId={})", lessonId);
-        Lesson lesson = (isAdmin
+        Lesson lesson = (canAccessAnyLesson
             ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
             : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> {
@@ -249,10 +249,10 @@ public class LessonService {
         Long teacherId,
         Long lessonId,
         String note,
-        boolean isAdmin
+        boolean canAccessAnyLesson
     ) {
         log.debug("수업 노트 업데이트 요청 (lessonId={})", lessonId);
-        Lesson lesson = (isAdmin
+        Lesson lesson = (canAccessAnyLesson
             ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
             : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
         ).orElseThrow(() -> {
@@ -314,24 +314,6 @@ public class LessonService {
     }
 
     /**
-     * 과목 교환 승인 이벤트 처리용 - 과목의 승인일 이후 모든 수업의 담당 교사를 변경한다.
-     */
-    @Transactional
-    public void applyTeacherChangeFromSubjectApproval(Long subjectId, Long newTeacherId, LocalDate from) {
-        log.debug("과목 수업 교사 일괄 변경 (subjectId={}, newTeacherId={}, from={})", subjectId, newTeacherId, from);
-        Subject subject = subjectRepository.findById(subjectId)
-            .orElseThrow(() -> new SubjectNotFoundException(subjectId));
-        User newTeacher = userRepository.findById(newTeacherId)
-            .orElseThrow(() -> new UserNotFoundException(newTeacherId));
-        subject.changeTeacher(newTeacher);
-        List<Lesson> lessons = lessonRepository.findAllBySubjectIdAndDateGreaterThanEqualAndIsDeletedFalse(subjectId, from);
-        lessons.forEach(lesson -> lesson.changeTeacher(newTeacher));
-        subjectRepository.save(subject);
-        lessonRepository.saveAll(lessons);
-        log.debug("과목 수업 교사 일괄 변경 완료 (변경된 수업={}건)", lessons.size());
-    }
-
-    /**
      * 결석 승인 이벤트 처리용 - 수업 교사 출석 상태를 공결(EXCUSED)로 변경한다.
      */
     @Transactional
@@ -349,23 +331,15 @@ public class LessonService {
     }
 
     /**
-     * 수업 교환 승인 이벤트 처리용 - 수업 담당 교사를 변경한다.
+     * 수업 교환 제안 수락 이벤트 처리용 - 대상 수업의 담당 교사를 변경한다.
      */
     @Transactional
-    public void applyTeacherExchange(Long lessonId, Long requesterId, Long newTeacherId) {
-        log.debug("담당 교사 교환 처리 (lessonId={}, requesterId={}, newTeacherId={})",
-            lessonId, requesterId, newTeacherId);
+    public void applyTeacherExchange(Long lessonId, Long newTeacherId) {
+        log.debug("담당 교사 교환 처리 (lessonId={}, newTeacherId={})", lessonId, newTeacherId);
         Lesson lesson = lessonRepository.findById(lessonId)
             .orElseThrow(() -> new LessonNotFoundException(lessonId));
-        User requester = userRepository.findById(requesterId)
-            .orElseThrow(() -> new UserNotFoundException(requesterId));
         User newTeacher = userRepository.findById(newTeacherId)
             .orElseThrow(() -> new UserNotFoundException(newTeacherId));
-
-        lessonRepository.findByTeacherIdAndDateAndStartTimeAndEndTimeAndIsDeletedFalse(
-            newTeacherId, lesson.getDate(), lesson.getStartTime(), lesson.getEndTime()
-        ).filter(counterpartLesson -> !counterpartLesson.getId().equals(lessonId))
-            .ifPresent(counterpartLesson -> counterpartLesson.changeTeacher(requester));
 
         lesson.changeTeacher(newTeacher);
     }

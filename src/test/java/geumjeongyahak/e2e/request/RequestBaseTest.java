@@ -1,7 +1,6 @@
 package geumjeongyahak.e2e.request;
 
 import geumjeongyahak.domain.auth.enums.RoleType;
-import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import geumjeongyahak.e2e.BaseE2ETest;
 import geumjeongyahak.e2e.util.TestLessonHelper;
 import io.restassured.http.ContentType;
@@ -26,7 +25,7 @@ import static java.util.Map.entry;
  *   <li>TEACHER_ID  = 2 (teacher01 / ROLE_VOLUNTEER)</li>
  *   <li>TEACHER2_ID = 3 (teacher02 / ROLE_VOLUNTEER)</li>
  *   <li>CLASSROOM_ID = 1 (벚꽃반)</li>
- *   <li>SUBJECT_ID = 1  (teacher01 담당 – 과목 기반 요청 재사용)</li>
+ *   <li>SUBJECT_ID = 1  (teacher01 담당 - 구입 요청 재사용)</li>
  * </ul>
  *
  * <h3>레슨 기반 요청 주의사항</h3>
@@ -36,6 +35,7 @@ import static java.util.Map.entry;
 @Tag("request")
 public abstract class RequestBaseTest extends BaseE2ETest {
 
+    protected static final String GUEST_USERNAME = "guest01";
     protected static final String VOLUNTEER_USERNAME = "teacher01";   // id=2
     protected static final String VOLUNTEER2_USERNAME = "teacher02";  // id=3
     protected static final long CLASSROOM_ID = 1L;
@@ -48,6 +48,7 @@ public abstract class RequestBaseTest extends BaseE2ETest {
 
     protected String adminToken;
     protected String managerToken;
+    protected String guestToken;
     protected String volunteerToken;   // teacher01
     protected String volunteer2Token;  // teacher02
 
@@ -58,6 +59,7 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         adminToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
         userTestHelper.createTestUser("manager01", RoleType.MANAGER);
         managerToken = userTestHelper.generateAccessTokenByNickname("manager01");
+        guestToken = userTestHelper.generateAccessTokenByNickname(GUEST_USERNAME);
         volunteerToken = userTestHelper.generateAccessTokenByNickname(VOLUNTEER_USERNAME);
         volunteer2Token = userTestHelper.generateAccessTokenByNickname(VOLUNTEER2_USERNAME);
     }
@@ -85,7 +87,34 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         LocalDate lessonDate,
         String title,
         String content,
-        LessonExchangeScope scope,
+        Integer startPeriod,
+        Integer endPeriod,
+        LocalDateTime expiresAt
+    ) {
+        return given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, authHeader)
+            .contentType(ContentType.JSON)
+            .body(buildLessonExchangeRequestBody(
+                lessonDate,
+                title,
+                content,
+                startPeriod,
+                endPeriod,
+                expiresAt
+            ))
+            .post()
+            .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
+    }
+
+    protected Map<String, Object> buildLessonExchangeRequestBody(
+        LocalDate lessonDate,
+        String title,
+        String content,
         Integer startPeriod,
         Integer endPeriod,
         LocalDateTime expiresAt
@@ -94,7 +123,6 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         body.put("lessonDate", lessonDate.toString());
         body.put("title", title);
         body.put("content", content);
-        body.put("scope", scope.name());
         body.put("expiresAt", expiresAt.toString());
         if (startPeriod != null) {
             body.put("startPeriod", startPeriod);
@@ -102,18 +130,7 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         if (endPeriod != null) {
             body.put("endPeriod", endPeriod);
         }
-
-        return given()
-            .basePath("/api/v1/lesson-exchange-requests")
-            .header(AUTH_HEADER, authHeader)
-            .contentType(ContentType.JSON)
-            .body(body)
-            .post()
-            .then()
-            .statusCode(201)
-            .extract()
-            .jsonPath()
-            .getLong("id");
+        return body;
     }
 
     protected Long createPurchaseRequest(String authHeader, Long subjectId,
@@ -136,22 +153,4 @@ public abstract class RequestBaseTest extends BaseE2ETest {
             .getLong("id");
     }
 
-    protected Long createSubjectExchangeRequest(String authHeader, Long subjectId,
-        String title, String content) {
-        return given()
-            .basePath("/api/v1/subject-exchange-requests")
-            .header(AUTH_HEADER, authHeader)
-            .contentType(ContentType.JSON)
-            .body(Map.ofEntries(
-                entry("subjectId", subjectId),
-                entry("title", title),
-                entry("content", content)
-            ))
-            .post()
-            .then()
-            .statusCode(201)
-            .extract()
-            .jsonPath()
-            .getLong("id");
-    }
 }

@@ -22,10 +22,44 @@ import geumjeongyahak.domain.lesson.v1.dto.response.LessonSummaryResponse;
 @RequiredArgsConstructor
 @Tag(name = "Lesson", description = "수업 관리 API")
 public class LessonController {
+
+    private static final String TEACHER_OR_HIGHER_ACCESS =
+        "hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN')";
+    private static final String MANAGER_OR_HIGHER_ACCESS =
+        "hasRole('MANAGER') or hasRole('ADMIN')";
+
     private final LessonService lessonService;
+    private final StudentAttendanceService studentAttendanceService;
+
+    @PreAuthorize(MANAGER_OR_HIGHER_ACCESS)
+    @Operation(
+        summary = "수업 생성",
+        description = "ADMIN 또는 MANAGER 가 수업을 생성합니다. "
+            + "담당 교사는 VOLUNTEER 역할 사용자만 지정할 수 있습니다. "
+            + "같은 교사의 같은 날짜 수업 시간이 기존 수업과 겹치면 생성할 수 없습니다. "
+            + "생성된 수업은 SCHEDULED 상태와 기본 교사 출석 상태로 저장됩니다."
+    )
+    @PostMapping
+    public ResponseEntity<LessonDetailResponse> createLesson(
+        @Valid @RequestBody CreateLessonRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("POST /api/v1/lessons - 수업 생성 요청 (subjectId={}, teacherId={}, date={}, period={})",
+            request.subjectId(), request.teacherId(), request.date(), request.period());
+        LessonDetailResponse response = lessonService.createLesson(
+            userDetails.getUserId(),
+            request
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
 
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "전체 수업 조회", description = "전체 수업을 조회합니다.")
+    @Operation(
+        summary = "전체 수업 조회",
+        description = "인증된 사용자가 기간 조건에 해당하는 전체 수업 목록을 조회합니다. "
+            + "수업 목록은 날짜와 교시 기준으로 정렬되어 반환됩니다. "
+            + "조회 API는 side effect 를 발생시키지 않습니다."
+    )
     @GetMapping
     public ResponseEntity<List<LessonSummaryResponse>> getAllLessons(
         @ModelAttribute @Valid LessonRangeRequest request

@@ -43,8 +43,6 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
         LocalTime endTime
     );
 
-    List<Lesson> findAllBySubjectIdAndDateGreaterThanEqualAndIsDeletedFalse(Long subjectId, LocalDate from);
-
     boolean existsByTeacherIdAndDateAndIsDeletedFalseAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
         Long teacherId, LocalDate date, LocalTime endTime, LocalTime startTime);
 

@@ -5,14 +5,20 @@ import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
 public interface LessonExchangeRequestRepository extends JpaRepository<LessonExchangeRequest, Long> {
 
-    List<LessonExchangeRequest> findAllByOrderByCreatedAtDesc();
+    List<LessonExchangeRequest> findAllByStatusNotOrderByCreatedAtDesc(
+        LessonExchangeRequestStatus status
+    );
 
-    List<LessonExchangeRequest> findAllByRequestedBy_IdOrderByCreatedAtDesc(Long requestedById);
+    List<LessonExchangeRequest> findAllByRequestedBy_IdAndStatusNotOrderByCreatedAtDesc(
+        Long requestedById,
+        LessonExchangeRequestStatus status
+    );
 
     List<LessonExchangeRequest> findAllByStatusOrderByCreatedAtDesc(
         LessonExchangeRequestStatus status
@@ -27,5 +33,10 @@ public interface LessonExchangeRequestRepository extends JpaRepository<LessonExc
         Long requesterId,
         LocalDate lessonDate,
         Collection<LessonExchangeRequestStatus> activeStatuses
+    );
+
+    List<LessonExchangeRequest> findAllByStatusInAndExpiresAtBefore(
+        Collection<LessonExchangeRequestStatus> statuses,
+        LocalDateTime expiresAt
     );
 }

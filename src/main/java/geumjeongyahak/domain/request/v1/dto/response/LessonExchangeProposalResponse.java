@@ -17,13 +17,13 @@ public record LessonExchangeProposalResponse(
     @Schema(description = "요청 ID", example = "3")
     Long requestId,
 
-    @Schema(description = "반 이름", example = "개나리반")
+    @Schema(description = "반 이름", example = "장미반")
     String classroomName,
 
-    @Schema(description = "제안자 ID", example = "2")
+    @Schema(description = "제안자 ID", example = "3")
     Long proposedById,
 
-    @Schema(description = "제안자 이름", example = "홍길동")
+    @Schema(description = "제안자 이름", example = "김철수")
     String proposedByName,
 
     @Schema(description = "제안 유형", example = "EXCHANGE")
@@ -32,13 +32,13 @@ public record LessonExchangeProposalResponse(
     @Schema(description = "제안 범위", example = "FULL")
     LessonExchangeScope proposalScope,
 
-    @Schema(description = "제안 수업 날짜")
+    @Schema(description = "제안 수업 날짜", example = "2026-06-17")
     LocalDate lessonDate,
 
-    @Schema(description = "제안 시작 교시")
+    @Schema(description = "제안 시작 교시", example = "1")
     Integer startPeriod,
 
-    @Schema(description = "제안 종료 교시")
+    @Schema(description = "제안 종료 교시", example = "3")
     Integer endPeriod,
 
     @Schema(description = "제안 내용")
@@ -59,14 +59,11 @@ public record LessonExchangeProposalResponse(
     @Schema(description = "생성 시각")
     LocalDateTime createdAt
 ) {
-    public static LessonExchangeProposalResponse from(
-        LessonExchangeProposal proposal,
-        String classroomName
-    ) {
+    public static LessonExchangeProposalResponse from(LessonExchangeProposal proposal) {
         return new LessonExchangeProposalResponse(
             proposal.getId(),
             proposal.getRequest().getId(),
-            classroomName,
+            proposal.getClassroomNameSnapshot(),
             proposal.getProposedBy().getId(),
             proposal.getProposedBy().getName(),
             proposal.getProposalType(),

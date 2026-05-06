@@ -19,10 +19,19 @@ public class LessonDeleteTest extends LessonBaseTest {
     }
 
     @Test
+    @DisplayName("매니저 권한으로 수업 삭제 성공(204)")
+    void deleteLesson_success_manager() {
+        Long subjectId = createTrackedSubjectAndGetId("매니저 삭제");
+        Long lessonId = createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-26", "19:20:00", "20:00:00", 1);
+
+        deleteLesson(lessonId, managerAccessToken);
+    }
+
+    @Test
     @DisplayName("일반 봉사자 권한으로 수업 삭제 실패(403)")
     void deleteLesson_forbidden_volunteer() {
         Long subjectId = createTrackedSubjectAndGetId("체육");
-        Long lessonId = createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-26", "19:20:00", "20:00:00", 1);
+        Long lessonId = createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-27", "19:20:00", "20:00:00", 1);
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
@@ -36,7 +45,7 @@ public class LessonDeleteTest extends LessonBaseTest {
     @DisplayName("인증 없이 수업 삭제 실패(401)")
     void deleteLesson_unauthorized() {
         Long subjectId = createTrackedSubjectAndGetId("음악");
-        Long lessonId = createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-27", "19:20:00", "20:00:00", 1);
+        Long lessonId = createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-28", "19:20:00", "20:00:00", 1);
 
         given()
             .when()

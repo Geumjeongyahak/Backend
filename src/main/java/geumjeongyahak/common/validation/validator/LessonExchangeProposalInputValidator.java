@@ -2,20 +2,21 @@ package geumjeongyahak.common.validation.validator;
 
 import geumjeongyahak.common.validation.annotation.ValidLessonExchangeProposalInput;
 import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeProposalRequest;
+import geumjeongyahak.domain.request.v1.dto.request.UpdateLessonExchangeProposalRequest;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
 import java.time.LocalDate;
 
 public class LessonExchangeProposalInputValidator
-    implements ConstraintValidator<ValidLessonExchangeProposalInput, CreateLessonExchangeProposalRequest> {
+    implements ConstraintValidator<ValidLessonExchangeProposalInput, Object> {
 
     private static final int MIN_PERIOD = 1;
     private static final int MAX_PERIOD = 3;
 
     @Override
     public boolean isValid(
-        CreateLessonExchangeProposalRequest value,
+        Object value,
         ConstraintValidatorContext context
     ) {
         if (value == null) {
@@ -24,9 +25,21 @@ public class LessonExchangeProposalInputValidator
 
         context.disableDefaultConstraintViolation();
 
-        LocalDate lessonDate = value.lessonDate();
-        Integer startPeriod = value.startPeriod();
-        Integer endPeriod = value.endPeriod();
+        LocalDate lessonDate;
+        Integer startPeriod;
+        Integer endPeriod;
+
+        if (value instanceof CreateLessonExchangeProposalRequest request) {
+            lessonDate = request.lessonDate();
+            startPeriod = request.startPeriod();
+            endPeriod = request.endPeriod();
+        } else if (value instanceof UpdateLessonExchangeProposalRequest request) {
+            lessonDate = request.lessonDate();
+            startPeriod = request.startPeriod();
+            endPeriod = request.endPeriod();
+        } else {
+            return true;
+        }
 
         // lessonDate가 없으면 대체형 제안
         if (lessonDate == null) {

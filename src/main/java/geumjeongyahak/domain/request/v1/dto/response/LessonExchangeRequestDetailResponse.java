@@ -13,13 +13,13 @@ public record LessonExchangeRequestDetailResponse(
     @Schema(description = "요청 ID", example = "1")
     Long id,
 
-    @Schema(description = "반 이름", example = "개나리반")
+    @Schema(description = "반 이름", example = "벚꽃반")
     String classroomName,
 
-    @Schema(description = "수업 날짜", example = "2026-03-28")
+    @Schema(description = "수업 날짜", example = "2026-06-10")
     LocalDate lessonDate,
 
-    @Schema(description = "요청자 ID", example = "3")
+    @Schema(description = "요청자 ID", example = "2")
     Long requestedById,
 
     @Schema(description = "요청자 이름", example = "홍길동")
@@ -40,10 +40,10 @@ public record LessonExchangeRequestDetailResponse(
     @Schema(description = "교환 시작 교시", example = "1")
     Integer startPeriod,
 
-    @Schema(description = "교환 종료 교시", example = "2")
+    @Schema(description = "교환 종료 교시", example = "3")
     Integer endPeriod,
 
-    @Schema(description = "요청 만료 시각")
+    @Schema(description = "요청 만료 시각", example = "2026-06-07T22:00:00")
     LocalDateTime expiresAt,
 
     @Schema(description = "처리(승인/반려) 시각")
@@ -58,16 +58,16 @@ public record LessonExchangeRequestDetailResponse(
     @Schema(description = "교환 완료 시각")
     LocalDateTime completedAt,
 
+    @Schema(description = "요청 취소 시각")
+    LocalDateTime cancelledAt,
+
     @Schema(description = "생성 시각")
     LocalDateTime createdAt
 ) {
-    public static LessonExchangeRequestDetailResponse from(
-        LessonExchangeRequest r,
-        String classroomName
-    ) {
+    public static LessonExchangeRequestDetailResponse from(LessonExchangeRequest r) {
         return new LessonExchangeRequestDetailResponse(
             r.getId(),
-            classroomName,
+            r.getClassroomNameSnapshot(),
             r.getLessonDate(),
             r.getRequestedBy().getId(),
             r.getRequestedBy().getName(),
@@ -82,6 +82,7 @@ public record LessonExchangeRequestDetailResponse(
             r.getProcessedBy() != null ? r.getProcessedBy().getName() : null,
             r.getRejectionNote(),
             r.getCompletedAt(),
+            r.getCancelledAt(),
             r.getCreatedAt()
         );
     }

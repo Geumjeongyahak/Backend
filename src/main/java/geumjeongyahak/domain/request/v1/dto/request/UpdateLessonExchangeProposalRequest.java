@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDate;
 
 @ValidLessonExchangeProposalInput
-public record CreateLessonExchangeProposalRequest(
+public record UpdateLessonExchangeProposalRequest(
 
     @Schema(description = "제안 수업 날짜", example = "2026-06-17")
     LocalDate lessonDate,

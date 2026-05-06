@@ -10,18 +10,18 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @ValidLessonExchangeScope
-public record CreateLessonExchangeRequestRequest(
+public record UpdateLessonExchangeRequestRequest(
 
     @NotNull
     @Schema(description = "교환 대상 수업 날짜", example = "2026-06-10")
     LocalDate lessonDate,
 
     @NotBlank
-    @Schema(description = "요청 제목", example = "수업 교환 요청")
+    @Schema(description = "요청 제목", example = "수업 교환 요청 수정")
     String title,
 
     @NotBlank
-    @Schema(description = "요청 내용", example = "사정으로 인해 교환을 요청합니다.")
+    @Schema(description = "요청 내용", example = "개인 사정으로 교환 요청 내용을 수정합니다.")
     String content,
 
     @Schema(description = "교환 시작 교시. 전체 교환이면 입력하지 않습니다.", example = "1")

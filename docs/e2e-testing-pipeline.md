@@ -14,7 +14,6 @@
 ./gradlew test -Dgroups="absence-request"
 ./gradlew test -Dgroups="lesson-exchange-request"
 ./gradlew test -Dgroups="purchase-request"
-./gradlew test -Dgroups="subject-exchange-request"
 ./gradlew test -Dgroups="lesson"
 ./gradlew test -Dgroups="request"        # 요청 도메인 전체
 
@@ -44,8 +43,7 @@ src/test/java/geumjeongyahak/
 │       ├── RequestBaseTest.java
 │       ├── absence/
 │       ├── lessonexchange/
-│       ├── purchase/
-│       └── subjectexchange/
+│       └── purchase/
 ```
 
 ---
@@ -169,7 +167,7 @@ public abstract class XxxBaseTest extends BaseE2ETest {
 |------|------|
 | 승인 시 연관 엔티티 변경 (side-effect) | **독립 엔티티 생성** – `@BeforeEach` 또는 테스트 내에서 직접 생성 |
 | 과목/수업 기반 요청 | `TestLessonHelper`로 테스트별 독립 수업 생성 |
-| 과목 상태 미변경 요청 (Purchase, SubjectExchange) | init_data `SUBJECT_ID=1` 재사용 가능 |
+| 과목 상태 미변경 요청 (Purchase) | init_data `SUBJECT_ID=1` 재사용 가능 |
 | 중복 체크가 있는 생성 | 테스트마다 고유 식별자 사용 |
 
 #### cleanup 패턴

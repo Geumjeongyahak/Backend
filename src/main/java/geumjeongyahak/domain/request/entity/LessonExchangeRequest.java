@@ -30,6 +30,10 @@ public class LessonExchangeRequest extends BaseEntity {
     @Column(nullable = false)
     private String title;
 
+    // 실제 수업 교사가 변경된 이후에도 요청 화면에는 생성/수정 당시의 반 이름을 유지하기 위한 snapshot 값
+    @Column(name = "classroom_name_snapshot", nullable = false)
+    private String classroomNameSnapshot;
+
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
@@ -70,6 +74,7 @@ public class LessonExchangeRequest extends BaseEntity {
         User requestedBy,
         LocalDate lessonDate,
         String title,
+        String classroomNameSnapshot,
         String content,
         LessonExchangeScope scope,
         Integer startPeriod,
@@ -80,6 +85,7 @@ public class LessonExchangeRequest extends BaseEntity {
         this.requestedBy = requestedBy;
         this.lessonDate = lessonDate;
         this.title = title;
+        this.classroomNameSnapshot = classroomNameSnapshot;
         this.content = content;
         this.status = LessonExchangeRequestStatus.PENDING;
         this.scope = scope;
@@ -99,6 +105,27 @@ public class LessonExchangeRequest extends BaseEntity {
         this.processedBy = approver;
         this.processedAt = LocalDateTime.now();
         this.rejectionNote = rejectionNote;
+    }
+
+    public void update(
+        LocalDate lessonDate,
+        String title,
+        String classroomNameSnapshot,
+        String content,
+        LessonExchangeScope scope,
+        Integer startPeriod,
+        Integer endPeriod,
+        LocalDateTime expiresAt
+    ) {
+        validateScope(scope, startPeriod, endPeriod);
+        this.lessonDate = lessonDate;
+        this.title = title;
+        this.classroomNameSnapshot = classroomNameSnapshot;
+        this.content = content;
+        this.scope = scope;
+        this.startPeriod = startPeriod;
+        this.endPeriod = endPeriod;
+        this.expiresAt = expiresAt;
     }
 
     public void complete() {
