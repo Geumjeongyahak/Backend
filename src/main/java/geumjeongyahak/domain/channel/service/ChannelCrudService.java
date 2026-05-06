@@ -45,6 +45,7 @@ public class ChannelCrudService {
                 .bindingType(ChannelBindingType.STANDALONE)
                 .refId(null)
                 .accessLevel(ChannelAccessLevel.valueOf(request.accessLevel()))
+                .allowGuestRead(request.allowGuestRead())
                 .isDefault(request.isDefault())
                 .isActive(request.isActive())
                 .build());
@@ -108,6 +109,10 @@ public class ChannelCrudService {
         }
         if (request.accessLevel() != null) {
             channel.setAccessLevel(ChannelAccessLevel.valueOf(request.accessLevel()));
+            isUpdated = true;
+        }
+        if (request.allowGuestRead() != null) {
+            channel.setAllowGuestRead(request.allowGuestRead());
             isUpdated = true;
         }
         if (request.isDefault() != null) {

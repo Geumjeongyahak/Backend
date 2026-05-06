@@ -9,6 +9,7 @@
         <label>설명 <textarea name="description"></textarea></label>
         <label>접근 수준 <select name="accessLevel" required><option th:each="level : ${accessLevels}" th:value="${level.name()}" th:text="${level.name()}" th:selected="${level.name() == 'READ_WRITE'}">READ_WRITE</option></select></label>
         <div style="display: flex; gap: 20px; padding: 10px 0;">
+            <label class="check-label"><input name="allowGuestRead" type="checkbox" value="true"> 방문자 읽기 허용</label>
             <label class="check-label"><input name="isDefault" type="checkbox" value="true"> 기본 채널</label>
             <label class="check-label"><input name="isActive" type="checkbox" value="true" checked> 활성화</label>
         </div>

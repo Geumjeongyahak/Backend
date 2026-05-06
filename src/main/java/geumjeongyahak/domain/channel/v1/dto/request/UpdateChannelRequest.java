@@ -47,6 +47,12 @@ public record UpdateChannelRequest(
                 example = "READ_COMMENT"
         )
         @ValidChannelAccessLevel
-        String accessLevel
+        String accessLevel,
+
+        @Schema(
+                description = "비로그인 방문자의 읽기 허용 여부를 변경합니다. true이면 누구나 읽을 수 있습니다.",
+                example = "false"
+        )
+        Boolean allowGuestRead
 ) {
 }

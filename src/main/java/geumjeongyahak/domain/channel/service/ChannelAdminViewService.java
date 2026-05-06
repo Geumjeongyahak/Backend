@@ -37,6 +37,7 @@ public class ChannelAdminViewService {
             .filter(channel -> isAllOrBlank(filter.channelType()) || channel.getChannelType().equals(filter.channelType()))
             .filter(channel -> isAllOrBlank(filter.bindingType()) || channel.getBindingType().equals(filter.bindingType()))
             .filter(channel -> isAllOrBlank(filter.accessLevel()) || channel.getAccessLevel().equals(filter.accessLevel()))
+            .filter(channel -> filter.allowGuestRead() == null || channel.getAllowGuestRead() == filter.allowGuestRead())
             .filter(channel -> filter.isActive() == null || channel.getIsActive() == filter.isActive())
             .filter(channel -> filter.isDefault() == null || channel.getIsDefault() == filter.isDefault())
             .map(AdminChannelRow::from)
@@ -61,13 +62,14 @@ public class ChannelAdminViewService {
     }
 
     @Transactional
-    public Long createChannel(String name, String description, String accessLevel, Boolean isDefault, Boolean isActive) {
+    public Long createChannel(String name, String description, String accessLevel, Boolean allowGuestRead, Boolean isDefault, Boolean isActive) {
         return channelCrudService.createChannel(new CreateChannelRequest(
             name,
             description,
             isDefault,
             isActive,
-            accessLevel
+            accessLevel,
+            allowGuestRead
         )).id();
     }
 
@@ -126,6 +128,7 @@ public class ChannelAdminViewService {
         String channelType,
         String bindingType,
         String accessLevel,
+        Boolean allowGuestRead,
         Boolean isActive,
         Boolean isDefault,
         Integer page,
@@ -142,6 +145,7 @@ public class ChannelAdminViewService {
         String bindingType,
         Long refId,
         String accessLevel,
+        boolean allowGuestRead,
         boolean isDefault,
         boolean isActive,
         LocalDateTime lastPostedAt,
@@ -156,6 +160,7 @@ public class ChannelAdminViewService {
                 channel.getBindingType(),
                 channel.getRefId(),
                 channel.getAccessLevel(),
+                Boolean.TRUE.equals(channel.getAllowGuestRead()),
                 Boolean.TRUE.equals(channel.getIsDefault()),
                 Boolean.TRUE.equals(channel.getIsActive()),
                 channel.getLastPostedAt(),

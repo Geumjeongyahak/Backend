@@ -26,6 +26,7 @@ public class ChannelViewController {
         @RequestParam(required = false) String channelType,
         @RequestParam(required = false) String bindingType,
         @RequestParam(required = false) String accessLevel,
+        @RequestParam(required = false) Boolean allowGuestRead,
         @RequestParam(required = false) Boolean isActive,
         @RequestParam(required = false) Boolean isDefault,
         @RequestParam(required = false) Integer page,
@@ -34,7 +35,7 @@ public class ChannelViewController {
         Model model,
         Authentication authentication
     ) {
-        ChannelFilter filter = new ChannelFilter(keyword, channelType, bindingType, accessLevel, isActive, isDefault, page, size, sort);
+        ChannelFilter filter = new ChannelFilter(keyword, channelType, bindingType, accessLevel, allowGuestRead, isActive, isDefault, page, size, sort);
         model.addAttribute("active", "channels");
         model.addAttribute("adminName", authentication.getName());
         model.addAttribute("filter", filter);
@@ -58,11 +59,12 @@ public class ChannelViewController {
         @RequestParam String name,
         @RequestParam(required = false) String description,
         @RequestParam String accessLevel,
+        @RequestParam(required = false) Boolean allowGuestRead,
         @RequestParam(required = false) Boolean isDefault,
         @RequestParam(required = false) Boolean isActive,
         RedirectAttributes redirectAttributes
     ) {
-        Long channelId = channelAdminViewService.createChannel(name, description, accessLevel, isDefault, isActive);
+        Long channelId = channelAdminViewService.createChannel(name, description, accessLevel, allowGuestRead, isDefault, isActive);
         redirectAttributes.addFlashAttribute("message", "채널을 생성했습니다.");
         return "redirect:/admin/channel/channels/" + channelId;
     }

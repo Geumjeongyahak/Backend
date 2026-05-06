@@ -26,13 +26,13 @@ public class ChannelAccessChecker {
      * 모든 명시적 권한은 ResourceType.CHANNEL 기준으로 체크한다. (예: channel:manage:1)
      */
     public boolean can(String actionCode, Long channelId, CustomUserDetails userDetails) {
-        if (channelId == null || userDetails == null) return false;
-        if (userDetails.isAdmin()) return true;
+        if (channelId == null) return false;
+        if (userDetails != null && userDetails.isAdmin()) return true;
 
         ActionType action = ActionType.fromCode(actionCode);
 
-        // 1. 명시적 채널 권한 확인 (예: channel:manage:1, channel:write:*)
-        if (permissionChecker.hasPermission(userDetails, ResourceType.CHANNEL, action, channelId)) return true;
+        // 1. 명시적 채널 권한 확인 (인증된 사용자만 가능)
+        if (userDetails != null && permissionChecker.hasPermission(userDetails, ResourceType.CHANNEL, action, channelId)) return true;
 
         // 2. 채널 정책 확인
         Channel channel = channelRepository.findById(channelId)
@@ -49,21 +49,30 @@ public class ChannelAccessChecker {
      * 엔티티 기반 권한 검사
      */
     public boolean can(Channel channel, ActionType action, CustomUserDetails userDetails) {
-        if (userDetails == null) return false;
-        if (userDetails.isAdmin()) return true;
+        if (userDetails != null && userDetails.isAdmin()) return true;
 
         // 1. 명시적 권한 확인
-        if (permissionChecker.hasPermission(userDetails, ResourceType.CHANNEL, action, channel.getId())) return true;
+        if (userDetails != null && permissionChecker.hasPermission(userDetails, ResourceType.CHANNEL, action, channel.getId())) return true;
 
-        // 2. 일반 사용자 정책 확인
+        // 2. 일반 사용자/GUEST 정책 확인
         if (!channel.isActive()) return false;
+
+        // Guest Read가 허용된 경우 조회 액션은 무조건 허용 (최우선 순위)
+        if (action == ActionType.READ && channel.isAllowGuestRead()) {
+            return true;
+        }
+
+        // GUEST 접근 제어: 유저가 없으면 위에서 처리되지 않은 경우(조회 아님 등) 거부
+        if (userDetails == null) {
+            return false;
+        }
 
         return isPolicySatisfied(channel.getAccessLevel(), action);
     }
 
     private boolean isPolicySatisfied(ChannelAccessLevel level, ActionType action) {
         return switch (action) {
-            case READ -> level.getPriority() >= ChannelAccessLevel.READ_ONLY.getPriority();
+            case READ -> level != ChannelAccessLevel.CLOSED;
             case WRITE, CREATE -> level.getPriority() >= ChannelAccessLevel.READ_WRITE.getPriority();
             case MANAGE, DELETE, UPDATE -> false; // 관리 권한은 정책만으로 허용 안됨 (ADMIN 또는 명시적 권한 필요)
             default -> false;

@@ -12,6 +12,7 @@
         <div class="detail-item"><span>유형</span><strong th:text="${channel.channelType}">CUSTOM</strong></div>
         <div class="detail-item"><span>연동</span><strong th:text="${channel.bindingType}">STANDALONE</strong></div>
         <div class="detail-item"><span>접근 수준</span><strong th:text="${channel.accessLevel}">READ_WRITE</strong></div>
+        <div class="detail-item"><span>방문자 읽기</span><strong th:text="${channel.allowGuestRead ? '허용' : '차단'}">차단</strong></div>
         <div class="detail-item"><span>상태</span><strong th:text="${channel.isActive ? '활성' : '숨김'}">활성</strong></div>
         <div class="detail-item"><span>최근 게시</span><strong th:text="${channel.lastPostedAt != null ? #temporals.format(channel.lastPostedAt, 'yyyy.MM.dd HH:mm') : '-'}">-</strong></div>
     </section>

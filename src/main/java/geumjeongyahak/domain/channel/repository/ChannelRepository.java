@@ -27,6 +27,7 @@ public interface ChannelRepository extends JpaRepository<Channel, Long>, JpaSpec
                 binding_type as bindingType,
                 ref_id as refId,
                 access_level as accessLevel,
+                allow_guest_read as allowGuestRead,
                 is_default as isDefault,
                 is_active as isActive,
                 last_posted_at as lastPostedAt,
@@ -52,6 +53,8 @@ public interface ChannelRepository extends JpaRepository<Channel, Long>, JpaSpec
         Long getRefId();
 
         String getAccessLevel();
+
+        Boolean getAllowGuestRead();
 
         Boolean getIsDefault();
 
