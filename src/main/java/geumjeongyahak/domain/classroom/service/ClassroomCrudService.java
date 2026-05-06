@@ -12,7 +12,7 @@ import geumjeongyahak.domain.classroom.v1.dto.request.ClassroomPaginationRequest
 import geumjeongyahak.domain.classroom.v1.dto.request.CreateClassroomRequest;
 import geumjeongyahak.domain.classroom.v1.dto.request.UpdateClassroomRequest;
 import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomDetailResponse;
-import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomResponse;
+import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomSummaryResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.domain.Specification;
@@ -49,7 +49,7 @@ public class ClassroomCrudService {
         return ClassroomDetailResponse.from(classroom);
     }
 
-    public PaginationResponse<ClassroomResponse> getClassrooms(
+    public PaginationResponse<ClassroomSummaryResponse> getClassrooms(
             ClassroomPaginationRequest request
     ) {
         log.debug("분반 목록 조회 시도: name={}, type={}", request.getName(), request.getType());
@@ -67,7 +67,7 @@ public class ClassroomCrudService {
         }
         var pageResponse = PaginationResponse.from(
                 classroomRepository.findAll(spec, pageRequest),
-                ClassroomResponse::from
+                ClassroomSummaryResponse::from
         );
         log.debug("분반 목록 조회 성공: {}개 조회", pageResponse.getTotalElements());
         return pageResponse;
