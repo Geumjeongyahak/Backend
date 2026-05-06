@@ -68,7 +68,6 @@ ALTER SEQUENCE classrooms_id_seq RESTART WITH 10;
 -- 7. Channels
 INSERT INTO channels (id, name, description, channel_type, binding_type, ref_id, access_level, is_default, is_active)
 VALUES
-    (1, '전체보기', '전체 게시글을 조회하는 기본 채널', 'ALL', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE),
     (2, '공지사항', '기관 전체 공지사항 채널', 'NOTICE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE),
     (3, '자료실', '교육 자료 및 양식 자료실', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE),
     (4, '행사안내', '주요 행사 및 일정 안내', 'EVENT', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE),
