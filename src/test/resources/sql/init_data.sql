@@ -57,20 +57,20 @@ VALUES
 ALTER TABLE classrooms ALTER COLUMN id RESTART WITH 4;
 
 -- 7. Channels
-INSERT INTO channels (id, name, description, channel_type, binding_type, ref_id, access_level, is_default, is_active)
+INSERT INTO channels (id, name, description, channel_type, binding_type, ref_id, access_level, allow_guest_read, is_default, is_active)
 VALUES
-    (1, '공지사항', '기관 전체 공지사항 채널', 'NOTICE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE),
-    (2, '이벤트', '기관 전체 이벤트 채널', 'EVENT', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE),
-    (3, '자료실', '기관 공용 자료실 채널', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE),
-    (4, '벚꽃반', '벚꽃반 게시판', 'CLASSROOM', 'DOMAIN_LINKED', 1, 'READ_WRITE', TRUE, TRUE),
-    (5, '장미반', '장미반 게시판', 'CLASSROOM', 'DOMAIN_LINKED', 2, 'READ_WRITE', TRUE, TRUE),
-    (6, '스마트폰반', '스마트폰반 게시판', 'CLASSROOM', 'DOMAIN_LINKED', 3, 'READ_WRITE', TRUE, TRUE),
-    (7, '교무기획부', '교무기획부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 1, 'READ_WRITE', TRUE, TRUE),
-    (8, '교육연구부', '교육연구부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 2, 'READ_WRITE', TRUE, TRUE),
-    (9, '생활안전부', '생활안전부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 3, 'READ_WRITE', TRUE, TRUE),
-    (10, '총무부', '총무부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 4, 'READ_WRITE', TRUE, TRUE),
-    (11, '홍보부', '홍보부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 5, 'READ_WRITE', TRUE, TRUE),
-    (12, '편집부', '편집부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 6, 'READ_WRITE', TRUE, TRUE);
+    (1, '공지사항', '기관 전체 공지사항 채널', 'NOTICE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE, TRUE),
+    (2, '이벤트', '기관 전체 이벤트 채널', 'EVENT', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE, TRUE),
+    (3, '자료실', '기관 공용 자료실 채널', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', FALSE, TRUE, TRUE),
+    (4, '벚꽃반', '벚꽃반 게시판', 'CLASSROOM', 'DOMAIN_LINKED', 1, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (5, '장미반', '장미반 게시판', 'CLASSROOM', 'DOMAIN_LINKED', 2, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (6, '스마트폰반', '스마트폰반 게시판', 'CLASSROOM', 'DOMAIN_LINKED', 3, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (7, '교무기획부', '교무기획부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 1, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (8, '교육연구부', '교육연구부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 2, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (9, '생활안전부', '생활안전부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 3, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (10, '총무부', '총무부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 4, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (11, '홍보부', '홍보부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 5, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (12, '편집부', '편집부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 6, 'READ_WRITE', FALSE, TRUE, TRUE);
 ALTER TABLE channels ALTER COLUMN id RESTART WITH 13;
 
 -- 8. Subjects

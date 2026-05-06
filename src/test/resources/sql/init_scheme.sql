@@ -305,6 +305,7 @@ CREATE TABLE channels (
     binding_type VARCHAR(20) NOT NULL,
     ref_id BIGINT,
     access_level VARCHAR(30) NOT NULL,
+    allow_guest_read BOOLEAN NOT NULL DEFAULT FALSE,
     is_default BOOLEAN NOT NULL DEFAULT FALSE,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
