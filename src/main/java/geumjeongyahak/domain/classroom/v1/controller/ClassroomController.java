@@ -36,7 +36,6 @@ public class ClassroomController {
         );
     }
 
-    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "분반 상세 조회", description = "특정 분반의 상세 정보를 조회합니다.")
     @GetMapping("/{id}")
     public ResponseEntity<ClassroomDetailResponse> getClassroomDetail(
@@ -48,7 +47,6 @@ public class ClassroomController {
         );
     }
 
-    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "분반 목록 조회", description = "분반 목록을 조회합니다.")
     @GetMapping
     public ResponseEntity<?> getClassrooms(

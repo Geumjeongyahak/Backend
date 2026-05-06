@@ -36,14 +36,15 @@ public class ClassroomUpdateTest extends BaseClassroomTest {
                 Map.of("name", "수정된 분반 이름", "type", "WEEKEND", "description", "수정된 설명"),
                 Map.of("name", "다른 이름"),
                 Map.of("type", "WEEKDAY"),
-                Map.of("description", "다른 설명")
+                Map.of("description", "다른 설명"),
+                Map.of("description", "")
         ).forEach(reqBody -> {
             given()
                     .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
                     .contentType("application/json")
                     .body(reqBody)
             .when()
-                    .put("/{classId}", targetClassroom.getId())
+                    .patch("/{classId}", targetClassroom.getId())
             .then()
                     .statusCode(200)
                     .body("id", equalTo(targetClassroom.getId().intValue()))
@@ -80,23 +81,30 @@ public class ClassroomUpdateTest extends BaseClassroomTest {
                     .contentType("application/json")
                     .body(reqBody)
             .when()
-                    .put("/{classId}", targetClassroom.getId())
+                    .patch("/{classId}", targetClassroom.getId())
             .then()
                     .statusCode(400)
                     .body("code", equalTo("VAL001"))
                     .log().body();
         });
 
-        // 빈 요청 본문
+    }
+
+    @Test
+    @DisplayName("변경값 없는 분반 수정 요청은 기존 리소스 반환(200 OK)")
+    void updateClassroom_NoChanges_ReturnsCurrentResource() {
         given()
                 .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
                 .contentType("application/json")
                 .body(Map.of())
         .when()
-                .put("/{classId}", targetClassroom.getId())
+                .patch("/{classId}", targetClassroom.getId())
         .then()
-                .statusCode(400)
-                .body("code", equalTo("VAL004"))
+                .statusCode(200)
+                .body("id", equalTo(targetClassroom.getId().intValue()))
+                .body("name", equalTo(targetClassroom.getName()))
+                .body("type", equalTo(targetClassroom.getType().name()))
+                .body("description", equalTo(targetClassroom.getDescription()))
                 .log().body();
     }
 
@@ -108,7 +116,7 @@ public class ClassroomUpdateTest extends BaseClassroomTest {
                 .contentType("application/json")
                 .body(Map.of("name", "수정된 분반 이름"))
         .when()
-                .put("/{classId}", targetClassroom.getId())
+                .patch("/{classId}", targetClassroom.getId())
         .then()
                 .statusCode(401)
                 .body("code", equalTo("AUTH001"))
@@ -124,7 +132,7 @@ public class ClassroomUpdateTest extends BaseClassroomTest {
                 .contentType("application/json")
                 .body(Map.of("name", "수정된 분반 이름"))
         .when()
-                .put("/{classId}", targetClassroom.getId())
+                .patch("/{classId}", targetClassroom.getId())
         .then()
                 .statusCode(403)
                 .body("code", equalTo("AUTHZ001"))
@@ -140,7 +148,7 @@ public class ClassroomUpdateTest extends BaseClassroomTest {
                 .contentType("application/json")
                 .body(Map.of("name", "수정된 분반 이름"))
         .when()
-                .put("/{classId}", nonExistentClassroomId)
+                .patch("/{classId}", nonExistentClassroomId)
         .then()
                 .statusCode(404)
                 .body("code", equalTo("RES-03-001"))
@@ -160,7 +168,7 @@ public class ClassroomUpdateTest extends BaseClassroomTest {
                 .contentType("application/json")
                 .body(Map.of("name", conflictName))
         .when()
-                .put("/{classId}", targetClassroom.getId())
+                .patch("/{classId}", targetClassroom.getId())
         .then()
                 .statusCode(409)
                 .body("code", equalTo("BIZ-03-001"))
