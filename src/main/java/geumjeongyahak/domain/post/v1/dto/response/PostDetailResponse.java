@@ -85,6 +85,7 @@ public record PostDetailResponse(
                                 pa.getFile().getContentType(),
                                 pa.getFile().getFileSize(),
                                 pa.getFile().getExt(),
+                                pa.getFile().getPublicUrl(),
                                 pa.getSortOrder()))
                         .toList()
         );
@@ -106,6 +107,9 @@ public record PostDetailResponse(
 
             @Schema(description = "파일 확장자입니다.", example = "pdf")
             String ext,
+
+            @Schema(description = "다운로드 가능한 URL입니다.", example = "https://storage.googleapis.com/...")
+            String downloadUrl,
 
             @Schema(description = "첨부파일 정렬 순서입니다.", example = "0")
             int sortOrder

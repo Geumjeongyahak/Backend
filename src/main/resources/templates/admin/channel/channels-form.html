@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('채널 생성')}"></head>
+<body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+<main class="stack">
+    <div class="page-title"><div><h1>채널 생성</h1><p>커스텀 채널을 생성합니다.</p></div></div>
+    <form class="panel form-grid" th:action="@{/admin/channel/channels}" method="post">
+        <label>채널명 <input name="name" required minlength="2" maxlength="100"></label>
+        <label>설명 <textarea name="description"></textarea></label>
+        <label>접근 수준 <select name="accessLevel" required><option th:each="level : ${accessLevels}" th:value="${level.name()}" th:text="${level.name()}" th:selected="${level.name() == 'READ_WRITE'}">READ_WRITE</option></select></label>
+        <div style="display: flex; gap: 20px; padding: 10px 0;">
+            <label class="check-label"><input name="isDefault" type="checkbox" value="true"> 기본 채널</label>
+            <label class="check-label"><input name="isActive" type="checkbox" value="true" checked> 활성화</label>
+        </div>
+        <button class="button" type="submit">생성</button>
+    </form>
+</main>
+</div></body></html>

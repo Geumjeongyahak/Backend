@@ -14,6 +14,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -220,6 +221,20 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.BAD_REQUEST,
                 ex.getMessage()
+        );
+        problemDetail.setTitle(CommonErrorCode.INVALID_INPUT.getCode());
+        problemDetail.setProperty("code", CommonErrorCode.INVALID_INPUT.getCode());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ProblemDetail> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException ex) {
+        log.warn("MaxUploadSizeExceededException 발생 - {}", ex.getMessage());
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                "파일 업로드 용량을 초과했습니다. (최대 30MB)"
         );
         problemDetail.setTitle(CommonErrorCode.INVALID_INPUT.getCode());
         problemDetail.setProperty("code", CommonErrorCode.INVALID_INPUT.getCode());
