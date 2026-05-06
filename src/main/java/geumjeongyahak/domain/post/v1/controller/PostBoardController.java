@@ -33,7 +33,7 @@ import geumjeongyahak.domain.post.v1.dto.response.PostSummaryResponse;
 public class PostBoardController {
     private final PostCrudService postCrudService;
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('post:read:*')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "통합 게시글 목록 조회",
             description = """

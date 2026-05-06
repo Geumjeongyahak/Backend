@@ -46,7 +46,7 @@ public class PostQueryController {
         return ResponseEntity.ok(postCrudService.getPosts(channelId, userDetails, request));
     }
 
-    @PreAuthorize("@channelAccess.can('read', #channelId, principal)")
+    @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "게시글 상세 조회",
             description = """

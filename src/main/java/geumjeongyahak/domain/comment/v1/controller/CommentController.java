@@ -61,7 +61,7 @@ public class CommentController {
                 .body(commentCrudService.createComment(channelId, postId, userDetails, request));
     }
 
-    @PreAuthorize("@channelAccess.can('read', #channelId, principal)")
+    @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "댓글 목록 조회",
             description = """
