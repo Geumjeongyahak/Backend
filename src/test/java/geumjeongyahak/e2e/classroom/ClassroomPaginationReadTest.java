@@ -191,15 +191,17 @@ public class ClassroomPaginationReadTest extends BaseClassroomTest {
     }
 
     @Test
-    @DisplayName("인증 없이 페이지네이션 조회 실패(401 Unauthorized)")
-    void getAllClassrooms_Unauthorized() {
+    @DisplayName("인증 없이 페이지네이션 조회 성공(200 OK)")
+    void getAllClassrooms_Success_Unauthenticated() {
         given()
             .queryParam("page", 0)
             .queryParam("size", 10)
         .when()
             .get()
         .then()
-            .statusCode(401)
+            .statusCode(200)
+            .body("content", notNullValue())
+            .body("page", equalTo(0))
             .log().all();
     }
 }
