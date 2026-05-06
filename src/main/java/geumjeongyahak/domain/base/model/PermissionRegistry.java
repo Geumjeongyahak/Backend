@@ -21,16 +21,6 @@ public class PermissionRegistry {
             ActionType.READ, ActionType.WRITE, ActionType.MANAGE
         ));
 
-        // POST: 조회, 작성, 삭제
-        ALLOWED_COMBINATIONS.put(ResourceType.POST, Set.of(
-            ActionType.READ, ActionType.WRITE, ActionType.DELETE
-        ));
-
-        // COMMENT: 조회, 작성, 삭제
-        ALLOWED_COMBINATIONS.put(ResourceType.COMMENT, Set.of(
-            ActionType.READ, ActionType.WRITE, ActionType.DELETE
-        ));
-
         // DEPARTMENT: 조회, 수정/관리
         ALLOWED_COMBINATIONS.put(ResourceType.DEPARTMENT, Set.of(
             ActionType.READ, ActionType.WRITE, ActionType.MANAGE
@@ -47,7 +37,7 @@ public class PermissionRegistry {
         ALLOWED_COMBINATIONS.put(ResourceType.SUBJECT, Set.of(ActionType.READ, ActionType.WRITE));
         ALLOWED_COMBINATIONS.put(ResourceType.LESSON, Set.of(ActionType.READ, ActionType.WRITE));
 
-        // USER: 조회, 수정, 관리
+        // USER: 조회, 생성, 수정, 삭제, 권한 부여/회수, 관리
         ALLOWED_COMBINATIONS.put(ResourceType.USER, Set.of(ActionType.READ, ActionType.WRITE, ActionType.MANAGE));
 
         // FILE: 조회, 작성

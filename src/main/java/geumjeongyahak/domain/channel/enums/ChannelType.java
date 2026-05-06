@@ -1,7 +1,9 @@
 package geumjeongyahak.domain.channel.enums;
 
 public enum ChannelType {
-    ALL,
+    NOTICE,
+    EVENT,
+    RESOURCE,
     CLASSROOM,
     DEPARTMENT,
     CUSTOM

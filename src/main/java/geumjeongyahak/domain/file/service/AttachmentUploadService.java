@@ -42,6 +42,7 @@ public class AttachmentUploadService {
                 .contentType(file.getContentType())
                 .fileSize(file.getSize())
                 .ext(fileValidationSupport.extractExtension(file.getOriginalFilename()))
+                .publicUrl(storedFile.url())
                 .build()
         );
 

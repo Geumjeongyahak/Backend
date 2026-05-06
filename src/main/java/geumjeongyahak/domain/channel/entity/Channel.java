@@ -5,7 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -13,30 +12,21 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.Setter;
 import geumjeongyahak.domain.base.entity.BaseEntity;
+import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
+import geumjeongyahak.domain.channel.enums.ChannelBindingType;
 import geumjeongyahak.domain.channel.enums.ChannelType;
-import geumjeongyahak.domain.channel.enums.ChannelWriterPolicy;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
-@Table(
-        name = "channels",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_channels_slug_is_deleted",
-                columnNames = {"slug", "is_deleted"}
-        )
-)
+@Table(name = "channels")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Channel extends BaseEntity {
 
     @Setter
     @Column(nullable = false, length = 100)
     private String name;
-
-    @Setter
-    @Column(nullable = false, length = 100)
-    private String slug;
 
     @Setter
     @Column(columnDefinition = "TEXT")
@@ -48,13 +38,18 @@ public class Channel extends BaseEntity {
     private ChannelType channelType;
 
     @Setter
+    @Enumerated(EnumType.STRING)
+    @Column(name = "binding_type", nullable = false, length = 20)
+    private ChannelBindingType bindingType;
+
+    @Setter
     @Column(name = "ref_id")
     private Long refId;
 
     @Setter
     @Enumerated(EnumType.STRING)
-    @Column(name = "writer_policy", nullable = false, length = 50)
-    private ChannelWriterPolicy writerPolicy;
+    @Column(name = "access_level", nullable = false, length = 30)
+    private ChannelAccessLevel accessLevel;
 
     @Setter
     @Column(name = "is_default", nullable = false)
@@ -69,35 +64,33 @@ public class Channel extends BaseEntity {
     private boolean isDeleted;
 
     @Setter
-    @Column(name = "sort_order", nullable = false)
-    private int sortOrder;
-
-    @Setter
     @Column(name = "last_posted_at")
     private LocalDateTime lastPostedAt;
 
     @Builder
     public Channel(
             @NonNull String name,
-            @NonNull String slug,
             String description,
             @NonNull ChannelType channelType,
+            @NonNull ChannelBindingType bindingType,
             Long refId,
-            ChannelWriterPolicy writerPolicy,
+            ChannelAccessLevel accessLevel,
             Boolean isDefault,
-            Boolean isActive,
-            Integer sortOrder
+            Boolean isActive
     ) {
         this.name = name;
-        this.slug = slug;
         this.description = description;
         this.channelType = channelType;
+        this.bindingType = bindingType;
         this.refId = refId;
-        this.writerPolicy = writerPolicy == null ? ChannelWriterPolicy.ALL_AUTHENTICATED : writerPolicy;
+        this.accessLevel = accessLevel == null ? ChannelAccessLevel.READ_WRITE : accessLevel;
         this.isDefault = isDefault != null && isDefault;
         this.isActive = isActive == null || isActive;
         this.isDeleted = false;
-        this.sortOrder = sortOrder == null ? 0 : sortOrder;
         this.lastPostedAt = null;
+    }
+
+    public boolean isDomainLinked() {
+        return this.bindingType == ChannelBindingType.DOMAIN_LINKED;
     }
 }

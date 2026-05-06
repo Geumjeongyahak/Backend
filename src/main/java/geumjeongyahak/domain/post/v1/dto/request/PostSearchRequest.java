@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.post.v1.dto.request;
 
+import geumjeongyahak.common.validation.annotation.ValidPostStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -42,20 +43,12 @@ public class PostSearchRequest extends BasePaginationRequest {
 
     @Schema(
             description = """
-                    게시글 유형 필터입니다.
-                    NOTICE만 조회하면 공지사항 탭, GENERAL만 조회하면 일반 글 탭처럼 활용할 수 있습니다.
-                    """,
-            example = "NOTICE"
-    )
-    private String postType;
-
-    @Schema(
-            description = """
                     게시글 상태 필터입니다.
                     기본 운영 화면은 보통 PUBLISHED를 사용하고, 관리자 화면에서는 DRAFT 포함 조회 같은 용도로 확장할 수 있습니다.
                     """,
             example = "PUBLISHED"
     )
+    @ValidPostStatus
     private String status;
 
     @Schema(

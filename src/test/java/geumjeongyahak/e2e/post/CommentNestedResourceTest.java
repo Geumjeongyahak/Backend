@@ -89,10 +89,10 @@ public class CommentNestedResourceTest extends BasePostTest {
                 .body(new CreatePostRequest(
                         "댓글 테스트 게시글",
                         "<p>댓글 테스트 본문</p>",
-                        "GENERAL",
                         "PUBLISHED",
                         false,
-                        allowComment
+                        allowComment,
+                        null
                 ))
                 .when()
                 .post("/api/v1/channels/{channelId}/posts", noticeChannelId)

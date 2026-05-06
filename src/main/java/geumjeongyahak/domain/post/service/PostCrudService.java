@@ -12,11 +12,11 @@ import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.channel.entity.Channel;
 import geumjeongyahak.domain.channel.service.ChannelProxyService;
+import geumjeongyahak.domain.post.config.PostProperties;
 import geumjeongyahak.domain.post.entity.Post;
 import geumjeongyahak.domain.post.event.PostChangedEvent;
 import geumjeongyahak.domain.post.exception.PostErrorCode;
 import geumjeongyahak.domain.post.enums.PostStatus;
-import geumjeongyahak.domain.post.enums.PostType;
 import geumjeongyahak.domain.post.repository.PostRepository;
 import geumjeongyahak.domain.post.repository.PostSpecs;
 import geumjeongyahak.domain.post.v1.dto.request.CreatePostRequest;
@@ -39,37 +39,35 @@ public class PostCrudService {
     private final PostRepository postRepository;
     private final ChannelProxyService channelProxyService;
     private final UserProxyService userProxyService;
-    private final PostPermissionService postPermissionService;
     private final PostSearchSpecificationBuilder postSearchSpecificationBuilder;
     private final EventPublisher eventPublisher;
+    private final PostProperties postProperties;
 
     @Transactional
     public PostDetailResponse createPost(Long channelId, CustomUserDetails userDetails, CreatePostRequest request) {
         User author = userProxyService.findById(userDetails.getUserId())
                 .orElseThrow(() -> new UserNotFoundException(userDetails.getUserId()));
-        Channel channel = channelProxyService.getReadableById(channelId);
-
-        postPermissionService.validateCreatePermission(userDetails, channel);
+        Channel channel = channelProxyService.getActiveById(channelId);
+        PostStatus status = request.status() == null ? PostStatus.PUBLISHED : PostStatus.valueOf(request.status());
 
         Post savedPost = postRepository.save(Post.builder()
                 .channel(channel)
                 .author(author)
                 .title(request.title())
                 .contentHtml(request.contentHtml())
-                .postType(parsePostType(request.postType()))
-                .status(resolveStatus(request.status()))
+                .status(status)
                 .isPinned(request.isPinned())
                 .allowComment(request.allowComment())
+                .thumbnailUrl(request.thumbnailUrl())
+                .expiresAt(resolveDraftExpiration(status))
                 .build());
 
         publishPostChangedEvent(channel.getId());
-        return PostDetailResponse.from(savedPost);
+        return reloadForResponse(channelId, savedPost.getId());
     }
 
-    public PaginationResponse<PostSummaryResponse> getPosts(Long channelId, PostSearchRequest request) {
-        channelProxyService.getReadableById(channelId);
-
-        Specification<Post> spec = postSearchSpecificationBuilder.build(request)
+    public PaginationResponse<PostSummaryResponse> getPosts(Long channelId, CustomUserDetails userDetails, PostSearchRequest request) {
+        Specification<Post> spec = postSearchSpecificationBuilder.build(request, userDetails)
                 .and(PostSpecs.hasChannelId(channelId));
 
         return PaginationResponse.from(
@@ -78,17 +76,18 @@ public class PostCrudService {
         );
     }
 
-    public PaginationResponse<PostSummaryResponse> getPosts(PostSearchRequest request) {
+    public PaginationResponse<PostSummaryResponse> getPosts(CustomUserDetails userDetails, PostSearchRequest request) {
         return PaginationResponse.from(
-                postRepository.findAll(postSearchSpecificationBuilder.build(request), request.toRequest()),
+                postRepository.findAll(postSearchSpecificationBuilder.build(request, userDetails), request.toRequest()),
                 PostSummaryResponse::from
         );
     }
 
     @Transactional
     public PostDetailResponse getPost(Long channelId, Long postId) {
-        channelProxyService.getReadableById(channelId);
-        Post post = getPostWithoutDeleted(channelId, postId);
+        Post post = postRepository.findWithAttachmentsByIdAndChannelId(postId, channelId)
+                .filter(p -> !p.isDeleted())
+                .orElseThrow(() -> new ResourceNotFoundException(PostErrorCode.POST_NOT_FOUND));
         post.incrementViewCount();
         return PostDetailResponse.from(post);
     }
@@ -100,36 +99,52 @@ public class PostCrudService {
             Long postId,
             UpdatePostRequest request
     ) {
-        channelProxyService.getReadableById(channelId);
         Post post = getPostWithoutDeleted(channelId, postId);
-        postPermissionService.validateEditPermission(userDetails, post);
 
         if (!hasAnyUpdate(request)) {
             throw new BusinessException(CommonErrorCode.NO_CHANGES_DETECTED);
         }
 
+        PostStatus targetStatus = request.status() == null
+                ? post.getStatus()
+                : PostStatus.valueOf(request.status());
+
         post.update(
                 request.title(),
                 request.contentHtml(),
-                parsePostType(request.postType()),
-                parsePostStatus(request.status()),
-                request.isPinned(),
-                request.allowComment()
+                request.status() == null ? null : targetStatus,
+                null,
+                request.allowComment(),
+                request.thumbnailUrl(),
+                null
         );
 
-        Post updated = postRepository.save(post);
+        if (targetStatus == PostStatus.PUBLISHED) {
+            post.publish();
+        } else if (targetStatus == PostStatus.ARCHIVED) {
+            post.archive();
+        } else if (targetStatus == PostStatus.DRAFT) {
+            post.updateDraftExpiration(resolveDraftExpiration(targetStatus));
+        }
+
+        postRepository.save(post);
         publishPostChangedEvent(channelId);
-        return PostDetailResponse.from(updated);
+        return reloadForResponse(channelId, postId);
     }
 
     @Transactional
     public void deletePost(Long channelId, CustomUserDetails userDetails, Long postId) {
-        channelProxyService.getReadableById(channelId);
         Post post = getPostWithoutDeleted(channelId, postId);
-        postPermissionService.validateEditPermission(userDetails, post);
         post.delete();
         postRepository.save(post);
         publishPostChangedEvent(channelId);
+    }
+
+    private PostDetailResponse reloadForResponse(Long channelId, Long postId) {
+        return postRepository.findWithAttachmentsByIdAndChannelId(postId, channelId)
+                .filter(p -> !p.isDeleted())
+                .map(PostDetailResponse::from)
+                .orElseThrow(() -> new ResourceNotFoundException(PostErrorCode.POST_NOT_FOUND));
     }
 
     private Post getPostWithoutDeleted(Long channelId, Long postId) {
@@ -141,45 +156,33 @@ public class PostCrudService {
         return post;
     }
 
+    @Transactional
+    public PostDetailResponse pinPost(Long channelId, Long postId, boolean isPinned) {
+        Post post = getPostWithoutDeleted(channelId, postId);
+        post.update(null, null, null, isPinned, null, null, null);
+        postRepository.save(post);
+        return reloadForResponse(channelId, postId);
+    }
+
     private boolean hasAnyUpdate(UpdatePostRequest request) {
         return request.title() != null
                 || request.contentHtml() != null
-                || request.postType() != null
                 || request.status() != null
-                || request.isPinned() != null
-                || request.allowComment() != null;
+                || request.allowComment() != null
+                || request.thumbnailUrl() != null;
+    }
+
+    private LocalDateTime resolveDraftExpiration(PostStatus status) {
+        if (status != PostStatus.DRAFT) {
+            return null;
+        }
+        return LocalDateTime.now().plusMinutes(postProperties.getDraftExpirationMinutes());
     }
 
     private void publishPostChangedEvent(Long channelId) {
-        LocalDateTime lastPostedAt = postRepository.findFirstByChannelIdAndIsDeletedFalseOrderByCreatedAtDescIdDesc(channelId)
+        LocalDateTime lastPostedAt = postRepository.findFirstByChannelIdAndStatusAndIsDeletedFalseOrderByCreatedAtDescIdDesc(channelId, PostStatus.PUBLISHED)
                 .map(Post::getCreatedAt)
                 .orElse(null);
         eventPublisher.publish(new PostChangedEvent(channelId, lastPostedAt));
-    }
-
-    private PostStatus resolveStatus(String status) {
-        return status == null ? PostStatus.PUBLISHED : parsePostStatus(status);
-    }
-
-    private PostStatus parsePostStatus(String status) {
-        if (status == null) {
-            return null;
-        }
-        try {
-            return PostStatus.valueOf(status);
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 게시글 상태입니다.");
-        }
-    }
-
-    private PostType parsePostType(String postType) {
-        if (postType == null) {
-            return null;
-        }
-        try {
-            return PostType.valueOf(postType);
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 게시글 유형입니다.");
-        }
     }
 }

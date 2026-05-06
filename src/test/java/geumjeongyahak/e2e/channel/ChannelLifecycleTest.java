@@ -39,16 +39,10 @@ class ChannelLifecycleTest extends BaseChannelTest {
 
         UpdateChannelRequest request = new UpdateChannelRequest(
             "수정 후 채널",
-            "updated-channel-" + System.currentTimeMillis(),
             "설명이 수정되었습니다.",
-            null,
-            null,
-            null,
-            null,
-            "ALL_AUTHENTICATED",
             true,
-            null,
-            20
+            true,
+            "READ_WRITE"
         );
 
         given()
@@ -62,7 +56,9 @@ class ChannelLifecycleTest extends BaseChannelTest {
             .body("id", equalTo(channelId.intValue()))
             .body("name", equalTo("수정 후 채널"))
             .body("description", equalTo("설명이 수정되었습니다."))
-            .body("writerPolicy", equalTo("ALL_AUTHENTICATED"))
+            .body("channelType", equalTo("CUSTOM"))
+            .body("bindingType", equalTo("STANDALONE"))
+            .body("accessLevel", equalTo("READ_WRITE"))
             .body("isDefault", equalTo(true))
             .body("isActive", equalTo(true));
     }
@@ -74,8 +70,10 @@ class ChannelLifecycleTest extends BaseChannelTest {
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new UpdateChannelRequest(null, null, null, false, null))
         .when()
-            .patch("/{id}/hide", channelId)
+            .put("/{id}", channelId)
         .then()
             .statusCode(200)
             .body("id", equalTo(channelId.intValue()))
@@ -83,6 +81,7 @@ class ChannelLifecycleTest extends BaseChannelTest {
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .queryParam("isActive", true)
         .when()
             .get()
         .then()
@@ -100,8 +99,10 @@ class ChannelLifecycleTest extends BaseChannelTest {
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new UpdateChannelRequest(null, null, null, true, null))
         .when()
-            .patch("/{id}/show", channelId)
+            .put("/{id}", channelId)
         .then()
             .statusCode(200)
             .body("id", equalTo(channelId.intValue()))
@@ -136,7 +137,7 @@ class ChannelLifecycleTest extends BaseChannelTest {
         given()
             .header(AUTH_HEADER, getAuthHeader(guestAccessToken))
             .contentType(ContentType.JSON)
-            .body(new UpdateChannelRequest("수정 시도", null, null, null, null, null, null, null, null, null, null))
+            .body(new UpdateChannelRequest("수정 시도", null, null, null, null))
         .when()
             .put("/{id}", channelId)
         .then()
@@ -144,8 +145,10 @@ class ChannelLifecycleTest extends BaseChannelTest {
 
         given()
             .header(AUTH_HEADER, getAuthHeader(guestAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new UpdateChannelRequest(null, null, null, false, null))
         .when()
-            .patch("/{id}/hide", channelId)
+            .put("/{id}", channelId)
         .then()
             .statusCode(403);
 
@@ -158,19 +161,12 @@ class ChannelLifecycleTest extends BaseChannelTest {
     }
 
     private Long createChannel(String name, boolean isActive) {
-        String slug = "channel-" + System.nanoTime();
         CreateChannelRequest request = new CreateChannelRequest(
             name,
-            slug,
             name + " 설명",
-            "ALL",
-            null,
-            null,
-            null,
-            "ADMIN_MANAGER_ONLY",
             false,
             isActive,
-            10
+            "READ_ONLY"
         );
 
         Long channelId = given()

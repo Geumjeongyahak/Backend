@@ -7,6 +7,8 @@
 - [PRD](./prd.md): 제품 요구사항과 기능 우선순위
 - [기술 명세서](./tech_spec.md): 아키텍처, 기술 스택, 구현 방향
 - [데이터 모델](./data_model.md): 엔티티와 관계, DB 구조
+- [Channel/Post 변경안](./channel_post_redesign_plan.md): 자료실 채널, 썸네일, `post_type` 제거, 임시 게시판 플로우까지 포함한 변경 기준서
+- [Channel/Post 인수인계서](./channel_post_handover_2026_05_04.md): 실제 구현 완료 범위, 남은 작업, E2E 영향 정리
 
 ## 2. API 문서
 

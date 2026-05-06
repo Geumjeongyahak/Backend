@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.post.v1.dto.request;
 
+import geumjeongyahak.common.validation.annotation.ValidPostStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 
@@ -7,7 +8,7 @@ import jakarta.validation.constraints.Size;
         description = """
                 게시글 수정 요청 DTO입니다.
                 null이 아닌 필드만 반영되며, 하나도 보내지 않으면 변경 없음 오류가 발생합니다.
-                제목/본문 수정부터 공지 전환, 고정 처리, 댓글 허용 설정 변경까지 같은 요청 형태로 처리할 수 있습니다.
+                제목/본문 수정부터 상태 전환, 고정 처리, 댓글 허용, 썸네일 변경까지 같은 요청 형태로 처리할 수 있습니다.
                 """
 )
 public record UpdatePostRequest(
@@ -25,27 +26,22 @@ public record UpdatePostRequest(
         String contentHtml,
 
         @Schema(
-                description = "변경할 게시글 유형입니다. 일반 글을 공지로 올리거나, 공지를 일반 글로 전환할 때 사용할 수 있습니다.",
-                example = "NOTICE"
-        )
-        String postType,
-
-        @Schema(
                 description = "변경할 게시글 상태입니다. 운영 정책에 따라 게시 상태 전환에 활용할 수 있습니다.",
                 example = "PUBLISHED"
         )
+        @ValidPostStatus
         String status,
-
-        @Schema(
-                description = "상단 고정 여부를 변경합니다. true로 바꾸면 같은 게시판에서 우선 노출됩니다.",
-                example = "true"
-        )
-        Boolean isPinned,
 
         @Schema(
                 description = "댓글 허용 여부를 변경합니다. 공지 운영 정책 변경이나 의견 수렴 종료 시 활용할 수 있습니다.",
                 example = "false"
         )
-        Boolean allowComment
+        Boolean allowComment,
+
+        @Schema(
+                description = "대표 썸네일 URL을 변경합니다.",
+                example = "https://cdn.example.com/posts/thumbnail.png"
+        )
+        String thumbnailUrl
 ) {
 }

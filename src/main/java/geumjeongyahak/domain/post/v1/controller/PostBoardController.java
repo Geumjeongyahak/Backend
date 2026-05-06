@@ -8,9 +8,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.post.service.PostCrudService;
 import geumjeongyahak.domain.post.v1.dto.request.PostSearchRequest;
@@ -58,9 +60,10 @@ public class PostBoardController {
     )
     @GetMapping
     public ResponseEntity<PaginationResponse<PostSummaryResponse>> getPosts(
-            @ParameterObject @Valid PostSearchRequest request
+            @ParameterObject @Valid PostSearchRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("GET /api/v1/posts - 통합 게시글 목록 조회 요청");
-        return ResponseEntity.ok(postCrudService.getPosts(request));
+        return ResponseEntity.ok(postCrudService.getPosts(userDetails, request));
     }
 }

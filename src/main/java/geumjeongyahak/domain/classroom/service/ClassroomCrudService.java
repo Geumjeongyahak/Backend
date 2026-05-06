@@ -1,10 +1,20 @@
 package geumjeongyahak.domain.classroom.service;
 
+import java.util.Objects;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.common.exception.DuplicateResourceException;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.enums.ClassroomType;
+import geumjeongyahak.domain.classroom.event.ClassroomCreatedEvent;
 import geumjeongyahak.domain.classroom.exception.ClassroomErrorCode;
 import geumjeongyahak.domain.classroom.repository.ClassroomRepository;
 import geumjeongyahak.domain.classroom.repository.specification.ClassroomSpecs;
@@ -13,13 +23,6 @@ import geumjeongyahak.domain.classroom.v1.dto.request.CreateClassroomRequest;
 import geumjeongyahak.domain.classroom.v1.dto.request.UpdateClassroomRequest;
 import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomDetailResponse;
 import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomSummaryResponse;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Objects;
 
 @Slf4j
 @Service
@@ -27,6 +30,7 @@ import java.util.Objects;
 @Transactional(readOnly = true)
 public class ClassroomCrudService {
     private final ClassroomRepository classroomRepository;
+    private final EventPublisher eventPublisher;
 
     @Transactional
     public ClassroomDetailResponse createClassroom(CreateClassroomRequest request) {
@@ -34,40 +38,38 @@ public class ClassroomCrudService {
 
         if (classroomRepository.existsByName(request.name())) {
             // TODO: soft delete된 분반이 있을 경우 복구하는 로직 추가 고려(논의 필요)
-
             log.info("분반 생성 실패 - 중복된 이름: {}", request.name());
             throw new DuplicateResourceException(ClassroomErrorCode.DUPLICATE_CLASSROOM);
         }
 
-        Classroom classroom =  classroomRepository.save(Classroom.builder()
-                .name(request.name())
-                .type(ClassroomType.valueOf(request.type()))
-                .description(request.description())
-                .build());
+        Classroom classroom = classroomRepository.save(Classroom.builder()
+            .name(request.name())
+            .type(ClassroomType.valueOf(request.type()))
+            .description(request.description())
+            .build());
 
+        eventPublisher.publish(new ClassroomCreatedEvent(classroom.getId(), classroom.getName()));
         log.info("분반 생성 성공: {}", classroom.getName());
         return ClassroomDetailResponse.from(classroom);
     }
 
     public PaginationResponse<ClassroomSummaryResponse> getClassrooms(
-            ClassroomPaginationRequest request
+        ClassroomPaginationRequest request
     ) {
         log.debug("분반 목록 조회 시도: name={}, type={}", request.getName(), request.getType());
-        // 기본 스펙: 삭제되지 않은 분반
         Specification<Classroom> spec = ClassroomSpecs.withoutDeleted();
 
         var pageRequest = request.toRequest();
         if (request.getName() != null) {
-            // 이름 필터링 추가
             spec = spec.and(ClassroomSpecs.containsName(request.getName()));
         }
         if (request.getType() != null) {
-            // 유형 필터링 추가
             spec = spec.and(ClassroomSpecs.hasType(ClassroomType.valueOf(request.getType())));
         }
+
         var pageResponse = PaginationResponse.from(
-                classroomRepository.findAll(spec, pageRequest),
-                ClassroomSummaryResponse::from
+            classroomRepository.findAll(spec, pageRequest),
+            ClassroomSummaryResponse::from
         );
         log.debug("분반 목록 조회 성공: {}개 조회", pageResponse.getTotalElements());
         return pageResponse;
@@ -129,8 +131,7 @@ public class ClassroomCrudService {
 
     private Classroom getClassroomWithoutDeleted(Long id) {
         Classroom classroom = classroomRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(ClassroomErrorCode.CLASSROOM_NOT_FOUND));
-        // 삭제된 분반인지 확인
+            .orElseThrow(() -> new ResourceNotFoundException(ClassroomErrorCode.CLASSROOM_NOT_FOUND));
         if (classroom.isDeleted()) {
             throw new ResourceNotFoundException(ClassroomErrorCode.CLASSROOM_NOT_FOUND);
         }

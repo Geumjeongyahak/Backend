@@ -1,15 +1,11 @@
 package geumjeongyahak.domain.comment.service;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
-import geumjeongyahak.domain.channel.service.ChannelProxyService;
-import geumjeongyahak.domain.auth.exception.AuthErrorCode;
-import geumjeongyahak.domain.comment.exception.CommentErrorCode;
+import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.comment.entity.Comment;
+import geumjeongyahak.domain.comment.exception.CommentErrorCode;
 import geumjeongyahak.domain.comment.repository.CommentRepository;
 import geumjeongyahak.domain.comment.v1.dto.request.CreateCommentRequest;
 import geumjeongyahak.domain.comment.v1.dto.response.CommentResponse;
@@ -18,6 +14,9 @@ import geumjeongyahak.domain.post.service.PostProxyService;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.exception.UserNotFoundException;
 import geumjeongyahak.domain.users.service.UserProxyService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -27,19 +26,17 @@ import java.util.List;
 public class CommentCrudService {
 
     private final CommentRepository commentRepository;
-    private final ChannelProxyService channelProxyService;
     private final PostProxyService postProxyService;
     private final UserProxyService userProxyService;
 
     @Transactional
-    public CommentResponse createComment(Long channelId, Long postId, Long userId, CreateCommentRequest request) {
-        channelProxyService.getReadableById(channelId);
+    public CommentResponse createComment(Long channelId, Long postId, CustomUserDetails userDetails, CreateCommentRequest request) {
         Post post = postProxyService.getActiveByChannelId(channelId, postId);
-        User author = userProxyService.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+        User author = userProxyService.findById(userDetails.getUserId())
+                .orElseThrow(() -> new UserNotFoundException(userDetails.getUserId()));
 
         if (!post.isAllowComment()) {
-            throw new BusinessException(CommonErrorCode.INVALID_STATE, "댓글이 허용되지 않은 게시글입니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_STATE, "댓글이 비활성화된 게시글에는 댓글을 작성할 수 없습니다.");
         }
 
         Comment parentComment = resolveParentComment(postId, request.parentCommentId());
@@ -55,7 +52,6 @@ public class CommentCrudService {
     }
 
     public List<CommentResponse> getComments(Long channelId, Long postId) {
-        channelProxyService.getReadableById(channelId);
         postProxyService.getActiveByChannelId(channelId, postId);
 
         return commentRepository.findAllByPostIdAndIsDeletedFalseOrderByCreatedAtAscIdAsc(postId).stream()
@@ -64,23 +60,16 @@ public class CommentCrudService {
     }
 
     @Transactional
-    public void deleteComment(Long channelId, Long postId, Long commentId, Long userId, boolean isAdminOrManager) {
-        channelProxyService.getReadableById(channelId);
+    public void deleteComment(Long channelId, Long postId, Long commentId, CustomUserDetails userDetails) {
         postProxyService.getActiveByChannelId(channelId, postId);
         Comment comment = getActiveComment(postId, commentId);
-
-        if (!isAdminOrManager && !comment.getAuthor().getId().equals(userId)) {
-            throw new BusinessException(AuthErrorCode.ACCESS_DENIED);
-        }
 
         comment.delete();
         commentRepository.save(comment);
     }
 
     private Comment resolveParentComment(Long postId, Long parentCommentId) {
-        if (parentCommentId == null) {
-            return null;
-        }
+        if (parentCommentId == null) return null;
 
         Comment parentComment = getActiveComment(postId, parentCommentId);
         if (parentComment.getParentComment() != null) {

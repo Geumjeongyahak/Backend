@@ -4,8 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
+import geumjeongyahak.domain.department.event.DepartmentCreatedEvent;
 import geumjeongyahak.domain.department.entity.Department;
 import geumjeongyahak.domain.department.exception.DeleteDepartmentWithMemberException;
 import geumjeongyahak.domain.department.repository.DepartmentRepository;
@@ -14,6 +16,7 @@ import geumjeongyahak.domain.department.v1.dto.request.UpdateDepartmentRequest;
 import geumjeongyahak.domain.department.v1.dto.response.DepartmentDetailResponse;
 import geumjeongyahak.domain.department.v1.dto.response.DepartmentListResponse;
 import geumjeongyahak.domain.department.v1.dto.response.DepartmentSimpleResponse;
+import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
 
 import java.util.List;
@@ -26,6 +29,7 @@ public class DepartmentCrudService {
     private final DepartmentRepository departmentRepository;
     private final DepartmentPermissionService departmentPermissionService;
     private final UserProxyService userProxyService;
+    private final EventPublisher eventPublisher;
 
     @Transactional
     public DepartmentSimpleResponse createDepartment(CreateDepartmentRequest request) {
@@ -37,6 +41,9 @@ public class DepartmentCrudService {
                 .build();
         departmentPermissionService.replacePermissions(department, request.permissions());
         Department savedDepartment = departmentRepository.save(department);
+        
+        eventPublisher.publish(new DepartmentCreatedEvent(savedDepartment.getId(), savedDepartment.getName()));
+        
         log.info("부서 생성 완료 - ID: {}", savedDepartment.getId());
         return DepartmentSimpleResponse.from(savedDepartment);
     }
@@ -44,7 +51,7 @@ public class DepartmentCrudService {
     public DepartmentDetailResponse getDepartmentDetailById(Long deptId) {
         log.debug("부서 상세 조회 요청 - ID: {}", deptId);
         Department department = findDepartmentById(deptId);
-        List<geumjeongyahak.domain.users.entity.User> users = userProxyService.getAllByDepartmentId(deptId);
+        List<User> users = userProxyService.getAllByDepartmentId(deptId);
         log.debug("부서 상세 조회 완료 - ID: {}, 사용자 수: {}", deptId, users.size());
         return DepartmentDetailResponse.from(department, users);
     }
@@ -89,7 +96,7 @@ public class DepartmentCrudService {
     private Department findDepartmentById(Long deptId) {
         return departmentRepository.findById(deptId)
                 .orElseThrow(() -> {
-                    log.warn("부서를 찾을 수 없습니다 - ID: {}", deptId);
+                    log.debug("부서를 찾을 수 없습니다 - ID: {}", deptId);
                     return new ResourceNotFoundException(CommonErrorCode.RESOURCE_NOT_FOUND, "부서를 찾을 수 없습니다 - ID: " + deptId);
                 });
     }
