@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('채널')}"></head>
+<body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+<main class="stack">
+    <div class="page-title">
+        <div><h1>채널</h1><p>채널과 채널별 게시글을 관리합니다.</p></div>
+        <a class="button" th:href="@{/admin/channel/channels/new}">채널 생성</a>
+    </div>
+    <form class="panel filter-grid" th:action="@{/admin/channel/channels}" method="get">
+        <label>검색어 <input name="keyword" th:value="${filter.keyword}" placeholder="채널명, 설명"></label>
+        <label>유형 <select name="channelType"><option value="">전체</option><option th:each="type : ${channelTypes}" th:value="${type.name()}" th:text="${type.name()}" th:selected="${filter.channelType == type.name()}">CUSTOM</option></select></label>
+        <label>연동 <select name="bindingType"><option value="">전체</option><option th:each="type : ${bindingTypes}" th:value="${type.name()}" th:text="${type.name()}" th:selected="${filter.bindingType == type.name()}">STANDALONE</option></select></label>
+        <label>접근 <select name="accessLevel"><option value="">전체</option><option th:each="level : ${accessLevels}" th:value="${level.name()}" th:text="${level.name()}" th:selected="${filter.accessLevel == level.name()}">READ_WRITE</option></select></label>
+        <button class="button" type="submit">조회</button>
+        <a class="reset-link" th:href="@{/admin/channel/channels}">초기화</a>
+    </form>
+    <section class="panel table-panel">
+        <div class="table-scroll"><table><thead><tr><th>ID</th><th>이름</th><th>유형</th><th>연동</th><th>접근</th><th>상태</th><th>최근 게시</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="channel : ${channelsPage.content}">
+                <td th:text="${channel.id}">1</td>
+                <td><a class="link" th:href="@{/admin/channel/channels/{channelId}(channelId=${channel.id})}" th:text="${channel.name}">공지사항</a><p th:text="${channel.description ?: '-'}">설명</p></td>
+                <td><span class="tag" th:text="${channel.channelType}">CUSTOM</span></td>
+                <td th:text="${channel.bindingType}">STANDALONE</td>
+                <td th:text="${channel.accessLevel}">READ_WRITE</td>
+                <td><span class="pill" th:text="${channel.isActive ? '활성' : '숨김'}">활성</span><span class="tag" th:if="${channel.isDefault}">기본</span></td>
+                <td th:text="${channel.lastPostedAt != null ? #temporals.format(channel.lastPostedAt, 'yyyy.MM.dd HH:mm') : '-'}">-</td>
+                <td><a class="button secondary" th:href="@{/admin/channel/{channelId}/posts(channelId=${channel.id})}">게시글</a></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(channelsPage.content)}"><td colspan="8" class="empty">채널이 없습니다.</td></tr>
+            </tbody></table></div>
+        <div class="pager"><span th:text="|총 ${channelsPage.totalElements}개 · ${channelsPage.page + 1}/${channelsPage.totalPages == 0 ? 1 : channelsPage.totalPages} 페이지|">총 0개</span><div>
+            <a class="reset-link" th:classappend="${!channelsPage.hasPrevious()} ? 'disabled'" th:href="@{/admin/channel/channels(keyword=${filter.keyword},channelType=${filter.channelType},bindingType=${filter.bindingType},accessLevel=${filter.accessLevel},size=${channelsPage.size},sort=${filter.sort},page=${channelsPage.previousPage()})}">이전</a>
+            <a class="reset-link" th:classappend="${!channelsPage.hasNext()} ? 'disabled'" th:href="@{/admin/channel/channels(keyword=${filter.keyword},channelType=${filter.channelType},bindingType=${filter.bindingType},accessLevel=${filter.accessLevel},size=${channelsPage.size},sort=${filter.sort},page=${channelsPage.nextPage()})}">다음</a>
+        </div></div>
+    </section>
+</main>
+</div></body></html>

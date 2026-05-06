@@ -64,10 +64,12 @@ public class ChannelCrudService {
         if (request.getName() != null && !request.getName().isBlank()) {
             spec = spec.and(ChannelSpecs.containsName(request.getName()));
         }
-        if (request.getChannelType() != null && !request.getChannelType().isBlank()) {
+        if (request.getChannelType() != null && !request.getChannelType().isBlank()
+                && !"ALL".equalsIgnoreCase(request.getChannelType())) {
             spec = spec.and(ChannelSpecs.hasChannelType(ChannelType.valueOf(request.getChannelType())));
         }
-        if (request.getBindingType() != null && !request.getBindingType().isBlank()) {
+        if (request.getBindingType() != null && !request.getBindingType().isBlank()
+                && !"ALL".equalsIgnoreCase(request.getBindingType())) {
             spec = spec.and(ChannelSpecs.hasBindingType(ChannelBindingType.valueOf(request.getBindingType())));
         }
         if (request.getIsActive() != null) {

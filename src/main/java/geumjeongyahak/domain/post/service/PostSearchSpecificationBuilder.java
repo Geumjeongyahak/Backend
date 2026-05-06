@@ -57,7 +57,8 @@ public class PostSearchSpecificationBuilder {
         if (request.getStatus() != null && !request.getStatus().isBlank()) {
             spec = spec.and(PostSpecs.hasStatus(PostStatus.valueOf(request.getStatus())));
         }
-        if (request.getChannelType() != null && !request.getChannelType().isBlank()) {
+        if (request.getChannelType() != null && !request.getChannelType().isBlank()
+                && !"ALL".equalsIgnoreCase(request.getChannelType())) {
             spec = spec.and(PostSpecs.hasChannelType(ChannelType.valueOf(request.getChannelType())));
         }
         if (request.getClassroomId() != null) {

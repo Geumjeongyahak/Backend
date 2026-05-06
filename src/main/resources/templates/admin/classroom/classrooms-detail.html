@@ -1,0 +1,7 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('분반 상세')}"></head>
+<body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+<main class="stack"><div class="page-title"><div><h1 th:text="${classroom.name}">분반</h1><p>분반 상세 정보</p></div><a class="button secondary" th:href="@{/admin/classroom/classrooms/{classroomId}/edit(classroomId=${classroom.id})}">수정</a></div>
+<section class="panel detail-grid"><div class="detail-item"><span>ID</span><strong th:text="${classroom.id}">1</strong></div><div class="detail-item"><span>유형</span><strong th:text="${classroom.type}">WEEKDAY</strong></div><div class="detail-item"><span>설명</span><strong th:text="${classroom.description ?: '-'}">-</strong></div><div class="detail-item"><span>생성일</span><strong th:text="${#temporals.format(classroom.createdAt, 'yyyy.MM.dd')}">2026.01.01</strong></div></section>
+</main></div></body></html>

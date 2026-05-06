@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('사용자 상세')}"></head>
+<body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+<main class="stack">
+    <div class="page-title">
+        <div><h1 th:text="${user.name}">사용자</h1><p>사용자 상세 정보와 직접 권한을 관리합니다.</p></div>
+        <a class="button secondary" th:href="@{/admin/user/users/{userId}/edit(userId=${user.id})}">수정</a>
+    </div>
+    <section class="panel detail-grid">
+        <div class="detail-item"><span>ID</span><strong th:text="${user.id}">1</strong></div>
+        <div class="detail-item"><span>역할</span><strong th:text="${user.role}">VOLUNTEER</strong></div>
+        <div class="detail-item"><span>이메일</span><strong th:text="${user.email}">email</strong></div>
+        <div class="detail-item"><span>닉네임</span><strong th:text="${user.nickname}">nick</strong></div>
+        <div class="detail-item"><span>연락처</span><strong th:text="${user.phoneNumber ?: '-'}">-</strong></div>
+        <div class="detail-item"><span>부서</span><strong><a class="link" th:if="${user.departmentId != null}" th:href="@{/admin/department/departments/{departmentId}(departmentId=${user.departmentId})}" th:text="|#${user.departmentId}|">부서</a><span th:if="${user.departmentId == null}">-</span></strong></div>
+    </section>
+    <section class="panel stack">
+        <h2>직접 권한</h2>
+        <div><span class="tag" th:each="permission : ${user.permissions}" th:text="${permission.code}">user:manage:*</span><span th:if="${#lists.isEmpty(user.permissions)}">-</span></div>
+        <form class="inline-form" th:action="@{/admin/user/users/{userId}/permissions(userId=${user.id})}" method="post">
+            <select name="permissionCode" required>
+                <option value="">권한 선택</option>
+                <option th:each="permission : ${permissionOptions}" th:value="${permission.permissionCode}" th:text="|${permission.label} (${permission.permissionCode})|">권한</option>
+            </select>
+            <button class="button" type="submit">권한 추가</button>
+        </form>
+    </section>
+</main>
+</div></body></html>
