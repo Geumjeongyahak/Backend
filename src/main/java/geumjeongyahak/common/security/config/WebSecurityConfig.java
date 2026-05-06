@@ -109,6 +109,7 @@ public class WebSecurityConfig {
                 .requestMatchers("/api/v1/auth/google/**").permitAll()
                 // 공개 조회 API
                 .requestMatchers(HttpMethod.GET, "/api/v1/classrooms", "/api/v1/classrooms/*").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/channels", "/api/v1/channels/**").permitAll()
                 // 그 외는 인증 필요
                 .anyRequest().authenticated()
             )
