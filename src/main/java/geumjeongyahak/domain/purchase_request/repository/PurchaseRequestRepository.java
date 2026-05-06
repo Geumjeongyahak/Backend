@@ -7,6 +7,8 @@ import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 
 public interface PurchaseRequestRepository extends JpaRepository<PurchaseRequest, Long> {
 
+    long countByStatus(PurchaseRequestStatus status);
+
     List<PurchaseRequest> findAllByOrderByCreatedAtDesc();
 
     List<PurchaseRequest> findAllByRequestedBy_IdOrderByCreatedAtDesc(Long requestedById);

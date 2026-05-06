@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('구매 요청 상세')}"></head>
+<body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+<main class="stack">
+    <div class="page-title"><div><h1 th:text="${request.title}">구매 요청</h1><p>구매 요청 상세와 처리</p></div></div>
+    <section class="panel detail-grid">
+        <div class="detail-item"><span>상태</span><strong th:text="${request.status.name()}">PENDING</strong></div>
+        <div class="detail-item"><span>요청자</span><strong><a class="link" th:href="@{/admin/user/users/{userId}(userId=${request.requestedById})}" th:text="${request.requestedByName}">요청자</a></strong></div>
+        <div class="detail-item"><span>분반</span><strong><a class="link" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${request.classroomId})}" th:text="${request.classroomName}">분반</a></strong></div>
+        <div class="detail-item"><span>총 금액</span><strong th:text="${request.totalPrice ?: '-'}">-</strong></div>
+        <div class="detail-item"><span>내용</span><strong th:text="${request.content}">내용</strong></div>
+        <div class="detail-item"><span>메모</span><strong th:text="${request.note ?: '-'}">-</strong></div>
+    </section>
+    <section class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>ID</th><th>품명</th><th>사유</th><th>가격</th><th>영수증</th></tr></thead><tbody><tr th:each="item : ${request.items}"><td th:text="${item.id}">1</td><td th:text="${item.name}">품목</td><td th:text="${item.reason ?: '-'}">사유</td><td th:text="${item.price ?: '-'}">-</td><td><a class="link" th:if="${item.receiptFileUrl != null}" th:href="${item.receiptFileUrl}">보기</a><span th:if="${item.receiptFileUrl == null}">-</span></td></tr></tbody></table></div></section>
+    <section class="panel" th:if="${request.status.name() == 'PENDING'}"><form class="inline-form" th:action="@{/admin/request/purchase/purchase-requests/{requestId}/approve(requestId=${request.id})}" method="post"><button class="button" type="submit">승인</button></form><form class="inline-form" th:action="@{/admin/request/purchase/purchase-requests/{requestId}/reject(requestId=${request.id})}" method="post"><input name="note" placeholder="반려 사유" required><button class="button danger" type="submit">반려</button></form></section>
+</main>
+</div></body></html>

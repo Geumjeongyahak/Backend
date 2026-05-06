@@ -3,22 +3,24 @@ package geumjeongyahak.e2e.request.purchase;
 import static io.restassured.RestAssured.given;
 import static java.util.Map.entry;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 
 import io.restassured.http.ContentType;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import geumjeongyahak.domain.request.repository.PurchaseRequestRepository;
+import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 
 /**
  * 기자재 구입 요청 생성 E2E 테스트.
- * init_data 의 SUBJECT_ID=1 (한글 기초, teacher01 담당)을 재사용한다.
- * 과목 상태는 구입 요청으로 변경되지 않으므로 격리 문제 없음.
+ * init_data 의 CLASSROOM_ID=1 (벚꽃반)을 재사용한다.
+ * 분반 상태는 구입 요청으로 변경되지 않으므로 격리 문제 없음.
  */
 @Tag("purchase-request")
 @DisplayName("E2E: 기자재 구입 요청 생성 테스트")
@@ -43,24 +45,31 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     @DisplayName("인증된 봉사자가 구입 요청 생성 → 201, 필드 검증")
     void createRequest_asVolunteer_returns201() {
         createdRequestId = given()
-            .basePath("/api/v1/purchase-requests")
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.ofEntries(
-                entry("subjectId", SUBJECT_ID),
                 entry("title", "교재 구입 요청"),
                 entry("content", "한글 기초 교재가 필요합니다."),
-                entry("price", 15000L)
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "한글 기초 교재"),
+                    entry("reason", "수업 교재 부족"),
+                    entry("price", 15000L)
+                )))
             ))
             .post()
             .then()
             .statusCode(201)
             .body("id", notNullValue())
-            .body("subjectId", equalTo((int) SUBJECT_ID))
+            .body("classroomId", equalTo((int) CLASSROOM_ID))
             .body("title", equalTo("교재 구입 요청"))
-            .body("price", equalTo(15000))
+            .body("totalPrice", equalTo(null))
             .body("status", equalTo("PENDING"))
             .body("requestedByName", equalTo("홍길동"))
+            .body("items", hasSize(1))
+            .body("items[0].name", equalTo("한글 기초 교재"))
+            .body("items[0].price", equalTo(15000))
             .extract()
             .jsonPath()
             .getLong("id");
@@ -70,14 +79,18 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     @DisplayName("관리자가 구입 요청 생성 → 201")
     void createRequest_asAdmin_returns201() {
         createdRequestId = given()
-            .basePath("/api/v1/purchase-requests")
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .contentType(ContentType.JSON)
             .body(Map.ofEntries(
-                entry("subjectId", SUBJECT_ID),
                 entry("title", "칠판 구입"),
                 entry("content", "교실용 칠판"),
-                entry("price", 50000L)
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "칠판"),
+                    entry("reason", "교실 비품 교체"),
+                    entry("price", 50000L)
+                )))
             ))
             .post()
             .then()
@@ -93,13 +106,17 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     @DisplayName("인증 없이 구입 요청 → 401")
     void createRequest_unauthenticated_returns401() {
         given()
-            .basePath("/api/v1/purchase-requests")
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
             .contentType(ContentType.JSON)
             .body(Map.ofEntries(
-                entry("subjectId", SUBJECT_ID),
                 entry("title", "제목"),
                 entry("content", "내용"),
-                entry("price", 1000L)
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "품목"),
+                    entry("reason", "사유"),
+                    entry("price", 1000L)
+                )))
             ))
             .post()
             .then()
@@ -109,17 +126,21 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     // ── 도메인 오류 ───────────────────────────────────────
 
     @Test
-    @DisplayName("존재하지 않는 과목 ID → 404")
-    void createRequest_nonExistentSubject_returns404() {
+    @DisplayName("존재하지 않는 분반 ID → 404")
+    void createRequest_nonExistentClassroom_returns404() {
         given()
-            .basePath("/api/v1/purchase-requests")
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", 99999L)
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.ofEntries(
-                entry("subjectId", 99999L),
                 entry("title", "제목"),
                 entry("content", "내용"),
-                entry("price", 1000L)
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "품목"),
+                    entry("reason", "사유"),
+                    entry("price", 1000L)
+                )))
             ))
             .post()
             .then()
@@ -132,12 +153,18 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     @DisplayName("title 이 빈 문자열 → 400")
     void createRequest_blankTitle_returns400() {
         given()
-            .basePath("/api/v1/purchase-requests")
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.ofEntries(
-                entry("subjectId", SUBJECT_ID), entry("title", ""),
-                entry("content", "내용"), entry("price", 1000L)
+                entry("title", ""),
+                entry("content", "내용"),
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "품목"),
+                    entry("reason", "사유"),
+                    entry("price", 1000L)
+                )))
             ))
             .post()
             .then()
@@ -145,15 +172,17 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("price 가 0 → 400 (@Min(1) validation)")
-    void createRequest_priceZero_returns400() {
+    @DisplayName("items 가 빈 배열 → 400")
+    void createRequest_emptyItems_returns400() {
         given()
-            .basePath("/api/v1/purchase-requests")
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.ofEntries(
-                entry("subjectId", SUBJECT_ID), entry("title", "제목"),
-                entry("content", "내용"), entry("price", 0L)
+                entry("title", "제목"),
+                entry("content", "내용"),
+                entry("items", List.of())
             ))
             .post()
             .then()
@@ -164,12 +193,18 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     @DisplayName("price 가 음수 → 400")
     void createRequest_negativePrice_returns400() {
         given()
-            .basePath("/api/v1/purchase-requests")
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.ofEntries(
-                entry("subjectId", SUBJECT_ID), entry("title", "제목"),
-                entry("content", "내용"), entry("price", -100L)
+                entry("title", "제목"),
+                entry("content", "내용"),
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "품목"),
+                    entry("reason", "사유"),
+                    entry("price", -100L)
+                )))
             ))
             .post()
             .then()
@@ -177,14 +212,21 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("subjectId 가 null → 400")
-    void createRequest_nullSubjectId_returns400() {
+    @DisplayName("item name 이 빈 문자열 → 400")
+    void createRequest_blankItemName_returns400() {
         given()
-            .basePath("/api/v1/purchase-requests")
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.ofEntries(
-                entry("title", "제목"), entry("content", "내용"), entry("price", 1000L)
+                entry("title", "제목"),
+                entry("content", "내용"),
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", ""),
+                    entry("reason", "사유"),
+                    entry("price", 1000L)
+                )))
             ))
             .post()
             .then()
