@@ -116,6 +116,7 @@ public class ImageUploadService {
                 .contentType(contentType)
                 .fileSize(fileSize)
                 .ext(ext)
+                .publicUrl(storedFile.url())
                 .build()
         );
     }

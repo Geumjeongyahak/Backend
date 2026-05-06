@@ -1,10 +1,10 @@
 package geumjeongyahak.domain.post.repository;
 
 import org.springframework.data.jpa.domain.Specification;
+import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.post.entity.Post;
 import geumjeongyahak.domain.post.enums.PostStatus;
-import geumjeongyahak.domain.post.enums.PostType;
 
 public final class PostSpecs {
 
@@ -15,10 +15,22 @@ public final class PostSpecs {
         return (root, query, cb) -> cb.isFalse(root.get("isDeleted"));
     }
 
+    public static Specification<Post> hasPublicAccess() {
+        return (root, query, cb) -> cb.and(
+                cb.isTrue(root.get("channel").get("isActive")),
+                cb.notEqual(root.get("channel").get("accessLevel"), ChannelAccessLevel.CLOSED)
+        );
+    }
+
+    public static Specification<Post> hasAnyChannelId(java.util.Collection<Long> channelIds) {
+        return (root, query, cb) -> root.get("channel").get("id").in(channelIds);
+    }
+
     public static Specification<Post> hasVisibleChannel() {
         return (root, query, cb) -> cb.and(
                 cb.isFalse(root.get("channel").get("isDeleted")),
-                cb.isTrue(root.get("channel").get("isActive"))
+                cb.isTrue(root.get("channel").get("isActive")),
+                cb.notEqual(root.get("channel").get("accessLevel"), ChannelAccessLevel.CLOSED)
         );
     }
 
@@ -47,10 +59,6 @@ public final class PostSpecs {
 
     public static Specification<Post> containsContent(String contentKeyword) {
         return (root, query, cb) -> cb.like(root.get("contentHtml"), "%" + contentKeyword + "%");
-    }
-
-    public static Specification<Post> hasPostType(PostType postType) {
-        return (root, query, cb) -> cb.equal(root.get("postType"), postType);
     }
 
     public static Specification<Post> hasStatus(PostStatus status) {

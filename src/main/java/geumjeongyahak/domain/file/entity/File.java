@@ -47,6 +47,9 @@ public class File {
     @Column(name = "ext", nullable = false, length = 20)
     private String ext;
 
+    @Column(name = "public_url", length = 1000)
+    private String publicUrl;
+
     @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;
 
@@ -61,7 +64,8 @@ public class File {
         String originalName,
         String contentType,
         Long fileSize,
-        String ext
+        String ext,
+        String publicUrl
     ) {
         this.storageKey = storageKey;
         this.bucket = bucket;
@@ -69,6 +73,7 @@ public class File {
         this.contentType = contentType;
         this.fileSize = fileSize;
         this.ext = ext;
+        this.publicUrl = publicUrl;
     }
 
     public void delete() {

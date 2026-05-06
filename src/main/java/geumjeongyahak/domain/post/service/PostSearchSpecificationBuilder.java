@@ -1,15 +1,14 @@
 package geumjeongyahak.domain.post.service;
 
-import lombok.RequiredArgsConstructor;
+import geumjeongyahak.common.security.service.CustomUserDetails;
+
+import java.util.List;
+
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
-import geumjeongyahak.common.exception.BusinessException;
-import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.domain.channel.enums.ChannelType;
-import geumjeongyahak.domain.channel.service.ChannelProxyService;
 import geumjeongyahak.domain.post.entity.Post;
 import geumjeongyahak.domain.post.enums.PostStatus;
-import geumjeongyahak.domain.post.enums.PostType;
 import geumjeongyahak.domain.post.repository.PostSpecs;
 import geumjeongyahak.domain.post.v1.dto.request.PostSearchRequest;
 
@@ -17,17 +16,33 @@ import geumjeongyahak.domain.post.v1.dto.request.PostSearchRequest;
  * 게시글 검색 조건을 Specification 으로 변환한다.
  */
 @Component
-@RequiredArgsConstructor
 public class PostSearchSpecificationBuilder {
 
-    private final ChannelProxyService channelProxyService;
-
-    public Specification<Post> build(PostSearchRequest request) {
+    public Specification<Post> build(PostSearchRequest request, CustomUserDetails userDetails) {
+        // 1. 기본 필터: 삭제되지 않은 게시글 + 삭제되지 않은 채널
         Specification<Post> spec = PostSpecs.withoutDeleted()
-                .and(PostSpecs.hasVisibleChannel());
+                .and((root, query, cb) -> cb.isFalse(root.get("channel").get("isDeleted")));
 
+        // 2. 가시성 필터 (ADMIN 및 권한 보유자 대응)
+        if (userDetails == null) {
+            // 미인증: 공개 채널만 노출
+            spec = spec.and(PostSpecs.hasPublicAccess());
+        } else if (!userDetails.isAdmin()) {
+            // ADMIN이 아닌 경우
+            if (!hasWildcardPostPermission(userDetails)) {
+                // 전체 조회 권한(*)이 없는 경우: 공개 채널 + 개별 권한 있는 채널만 노출
+                java.util.List<Long> allowedIds = extractAllowedChannelIds(userDetails);
+                Specification<Post> visibility = PostSpecs.hasPublicAccess();
+                if (!allowedIds.isEmpty()) {
+                    visibility = visibility.or(PostSpecs.hasAnyChannelId(allowedIds));
+                }
+                spec = spec.and(visibility);
+            }
+            // 전체 조회 권한(*)이 있으면 추가 가시성 필터 없이 모든 비삭제 채널 노출
+        }
+
+        // 3. 요청 조건 필터
         if (request.getChannelId() != null) {
-            channelProxyService.getReadableById(request.getChannelId());
             spec = spec.and(PostSpecs.hasChannelId(request.getChannelId()));
         }
         if (request.getAuthor() != null && !request.getAuthor().isBlank()) {
@@ -39,14 +54,11 @@ public class PostSearchSpecificationBuilder {
         if (request.getContent() != null && !request.getContent().isBlank()) {
             spec = spec.and(PostSpecs.containsContent(request.getContent()));
         }
-        if (request.getPostType() != null && !request.getPostType().isBlank()) {
-            spec = spec.and(PostSpecs.hasPostType(parsePostType(request.getPostType())));
-        }
         if (request.getStatus() != null && !request.getStatus().isBlank()) {
-            spec = spec.and(PostSpecs.hasStatus(parsePostStatus(request.getStatus())));
+            spec = spec.and(PostSpecs.hasStatus(PostStatus.valueOf(request.getStatus())));
         }
         if (request.getChannelType() != null && !request.getChannelType().isBlank()) {
-            spec = spec.and(PostSpecs.hasChannelType(parseChannelType(request.getChannelType())));
+            spec = spec.and(PostSpecs.hasChannelType(ChannelType.valueOf(request.getChannelType())));
         }
         if (request.getClassroomId() != null) {
             spec = spec.and(PostSpecs.hasChannelType(ChannelType.CLASSROOM))
@@ -62,27 +74,21 @@ public class PostSearchSpecificationBuilder {
         return spec;
     }
 
-    private PostStatus parsePostStatus(String status) {
-        try {
-            return PostStatus.valueOf(status);
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 게시글 상태입니다.");
-        }
+    private boolean hasWildcardPostPermission(CustomUserDetails userDetails) {
+        return userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().startsWith("post:read:*") ||
+                               a.getAuthority().startsWith("post:write:*") ||
+                               a.getAuthority().startsWith("post:manage:*"));
     }
 
-    private PostType parsePostType(String postType) {
-        try {
-            return PostType.valueOf(postType);
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 게시글 유형입니다.");
-        }
-    }
-
-    private ChannelType parseChannelType(String channelType) {
-        try {
-            return ChannelType.valueOf(channelType);
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "유효하지 않은 채널 유형입니다.");
-        }
+    private List<Long> extractAllowedChannelIds(CustomUserDetails userDetails) {
+        return userDetails.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .filter(a -> a.startsWith("post:read:") || a.startsWith("post:write:") || a.startsWith("post:manage:"))
+                .map(a -> a.substring(a.lastIndexOf(":") + 1))
+                .filter(id -> !id.equals("*"))
+                .map(Long::valueOf)
+                .distinct()
+                .toList();
     }
 }

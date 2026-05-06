@@ -19,10 +19,10 @@ public class PostNestedResourceTest extends BasePostTest {
         CreatePostRequest request = new CreatePostRequest(
                 "4월 운영 공지",
                 "<p>공지 내용입니다.</p>",
-                "NOTICE",
                 "PUBLISHED",
                 true,
-                true
+                true,
+                null
         );
 
         Long postId = given()
@@ -36,7 +36,6 @@ public class PostNestedResourceTest extends BasePostTest {
                 .body("id", notNullValue())
                 .body("channelId", equalTo(noticeChannelId.intValue()))
                 .body("title", equalTo("4월 운영 공지"))
-                .body("postType", equalTo("NOTICE"))
                 .extract()
                 .jsonPath()
                 .getLong("id");
@@ -68,10 +67,10 @@ public class PostNestedResourceTest extends BasePostTest {
         CreatePostRequest request = new CreatePostRequest(
                 "권한 없는 공지",
                 "<p>권한 없음</p>",
-                "NOTICE",
                 "PUBLISHED",
                 false,
-                true
+                true,
+                null
         );
 
         given()

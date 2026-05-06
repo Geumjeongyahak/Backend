@@ -2,7 +2,6 @@ package geumjeongyahak.e2e.lesson;
 
 import static io.restassured.RestAssured.given;
 
-import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

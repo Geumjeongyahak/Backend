@@ -1,5 +1,9 @@
 package geumjeongyahak.domain.student.v1.controller;
 
+import geumjeongyahak.domain.base.dto.response.PaginationResponse;
+import geumjeongyahak.domain.student.service.StudentService;
+import geumjeongyahak.domain.student.v1.dto.request.StudentPaginationRequest;
+import geumjeongyahak.domain.student.v1.dto.response.StudentResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -7,46 +11,48 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import geumjeongyahak.domain.base.dto.response.PaginationResponse;
-import geumjeongyahak.domain.student.service.StudentService;
-import geumjeongyahak.domain.student.v1.dto.request.CreateStudentRequest;
-import geumjeongyahak.domain.student.v1.dto.request.StudentPaginationRequest;
-import geumjeongyahak.domain.student.v1.dto.request.UpdateStudentRequest;
-import geumjeongyahak.domain.student.v1.dto.response.StudentResponse;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/students")
 @RequiredArgsConstructor
-@Tag(name = "Student", description = "학생 관리 API")
+@Tag(
+    name = "Student",
+    description = """
+        학생 목록 및 상세 정보를 조회하는 API입니다.
+        봉사자(교사)가 수업 진행 및 출석 체크를 위해 학생 정보를 조회할 때 사용합니다.
+        학생 정보의 등록/수정/삭제는 Student Admin API를 사용하세요.
+        """
+)
 public class StudentController {
 
     private final StudentService studentService;
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "학생 등록", description = "새로운 학생을 등록합니다.")
-    @PostMapping
-    public ResponseEntity<StudentResponse> createStudent(
-        @Valid @RequestBody CreateStudentRequest request
-    ) {
-        log.debug("POST /api/v1/students - 학생 생성 요청: {}", request);
-        StudentResponse response = studentService.createStudent(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "학생 목록 조회", description = "전체 학생 목록을 페이지네이션하여 조회합니다.")
+    @Operation(
+        summary = "학생 목록 조회",
+        description = """
+            전체 학생 목록을 페이지네이션하여 조회합니다.
+
+            사용 사례:
+            - 수업 배정을 위해 전체 학생 현황 파악
+            - 이름 또는 상태 필터를 통한 학생 검색
+            - 출석부 생성을 위한 학생 목록 로딩
+
+            동작 방식:
+            - 이름(name) 검색은 부분 일치로 동작합니다.
+            - 상태(status) 필터를 통해 재학/휴학/졸업생을 구분하여 조회할 수 있습니다.
+
+            사이드 이펙트:
+            - 읽기 전용 API이며 학생 데이터를 변경하지 않습니다.
+            """
+    )
     @GetMapping
     public ResponseEntity<PaginationResponse<StudentResponse>> getAllStudents(
         @ParameterObject @Valid StudentPaginationRequest request
@@ -57,7 +63,22 @@ public class StudentController {
     }
 
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "학생 단건 조회", description = "ID로 특정 학생을 조회합니다.")
+    @Operation(
+        summary = "학생 단건 조회",
+        description = """
+            학생 식별자(ID)로 특정 학생의 상세 정보를 조회합니다.
+
+            사용 사례:
+            - 특정 학생의 상세 프로필 확인
+            - 수업 로그 작성 시 학생 정보 참조
+
+            응답 정보:
+            - 학생 이름, 전화번호, 상태, 비고(설명)
+
+            사이드 이펙트:
+            - 읽기 전용 API이며 학생 데이터를 변경하지 않습니다.
+            """
+    )
     @GetMapping("/{studentId}")
     public ResponseEntity<StudentResponse> getStudentById(
         @Parameter(description = "학생 식별자", example = "1")
@@ -66,30 +87,5 @@ public class StudentController {
         log.debug("GET /api/v1/students/{} - 학생 단건 조회 요청", studentId);
         StudentResponse response = studentService.getStudentById(studentId);
         return ResponseEntity.ok(response);
-    }
-
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "학생 수정", description = "기존 학생 정보를 수정합니다.")
-    @PatchMapping("/{studentId}")
-    public ResponseEntity<StudentResponse> updateStudent(
-        @Parameter(description = "학생 식별자", example = "1")
-        @PathVariable Long studentId,
-        @Valid @RequestBody UpdateStudentRequest request
-    ) {
-        log.debug("PATCH /api/v1/students/{} - 학생 수정 요청", studentId);
-        StudentResponse response = studentService.updateStudent(studentId, request);
-        return ResponseEntity.ok(response);
-    }
-
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "학생 삭제", description = "학생을 삭제합니다.")
-    @DeleteMapping("/{studentId}")
-    public ResponseEntity<Void> deleteStudent(
-        @Parameter(description = "학생 식별자", example = "1")
-        @PathVariable Long studentId
-    ) {
-        log.debug("DELETE /api/v1/students/{} - 학생 삭제 요청", studentId);
-        studentService.deleteStudentById(studentId);
-        return ResponseEntity.noContent().build();
     }
 }

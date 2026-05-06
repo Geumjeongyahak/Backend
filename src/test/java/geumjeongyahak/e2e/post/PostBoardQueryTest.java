@@ -4,8 +4,9 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import geumjeongyahak.domain.channel.entity.Channel;
+import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
+import geumjeongyahak.domain.channel.enums.ChannelBindingType;
 import geumjeongyahak.domain.channel.enums.ChannelType;
-import geumjeongyahak.domain.channel.enums.ChannelWriterPolicy;
 import geumjeongyahak.domain.post.v1.dto.request.CreatePostRequest;
 
 import static io.restassured.RestAssured.given;
@@ -19,7 +20,7 @@ public class PostBoardQueryTest extends BasePostTest {
     @Test
     @DisplayName("게시글 상세 조회 시 조회수가 증가한다")
     void getPost_IncreasesViewCount() {
-        Long postId = createPost(noticeChannelId, "조회수 테스트 공지", "NOTICE");
+        Long postId = createPost(noticeChannelId, "조회수 테스트 공지");
 
         given()
                 .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -44,42 +45,40 @@ public class PostBoardQueryTest extends BasePostTest {
     void getBoardPosts_WithBoardFilters_Success() {
         Channel classroomChannel = channelRepository.save(Channel.builder()
                 .name("겨울반 게시판")
-                .slug("classroom-board-" + System.currentTimeMillis())
                 .description("반별 게시판")
                 .channelType(ChannelType.CLASSROOM)
+                .bindingType(ChannelBindingType.STANDALONE)
                 .refId(101L)
-                .writerPolicy(ChannelWriterPolicy.ALL_AUTHENTICATED)
+                .accessLevel(ChannelAccessLevel.READ_WRITE)
                 .isActive(true)
-                .sortOrder(2)
                 .build());
         Channel departmentChannel = channelRepository.save(Channel.builder()
                 .name("교육연구부 게시판")
-                .slug("department-board-" + System.currentTimeMillis())
                 .description("부서 게시판")
                 .channelType(ChannelType.DEPARTMENT)
+                .bindingType(ChannelBindingType.STANDALONE)
                 .refId(201L)
-                .writerPolicy(ChannelWriterPolicy.ALL_AUTHENTICATED)
+                .accessLevel(ChannelAccessLevel.READ_WRITE)
                 .isActive(true)
-                .sortOrder(3)
                 .build());
 
         testChannelHelper.registerChannel(classroomChannel.getId());
         testChannelHelper.registerChannel(departmentChannel.getId());
 
-        createPost(noticeChannelId, "전체 공지", "NOTICE");
-        createPost(classroomChannel.getId(), "겨울반 안내", "GENERAL");
-        createPost(departmentChannel.getId(), "교육연구부 회의", "GENERAL");
+        createPost(noticeChannelId, "전체 공지");
+        createPost(classroomChannel.getId(), "겨울반 안내");
+        createPost(departmentChannel.getId(), "교육연구부 회의");
 
         given()
                 .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-                .queryParam("postType", "NOTICE")
+                .queryParam("channelType", "NOTICE")
                 .when()
                 .get("/api/v1/posts")
                 .then()
                 .statusCode(200)
                 .body("content", hasSize(1))
                 .body("content[0].title", equalTo("전체 공지"))
-                .body("content[0].channelType", equalTo("ALL"));
+                .body("content[0].channelType", equalTo("NOTICE"));
 
         given()
                 .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -104,14 +103,14 @@ public class PostBoardQueryTest extends BasePostTest {
                 .body("content[0].channelType", equalTo("DEPARTMENT"));
     }
 
-    private Long createPost(Long channelId, String title, String postType) {
+    private Long createPost(Long channelId, String title) {
         CreatePostRequest request = new CreatePostRequest(
                 title,
                 "<p>" + title + "</p>",
-                postType,
                 "PUBLISHED",
                 false,
-                true
+                true,
+                null
         );
 
         Long postId = given()

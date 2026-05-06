@@ -57,20 +57,21 @@ VALUES
 ALTER TABLE classrooms ALTER COLUMN id RESTART WITH 4;
 
 -- 7. Channels
-INSERT INTO channels (id, name, slug, description, channel_type, ref_id, writer_policy, is_default, is_active, sort_order)
+INSERT INTO channels (id, name, description, channel_type, binding_type, ref_id, access_level, is_default, is_active)
 VALUES
-    (1, '전체보기', 'all', '전체 게시글을 조회하는 기본 채널', 'ALL', NULL, 'ALL_AUTHENTICATED', TRUE, TRUE, 0),
-    (2, '공지사항', 'notice', '기관 전체 공지사항 채널', 'ALL', NULL, 'ADMIN_MANAGER_ONLY', TRUE, TRUE, 1),
-    (3, '벚꽃반', 'classroom-1', '벚꽃반 게시판', 'CLASSROOM', 1, 'CLASSROOM_MANAGER_TEACHER_ONLY', TRUE, TRUE, 10),
-    (4, '장미반', 'classroom-2', '장미반 게시판', 'CLASSROOM', 2, 'CLASSROOM_MANAGER_TEACHER_ONLY', TRUE, TRUE, 11),
-    (5, '스마트폰반', 'classroom-3', '스마트폰반 게시판', 'CLASSROOM', 3, 'CLASSROOM_MANAGER_TEACHER_ONLY', TRUE, TRUE, 12),
-    (6, '교무기획부', 'department-1', '교무기획부 게시판', 'DEPARTMENT', 1, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 30),
-    (7, '교육연구부', 'department-2', '교육연구부 게시판', 'DEPARTMENT', 2, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 31),
-    (8, '생활안전부', 'department-3', '생활안전부 게시판', 'DEPARTMENT', 3, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 32),
-    (9, '총무부', 'department-4', '총무부 게시판', 'DEPARTMENT', 4, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 33),
-    (10, '홍보부', 'department-5', '홍보부 게시판', 'DEPARTMENT', 5, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 34),
-    (11, '편집부', 'department-6', '편집부 게시판', 'DEPARTMENT', 6, 'DEPARTMENT_MEMBER_OR_ADMIN', TRUE, TRUE, 35);
-ALTER TABLE channels ALTER COLUMN id RESTART WITH 12;
+    (1, '공지사항', '기관 전체 공지사항 채널', 'NOTICE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE),
+    (2, '이벤트', '기관 전체 이벤트 채널', 'EVENT', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE),
+    (3, '자료실', '기관 공용 자료실 채널', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE),
+    (4, '벚꽃반', '벚꽃반 게시판', 'CLASSROOM', 'DOMAIN_LINKED', 1, 'READ_WRITE', TRUE, TRUE),
+    (5, '장미반', '장미반 게시판', 'CLASSROOM', 'DOMAIN_LINKED', 2, 'READ_WRITE', TRUE, TRUE),
+    (6, '스마트폰반', '스마트폰반 게시판', 'CLASSROOM', 'DOMAIN_LINKED', 3, 'READ_WRITE', TRUE, TRUE),
+    (7, '교무기획부', '교무기획부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 1, 'READ_WRITE', TRUE, TRUE),
+    (8, '교육연구부', '교육연구부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 2, 'READ_WRITE', TRUE, TRUE),
+    (9, '생활안전부', '생활안전부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 3, 'READ_WRITE', TRUE, TRUE),
+    (10, '총무부', '총무부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 4, 'READ_WRITE', TRUE, TRUE),
+    (11, '홍보부', '홍보부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 5, 'READ_WRITE', TRUE, TRUE),
+    (12, '편집부', '편집부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 6, 'READ_WRITE', TRUE, TRUE);
+ALTER TABLE channels ALTER COLUMN id RESTART WITH 13;
 
 -- 8. Subjects
 INSERT INTO subjects (id, class_id, teacher_id, name, start_at, end_at, times, day_of_week, start_time, end_time, period, description)

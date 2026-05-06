@@ -11,8 +11,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.channel.entity.Channel;
+import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
+import geumjeongyahak.domain.channel.enums.ChannelBindingType;
 import geumjeongyahak.domain.channel.enums.ChannelType;
-import geumjeongyahak.domain.channel.enums.ChannelWriterPolicy;
 import geumjeongyahak.domain.post.v1.dto.request.CreatePostRequest;
 import geumjeongyahak.domain.post.v1.dto.request.UpdatePostRequest;
 
@@ -33,10 +34,9 @@ class PostLifecycleTest extends BasePostTest {
             .body(new UpdatePostRequest(
                 "수정 후 제목",
                 "<p>수정된 본문</p>",
-                "NOTICE",
                 "PUBLISHED",
-                true,
-                false
+                false,
+                null
             ))
         .when()
             .put("/api/v1/channels/{channelId}/posts/{postId}", channelId, postId)
@@ -45,8 +45,6 @@ class PostLifecycleTest extends BasePostTest {
             .body("id", equalTo(postId.intValue()))
             .body("title", equalTo("수정 후 제목"))
             .body("contentHtml", equalTo("<p>수정된 본문</p>"))
-            .body("postType", equalTo("NOTICE"))
-            .body("isPinned", equalTo(true))
             .body("allowComment", equalTo(false));
     }
 
@@ -61,7 +59,7 @@ class PostLifecycleTest extends BasePostTest {
         given()
             .header(AUTH_HEADER, getAuthHeader(otherUserToken))
             .contentType(ContentType.JSON)
-            .body(new UpdatePostRequest("수정 시도", null, null, null, null, null))
+            .body(new UpdatePostRequest("수정 시도", null, null, null, null))
         .when()
             .put("/api/v1/channels/{channelId}/posts/{postId}", channelId, postId)
         .then()
@@ -137,13 +135,13 @@ class PostLifecycleTest extends BasePostTest {
     private Long createAllAuthenticatedChannel() {
         Channel channel = channelRepository.save(Channel.builder()
             .name("전체 사용자 게시판")
-            .slug("post-open-" + System.nanoTime())
             .description("Post lifecycle 테스트 채널")
-            .channelType(ChannelType.ALL)
-            .writerPolicy(ChannelWriterPolicy.ALL_AUTHENTICATED)
+            .channelType(ChannelType.CUSTOM)
+            .bindingType(ChannelBindingType.STANDALONE)
+            .accessLevel(ChannelAccessLevel.READ_WRITE)
+            .refId(null)
             .isDefault(false)
             .isActive(true)
-            .sortOrder(2)
             .build());
         testChannelHelper.registerChannel(channel.getId());
         return channel.getId();
@@ -156,10 +154,10 @@ class PostLifecycleTest extends BasePostTest {
             .body(new CreatePostRequest(
                 title,
                 "<p>" + title + " 본문</p>",
-                "GENERAL",
                 "PUBLISHED",
                 false,
-                true
+                true,
+                null
             ))
         .when()
             .post("/api/v1/channels/{channelId}/posts", channelId)

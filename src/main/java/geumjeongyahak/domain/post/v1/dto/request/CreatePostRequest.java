@@ -1,15 +1,15 @@
 package geumjeongyahak.domain.post.v1.dto.request;
 
+import geumjeongyahak.common.validation.annotation.ValidPostStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 @Schema(
         description = """
                 게시글 생성 요청 DTO입니다.
                 사용자가 채널 안에 새 글을 작성할 때 필요한 최소 입력만 받습니다.
-                서버가 생성 시각, 작성자, 조회수 같은 내부 관리값을 자동으로 채우며, 클라이언트는 제목/본문/유형/운영 옵션만 전달하면 됩니다.
+                서버가 생성 시각, 작성자, 조회수 같은 내부 관리값을 자동으로 채우며, 클라이언트는 제목/본문/상태/운영 옵션만 전달하면 됩니다.
                 """
 )
 public record CreatePostRequest(
@@ -38,22 +38,13 @@ public record CreatePostRequest(
 
         @Schema(
                 description = """
-                        게시글 유형입니다.
-                        NOTICE는 공지성 글, GENERAL은 일반 글, EVENT는 행사/이벤트 성격의 글처럼 화면 분류와 강조 표시 기준으로 활용할 수 있습니다.
-                        """,
-                example = "NOTICE"
-        )
-        @NotNull(message = "게시글 유형은 필수입니다.")
-        String postType,
-
-        @Schema(
-                description = """
                         게시글 상태입니다.
                         값을 생략하면 기본적으로 PUBLISHED로 처리됩니다.
                         임시저장 개념이 필요한 경우 DRAFT 같은 상태값을 활용할 수 있습니다.
                         """,
                 example = "PUBLISHED"
         )
+        @ValidPostStatus
         String status,
 
         @Schema(
@@ -70,9 +61,16 @@ public record CreatePostRequest(
                 description = """
                         댓글 허용 여부입니다.
                         게시판 성격에 따라 공지에는 false, 토론이나 의견 수렴 글에는 true로 둘 수 있습니다.
-                        """,
+                """,
                 example = "false"
         )
-        Boolean allowComment
+        Boolean allowComment,
+
+        @Schema(
+                description = "게시글 대표 썸네일 URL입니다. 별도 지정이 없으면 null로 둘 수 있습니다.",
+                example = "https://cdn.example.com/posts/thumbnail.png",
+                nullable = true
+        )
+        String thumbnailUrl
 ) {
 }

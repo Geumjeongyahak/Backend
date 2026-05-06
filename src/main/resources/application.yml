@@ -47,3 +47,5 @@ app:
         - text/plain
         - application/vnd.ms-powerpoint
         - application/vnd.openxmlformats-officedocument.presentationml.presentation
+  post:
+    draft-expiration-minutes: 60
