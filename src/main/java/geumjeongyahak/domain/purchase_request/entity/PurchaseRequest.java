@@ -1,12 +1,15 @@
-package geumjeongyahak.domain.request.entity;
+package geumjeongyahak.domain.purchase_request.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import geumjeongyahak.domain.base.entity.BaseEntity;
-import geumjeongyahak.domain.request.enums.RequestStatus;
-import geumjeongyahak.domain.subject.entity.Subject;
+import geumjeongyahak.domain.classroom.entity.Classroom;
+import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.users.entity.User;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -17,6 +20,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -33,8 +37,8 @@ public class PurchaseRequest extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subject_id", nullable = false)
-    private Subject subject;
+    @JoinColumn(name = "classroom_id", nullable = false)
+    private Classroom classroom;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requested_by", nullable = false)
@@ -46,12 +50,12 @@ public class PurchaseRequest extends BaseEntity {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    @Column(nullable = false)
-    private Long price;
+    @Column(name = "total_price")
+    private Long totalPrice;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private RequestStatus status;
+    private PurchaseRequestStatus status;
 
     private LocalDateTime approvalAt;
 
@@ -59,29 +63,44 @@ public class PurchaseRequest extends BaseEntity {
     @JoinColumn(name = "approval_by")
     private User approvalBy;
 
+    private LocalDateTime purchasedAt;
+
     @Column(columnDefinition = "TEXT")
     private String note;
 
-    public PurchaseRequest(Subject subject, User requestedBy, String title, String content, Long price) {
-        this.subject = subject;
+    @OneToMany(mappedBy = "purchaseRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PurchaseRequestItem> items = new ArrayList<>();
+
+    public PurchaseRequest(Classroom classroom, User requestedBy, String title, String content, List<PurchaseRequestItem> items) {
+        this.classroom = classroom;
         this.requestedBy = requestedBy;
         this.title = title;
         this.content = content;
-        this.price = price;
-        this.status = RequestStatus.PENDING;
+        this.status = PurchaseRequestStatus.PENDING;
+        items.forEach(item -> item.assignRequest(this));
+        this.items.addAll(items);
     }
 
     public void approve(User approver) {
-        this.status = RequestStatus.APPROVED;
+        this.status = PurchaseRequestStatus.APPROVED;
         this.approvalBy = approver;
         this.approvalAt = LocalDateTime.now();
     }
 
+    public void reportPurchase(long totalPrice) {
+        this.status = PurchaseRequestStatus.PURCHASED;
+        this.totalPrice = totalPrice;
+        this.purchasedAt = LocalDateTime.now();
+    }
+
+    public void confirm() {
+        this.status = PurchaseRequestStatus.CONFIRMED;
+    }
+
     public void reject(User approver, String note) {
-        this.status = RequestStatus.REJECTED;
+        this.status = PurchaseRequestStatus.REJECTED;
         this.approvalBy = approver;
         this.approvalAt = LocalDateTime.now();
         this.note = note;
     }
 }
-
