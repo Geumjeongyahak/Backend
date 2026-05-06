@@ -1,16 +1,11 @@
 package geumjeongyahak.domain.classroom.service;
 
-import java.util.Objects;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
 import geumjeongyahak.common.exception.DuplicateResourceException;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.classroom.entity.Classroom;
-import geumjeongyahak.domain.classroom.exception.ClassroomErrorCode;
 import geumjeongyahak.domain.classroom.enums.ClassroomType;
+import geumjeongyahak.domain.classroom.exception.ClassroomErrorCode;
 import geumjeongyahak.domain.classroom.repository.ClassroomRepository;
 import geumjeongyahak.domain.classroom.repository.specification.ClassroomSpecs;
 import geumjeongyahak.domain.classroom.v1.dto.request.ClassroomPaginationRequest;
@@ -18,13 +13,22 @@ import geumjeongyahak.domain.classroom.v1.dto.request.CreateClassroomRequest;
 import geumjeongyahak.domain.classroom.v1.dto.request.UpdateClassroomRequest;
 import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomDetailResponse;
 import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ClassroomCrudService {
     private final ClassroomRepository classroomRepository;
 
+    @Transactional
     public ClassroomDetailResponse createClassroom(CreateClassroomRequest request) {
         log.debug("분반 생성 시도: {}", request.name());
 
@@ -76,6 +80,7 @@ public class ClassroomCrudService {
         return ClassroomDetailResponse.from(classroom);
     }
 
+    @Transactional
     public ClassroomDetailResponse updateClassroom(Long id, UpdateClassroomRequest request) {
         log.debug("분반 수정 시도: {}, {}, {}", request.name(), request.type(), request.description());
 
@@ -113,6 +118,7 @@ public class ClassroomCrudService {
         return ClassroomDetailResponse.from(classroom);
     }
 
+    @Transactional
     public void deleteClassroom(Long id) {
         log.debug("분반 삭제 시도: {}", id);
         Classroom classroom = getClassroomWithoutDeleted(id);
