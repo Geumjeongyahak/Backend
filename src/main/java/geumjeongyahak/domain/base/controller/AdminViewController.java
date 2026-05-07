@@ -28,4 +28,9 @@ public class AdminViewController {
         model.addAttribute("summary", adminDashboardService.getSummary());
         return "admin/dashboard";
     }
+
+    @GetMapping("favicon.ico")
+    public String favicon() {
+        return "forward:/static/favicon.ico";
+    }
 }

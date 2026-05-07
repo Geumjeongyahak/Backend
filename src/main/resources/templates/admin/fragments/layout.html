@@ -342,6 +342,11 @@
             <a th:href="@{/admin/classroom/classrooms}" th:classappend="${active == 'classrooms'} ? 'active'">분반</a>
             <a th:href="@{/admin/request/purchase/purchase-requests}" th:classappend="${active == 'purchaseRequests'} ? 'active'">구매 요청</a>
         </nav>
+        <div th:if="${#arrays.contains(@environment.getActiveProfiles(), 'dev')}" style="margin-top: 20px;">
+            <a href="/swagger-ui/index.html" target="_blank" style="display: block; padding: 10px 14px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); font-size: 13px; font-weight: 800; text-align: center;">
+                Swagger UI ↗
+            </a>
+        </div>
         <form th:action="@{/admin/auth/logout}" method="post">
             <button class="logout" type="submit">로그아웃</button>
         </form>
