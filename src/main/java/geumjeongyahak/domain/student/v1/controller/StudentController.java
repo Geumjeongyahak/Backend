@@ -1,8 +1,9 @@
 package geumjeongyahak.domain.student.v1.controller;
 
-import geumjeongyahak.domain.base.dto.response.PaginationResponse;
+import java.util.List;
+
 import geumjeongyahak.domain.student.service.StudentService;
-import geumjeongyahak.domain.student.v1.dto.request.StudentPaginationRequest;
+import geumjeongyahak.domain.student.v1.dto.request.StudentSearchRequest;
 import geumjeongyahak.domain.student.v1.dto.response.StudentResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -38,27 +39,29 @@ public class StudentController {
     @Operation(
         summary = "학생 목록 조회",
         description = """
-            전체 학생 목록을 페이지네이션하여 조회합니다.
+            전체 학생 목록을 배열로 조회합니다.
 
             사용 사례:
             - 수업 배정을 위해 전체 학생 현황 파악
-            - 이름 또는 상태 필터를 통한 학생 검색
+            - 이름, 상태, 분반 필터를 통한 학생 검색
             - 출석부 생성을 위한 학생 목록 로딩
 
             동작 방식:
             - 이름(name) 검색은 부분 일치로 동작합니다.
             - 상태(status) 필터를 통해 재학/휴학/졸업생을 구분하여 조회할 수 있습니다.
+            - 분반(classroomId) 필터를 통해 특정 분반 소속 학생만 조회할 수 있습니다.
+            - 결과는 이름 오름차순으로 정렬됩니다.
 
             사이드 이펙트:
             - 읽기 전용 API이며 학생 데이터를 변경하지 않습니다.
             """
     )
     @GetMapping
-    public ResponseEntity<PaginationResponse<StudentResponse>> getAllStudents(
-        @ParameterObject @Valid StudentPaginationRequest request
+    public ResponseEntity<List<StudentResponse>> getAllStudents(
+        @ParameterObject @Valid StudentSearchRequest request
     ) {
         log.debug("GET /api/v1/students - 학생 목록 조회 요청");
-        PaginationResponse<StudentResponse> response = studentService.getAllStudents(request);
+        List<StudentResponse> response = studentService.getAllStudents(request);
         return ResponseEntity.ok(response);
     }
 
