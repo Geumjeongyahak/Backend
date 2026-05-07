@@ -136,17 +136,17 @@ public abstract class RequestBaseTest extends BaseE2ETest {
     protected Long createPurchaseRequest(String authHeader, Long classroomId,
         String title, String content, long price) {
         return given()
-            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
-            .pathParam("classroomId", classroomId)
+            .basePath("/api/v1/purchase-requests")
             .header(AUTH_HEADER, authHeader)
             .contentType(ContentType.JSON)
             .body(Map.ofEntries(
                 entry("title", title),
                 entry("content", content),
+                entry("classroomId", classroomId),
                 entry("items", java.util.List.of(Map.ofEntries(
                     entry("name", title + " 품목"),
                     entry("reason", content),
-                    entry("price", price)
+                    entry("expectedPrice", price)
                 )))
             ))
             .post()
