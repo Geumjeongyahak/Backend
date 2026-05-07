@@ -2,6 +2,7 @@ package geumjeongyahak.common.security.service;
 
 import geumjeongyahak.domain.base.enums.ActionType;
 import geumjeongyahak.domain.base.enums.ResourceType;
+import geumjeongyahak.domain.base.model.PermissionRegistry;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
@@ -12,11 +13,19 @@ public class DomainPermissionChecker {
         if (userDetails == null) return false;
         if (userDetails.isAdmin()) return true;
 
-        String wildcard = resource.getCode() + ":" + action.getCode() + ":*";
-        String specific  = resource.getCode() + ":" + action.getCode() + ":" + resourceId;
-
         return userDetails.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
-            .anyMatch(a -> a.equals(wildcard) || a.equals(specific));
+            .anyMatch(a -> matchesPermission(a, resource, action, resourceId));
+    }
+
+    private boolean matchesPermission(String authority, ResourceType resource, ActionType action, Object resourceId) {
+        if (PermissionRegistry.isScopeAllowed(resource, action, true) &&
+            authority.equals(resource.getCode() + ":" + action.getCode() + ":*")) {
+            return true;
+        }
+
+        return resourceId != null &&
+            PermissionRegistry.isScopeAllowed(resource, action, false) &&
+            authority.equals(resource.getCode() + ":" + action.getCode() + ":" + resourceId);
     }
 }

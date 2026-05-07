@@ -9,16 +9,10 @@ import java.util.Arrays;
 @RequiredArgsConstructor
 public enum ResourceType {
     CHANNEL("channel"),
-    POST("post"),
-    COMMENT("comment"),
-    CLASSROOM("classroom"),
     STUDENT("student"),
-    SUBJECT("subject"),
-    LESSON("lesson"),
     DEPARTMENT("department"),
     USER("user"),
-    FILE("file"),
-    REQUEST("request");
+    PURCHASE_REQUEST("purchase-request");
 
     private final String code;
 

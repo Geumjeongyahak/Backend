@@ -1,7 +1,7 @@
 package geumjeongyahak.domain.base.controller;
 
 import geumjeongyahak.domain.base.model.PermissionRegistry;
-import geumjeongyahak.domain.base.model.PermissionRegistry.PermissionDefinition;
+import geumjeongyahak.domain.base.model.PermissionDefinition;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +17,7 @@ import java.util.List;
 @Tag(name = "Permission Registry", description = "관리자 권한 선택지 조회 API")
 public class PermissionRegistryController {
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:manage:*') or hasAuthority('department:manage:*')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:grant:*') or hasAuthority('department:grant:*')")
     @GetMapping
     @Operation(summary = "전역 권한 선택지 조회", description = "관리자 화면에서 사용자/부서 권한을 선택할 때 사용할 수 있는 전역 권한 목록을 반환합니다.")
     public ResponseEntity<List<PermissionDefinition>> getGlobalPermissions() {

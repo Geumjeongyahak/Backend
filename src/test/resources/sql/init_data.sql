@@ -37,16 +37,16 @@ ALTER TABLE user_credentials ALTER COLUMN id RESTART WITH 5;
 
 -- 4. Department Permissions
 INSERT INTO department_permissions (department_id, permission_code) VALUES
-    (1, 'department:read:*'),
     (1, 'department:write:*'),
-    (2, 'post:read:*'),
-    (2, 'post:write:*'),
-    (4, 'file:read:*'),
-    (4, 'file:write:*');
+    (1, 'department:manage:*'),
+    (2, 'channel:read:*'),
+    (2, 'channel:write:*'),
+    (4, 'purchase-request:read:*'),
+    (4, 'purchase-request:review:*');
 
 -- 5. User Permissions
 INSERT INTO user_permissions (user_id, permission_code) VALUES
-    (2, 'lesson:write:1');
+    (2, 'channel:write:1');
 
 -- 6. Classrooms
 INSERT INTO classrooms (id, name, type, description)

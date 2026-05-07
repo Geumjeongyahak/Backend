@@ -1,7 +1,7 @@
 package geumjeongyahak.domain.base.service;
 
 import geumjeongyahak.domain.base.model.PermissionRegistry;
-import geumjeongyahak.domain.base.model.PermissionRegistry.PermissionDefinition;
+import geumjeongyahak.domain.base.model.PermissionDefinition;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
