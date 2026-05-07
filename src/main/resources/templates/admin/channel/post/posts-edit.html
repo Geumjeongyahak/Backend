@@ -56,7 +56,7 @@
     <script th:inline="javascript">
         const imageUploadUrl = /*[[@{/admin/channel/{channelId}/posts/{postId}/images(channelId=${post.channelId},postId=${post.id})}]]*/ '';
         const attachmentUploadUrl = /*[[@{/admin/channel/{channelId}/posts/{postId}/attachments(channelId=${post.channelId},postId=${post.id})}]]*/ '';
-        const attachmentDeleteUrlBase = /*[[@{/api/v1/files/attachments/}]]*/ '/api/v1/files/attachments/';
+        const attachmentDeleteUrlBase = /*[[@{/admin/channel/{channelId}/posts/{postId}/attachments(channelId=${post.channelId},postId=${post.id})}]]*/ '';
         
         const editor = new toastui.Editor({
             el: document.querySelector('#editor'),
@@ -104,7 +104,7 @@
                 
                 if (confirm('이 첨부파일을 삭제하시겠습니까?')) {
                     try {
-                        const response = await fetch(`${attachmentDeleteUrlBase}${fileId}`, { method: 'DELETE' });
+                        const response = await fetch(`${attachmentDeleteUrlBase}/${fileId}`, { method: 'DELETE' });
                         if (response.ok) {
                             pill.remove();
                         } else {

@@ -79,6 +79,7 @@ public record PostDetailResponse(
                 post.getCreatedAt(),
                 post.getUpdatedAt(),
                 post.getPostAttachments().stream()
+                        .filter(pa -> !pa.getFile().isDeleted())
                         .map(pa -> new PostAttachmentInfo(
                                 pa.getFile().getId(),
                                 pa.getFile().getOriginalName(),

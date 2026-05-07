@@ -62,6 +62,16 @@ public class AttachmentUploadService {
         file.delete();
     }
 
+    @Transactional
+    public void deleteAttachmentIfPresent(UUID fileId) {
+        fileRepository.findById(fileId)
+            .filter(file -> !file.isDeleted())
+            .ifPresent(file -> {
+                storageService.delete(file.getStorageKey());
+                file.delete();
+            });
+    }
+
     private File getFile(UUID fileId) {
         return fileRepository.findByIdAndIsDeletedFalse(fileId)
             .orElseThrow(() -> new ResourceNotFoundException(CommonErrorCode.RESOURCE_NOT_FOUND, "파일을 찾을 수 없습니다."));

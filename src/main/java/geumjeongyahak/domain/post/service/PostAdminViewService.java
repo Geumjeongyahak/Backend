@@ -35,6 +35,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -208,6 +209,16 @@ public class PostAdminViewService {
         }
 
         return uploaded;
+    }
+
+    @Transactional
+    public void deleteAttachment(Long channelId, Long postId, UUID fileId) {
+        getActivePost(channelId, postId);
+        PostAttachment attachment = postAttachmentRepository.findByPostIdAndFileId(postId, fileId)
+            .orElseThrow(() -> new ResourceNotFoundException(PostErrorCode.POST_NOT_FOUND));
+
+        postAttachmentRepository.delete(attachment);
+        attachmentUploadService.deleteAttachmentIfPresent(fileId);
     }
 
     @Transactional
