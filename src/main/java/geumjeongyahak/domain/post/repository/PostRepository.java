@@ -13,6 +13,7 @@ import geumjeongyahak.domain.post.entity.Post;
 import geumjeongyahak.domain.post.enums.PostStatus;
 
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 
 public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificationExecutor<Post> {
 
@@ -31,6 +32,10 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
 
     // 이벤트용: createdAt만 사용하므로 fetch join 불필요
     Optional<Post> findFirstByChannelIdAndStatusAndIsDeletedFalseOrderByCreatedAtDescIdDesc(Long channelId, PostStatus status);
+
+    // 내 초안 목록 조회
+    @EntityGraph(attributePaths = {"channel", "author"})
+    Page<Post> findAllByChannelIdAndAuthorIdAndStatusAndIsDeletedFalse(Long channelId, Long authorId, PostStatus status, Pageable pageable);
 
     @Query("select p.author.id from Post p where p.id = :id and p.isDeleted = false")
     Optional<Long> findAuthorIdById(@org.springframework.data.repository.query.Param("id") Long id);

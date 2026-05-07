@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('부서 수정')}"></head>
+<body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+<main class="stack"><div class="page-title"><div><h1>부서 수정</h1><p th:text="${department.name}">부서</p></div></div>
+<form class="panel form-grid" th:action="@{/admin/department/departments/{departmentId}(departmentId=${department.id})}" method="post">
+    <label>부서명 <input name="name" th:value="${department.name}" required></label>
+    <label>설명 <textarea name="description" th:text="${department.description}" required></textarea></label>
+    <button class="button" type="submit">수정</button>
+</form></main>
+</div></body></html>

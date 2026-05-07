@@ -20,7 +20,6 @@ import geumjeongyahak.domain.department.v1.dto.response.DepartmentListResponse;
 public class DepartmentController {
     private final DepartmentCrudService departmentCrudService;
 
-    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "부서 목록 조회", description = "참여 가능한 부서 목록을 조회합니다.")
     @GetMapping
     public ResponseEntity<DepartmentListResponse> getAllDepartments() {

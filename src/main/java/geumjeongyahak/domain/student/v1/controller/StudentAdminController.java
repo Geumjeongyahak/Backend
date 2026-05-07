@@ -31,7 +31,7 @@ public class StudentAdminController {
 
     private final StudentService studentService;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('student:write:*')")
     @Operation(
         summary = "학생 등록",
         description = """
@@ -59,7 +59,7 @@ public class StudentAdminController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('student:manage:*')")
     @Operation(
         summary = "학생 수정",
         description = """
@@ -90,7 +90,7 @@ public class StudentAdminController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('student:manage:*')")
     @Operation(
         summary = "학생 삭제",
         description = """

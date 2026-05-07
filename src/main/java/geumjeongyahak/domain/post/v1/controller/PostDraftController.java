@@ -1,24 +1,28 @@
 package geumjeongyahak.domain.post.v1.controller;
 
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 import geumjeongyahak.common.security.service.CustomUserDetails;
-import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
+import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.post.service.PostActionService;
+import geumjeongyahak.domain.post.service.PostCrudService;
 import geumjeongyahak.domain.post.v1.dto.request.SaveDraftRequest;
 import geumjeongyahak.domain.post.v1.dto.response.PostDetailResponse;
+import geumjeongyahak.domain.post.v1.dto.response.PostSummaryResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -31,6 +35,27 @@ import lombok.RequiredArgsConstructor;
 public class PostDraftController {
 
     private final PostActionService postActionService;
+    private final PostCrudService postCrudService;
+
+    @PreAuthorize("@channelAccess.can('read', #channelId, principal)")
+    @Operation(
+            summary = "내 초안 목록 조회",
+            description = """
+                    현재 로그인한 사용자가 해당 채널에 작성 중인 DRAFT 게시글 목록을 반환합니다.
+
+                    동작 방식:
+                    - 본인이 작성한 DRAFT 상태 게시글만 반환합니다.
+                    - 최신 생성 순으로 정렬됩니다.
+                    """
+    )
+    @GetMapping("/me/drafts")
+    public ResponseEntity<PaginationResponse<PostSummaryResponse>> getMyDrafts(
+            @PathVariable Long channelId,
+            @ParameterObject @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(postCrudService.getMyDrafts(channelId, userDetails, pageable));
+    }
 
     @PreAuthorize("@channelAccess.can('write', #channelId, principal)")
     @Operation(
@@ -85,54 +110,4 @@ public class PostDraftController {
         return ResponseEntity.ok(postActionService.saveDraft(channelId, postId, userDetails, request.toCommand()));
     }
 
-    @PreAuthorize("@channelAccess.can('write', #channelId, principal)")
-    @Operation(
-            summary = "초안 이미지 업로드 및 연동",
-            description = """
-                    이미지를 업로드하고 초안 게시글에 즉시 연동합니다.
-
-                    동작 방식:
-                    - multipart/form-data로 이미지 파일을 전송하면 스토리지 업로드와 post_files 매핑이 한 번에 처리됩니다.
-                    - 에디터에서 이미지 삽입 시 반환된 url을 본문 HTML에 직접 사용할 수 있습니다.
-                    - 동일 파일이 이미 연동되어 있으면 중복 저장 없이 업로드 결과만 반환합니다.
-
-                    제약 사항:
-                    - 본인이 작성한 초안에만 연동할 수 있습니다.
-                    - DRAFT 상태 게시글에만 사용할 수 있습니다.
-                    """
-    )
-    @PostMapping(value = "/{postId}/draft/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FileUploadResponse> attachImage(
-            @PathVariable Long channelId,
-            @PathVariable Long postId,
-            @RequestPart("file") MultipartFile file,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        return ResponseEntity.ok(postActionService.attachImageToDraft(channelId, postId, userDetails, file));
-    }
-
-    @PreAuthorize("@channelAccess.can('write', #channelId, principal)")
-    @Operation(
-            summary = "초안 첨부파일 업로드 및 연동",
-            description = """
-                    첨부파일을 업로드하고 초안 게시글에 즉시 연동합니다.
-
-                    동작 방식:
-                    - multipart/form-data로 파일을 전송하면 스토리지 업로드와 post_attachments 매핑이 한 번에 처리됩니다.
-                    - 동일 파일이 이미 연동되어 있으면 중복 저장 없이 업로드 결과만 반환합니다.
-
-                    제약 사항:
-                    - 본인이 작성한 초안에만 연동할 수 있습니다.
-                    - DRAFT 상태 게시글에만 사용할 수 있습니다.
-                    """
-    )
-    @PostMapping(value = "/{postId}/draft/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FileUploadResponse> attachAttachment(
-            @PathVariable Long channelId,
-            @PathVariable Long postId,
-            @RequestPart("file") MultipartFile file,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        return ResponseEntity.ok(postActionService.attachAttachmentToDraft(channelId, postId, userDetails, file));
-    }
 }

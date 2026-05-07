@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('채널 게시글')}"></head>
+<body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+<main class="stack">
+    <div class="page-title">
+        <div><h1>채널 게시글</h1><p>이 채널에 속한 게시글을 작성하고 관리합니다.</p></div>
+        <form th:action="@{/admin/channel/{channelId}/posts/drafts(channelId=${channelId})}" method="post">
+            <button class="button" type="submit">게시글 작성</button>
+        </form>
+    </div>
+    <form class="panel filter-grid" th:action="@{/admin/channel/{channelId}/posts(channelId=${channelId})}" method="get">
+        <label>검색어 <input name="keyword" th:value="${filter.keyword}" placeholder="제목, 본문, 작성자"></label>
+        <label>상태 <select name="status"><option value="">전체</option><option th:each="status : ${postStatuses}" th:value="${status.name()}" th:text="${status.name()}" th:selected="${filter.status == status.name()}">PUBLISHED</option></select></label>
+        <button class="button" type="submit">조회</button>
+        <a class="reset-link" th:href="@{/admin/channel/{channelId}/posts(channelId=${channelId})}">초기화</a>
+    </form>
+    <section class="panel table-panel">
+        <div class="table-scroll"><table><thead><tr><th>ID</th><th>제목</th><th>상태</th><th>작성자</th><th>댓글</th><th>조회</th><th>작성일</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="post : ${postsPage.content}">
+                <td th:text="${post.id}">1</td>
+                <td>
+                    <a class="link" th:if="${post.status != 'DRAFT'}" th:href="@{/admin/channel/{channelId}/posts/{postId}(channelId=${post.channelId},postId=${post.id})}" th:text="${post.title}">제목</a>
+                    <a class="link" th:if="${post.status == 'DRAFT'}" th:href="@{/admin/channel/{channelId}/posts/{postId}/edit(channelId=${post.channelId},postId=${post.id})}" th:text="${post.title == null || post.title.isBlank() ? '제목 없는 초안' : post.title}">제목 없는 초안</a>
+                    <span class="tag" th:if="${post.isPinned}">고정</span>
+                </td>
+                <td th:text="${post.status}">PUBLISHED</td>
+                <td th:text="${post.authorName}">관리자</td>
+                <td th:text="${post.allowComment ? '허용' : '닫힘'}">허용</td>
+                <td th:text="${post.viewCount}">0</td>
+                <td th:text="${#temporals.format(post.createdAt, 'yyyy.MM.dd HH:mm')}">2026.01.01</td>
+                <td><a class="button secondary" th:href="@{/admin/channel/{channelId}/posts/{postId}/edit(channelId=${post.channelId},postId=${post.id})}">수정</a></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(postsPage.content)}"><td colspan="8" class="empty">게시글이 없습니다.</td></tr>
+            </tbody></table></div>
+        <div class="pager"><span th:text="|총 ${postsPage.totalElements}개 · ${postsPage.page + 1}/${postsPage.totalPages == 0 ? 1 : postsPage.totalPages} 페이지|">총 0개</span><div>
+            <a class="reset-link" th:classappend="${!postsPage.hasPrevious()} ? 'disabled'" th:href="@{/admin/channel/{channelId}/posts(channelId=${channelId},keyword=${filter.keyword},status=${filter.status},size=${postsPage.size},sort=${filter.sort},page=${postsPage.previousPage()})}">이전</a>
+            <a class="reset-link" th:classappend="${!postsPage.hasNext()} ? 'disabled'" th:href="@{/admin/channel/{channelId}/posts(channelId=${channelId},keyword=${filter.keyword},status=${filter.status},size=${postsPage.size},sort=${filter.sort},page=${postsPage.nextPage()})}">다음</a>
+        </div></div>
+    </section>
+</main>
+</div></body></html>

@@ -29,7 +29,7 @@ public class PostSearchSpecificationBuilder {
             spec = spec.and(PostSpecs.hasPublicAccess());
         } else if (!userDetails.isAdmin()) {
             // ADMIN이 아닌 경우
-            if (!hasWildcardPostPermission(userDetails)) {
+            if (!hasWildcardChannelPermission(userDetails)) {
                 // 전체 조회 권한(*)이 없는 경우: 공개 채널 + 개별 권한 있는 채널만 노출
                 java.util.List<Long> allowedIds = extractAllowedChannelIds(userDetails);
                 Specification<Post> visibility = PostSpecs.hasPublicAccess();
@@ -57,7 +57,8 @@ public class PostSearchSpecificationBuilder {
         if (request.getStatus() != null && !request.getStatus().isBlank()) {
             spec = spec.and(PostSpecs.hasStatus(PostStatus.valueOf(request.getStatus())));
         }
-        if (request.getChannelType() != null && !request.getChannelType().isBlank()) {
+        if (request.getChannelType() != null && !request.getChannelType().isBlank()
+                && !"ALL".equalsIgnoreCase(request.getChannelType())) {
             spec = spec.and(PostSpecs.hasChannelType(ChannelType.valueOf(request.getChannelType())));
         }
         if (request.getClassroomId() != null) {
@@ -74,17 +75,17 @@ public class PostSearchSpecificationBuilder {
         return spec;
     }
 
-    private boolean hasWildcardPostPermission(CustomUserDetails userDetails) {
+    private boolean hasWildcardChannelPermission(CustomUserDetails userDetails) {
         return userDetails.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().startsWith("post:read:*") ||
-                               a.getAuthority().startsWith("post:write:*") ||
-                               a.getAuthority().startsWith("post:manage:*"));
+                .anyMatch(a -> a.getAuthority().startsWith("channel:read:*") ||
+                               a.getAuthority().startsWith("channel:write:*") ||
+                               a.getAuthority().startsWith("channel:manage:*"));
     }
 
     private List<Long> extractAllowedChannelIds(CustomUserDetails userDetails) {
         return userDetails.getAuthorities().stream()
                 .map(org.springframework.security.core.GrantedAuthority::getAuthority)
-                .filter(a -> a.startsWith("post:read:") || a.startsWith("post:write:") || a.startsWith("post:manage:"))
+                .filter(a -> a.startsWith("channel:read:") || a.startsWith("channel:write:") || a.startsWith("channel:manage:"))
                 .map(a -> a.substring(a.lastIndexOf(":") + 1))
                 .filter(id -> !id.equals("*"))
                 .map(Long::valueOf)

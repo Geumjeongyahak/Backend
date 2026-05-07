@@ -2,7 +2,7 @@ COMPOSE := docker compose
 BASE_COMPOSE := -f docker-compose.yml
 LOCAL_COMPOSE := -f docker-compose.yml -f docker-compose.local.yml
 
-.PHONY: up up-local down down-local logs logs-local ps ps-local build-local
+.PHONY: up up-local down down-local logs logs-local ps ps-local build-local push
 
 up:
 	$(COMPOSE) $(BASE_COMPOSE) up -d
@@ -30,3 +30,5 @@ ps:
 
 ps-local:
 	$(COMPOSE) $(LOCAL_COMPOSE) ps
+push:
+	docker push ghcr.io/geumjeongyahak/backend:latest

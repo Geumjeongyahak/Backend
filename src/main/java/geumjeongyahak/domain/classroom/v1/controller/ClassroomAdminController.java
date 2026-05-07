@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ClassroomAdminController {
     private final ClassroomCrudService classroomCrudService;
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('classroom:manage:*')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "분반 생성", description = "새로운 분반을 생성합니다.")
     @PostMapping
     public ResponseEntity<ClassroomDetailResponse> createClassroom(
@@ -42,7 +42,7 @@ public class ClassroomAdminController {
         );
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('classroom:manage:*')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(
         summary = "분반 수정",
         description = "기존 분반 정보를 수정합니다. 전달된 필드만 변경하며 description은 빈 문자열로 비울 수 있습니다."
@@ -58,7 +58,7 @@ public class ClassroomAdminController {
         );
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('classroom:manage:*')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "분반 삭제", description = "기존 분반을 삭제합니다.")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteClassroom(

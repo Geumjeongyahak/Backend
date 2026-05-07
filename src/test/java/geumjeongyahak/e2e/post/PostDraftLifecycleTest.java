@@ -2,6 +2,7 @@ package geumjeongyahak.e2e.post;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 
 import io.restassured.http.ContentType;
@@ -49,7 +50,7 @@ class PostDraftLifecycleTest extends BasePostTest {
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .multiPart(testFileHelper.multipartAttachmentRequest("file", "test.pdf"))
         .when()
-            .post("/api/v1/channels/{channelId}/posts/{postId}/draft/attachments", noticeChannelId, postId)
+            .post("/api/v1/channels/{channelId}/posts/{postId}/attachments", noticeChannelId, postId)
         .then()
             .statusCode(200)
             .body("originalName", equalTo("test.pdf"));
@@ -114,6 +115,29 @@ class PostDraftLifecycleTest extends BasePostTest {
             .put("/api/v1/channels/{channelId}/posts/{postId}/draft", noticeChannelId, postId)
         .then()
             .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("내 초안 목록 조회 - 본인 초안만 반환된다")
+    void getMyDrafts_ReturnsOwnDraftsOnly() {
+        Long postId = testPostHelper.createDraftAndRegister(noticeChannelId, adminAccessToken);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/api/v1/channels/{channelId}/posts/me/drafts", noticeChannelId)
+        .then()
+            .statusCode(200)
+            .body("content.id", hasItem(postId.intValue()));
+
+        // 다른 사용자는 본인 초안을 볼 수 없음
+        given()
+            .header(AUTH_HEADER, getAuthHeader(guestAccessToken))
+        .when()
+            .get("/api/v1/channels/{channelId}/posts/me/drafts", noticeChannelId)
+        .then()
+            .statusCode(200)
+            .body("content.id", org.hamcrest.Matchers.not(hasItem(postId.intValue())));
     }
 
     @Test

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('부서 상세')}"></head>
+<body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+<main class="stack">
+    <div class="page-title"><div><h1 th:text="${department.name}">부서</h1><p th:text="${department.description}">설명</p></div><a class="button secondary" th:href="@{/admin/department/departments/{departmentId}/edit(departmentId=${department.id})}">수정</a></div>
+    <section class="panel stack"><h2>부서 권한</h2><div><span class="tag" th:each="permission : ${department.permissions}" th:text="${permission.code}">권한</span><span th:if="${#lists.isEmpty(department.permissions)}">-</span></div>
+        <form class="inline-form permission-form" th:action="@{/admin/department/departments/{departmentId}/permissions(departmentId=${department.id})}" method="post">
+            <select name="permissionKey" required>
+                <option value="">권한 선택</option>
+                <option th:each="permission : ${permissionOptions}"
+                        th:value="|${permission.resourceCode}:${permission.actionCode}|"
+                        th:attr="data-resource-code=${permission.resourceCode},data-global-allowed=${permission.globalAllowed},data-target-allowed=${permission.targetAllowed}"
+                        th:text="|${permission.label} (${permission.resourceCode}:${permission.actionCode})|">권한</option>
+            </select>
+            <select name="scopeTarget" required>
+                <option value="">범위 선택</option>
+                <option th:each="scope : ${permissionScopeOptions}"
+                        th:value="${scope.value}"
+                        th:attr="data-resource-code=${scope.resourceCode}"
+                        th:text="${scope.label}">범위</option>
+            </select>
+            <button class="button" type="submit">추가</button>
+        </form>
+    </section>
+    <section class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>ID</th><th>이름</th><th>이메일</th><th>역할</th></tr></thead><tbody><tr th:each="user : ${department.users}"><td th:text="${user.id}">1</td><td><a class="link" th:href="@{/admin/user/users/{userId}(userId=${user.id})}" th:text="${user.name}">이름</a></td><td th:text="${user.email}">email</td><td th:text="${user.role}">role</td></tr><tr th:if="${#lists.isEmpty(department.users)}"><td colspan="4" class="empty">소속 사용자가 없습니다.</td></tr></tbody></table></div></section>
+</main>
+</div></body></html>

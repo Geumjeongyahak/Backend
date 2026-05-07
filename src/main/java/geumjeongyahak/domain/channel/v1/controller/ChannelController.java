@@ -32,7 +32,6 @@ import java.util.List;
 public class ChannelController {
     private final ChannelCrudService channelCrudService;
 
-    @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "채널 목록 조회",
             description = """

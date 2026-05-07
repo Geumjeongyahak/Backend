@@ -1,5 +1,8 @@
 package geumjeongyahak.common.security.service;
 
+import geumjeongyahak.domain.base.enums.ActionType;
+import geumjeongyahak.domain.base.enums.ResourceType;
+import geumjeongyahak.domain.base.model.PermissionRegistry;
 import org.springframework.security.access.PermissionEvaluator;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -17,11 +20,30 @@ public class PermissionCodeEvaluator implements PermissionEvaluator {
     @Override
     public boolean hasPermission(Authentication auth, Serializable targetId, String targetType, Object permission) {
         if (auth == null || targetType == null || permission == null) return false;
-        String wildcard = targetType + ":" + permission + ":*";
-        String specific  = targetType + ":" + permission + ":" + targetId;
+        ResourceType resource;
+        ActionType action;
+
+        try {
+            resource = ResourceType.fromCode(targetType);
+            action = ActionType.fromCode(permission.toString());
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+
         return auth.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
-            .anyMatch(a -> a.equals(wildcard) || a.equals(specific));
+            .anyMatch(a -> matchesPermission(a, resource, action, targetId));
+    }
+
+    private boolean matchesPermission(String authority, ResourceType resource, ActionType action, Serializable targetId) {
+        if (PermissionRegistry.isScopeAllowed(resource, action, true) &&
+            authority.equals(resource.getCode() + ":" + action.getCode() + ":*")) {
+            return true;
+        }
+
+        return targetId != null &&
+            PermissionRegistry.isScopeAllowed(resource, action, false) &&
+            authority.equals(resource.getCode() + ":" + action.getCode() + ":" + targetId);
     }
 
     @Override

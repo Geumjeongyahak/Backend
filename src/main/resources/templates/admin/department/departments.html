@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('부서 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main>
+        <div class="page-title">
+            <div>
+                <h1>부서</h1>
+                <p>부서명, 설명, 권한, 구성원 수 기준으로 조회합니다.</p>
+            </div>
+            <a class="button" th:href="@{/admin/department/departments/new}">부서 등록</a>
+        </div>
+
+        <form class="panel filter-grid" th:action="@{/admin/department/departments}" method="get">
+            <label>검색어
+                <input name="keyword" th:value="${filter.keyword}" placeholder="부서명 또는 설명">
+            </label>
+            <label>권한 코드
+                <input name="permissionCode" th:value="${filter.permissionCode}" placeholder="department:read">
+            </label>
+            <label>최소 구성원 수
+                <input name="minMemberCount" type="number" min="0" th:value="${filter.minMemberCount}" placeholder="0">
+            </label>
+            <label>정렬
+                <select name="sort">
+                    <option value="name,ASC" th:selected="${filter.sort == null || filter.sort == 'name,ASC'}">부서명 오름차순</option>
+                    <option value="name,DESC" th:selected="${filter.sort == 'name,DESC'}">부서명 내림차순</option>
+                    <option value="memberCount,DESC" th:selected="${filter.sort == 'memberCount,DESC'}">구성원 많은순</option>
+                    <option value="createdAt,DESC" th:selected="${filter.sort == 'createdAt,DESC'}">생성일 최신순</option>
+                </select>
+            </label>
+            <button class="button" type="submit">조회</button>
+            <a class="reset-link" th:href="@{/admin/department/departments}">초기화</a>
+        </form>
+
+        <section class="panel table-panel">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>부서명</th>
+                        <th>설명</th>
+                        <th>구성원</th>
+                        <th>부서 권한</th>
+                        <th>권한 추가</th>
+                        <th>생성일</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="department : ${departments}">
+                        <td th:text="${department.id}">1</td>
+                        <td><a class="link" th:href="@{/admin/department/departments/{departmentId}(departmentId=${department.id})}" th:text="${department.name}">학사부</a></td>
+                        <td th:text="${department.description ?: '-'}">설명</td>
+                        <td th:text="${department.memberCount}">0</td>
+                        <td>
+                            <span th:if="${#lists.isEmpty(department.permissions)}">-</span>
+                            <span class="tag" th:each="permission : ${department.permissions}" th:text="${permission}">post:write:*</span>
+                        </td>
+                        <td>
+                            <a class="button secondary" th:href="@{/admin/department/departments/{departmentId}(departmentId=${department.id})}">상세</a>
+                        </td>
+                        <td th:text="${#temporals.format(department.createdAt, 'yyyy.MM.dd')}">2026.01.01</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(departments)}">
+                        <td colspan="7" class="empty">등록된 부서가 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

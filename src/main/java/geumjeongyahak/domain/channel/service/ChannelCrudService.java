@@ -45,6 +45,7 @@ public class ChannelCrudService {
                 .bindingType(ChannelBindingType.STANDALONE)
                 .refId(null)
                 .accessLevel(ChannelAccessLevel.valueOf(request.accessLevel()))
+                .allowGuestRead(request.allowGuestRead())
                 .isDefault(request.isDefault())
                 .isActive(request.isActive())
                 .build());
@@ -64,10 +65,12 @@ public class ChannelCrudService {
         if (request.getName() != null && !request.getName().isBlank()) {
             spec = spec.and(ChannelSpecs.containsName(request.getName()));
         }
-        if (request.getChannelType() != null && !request.getChannelType().isBlank()) {
+        if (request.getChannelType() != null && !request.getChannelType().isBlank()
+                && !"ALL".equalsIgnoreCase(request.getChannelType())) {
             spec = spec.and(ChannelSpecs.hasChannelType(ChannelType.valueOf(request.getChannelType())));
         }
-        if (request.getBindingType() != null && !request.getBindingType().isBlank()) {
+        if (request.getBindingType() != null && !request.getBindingType().isBlank()
+                && !"ALL".equalsIgnoreCase(request.getBindingType())) {
             spec = spec.and(ChannelSpecs.hasBindingType(ChannelBindingType.valueOf(request.getBindingType())));
         }
         if (request.getIsActive() != null) {
@@ -106,6 +109,10 @@ public class ChannelCrudService {
         }
         if (request.accessLevel() != null) {
             channel.setAccessLevel(ChannelAccessLevel.valueOf(request.accessLevel()));
+            isUpdated = true;
+        }
+        if (request.allowGuestRead() != null) {
+            channel.setAllowGuestRead(request.allowGuestRead());
             isUpdated = true;
         }
         if (request.isDefault() != null) {

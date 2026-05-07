@@ -8,6 +8,7 @@ import geumjeongyahak.domain.comment.entity.Comment;
 import geumjeongyahak.domain.comment.exception.CommentErrorCode;
 import geumjeongyahak.domain.comment.repository.CommentRepository;
 import geumjeongyahak.domain.comment.v1.dto.request.CreateCommentRequest;
+import geumjeongyahak.domain.comment.v1.dto.request.UpdateCommentRequest;
 import geumjeongyahak.domain.comment.v1.dto.response.CommentResponse;
 import geumjeongyahak.domain.post.entity.Post;
 import geumjeongyahak.domain.post.service.PostProxyService;
@@ -57,6 +58,24 @@ public class CommentCrudService {
         return commentRepository.findAllByPostIdAndIsDeletedFalseOrderByCreatedAtAscIdAsc(postId).stream()
                 .map(CommentResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public CommentResponse updateComment(
+            Long channelId,
+            Long postId,
+            Long commentId,
+            CustomUserDetails userDetails,
+            UpdateCommentRequest request
+    ) {
+        postProxyService.getActiveByChannelId(channelId, postId);
+        Comment comment = getActiveComment(postId, commentId);
+        if (!comment.getAuthor().getId().equals(userDetails.getUserId())) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "댓글 작성자만 댓글을 수정할 수 있습니다.");
+        }
+
+        comment.updateContent(request.content());
+        return CommentResponse.from(commentRepository.save(comment));
     }
 
     @Transactional

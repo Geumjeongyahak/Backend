@@ -9,15 +9,10 @@ import java.util.Arrays;
 @RequiredArgsConstructor
 public enum ActionType {
     READ("read"),
-    CREATE("create"),
-    UPDATE("update"),
     WRITE("write"),
-    DELETE("delete"),
     GRANT("grant"),
-    REVOKE("revoke"),
     MANAGE("manage"),
-    APPROVE("approve"),
-    REJECT("reject");
+    REVIEW("review");
 
     private final String code;
 

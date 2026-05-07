@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.department.service;
 
 import geumjeongyahak.domain.auth.v1.dto.response.PermissionResponse;
+import geumjeongyahak.domain.base.model.PermissionCode;
 import geumjeongyahak.domain.department.entity.Department;
 import geumjeongyahak.domain.department.entity.DepartmentPermission;
 import geumjeongyahak.domain.department.repository.DepartmentPermissionRepository;
@@ -30,13 +31,14 @@ public class DepartmentPermissionService {
         if (requests == null) {
             return;
         }
-        requests.forEach(request -> department.addPermission(request.permissionCode()));
+        requests.forEach(request -> department.addPermission(new PermissionCode(request.permissionCode()).value()));
     }
 
     @Transactional
     public List<PermissionResponse> addPermission(Department department, String permissionCode) {
-        departmentPermissionRepository.findByDepartmentIdAndPermissionCode(department.getId(), permissionCode)
-            .orElseGet(() -> departmentPermissionRepository.save(new DepartmentPermission(department, permissionCode)));
+        String validatedPermissionCode = new PermissionCode(permissionCode).value();
+        departmentPermissionRepository.findByDepartmentIdAndPermissionCode(department.getId(), validatedPermissionCode)
+            .orElseGet(() -> departmentPermissionRepository.save(new DepartmentPermission(department, validatedPermissionCode)));
         return getAllPermissions(department.getId());
     }
 

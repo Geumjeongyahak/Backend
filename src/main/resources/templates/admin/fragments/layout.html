@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title} + ' | 금정열린배움터 관리자'">관리자 | 금정열린배움터</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/icons/geumjeongyahak-icon.svg}">
+    <link rel="apple-touch-icon" th:href="@{/icons/geumjeongyahak-icon.svg}">
+    <link rel="manifest" th:href="@{/site.webmanifest}">
+    <style>
+        :root {
+            --page: #f4f6f4;
+            --panel: #ffffff;
+            --ink: #151a18;
+            --muted: #777f7a;
+            --line: #dfe5df;
+            --soft-line: #edf1ed;
+            --green: #89ca6b;
+            --green-dark: #4f9d34;
+            --danger: #c0473b;
+            --warning: #b77a1c;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--page);
+            color: var(--ink);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        a { color: inherit; text-decoration: none; }
+        button, input, select, textarea { font: inherit; }
+        .shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 248px minmax(0, 1fr);
+        }
+        aside {
+            padding: 26px 22px;
+            background: #fff;
+            border-right: 1px solid var(--line);
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+        .mark {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            object-fit: contain;
+        }
+        .brand strong { display: block; font-size: 16px; }
+        .brand span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+        nav { display: grid; gap: 6px; }
+        nav a {
+            padding: 12px 14px;
+            border-radius: 8px;
+            color: #566059;
+            font-weight: 800;
+        }
+        nav a.active {
+            background: #edf8e8;
+            color: var(--green-dark);
+        }
+        .logout {
+            width: 100%;
+            margin-top: 28px;
+            padding: 11px 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: #59625c;
+            font-weight: 800;
+            cursor: pointer;
+        }
+        .content {
+            min-width: 0;
+            padding: 30px;
+        }
+        .topline {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 20px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+        .page-title {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+        h1 { margin: 0; font-size: 30px; letter-spacing: 0; }
+        h2 { margin: 0 0 16px; font-size: 20px; }
+        p { margin: 7px 0 0; color: var(--muted); }
+        .panel {
+            padding: 22px;
+            border: 1px solid var(--soft-line);
+            border-radius: 8px;
+            background: var(--panel);
+        }
+        .stack { display: grid; gap: 18px; }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 360px minmax(0, 1fr);
+            gap: 18px;
+            align-items: start;
+        }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .metric {
+            padding: 20px;
+            border: 1px solid var(--soft-line);
+            border-radius: 8px;
+            background: #fff;
+        }
+        .metric span { display: block; color: var(--muted); font-weight: 800; }
+        .metric strong { display: block; margin-top: 10px; font-size: 34px; line-height: 1; }
+        .form-grid { display: grid; gap: 10px; }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(150px, 1fr)) auto auto;
+            gap: 10px;
+            align-items: end;
+        }
+        label { display: grid; gap: 6px; color: #4b554f; font-size: 13px; font-weight: 800; }
+        .check-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .check-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            cursor: pointer;
+        }
+        input, select, textarea {
+            width: 100%;
+            min-height: 40px;
+            padding: 9px 11px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--ink);
+        }
+        textarea { min-height: 86px; resize: vertical; }
+        .button {
+            min-height: 38px;
+            padding: 8px 12px;
+            border: 0;
+            border-radius: 8px;
+            background: var(--green);
+            color: #fff;
+            font-weight: 900;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .button.secondary { border: 1px solid var(--line); background: #fff; color: #4f5953; }
+        .button.danger { background: var(--danger); }
+        .reset-link {
+            min-height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: #4f5953;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+        .flash {
+            margin-bottom: 16px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: #edf8e8;
+            color: var(--green-dark);
+            font-weight: 800;
+        }
+        .table-panel { padding: 0; overflow: hidden; }
+        .table-scroll { overflow-x: auto; }
+        .pager {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 16px;
+            border-top: 1px solid var(--soft-line);
+            color: var(--muted);
+            font-size: 14px;
+        }
+        .pager > div {
+            display: flex;
+            gap: 8px;
+        }
+        .disabled {
+            pointer-events: none;
+            opacity: .45;
+        }
+        .link {
+            color: var(--green-dark);
+            font-weight: 900;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .detail-item {
+            padding: 14px;
+            border: 1px solid var(--soft-line);
+            border-radius: 8px;
+            background: #fbfcfb;
+        }
+        .detail-item span {
+            display: block;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 900;
+        }
+        .detail-item strong {
+            display: block;
+            margin-top: 6px;
+            font-size: 16px;
+        }
+        table {
+            width: 100%;
+            min-width: 980px;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 13px 14px;
+            border-bottom: 1px solid var(--soft-line);
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #fbfcfb;
+            color: #68716b;
+            font-size: 13px;
+            font-weight: 900;
+        }
+        .inline-form {
+            display: flex;
+            gap: 7px;
+            align-items: center;
+            margin-bottom: 7px;
+        }
+        .inline-form input, .inline-form select { min-width: 150px; }
+        .pill, .tag {
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            padding: 0 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+        .pill { background: #edf8e8; color: var(--green-dark); }
+        .tag {
+            margin: 0 5px 5px 0;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            color: #4f5953;
+        }
+        .status-PENDING { background: #fff6df; color: var(--warning); }
+        .status-APPROVED { background: #edf8e8; color: var(--green-dark); }
+        .status-REJECTED { background: #fff0ed; color: var(--danger); }
+        .status-PURCHASED, .status-CONFIRMED { background: #eef3ff; color: #3860a8; }
+        .empty { padding: 36px 16px; color: var(--muted); text-align: center; }
+        .editor-shell {
+            min-height: 520px;
+        }
+        .post-body {
+            line-height: 1.72;
+        }
+        .post-body img {
+            max-width: 100%;
+            height: auto;
+        }
+        .comment {
+            padding: 14px;
+            border: 1px solid var(--soft-line);
+            border-radius: 8px;
+            background: #fbfcfb;
+        }
+        .comment.reply {
+            margin-left: 32px;
+        }
+        .comment-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 800;
+        }
+        .comment p {
+            white-space: pre-wrap;
+        }
+        @media (max-width: 980px) {
+            .shell { grid-template-columns: 1fr; }
+            aside { border-right: 0; border-bottom: 1px solid var(--line); }
+            .content { padding: 20px 16px; }
+            .metric-grid, .grid-2 { grid-template-columns: 1fr; }
+            .filter-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="shell" th:fragment="shell(content)">
+    <aside>
+        <a class="brand" th:href="@{/admin}">
+            <img class="mark" th:src="@{/icons/geumjeongyahak-icon.svg}" alt="금정열린배움터">
+            <div>
+                <strong>관리자 콘솔</strong>
+                <span>금정열린배움터 운영</span>
+            </div>
+        </a>
+        <nav>
+            <a th:href="@{/admin}" th:classappend="${active == 'dashboard'} ? 'active'">대시보드</a>
+            <a th:href="@{/admin/user/users}" th:classappend="${active == 'users'} ? 'active'">사용자</a>
+            <a th:href="@{/admin/channel/channels}" th:classappend="${active == 'channels'} ? 'active'">채널</a>
+            <a th:href="@{/admin/post/posts}" th:classappend="${active == 'posts'} ? 'active'">게시글</a>
+            <a th:href="@{/admin/department/departments}" th:classappend="${active == 'departments'} ? 'active'">부서</a>
+            <a th:href="@{/admin/classroom/classrooms}" th:classappend="${active == 'classrooms'} ? 'active'">분반</a>
+            <a th:href="@{/admin/request/purchase/purchase-requests}" th:classappend="${active == 'purchaseRequests'} ? 'active'">구매 요청</a>
+        </nav>
+        <div th:if="${#arrays.contains(@environment.getActiveProfiles(), 'dev')}" style="margin-top: 20px;">
+            <a href="/swagger-ui/index.html" target="_blank" style="display: block; padding: 10px 14px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); font-size: 13px; font-weight: 800; text-align: center;">
+                Swagger UI ↗
+            </a>
+        </div>
+        <form th:action="@{/admin/auth/logout}" method="post">
+            <button class="logout" type="submit">로그아웃</button>
+        </form>
+    </aside>
+    <div class="content">
+        <div class="topline">
+            <span th:text="${adminName}">admin@example.com</span>
+        </div>
+        <div class="flash" th:if="${message}" th:text="${message}">완료되었습니다.</div>
+        <th:block th:replace="${content}"></th:block>
+    </div>
+    <script>
+document.querySelectorAll('.permission-form').forEach((form) => {
+    const permissionSelect = form.querySelector('select[name="permissionKey"]');
+    const scopeSelect = form.querySelector('select[name="scopeTarget"]');
+    if (!permissionSelect || !scopeSelect) {
+        return;
+    }
+    const placeholder = scopeSelect.querySelector('option[value=""]')?.cloneNode(true);
+    const scopeOptions = Array.from(scopeSelect.options)
+        .filter((option) => option.value)
+        .map((option) => option.cloneNode(true));
+    const updateScopes = () => {
+        const selected = permissionSelect.selectedOptions[0];
+        const resourceCode = selected?.dataset.resourceCode;
+        const globalAllowed = selected?.dataset.globalAllowed === 'true';
+        const targetAllowed = selected?.dataset.targetAllowed === 'true';
+        scopeSelect.replaceChildren();
+        if (placeholder) {
+            scopeSelect.appendChild(placeholder.cloneNode(true));
+        }
+        scopeOptions
+            .filter((option) => {
+                const isGlobal = option.value === '*';
+                const matchesTarget = option.dataset.resourceCode === resourceCode;
+                return isGlobal ? globalAllowed : targetAllowed && matchesTarget;
+            })
+            .forEach((option) => scopeSelect.appendChild(option.cloneNode(true)));
+        scopeSelect.value = '';
+    };
+    permissionSelect.addEventListener('change', updateScopes);
+    updateScopes();
+});
+    </script>
+</div>
+</body>
+</html>

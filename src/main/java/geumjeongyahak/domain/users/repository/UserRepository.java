@@ -12,6 +12,7 @@ public interface UserRepository extends JpaRepository<User, Long>{
     boolean existsByNickname(String nickname);
     boolean existsByDepartmentId(Long departmentId);
     boolean existsByIdAndDepartmentId(Long userId, Long departmentId);
+    long countByDepartmentId(Long departmentId);
     java.util.List<User> findAllByDepartmentId(Long departmentId);
     Page<User> findAll(Pageable pageable);
 }

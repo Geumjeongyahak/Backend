@@ -12,12 +12,14 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.comment.service.CommentCrudService;
 import geumjeongyahak.domain.comment.v1.dto.request.CreateCommentRequest;
+import geumjeongyahak.domain.comment.v1.dto.request.UpdateCommentRequest;
 import geumjeongyahak.domain.comment.v1.dto.response.CommentResponse;
 
 import java.util.List;
@@ -61,7 +63,7 @@ public class CommentController {
                 .body(commentCrudService.createComment(channelId, postId, userDetails, request));
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@channelAccess.can('read', #channelId, principal)")
     @Operation(
             summary = "댓글 목록 조회",
             description = """
@@ -81,6 +83,28 @@ public class CommentController {
             @PathVariable Long postId
     ) {
         return ResponseEntity.ok(commentCrudService.getComments(channelId, postId));
+    }
+
+    @PreAuthorize("@commentAccess.can(#commentId, principal)")
+    @Operation(
+            summary = "댓글 수정",
+            description = """
+                    특정 게시글의 댓글 본문을 수정합니다.
+
+                    동작 방식:
+                    - 작성자 본인만 수정할 수 있습니다.
+                    - 댓글 본문만 교체됩니다.
+                    """
+    )
+    @PutMapping("/{commentId}")
+    public ResponseEntity<CommentResponse> updateComment(
+            @PathVariable Long channelId,
+            @PathVariable Long postId,
+            @PathVariable Long commentId,
+            @Valid @RequestBody UpdateCommentRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(commentCrudService.updateComment(channelId, postId, commentId, userDetails, request));
     }
 
     @PreAuthorize("@channelAccess.can('manage', #channelId, principal) or @commentAccess.can(#commentId, principal)")

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('관리자 대시보드')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>대시보드</h1>
+                <p>운영자가 처리해야 할 핵심 데이터를 모아봅니다.</p>
+            </div>
+        </div>
+
+        <section class="metric-grid">
+            <a class="metric" th:href="@{/admin/user/users}">
+                <span>사용자</span>
+                <strong th:text="${summary.userCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/department/departments}">
+                <span>부서</span>
+                <strong th:text="${summary.departmentCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/classroom/classrooms}">
+                <span>분반</span>
+                <strong th:text="${summary.classroomCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/request/purchase/purchase-requests(status='PENDING')}">
+                <span>대기 중 구매 요청</span>
+                <strong th:text="${summary.pendingPurchaseRequestCount}">0</strong>
+            </a>
+        </section>
+
+        <div class="grid-2" style="grid-template-columns: 1fr 1fr; gap: 24px;">
+            <section class="panel">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">사용자 및 권한 관리</h2>
+                </div>
+                <div class="metric-grid" style="grid-template-columns: 1fr 1fr;">
+                    <a class="metric" th:href="@{/admin/user/users}">
+                        <span>사용자 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">전체 사용자 및 권한 조회/수정</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/department/departments}">
+                        <span>부서 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">기관 산하 부서 조직 구성</p>
+                    </a>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">게시판 및 교육 운영</h2>
+                </div>
+                <div class="metric-grid" style="grid-template-columns: 1fr 1fr;">
+                    <a class="metric" th:href="@{/admin/channel/channels}">
+                        <span>채널 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">소통 채널 및 게시판 설정</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/post/posts}">
+                        <span>게시글 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">모든 채널의 게시물 모니터링</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/classroom/classrooms}">
+                        <span>분반 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">분반 및 교육 과정 운영</p>
+                    </a>
+                </div>
+            </section>
+        </div>
+
+        <section class="panel">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+                <h2 style="margin: 0;">결재 및 행정 지원</h2>
+            </div>
+            <div class="metric-grid">
+                <a class="metric" th:href="@{/admin/request/purchase/purchase-requests}">
+                    <span>전체 구매 요청</span>
+                    <p style="font-size: 13px; margin: 4px 0 0;">물품 구매 요청 이력 확인</p>
+                </a>
+                <a class="metric" th:href="@{/admin/request/purchase/purchase-requests(status='PENDING')}">
+                    <span style="color: var(--warning);">승인 대기 중</span>
+                    <p style="font-size: 13px; margin: 4px 0 0;">검토가 필요한 신규 구매 요청</p>
+                </a>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>
