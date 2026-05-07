@@ -128,6 +128,7 @@ CREATE TABLE students (
     phone_number VARCHAR(20),
     description TEXT,
     status VARCHAR(20) NOT NULL DEFAULT 'ENROLLED',
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (class_id) REFERENCES classrooms(id)

@@ -45,12 +45,16 @@ public class Student extends BaseEntity {
     @Column(nullable = false, length = 20)
     private StudentStatus status = StudentStatus.ENROLLED;
 
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted = false;
+
     public Student(String name, String phoneNumber, String description, Classroom classroom) {
         this.name = name;
         this.phoneNumber = phoneNumber;
         this.description = description;
         this.classroom = classroom;
         this.status = StudentStatus.ENROLLED;
+        this.isDeleted = false;
     }
 
     public void update(String name, String phoneNumber, String description, StudentStatus status, Classroom classroom) {
@@ -69,5 +73,9 @@ public class Student extends BaseEntity {
         if (classroom != null) {
             this.classroom = classroom;
         }
+    }
+
+    public void delete() {
+        this.isDeleted = true;
     }
 }

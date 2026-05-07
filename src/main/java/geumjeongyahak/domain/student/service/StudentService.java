@@ -35,7 +35,7 @@ public class StudentService {
     public StudentResponse createStudent(CreateStudentRequest request) {
         log.info("학생 등록 요청: - name: {}", request.name());
 
-        if (studentRepository.existsByNameAndPhoneNumber(request.name(), request.phoneNumber())) {
+        if (studentRepository.existsByNameAndPhoneNumberAndIsDeletedFalse(request.name(), request.phoneNumber())) {
             log.warn("학생 등록 실패 - 이미 등록된 학생입니다. name: {}, phoneNumber: {}",
                 request.name(), request.phoneNumber());
             throw new DuplicateStudentException(request.name(), request.phoneNumber());
@@ -69,7 +69,7 @@ public class StudentService {
 
     public StudentResponse getStudentById(Long studentId) {
         log.debug("학생 단건 조회 요청 - ID: {}", studentId);
-        return studentRepository.findById(studentId)
+        return studentRepository.findByIdAndIsDeletedFalse(studentId)
             .map(StudentResponse::from)
             .orElseThrow(() -> {
                 log.warn("학생을 찾을 수 없습니다 - ID: {}", studentId);
@@ -81,7 +81,7 @@ public class StudentService {
     public StudentResponse updateStudent(Long studentId, UpdateStudentRequest request) {
         log.info("학생 수정 요청 - ID: {}", studentId);
 
-        Student student = studentRepository.findById(studentId)
+        Student student = studentRepository.findByIdAndIsDeletedFalse(studentId)
             .orElseThrow(() -> {
                 log.warn("학생 수정 실패 - 학생을 찾을 수 없습니다. ID: {}", studentId);
                 return new StudentNotFoundException(studentId);
@@ -90,7 +90,7 @@ public class StudentService {
         String newName = (request.name() != null) ? request.name() : student.getName();
         String newPhone = (request.phoneNumber() != null) ? request.phoneNumber() : student.getPhoneNumber();
 
-        if (studentRepository.existsByNameAndPhoneNumberAndIdNot(newName, newPhone, studentId)) {
+        if (studentRepository.existsByNameAndPhoneNumberAndIdNotAndIsDeletedFalse(newName, newPhone, studentId)) {
             throw new DuplicateStudentException(newName, newPhone);
         }
 
@@ -107,16 +107,19 @@ public class StudentService {
     @Transactional
     public void deleteStudentById(Long studentId) {
         log.info("학생 삭제 요청 - ID: {}", studentId);
-        if (!studentRepository.existsById(studentId)) {
-            log.warn("학생 삭제 실패 - 학생을 찾을 수 없습니다. ID: {}", studentId);
-            throw new StudentNotFoundException(studentId);
-        }
-        studentRepository.deleteById(studentId);
+        Student student = studentRepository.findByIdAndIsDeletedFalse(studentId)
+            .orElseThrow(() -> {
+                log.warn("학생 삭제 실패 - 학생을 찾을 수 없습니다. ID: {}", studentId);
+                return new StudentNotFoundException(studentId);
+            });
+
+        student.delete();
         log.info("학생 삭제 완료 - ID: {}", studentId);
     }
 
     private Specification<Student> createSearchSpec(StudentSearchRequest request) {
-        return StudentSpecs.containsName(request.getName())
+        return StudentSpecs.withoutDeleted()
+            .and(StudentSpecs.containsName(request.getName()))
             .and(StudentSpecs.hasStatus(request.getStatus()))
             .and(StudentSpecs.hasClassroomId(request.getClassroomId()));
     }

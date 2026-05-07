@@ -7,6 +7,11 @@ import geumjeongyahak.domain.student.enums.StudentStatus;
 
 public class StudentSpecs {
 
+    public static Specification<Student> withoutDeleted() {
+        return (root, query, criteriaBuilder)
+                -> criteriaBuilder.isFalse(root.get("isDeleted"));
+    }
+
     public static Specification<Student> containsName(String name) {
         return (root, query, criteriaBuilder) -> {
             if (!StringUtils.hasText(name)) {
