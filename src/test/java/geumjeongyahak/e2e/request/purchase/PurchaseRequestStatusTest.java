@@ -2,7 +2,9 @@ package geumjeongyahak.e2e.request.purchase;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 
 import io.restassured.http.ContentType;
@@ -13,7 +15,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import geumjeongyahak.domain.request.repository.PurchaseRequestRepository;
+import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 
 /**
@@ -41,25 +43,43 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
 
     private Long setupPendingRequest() {
         return createPurchaseRequest(
-            getAuthHeader(volunteerToken), SUBJECT_ID, "교재 구입", "교재가 필요합니다.", 20000L);
+            getAuthHeader(volunteerToken), CLASSROOM_ID, "교재 구입", "교재가 필요합니다.", 20000L);
     }
 
     // ── 승인 (approve) ────────────────────────────────────
 
     @Test
-    @DisplayName("관리자 구입 요청 승인 → 200, APPROVED, approvalAt 설정")
+    @DisplayName("관리자 구입 요청 승인 → 200, APPROVED, approvalAt 설정, note 저장")
     void approve_asAdmin_returns200() {
         currentRequestId = setupPendingRequest();
 
         given()
-            .basePath("/api/v1/purchase-requests")
+            .basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .patch("/{id}/approve", currentRequestId)
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "수업 운영에 필요한 물품으로 승인합니다."))
+            .patch("/{requestId}/approve", currentRequestId)
             .then()
             .statusCode(200)
             .body("status", equalTo("APPROVED"))
             .body("approvalAt", notNullValue())
-            .body("approvalByName", notNullValue());
+            .body("approvalByName", notNullValue())
+            .body("note", equalTo("수업 운영에 필요한 물품으로 승인합니다."));
+    }
+
+    @Test
+    @DisplayName("note 없이 승인 → 400")
+    void approve_withoutNote_returns400() {
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of())
+            .patch("/{requestId}/approve", currentRequestId)
+            .then()
+            .statusCode(400);
     }
 
     @Test
@@ -67,14 +87,18 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     void approve_alreadyProcessed_returns409() {
         currentRequestId = setupPendingRequest();
 
-        given().basePath("/api/v1/purchase-requests")
+        given().basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .patch("/{id}/approve", currentRequestId)
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "처리 확인"))
+            .patch("/{requestId}/approve", currentRequestId)
             .then().statusCode(200);
 
-        given().basePath("/api/v1/purchase-requests")
+        given().basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .patch("/{id}/approve", currentRequestId)
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "재승인 사유"))
+            .patch("/{requestId}/approve", currentRequestId)
             .then().statusCode(409);
     }
 
@@ -84,9 +108,11 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
         currentRequestId = setupPendingRequest();
 
         given()
-            .basePath("/api/v1/purchase-requests")
+            .basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
-            .patch("/{id}/approve", currentRequestId)
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "승인 시도"))
+            .patch("/{requestId}/approve", currentRequestId)
             .then()
             .statusCode(403);
     }
@@ -95,9 +121,11 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     @DisplayName("존재하지 않는 구입 요청 승인 → 404")
     void approve_notFound_returns404() {
         given()
-            .basePath("/api/v1/purchase-requests")
+            .basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .patch("/{id}/approve", 99999L)
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "존재하지 않는 요청 승인"))
+            .patch("/{requestId}/approve", 99999L)
             .then()
             .statusCode(404);
     }
@@ -110,11 +138,11 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
         currentRequestId = setupPendingRequest();
 
         given()
-            .basePath("/api/v1/purchase-requests")
+            .basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .contentType(ContentType.JSON)
             .body(Map.of("note", "예산 초과로 반려합니다."))
-            .patch("/{id}/reject", currentRequestId)
+            .patch("/{requestId}/reject", currentRequestId)
             .then()
             .statusCode(200)
             .body("status", equalTo("REJECTED"))
@@ -127,11 +155,11 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
         currentRequestId = setupPendingRequest();
 
         given()
-            .basePath("/api/v1/purchase-requests")
+            .basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .contentType(ContentType.JSON)
             .body(Map.of())
-            .patch("/{id}/reject", currentRequestId)
+            .patch("/{requestId}/reject", currentRequestId)
             .then()
             .statusCode(400);
     }
@@ -141,16 +169,18 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     void reject_alreadyProcessed_returns409() {
         currentRequestId = setupPendingRequest();
 
-        given().basePath("/api/v1/purchase-requests")
+        given().basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .patch("/{id}/approve", currentRequestId)
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "삭제 상태 전환"))
+            .patch("/{requestId}/approve", currentRequestId)
             .then().statusCode(200);
 
-        given().basePath("/api/v1/purchase-requests")
+        given().basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .contentType(ContentType.JSON)
             .body(Map.of("note", "뒤늦은 반려"))
-            .patch("/{id}/reject", currentRequestId)
+            .patch("/{requestId}/reject", currentRequestId)
             .then().statusCode(409);
     }
 
@@ -160,11 +190,221 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
         currentRequestId = setupPendingRequest();
 
         given()
-            .basePath("/api/v1/purchase-requests")
+            .basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of("note", "반려"))
-            .patch("/{id}/reject", currentRequestId)
+            .patch("/{requestId}/reject", currentRequestId)
+            .then()
+            .statusCode(403);
+    }
+
+    // ── 삭제 (delete) ─────────────────────────────────────
+
+    @Test
+    @DisplayName("요청 작성자가 PENDING 구입 요청 삭제 → 204")
+    void delete_asOwnerAndPending_returns204() {
+        currentRequestId = setupPendingRequest();
+        Long requestId = currentRequestId;
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{requestId}", requestId)
+            .then()
+            .statusCode(204);
+
+        assertThat(purchaseRequestRepository.existsById(requestId)).isFalse();
+        currentRequestId = null;
+    }
+
+    @Test
+    @DisplayName("타인이 구입 요청 삭제 시도 → 403")
+    void delete_asOtherVolunteer_returns403() {
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
+            .delete("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("이미 처리된 구입 요청 삭제 시도 → 409")
+    void delete_processedRequest_returns409() {
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "삭제 불가 상태 전환"))
+            .patch("/{requestId}/approve", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(409);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 구입 요청 삭제 → 404")
+    void delete_notFound_returns404() {
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{requestId}", 99999L)
+            .then()
+            .statusCode(404);
+    }
+
+    @Test
+    @DisplayName("관리자가 PENDING 구입 요청 삭제 → 204")
+    void delete_asAdminAndPending_returns204() {
+        currentRequestId = setupPendingRequest();
+        Long requestId = currentRequestId;
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .delete("/{requestId}", requestId)
+            .then()
+            .statusCode(204);
+
+        assertThat(purchaseRequestRepository.existsById(requestId)).isFalse();
+        currentRequestId = null;
+    }
+
+    // ── 구매 보고 (report) ────────────────────────────────
+
+    @Test
+    @DisplayName("구매 완료 보고 시 요청 단위 영수증 여러 장 저장 → 200")
+    void report_withRequestReceipts_returns200() {
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "구매 보고 테스트 승인"))
+            .patch("/{requestId}/approve", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        Long itemId = given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getLong("items[0].id");
+
+        String receiptFileId1 = uploadPurchaseReceipt();
+        String receiptFileId2 = uploadPurchaseReceipt();
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "items", List.of(Map.of("itemId", itemId, "price", 20000L)),
+                "receiptFileIds", List.of(receiptFileId1, receiptFileId2)
+            ))
+            .post("/{requestId}/report", currentRequestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("PURCHASED"))
+            .body("receipts", hasSize(2))
+            .body("receipts[0].fileUrl", containsString("/documents/purchase-items/"));
+    }
+
+    // ── 재확인 요청 (reconfirmation) ───────────────────────
+
+    @Test
+    @DisplayName("요청 작성자가 PURCHASED 구입 요청 재확인 요청 → 204")
+    void requestReconfirmation_asOwnerAndPurchased_returns204() {
+        currentRequestId = setupPurchasedRequest();
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .post("/{requestId}/reconfirmation", currentRequestId)
+            .then()
+            .statusCode(204);
+    }
+
+    @Test
+    @DisplayName("타인이 구입 요청 재확인 요청 시도 → 403")
+    void requestReconfirmation_asOtherVolunteer_returns403() {
+        currentRequestId = setupPurchasedRequest();
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
+            .post("/{requestId}/reconfirmation", currentRequestId)
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("PURCHASED가 아닌 구입 요청 재확인 요청 → 409")
+    void requestReconfirmation_invalidStatus_returns409() {
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .post("/{requestId}/reconfirmation", currentRequestId)
+            .then()
+            .statusCode(409);
+    }
+
+    // ── 결재 확인 (confirm) ────────────────────────────────
+
+    @Test
+    @DisplayName("관리자가 PURCHASED 구입 요청 결재 확인 → 200, CONFIRMED")
+    void confirm_asAdminAndPurchased_returns200() {
+        currentRequestId = setupPurchasedRequest();
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", currentRequestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("CONFIRMED"));
+    }
+
+    @Test
+    @DisplayName("PURCHASED가 아닌 구입 요청 결재 확인 → 409")
+    void confirm_invalidStatus_returns409() {
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", currentRequestId)
+            .then()
+            .statusCode(409);
+    }
+
+    @Test
+    @DisplayName("봉사자가 결재 확인 시도 → 403")
+    void confirm_asVolunteer_returns403() {
+        currentRequestId = setupPurchasedRequest();
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .patch("/{requestId}/confirm", currentRequestId)
             .then()
             .statusCode(403);
     }
@@ -175,13 +415,13 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     @DisplayName("관리자는 전체 목록 / 봉사자는 본인 요청만 조회")
     void getList_adminSeesAll_volunteerSeesOnlyOwn() {
         Long request1Id = createPurchaseRequest(
-            getAuthHeader(volunteerToken), SUBJECT_ID, "v1 요청", "내용1", 1000L);
+            getAuthHeader(volunteerToken), CLASSROOM_ID, "v1 요청", "내용1", 1000L);
         Long request2Id = createPurchaseRequest(
-            getAuthHeader(volunteer2Token), SUBJECT_ID, "v2 요청", "내용2", 2000L);
+            getAuthHeader(volunteer2Token), CLASSROOM_ID, "v2 요청", "내용2", 2000L);
 
         try {
             List<Long> adminIds = given()
-                .basePath("/api/v1/purchase-requests")
+                .basePath("/api/v1/admin/purchase-requests")
                 .header(AUTH_HEADER, getAuthHeader(adminToken))
                 .get()
                 .then().statusCode(200)
@@ -210,7 +450,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
 
         // APPROVED 목록에는 PENDING 요청이 없어야 함
         List<Long> approvedIds = given()
-            .basePath("/api/v1/purchase-requests")
+            .basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .queryParam("status", "APPROVED")
             .get()
@@ -224,12 +464,12 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     @DisplayName("타인의 단건 조회 → 403")
     void getDetail_byNonOwner_returns403() {
         currentRequestId = createPurchaseRequest(
-            getAuthHeader(volunteerToken), SUBJECT_ID, "개인 요청", "내용", 5000L);
+            getAuthHeader(volunteerToken), CLASSROOM_ID, "개인 요청", "내용", 5000L);
 
         given()
             .basePath("/api/v1/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
-            .get("/{id}", currentRequestId)
+            .get("/{requestId}", currentRequestId)
             .then()
             .statusCode(403);
     }
@@ -242,5 +482,56 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .get()
             .then()
             .statusCode(401);
+    }
+
+    private Long setupPurchasedRequest() {
+        Long requestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "구매 보고 준비 승인"))
+            .patch("/{requestId}/approve", requestId)
+            .then()
+            .statusCode(200);
+
+        Long itemId = given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get("/{requestId}", requestId)
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getLong("items[0].id");
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("items", List.of(Map.of(
+                "itemId", itemId,
+                "price", 20000L
+            ))))
+            .post("/{requestId}/report", requestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("PURCHASED"));
+
+        return requestId;
+    }
+
+    private String uploadPurchaseReceipt() {
+        return given()
+            .basePath("/api/v1/files")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.MULTIPART)
+            .multiPart("file", "receipt.png", "receipt".getBytes(), "image/png")
+            .post("/images/purchase-items")
+            .then()
+            .statusCode(201)
+            .extract()
+            .path("fileId");
     }
 }

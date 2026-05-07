@@ -8,7 +8,7 @@ public record PermissionResponse(
     @Schema(description = "이름", example = "ADMIN")
     String name,
 
-    @Schema(description = "코드", example = "department:read")
+    @Schema(description = "코드", example = "department:write:*")
     String code
 ) {
     public static PermissionResponse from(RoleType roleType) {

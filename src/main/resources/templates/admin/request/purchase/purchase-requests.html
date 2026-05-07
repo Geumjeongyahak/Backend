@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('구매 요청 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>구매 요청</h1>
+                <p>현재는 기자재 구매 요청의 필터 조회, 승인, 반려만 관리합니다.</p>
+            </div>
+            <div>
+                <a class="button" th:href="@{/admin/request/purchase/purchase-requests/new}">구매 요청 등록</a>
+            </div>
+        </div>
+
+        <form class="panel filter-grid" th:action="@{/admin/request/purchase/purchase-requests}" method="get">
+            <label>검색어
+                <input name="keyword" th:value="${filter.keyword}" placeholder="제목, 분반, 요청자">
+            </label>
+            <label>상태
+                <select name="status">
+                    <option value="">전체</option>
+                    <option th:each="status : ${statuses}" th:value="${status.name()}" th:text="${status.name()}" th:selected="${selectedStatus == status}">PENDING</option>
+                </select>
+            </label>
+            <label>분반
+                <input name="classroomName" th:value="${filter.classroomName}" placeholder="벚꽃반">
+            </label>
+            <label>요청자
+                <input name="requestedByName" th:value="${filter.requestedByName}" placeholder="홍길동">
+            </label>
+            <label>페이지 크기
+                <select name="size">
+                    <option value="10" th:selected="${purchaseRequestsPage.size == 10}">10</option>
+                    <option value="20" th:selected="${purchaseRequestsPage.size == 20}">20</option>
+                    <option value="50" th:selected="${purchaseRequestsPage.size == 50}">50</option>
+                    <option value="100" th:selected="${purchaseRequestsPage.size == 100}">100</option>
+                </select>
+            </label>
+            <label>정렬
+                <select name="sort">
+                    <option value="createdAt,DESC" th:selected="${filter.sort == null || filter.sort == 'createdAt,DESC'}">생성일 최신순</option>
+                    <option value="createdAt,ASC" th:selected="${filter.sort == 'createdAt,ASC'}">생성일 오래된순</option>
+                    <option value="status,ASC" th:selected="${filter.sort == 'status,ASC'}">상태 오름차순</option>
+                    <option value="title,ASC" th:selected="${filter.sort == 'title,ASC'}">제목 오름차순</option>
+                    <option value="classroomName,ASC" th:selected="${filter.sort == 'classroomName,ASC'}">분반 오름차순</option>
+                </select>
+            </label>
+            <button class="button" type="submit">조회</button>
+            <a class="reset-link" th:href="@{/admin/request/purchase/purchase-requests}">초기화</a>
+        </form>
+
+        <section class="panel table-panel">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>제목</th>
+                        <th>분반</th>
+                        <th>요청자</th>
+                        <th>선금 요청</th>
+                        <th>선금 승인</th>
+                        <th>실 결제</th>
+                        <th>상태</th>
+                        <th>생성일</th>
+                        <th>처리</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="request : ${purchaseRequestsPage.content}">
+                        <td th:text="${request.id}">1</td>
+                        <td><a class="link" th:href="@{/admin/request/purchase/purchase-requests/{requestId}(requestId=${request.id})}" th:text="${request.title}">교재 구입</a></td>
+                        <td th:text="${request.classroomName}">벚꽃반</td>
+                        <td th:text="${request.requestedByName}">홍길동</td>
+                        <td th:text="${request.advancePaymentRequestedAmount != null ? request.advancePaymentRequestedAmount : '-'}">-</td>
+                        <td th:text="${request.advancePaymentApprovedAmount != null ? request.advancePaymentApprovedAmount : '-'}">-</td>
+                        <td th:text="${request.totalPrice != null ? request.totalPrice : '-'}">-</td>
+                        <td><span class="pill" th:classappend="'status-' + ${request.status.name()}" th:text="${request.status.name()}">PENDING</span></td>
+                        <td th:text="${#temporals.format(request.createdAt, 'yyyy.MM.dd')}">2026.01.01</td>
+                        <td>
+                            <form class="inline-form" th:if="${request.status.name() == 'PENDING'}" th:action="@{/admin/request/purchase/purchase-requests/{requestId}/approve(requestId=${request.id})}" method="post">
+                                <input name="note" placeholder="승인 사유" required>
+                                <input type="number" name="advancePaymentApprovedAmount" min="0" placeholder="선금 승인 금액">
+                                <button class="button" type="submit">승인</button>
+                            </form>
+                            <form class="inline-form" th:if="${request.status.name() == 'PENDING'}" th:action="@{/admin/request/purchase/purchase-requests/{requestId}/reject(requestId=${request.id})}" method="post">
+                                <input name="note" placeholder="반려 사유" required>
+                                <button class="button danger" type="submit">반려</button>
+                            </form>
+                            <span th:unless="${request.status.name() == 'PENDING'}">처리 완료</span>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(purchaseRequestsPage.content)}">
+                        <td colspan="10" class="empty">구매 요청이 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pager">
+                <span th:text="|총 ${purchaseRequestsPage.totalElements}건 · ${purchaseRequestsPage.page + 1}/${purchaseRequestsPage.totalPages == 0 ? 1 : purchaseRequestsPage.totalPages} 페이지|">총 0건</span>
+                <div>
+                    <a class="reset-link" th:classappend="${!purchaseRequestsPage.hasPrevious()} ? 'disabled'" th:href="@{/admin/request/purchase/purchase-requests(status=${filter.status},keyword=${filter.keyword},classroomName=${filter.classroomName},requestedByName=${filter.requestedByName},size=${purchaseRequestsPage.size},sort=${filter.sort},page=${purchaseRequestsPage.previousPage()})}">이전</a>
+                    <a class="reset-link" th:classappend="${!purchaseRequestsPage.hasNext()} ? 'disabled'" th:href="@{/admin/request/purchase/purchase-requests(status=${filter.status},keyword=${filter.keyword},classroomName=${filter.classroomName},requestedByName=${filter.requestedByName},size=${purchaseRequestsPage.size},sort=${filter.sort},page=${purchaseRequestsPage.nextPage()})}">다음</a>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

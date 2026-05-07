@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 public class StudentAdminController {
 
     private static final String STUDENT_WRITE_ACCESS = "hasRole('ADMIN') or hasAuthority('student:write:*')";
+    private static final String STUDENT_MANAGE_ACCESS = "hasRole('ADMIN') or hasAuthority('student:manage:*')";
 
     private final StudentService studentService;
 
@@ -62,7 +63,7 @@ public class StudentAdminController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PreAuthorize(STUDENT_WRITE_ACCESS)
+    @PreAuthorize(STUDENT_MANAGE_ACCESS)
     @Operation(
         summary = "학생 수정",
         description = """
@@ -94,7 +95,7 @@ public class StudentAdminController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize(STUDENT_WRITE_ACCESS)
+    @PreAuthorize(STUDENT_MANAGE_ACCESS)
     @Operation(
         summary = "학생 삭제",
         description = """

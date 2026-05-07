@@ -1,0 +1,15 @@
+{
+  "name": "금정열린배움터 관리자",
+  "short_name": "금정야학",
+  "icons": [
+    {
+      "src": "/icons/geumjeongyahak-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "theme_color": "#89ca6b",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}

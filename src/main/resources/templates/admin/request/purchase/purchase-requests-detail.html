@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('구매 요청 상세')}"></head>
+<body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+<main class="stack">
+    <div class="page-title">
+        <div>
+            <h1 th:text="${request.title}">구매 요청</h1>
+            <p>구매 요청 상세와 처리</p>
+        </div>
+        <div class="inline-form">
+            <a class="button" th:if="${request.status.name() == 'PENDING'}" th:href="@{/admin/request/purchase/purchase-requests/{requestId}/edit(requestId=${request.id})}">수정</a>
+            <a class="button" th:if="${request.status.name() == 'APPROVED'}" th:href="@{/admin/request/purchase/purchase-requests/{requestId}/edit(requestId=${request.id})}">구매 완료 보고</a>
+            <form class="inline-form" th:if="${request.status.name() == 'PENDING'}" th:action="@{/admin/request/purchase/purchase-requests/{requestId}/delete(requestId=${request.id})}" method="post" onsubmit="return confirm('이 구매 요청을 삭제하시겠습니까?');">
+                <button class="button danger" type="submit">삭제</button>
+            </form>
+        </div>
+    </div>
+    <div class="panel" style="background: #edf8e8; border-left: 4px solid var(--green); margin-bottom: 24px;" th:if="${request.status.name() == 'APPROVED'}">
+        <p style="margin: 0; color: var(--green-dark); font-weight: 800;">
+            승인된 요청입니다. 물품 구매 후 '수정' 버튼을 눌러 실제 가격과 영수증을 등록해 주세요.
+        </p>
+    </div>
+    <div class="panel" style="background: #f8faf9; border-left: 4px solid var(--green); margin-bottom: 24px;" th:if="${request.status.name() == 'PURCHASED'}">
+        <p style="margin: 0; color: var(--green-dark); font-weight: 800;">
+            구매 완료 보고가 제출되었습니다. 영수증과 금액을 확인한 뒤 결재 확인을 완료해 주세요.
+        </p>
+    </div>
+
+    <section class="panel detail-grid">
+        <div class="detail-item"><span>상태</span><strong th:text="${request.status.name()}">PENDING</strong></div>
+        <div class="detail-item"><span>요청자</span><strong><a class="link" th:href="@{/admin/user/users/{userId}(userId=${request.requestedById})}" th:text="${request.requestedByName}">요청자</a></strong></div>
+        <div class="detail-item"><span>분반</span><strong><a class="link" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${request.classroomId})}" th:text="${request.classroomName}">분반</a></strong></div>
+        <div class="detail-item"><span>선금 요청 금액</span><strong th:text="${request.advancePaymentRequestedAmount ?: '-'}">-</strong></div>
+        <div class="detail-item"><span>선금 승인 금액</span><strong th:text="${request.advancePaymentApprovedAmount ?: '-'}">-</strong></div>
+        <div class="detail-item"><span>실 결제 총액</span><strong th:text="${request.totalPrice ?: '-'}">-</strong></div>
+        <div class="detail-item"><span>내용</span><strong th:text="${request.content}">내용</strong></div>
+        <div class="detail-item"><span>메모</span><strong th:text="${request.note ?: '-'}">-</strong></div>
+    </section>
+    <section class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>ID</th><th>품명</th><th>사유</th><th>예상 가격</th><th>실제 가격</th></tr></thead><tbody><tr th:each="item : ${request.items}"><td th:text="${item.id}">1</td><td th:text="${item.name}">품목</td><td th:text="${item.reason ?: '-'}">사유</td><td th:text="${item.expectedPrice ?: '-'}">-</td><td th:text="${item.actualPrice ?: '-'}">-</td></tr></tbody></table></div></section>
+    <section class="panel" th:if="${request.status.name() == 'PURCHASED' || request.status.name() == 'CONFIRMED'}">
+        <h3>영수증</h3>
+        <div class="inline-form" th:if="${!#lists.isEmpty(request.receipts)}">
+            <a class="button secondary" th:each="receipt, stat : ${request.receipts}" th:href="${receipt.fileUrl}" target="_blank" th:text="'영수증 ' + ${stat.count}">영수증</a>
+        </div>
+        <p th:if="${#lists.isEmpty(request.receipts)}">등록된 영수증이 없습니다.</p>
+    </section>
+    <section class="panel" th:if="${request.status.name() == 'PENDING'}"><form class="inline-form" th:action="@{/admin/request/purchase/purchase-requests/{requestId}/approve(requestId=${request.id})}" method="post"><input name="note" placeholder="승인 사유" required><input type="number" name="advancePaymentApprovedAmount" min="0" placeholder="선금 승인 금액"><button class="button" type="submit">승인</button></form><form class="inline-form" th:action="@{/admin/request/purchase/purchase-requests/{requestId}/reject(requestId=${request.id})}" method="post"><input name="note" placeholder="반려 사유" required><button class="button danger" type="submit">반려</button></form></section>
+    <section class="panel" th:if="${request.status.name() == 'PURCHASED'}"><form class="inline-form" th:action="@{/admin/request/purchase/purchase-requests/{requestId}/confirm(requestId=${request.id})}" method="post"><button class="button" type="submit">결재 확인 완료</button></form></section>
+</main>
+</div></body></html>

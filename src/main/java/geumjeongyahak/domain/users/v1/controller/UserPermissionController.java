@@ -29,7 +29,7 @@ import java.util.List;
 public class UserPermissionController {
     private final UserPermissionService userPermissionService;
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:read:*')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:read:*') or hasAuthority('user:grant:*')")
     @Operation(
         summary = "사용자 권한 목록 조회",
         description = """
@@ -53,7 +53,7 @@ public class UserPermissionController {
         return ResponseEntity.ok(userPermissionService.getAllPermissions(userId));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:manage:*')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:grant:*')")
     @Operation(
         summary = "사용자 권한 추가",
         description = """
@@ -83,7 +83,7 @@ public class UserPermissionController {
         ));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:manage:*')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:grant:*')")
     @Operation(
         summary = "사용자 권한 제거",
         description = """

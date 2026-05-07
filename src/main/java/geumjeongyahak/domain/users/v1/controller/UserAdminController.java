@@ -34,7 +34,7 @@ import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
 public class UserAdminController {
     private final UserCrudService userCrudService;
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:read:*')") 
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:read:*')")
     @Operation(
         summary = "사용자 목록 조회",
         description = """
@@ -94,7 +94,7 @@ public class UserAdminController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:manage:*')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:write:*')")
     @Operation(
         summary = "사용자 생성",
         description = """

@@ -16,14 +16,14 @@ public record PermissionCode(
 ) {
 
     private static final Pattern PATTERN = Pattern.compile(
-            "^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*:(\\*|[1-9][0-9]*)$"
+            "^[a-z][a-z0-9_-]*:[a-z][a-z0-9_]*:(\\*|[1-9][0-9]*)$"
     );
 
     public PermissionCode {
         if (resource == null || action == null) {
             throw new IllegalArgumentException("Resource와 Action은 필수입니다.");
         }
-        PermissionRegistry.validate(resource, action);
+        PermissionRegistry.validate(resource, action, isGlobal);
         if (!isGlobal && targetId == null) {
             throw new IllegalArgumentException("Global 권한이 아닐 경우 targetId는 필수입니다.");
         }

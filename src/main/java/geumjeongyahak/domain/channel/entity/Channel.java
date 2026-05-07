@@ -64,6 +64,11 @@ public class Channel extends BaseEntity {
     private boolean isDeleted;
 
     @Setter
+    @Column(name = "allow_guest_read", nullable = false)
+    private boolean allowGuestRead;
+
+
+    @Setter
     @Column(name = "last_posted_at")
     private LocalDateTime lastPostedAt;
 
@@ -75,6 +80,7 @@ public class Channel extends BaseEntity {
             @NonNull ChannelBindingType bindingType,
             Long refId,
             ChannelAccessLevel accessLevel,
+            Boolean allowGuestRead,
             Boolean isDefault,
             Boolean isActive
     ) {
@@ -84,6 +90,7 @@ public class Channel extends BaseEntity {
         this.bindingType = bindingType;
         this.refId = refId;
         this.accessLevel = accessLevel == null ? ChannelAccessLevel.READ_WRITE : accessLevel;
+        this.allowGuestRead = allowGuestRead != null && allowGuestRead;
         this.isDefault = isDefault != null && isDefault;
         this.isActive = isActive == null || isActive;
         this.isDeleted = false;

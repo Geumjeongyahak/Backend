@@ -1,6 +1,10 @@
 spring:
   application:
     name: geumjeongyahak
+  servlet:
+    multipart:
+      max-file-size: 30MB
+      max-request-size: 30MB
   profiles:
     active: ${SPRING_PROFILES_ACTIVE}
   jpa:

@@ -24,7 +24,7 @@ class PostFileTest extends BasePostTest {
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .multiPart(testFileHelper.multipartImageRequest("file", "image1.png"))
         .when()
-            .post("/api/v1/channels/{channelId}/posts/{postId}/draft/images", noticeChannelId, postId)
+            .post("/api/v1/channels/{channelId}/posts/{postId}/images", noticeChannelId, postId)
         .then()
             .statusCode(200)
             .extract().jsonPath().getString("url");
@@ -33,7 +33,7 @@ class PostFileTest extends BasePostTest {
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .multiPart(testFileHelper.multipartImageRequest("file", "image2.png"))
         .when()
-            .post("/api/v1/channels/{channelId}/posts/{postId}/draft/images", noticeChannelId, postId)
+            .post("/api/v1/channels/{channelId}/posts/{postId}/images", noticeChannelId, postId)
         .then()
             .statusCode(200);
 

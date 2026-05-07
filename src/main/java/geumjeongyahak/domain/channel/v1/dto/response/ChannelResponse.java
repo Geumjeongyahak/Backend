@@ -34,6 +34,9 @@ public record ChannelResponse(
         @Schema(description = "채널의 기본 접근 수준입니다. CLOSED, READ_ONLY, READ_COMMENT, READ_WRITE 중 하나입니다.", example = "READ_ONLY")
         String accessLevel,
 
+        @Schema(description = "비로그인 방문자의 읽기 허용 여부입니다. true이면 누구나 읽을 수 있습니다.", example = "false")
+        boolean allowGuestRead,
+
         @Schema(description = "운영상 기본 채널로 취급되는지 여부입니다. 기본 게시판 묶음 구성에 활용할 수 있습니다.", example = "true")
         boolean isDefault,
 
@@ -60,6 +63,7 @@ public record ChannelResponse(
                 channel.getBindingType().name(),
                 channel.getRefId(),
                 channel.getAccessLevel().name(),
+                channel.isAllowGuestRead(),
                 channel.isDefault(),
                 channel.isActive(),
                 channel.getLastPostedAt()

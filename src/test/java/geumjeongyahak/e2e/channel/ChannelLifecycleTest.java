@@ -42,7 +42,8 @@ class ChannelLifecycleTest extends BaseChannelTest {
             "설명이 수정되었습니다.",
             true,
             true,
-            "READ_WRITE"
+            "READ_WRITE",
+            false
         );
 
         given()
@@ -71,7 +72,7 @@ class ChannelLifecycleTest extends BaseChannelTest {
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType(ContentType.JSON)
-            .body(new UpdateChannelRequest(null, null, null, false, null))
+            .body(new UpdateChannelRequest(null, null, null, false, null, null))
         .when()
             .put("/{id}", channelId)
         .then()
@@ -100,7 +101,7 @@ class ChannelLifecycleTest extends BaseChannelTest {
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType(ContentType.JSON)
-            .body(new UpdateChannelRequest(null, null, null, true, null))
+            .body(new UpdateChannelRequest(null, null, null, true, null, null))
         .when()
             .put("/{id}", channelId)
         .then()
@@ -137,7 +138,7 @@ class ChannelLifecycleTest extends BaseChannelTest {
         given()
             .header(AUTH_HEADER, getAuthHeader(guestAccessToken))
             .contentType(ContentType.JSON)
-            .body(new UpdateChannelRequest("수정 시도", null, null, null, null))
+            .body(new UpdateChannelRequest("수정 시도", null, null, null, null, null))
         .when()
             .put("/{id}", channelId)
         .then()
@@ -146,7 +147,7 @@ class ChannelLifecycleTest extends BaseChannelTest {
         given()
             .header(AUTH_HEADER, getAuthHeader(guestAccessToken))
             .contentType(ContentType.JSON)
-            .body(new UpdateChannelRequest(null, null, null, false, null))
+            .body(new UpdateChannelRequest(null, null, null, false, null, null))
         .when()
             .put("/{id}", channelId)
         .then()
@@ -166,7 +167,8 @@ class ChannelLifecycleTest extends BaseChannelTest {
             name + " 설명",
             false,
             isActive,
-            "READ_ONLY"
+            "READ_ONLY",
+            false
         );
 
         Long channelId = given()

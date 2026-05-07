@@ -15,4 +15,10 @@ public class RedirectController {
     public String redirectMetrics() {
         return "redirect:/actuator/metrics";
     }
+
+    @Operation(summary = "루트 주소에서 관리자 로그인 주소로 리디렉션 합니다.")
+    @GetMapping("/")
+    public String redirectAdminLogin() {
+        return "redirect:/admin/auth/login";
+    }
 }

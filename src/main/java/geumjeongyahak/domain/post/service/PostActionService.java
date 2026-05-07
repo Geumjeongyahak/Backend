@@ -7,20 +7,12 @@ import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.channel.entity.Channel;
 import geumjeongyahak.domain.channel.service.ChannelProxyService;
-import geumjeongyahak.domain.file.entity.File;
-import geumjeongyahak.domain.file.repository.FileRepository;
-import geumjeongyahak.domain.file.service.AttachmentUploadService;
-import geumjeongyahak.domain.file.service.ImageUploadService;
-import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
 import geumjeongyahak.domain.post.config.PostProperties;
 import geumjeongyahak.domain.post.entity.Post;
-import geumjeongyahak.domain.post.entity.PostAttachment;
-import geumjeongyahak.domain.post.entity.PostFile;
 import geumjeongyahak.domain.post.enums.PostStatus;
 import geumjeongyahak.domain.post.event.PostChangedEvent;
 import geumjeongyahak.domain.post.event.PostPublishedEvent;
 import geumjeongyahak.domain.post.exception.PostErrorCode;
-import geumjeongyahak.domain.post.repository.PostAttachmentRepository;
 import geumjeongyahak.domain.post.repository.PostFileRepository;
 import geumjeongyahak.domain.post.repository.PostRepository;
 import geumjeongyahak.domain.post.v1.dto.response.PostDetailResponse;
@@ -32,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 
@@ -44,10 +35,6 @@ public class PostActionService {
 
     private final PostRepository postRepository;
     private final PostFileRepository postFileRepository;
-    private final PostAttachmentRepository postAttachmentRepository;
-    private final FileRepository fileRepository;
-    private final ImageUploadService imageUploadService;
-    private final AttachmentUploadService attachmentUploadService;
     private final ChannelProxyService channelProxyService;
     private final UserProxyService userProxyService;
     private final EventPublisher eventPublisher;
@@ -99,50 +86,6 @@ public class PostActionService {
         postRepository.save(draft);
         log.info("게시글 초안 저장 완료 - channelId: {}, postId: {}", channelId, postId);
         return reloadForResponse(channelId, postId);
-    }
-
-    @Transactional
-    public FileUploadResponse attachImageToDraft(Long channelId, Long postId, CustomUserDetails userDetails, MultipartFile file) {
-        Post draft = getOwnedPost(channelId, postId, userDetails);
-        ensureDraft(draft);
-
-        FileUploadResponse uploaded = imageUploadService.uploadPostImage(file);
-        File savedFile = fileRepository.findById(uploaded.fileId())
-                .orElseThrow(() -> new ResourceNotFoundException(CommonErrorCode.RESOURCE_NOT_FOUND));
-
-        if (!postFileRepository.existsByPostIdAndFileId(postId, savedFile.getId())) {
-            int nextSortOrder = Math.toIntExact(postFileRepository.countByPostId(postId));
-            postFileRepository.save(PostFile.builder()
-                    .post(draft)
-                    .file(savedFile)
-                    .sortOrder(nextSortOrder)
-                    .build());
-        }
-
-        log.info("초안 이미지 연동 완료 - postId: {}, fileId: {}", postId, savedFile.getId());
-        return uploaded;
-    }
-
-    @Transactional
-    public FileUploadResponse attachAttachmentToDraft(Long channelId, Long postId, CustomUserDetails userDetails, MultipartFile file) {
-        Post draft = getOwnedPost(channelId, postId, userDetails);
-        ensureDraft(draft);
-
-        FileUploadResponse uploaded = attachmentUploadService.uploadAttachment(file);
-        File savedFile = fileRepository.findById(uploaded.fileId())
-                .orElseThrow(() -> new ResourceNotFoundException(CommonErrorCode.RESOURCE_NOT_FOUND));
-
-        if (!postAttachmentRepository.existsByPostIdAndFileId(postId, savedFile.getId())) {
-            int nextSortOrder = Math.toIntExact(postAttachmentRepository.countByPostId(postId));
-            postAttachmentRepository.save(PostAttachment.builder()
-                    .post(draft)
-                    .file(savedFile)
-                    .sortOrder(nextSortOrder)
-                    .build());
-        }
-
-        log.info("초안 첨부파일 연동 완료 - postId: {}, fileId: {}", postId, savedFile.getId());
-        return uploaded;
     }
 
     @Transactional

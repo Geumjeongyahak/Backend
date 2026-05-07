@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.users.service;
 
 import geumjeongyahak.domain.auth.v1.dto.response.PermissionResponse;
+import geumjeongyahak.domain.base.model.PermissionCode;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.entity.UserPermission;
 import geumjeongyahak.domain.users.repository.UserPermissionRepository;
@@ -30,12 +31,13 @@ public class UserPermissionService {
     @Transactional
     public List<PermissionResponse> addPermission(Long userId, String permissionCode) {
         log.debug("사용자 권한 추가 요청 - UserID: {}, PermissionCode: {}", userId, permissionCode);
+        String validatedPermissionCode = new PermissionCode(permissionCode).value();
         
         User user = userProxyService.getById(userId);
-        userPermissionRepository.findByUserIdAndPermissionCode(userId, permissionCode)
-            .orElseGet(() -> userPermissionRepository.save(new UserPermission(user, permissionCode)));
+        userPermissionRepository.findByUserIdAndPermissionCode(userId, validatedPermissionCode)
+            .orElseGet(() -> userPermissionRepository.save(new UserPermission(user, validatedPermissionCode)));
         
-        log.info("사용자 권한 추가 완료 - UserID: {}, PermissionCode: {}", userId, permissionCode);
+        log.info("사용자 권한 추가 완료 - UserID: {}, PermissionCode: {}", userId, validatedPermissionCode);
         return getAllPermissions(userId);
     }
 

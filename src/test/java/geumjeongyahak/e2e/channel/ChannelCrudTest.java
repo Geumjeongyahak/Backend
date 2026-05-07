@@ -21,7 +21,8 @@ public class ChannelCrudTest extends BaseChannelTest {
                 "공지 테스트용 채널",
                 false,
                 true,
-                "READ_ONLY"
+                "READ_ONLY",
+                false
         );
 
         Long channelId = given()
@@ -78,7 +79,8 @@ public class ChannelCrudTest extends BaseChannelTest {
                 "권한 없음",
                 false,
                 true,
-                "READ_WRITE"
+                "READ_WRITE",
+                false
         );
 
         given()
