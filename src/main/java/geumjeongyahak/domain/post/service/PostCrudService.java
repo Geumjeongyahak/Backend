@@ -30,6 +30,7 @@ import geumjeongyahak.domain.users.service.UserProxyService;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 
 import java.time.LocalDateTime;
+import org.springframework.data.domain.Pageable;
 
 @Slf4j
 @Service
@@ -79,6 +80,14 @@ public class PostCrudService {
     public PaginationResponse<PostSummaryResponse> getPosts(CustomUserDetails userDetails, PostSearchRequest request) {
         return PaginationResponse.from(
                 postRepository.findAll(postSearchSpecificationBuilder.build(request, userDetails), request.toRequest()),
+                PostSummaryResponse::from
+        );
+    }
+
+    public PaginationResponse<PostSummaryResponse> getMyDrafts(Long channelId, CustomUserDetails userDetails, Pageable pageable) {
+        return PaginationResponse.from(
+                postRepository.findAllByChannelIdAndAuthorIdAndStatusAndIsDeletedFalse(
+                        channelId, userDetails.getUserId(), PostStatus.DRAFT, pageable),
                 PostSummaryResponse::from
         );
     }
