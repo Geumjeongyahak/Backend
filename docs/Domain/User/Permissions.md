@@ -31,7 +31,7 @@
 
 | 구성요소 | 설명 | 규칙 |
 |---------|------|------|
-| `resource` | 리소스 종류 | 소문자 snake_case |
+| `resource` | 리소스 종류 | 소문자 kebab-case 또는 snake_case |
 | `action` | 수행 작업 | 소문자 |
 | `target` | 대상 범위 | `*` (전체) 또는 양수 정수 ID |
 
@@ -39,13 +39,13 @@
 
 | 코드 | 의미 |
 |------|------|
-| `user:read:*` | 모든 사용자 읽기 |
+| `user:write:*` | 사용자 생성/수정 |
 | `channel:manage:3` | ID=3 채널 관리 |
-| `lesson:write:12` | ID=12 수업 쓰기 |
+| `purchase-request:review:*` | 모든 구입 요청 승인/반려 처리 |
 
 ### 유효성 규칙
 
-- 정규식: `^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*:(\*|[1-9][0-9]*)$`
+- 정규식: `^[a-z][a-z0-9_-]*:[a-z][a-z0-9_]*:(\*|[1-9][0-9]*)$`
 - `resource`와 `action`은 아래 허용 조합 목록(`PermissionRegistry`)에 있어야 합니다.
 - `target`이 `*`이면 전체 범위, 숫자이면 해당 ID 단위 범위입니다.
 
@@ -58,34 +58,15 @@ API로 사용자에게 부여할 수 있는 코드는 아래 조합으로만 제
 
 | resource | 허용 action | 전체 범위 코드 | ID 범위 코드 |
 |----------|------------|---------------|-------------|
-| `user` | `read` | `user:read:*` | `user:read:{id}` |
-| `user` | `write` | `user:write:*` | `user:write:{id}` |
-| `user` | `manage` | `user:manage:*` | `user:manage:{id}` |
-| `channel` | `read` | `channel:read:*` | `channel:read:{id}` |
-| `channel` | `write` | `channel:write:*` | `channel:write:{id}` |
-| `channel` | `manage` | `channel:manage:*` | `channel:manage:{id}` |
-| `department` | `read` | `department:read:*` | `department:read:{id}` |
-| `department` | `write` | `department:write:*` | `department:write:{id}` |
-| `department` | `manage` | `department:manage:*` | `department:manage:{id}` |
-| `request` | `read` | `request:read:*` | `request:read:{id}` |
-| `request` | `write` | `request:write:*` | `request:write:{id}` |
-| `request` | `approve` | `request:approve:*` | `request:approve:{id}` |
-| `request` | `reject` | `request:reject:*` | `request:reject:{id}` |
-| `classroom` | `read` | `classroom:read:*` | `classroom:read:{id}` |
-| `classroom` | `write` | `classroom:write:*` | `classroom:write:{id}` |
-| `student` | `read` | `student:read:*` | `student:read:{id}` |
-| `student` | `write` | `student:write:*` | `student:write:{id}` |
-| `subject` | `read` | `subject:read:*` | `subject:read:{id}` |
-| `subject` | `write` | `subject:write:*` | `subject:write:{id}` |
-| `lesson` | `read` | `lesson:read:*` | `lesson:read:{id}` |
-| `lesson` | `write` | `lesson:write:*` | `lesson:write:{id}` |
-| `file` | `read` | `file:read:*` | `file:read:{id}` |
-| `file` | `write` | `file:write:*` | `file:write:{id}` |
-| `post` | `read` | `post:read:*` | `post:read:{id}` |
+| `user` | `read`, `write`, `manage`, `grant` | `user:{action}:*` | 불가 |
+| `department` | `write`, `manage`, `grant` | `department:{action}:*` | 불가 |
+| `student` | `write`, `manage` | `student:{action}:*` | 불가 |
+| `channel` | `read`, `write`, `manage` | `channel:{action}:*` | `channel:{action}:{id}` |
+| `purchase-request` | `read`, `manage`, `review` | `purchase-request:{action}:*` | 불가 |
 
-> **참고**: `post` 리소스는 PermissionRegistry에 정의되어 있지 않지만  
-> `PostBoardController`에서 `post:read:*`가 `@PreAuthorize`에 사용됩니다.  
-> 현재는 API를 통해 직접 부여할 수 없으며, 역할 또는 채널 권한으로 대체합니다.
+Registry는 실제 운영에서 부여할 권한만 유지합니다. 게시글/댓글 권한은 별도 `post`, `comment` 리소스로 만들지 않고 `channel` 권한과 `accessLevel` 정책으로 판정합니다.
+
+`create`, `update`, `delete`는 사용하지 않습니다. 생성/수정 계열은 `write`, 삭제를 포함한 운영성 작업은 `manage`로 묶습니다.
 
 ---
 
@@ -111,14 +92,14 @@ permission code로는 표현되지 않습니다.
 |-----|---------|
 | `GET /api/v1/users` | `ADMIN` \| `user:read:*` |
 | `GET /api/v1/users/{userId}` | `ADMIN` \| `user:read:*` |
-| `POST /api/v1/users` | `ADMIN` \| `user:manage:*` |
+| `POST /api/v1/users` | `ADMIN` \| `user:write:*` |
 | `PATCH /api/v1/users/{userId}` | `ADMIN` \| `user:manage:*` |
 | `DELETE /api/v1/users/{userId}` | `ADMIN` \| `user:manage:*` |
 | `GET /api/v1/users/me` | 인증만 |
 | `PATCH /api/v1/users/me` | 인증만 |
-| `GET /api/v1/users/{userId}/permissions` | `ADMIN` \| `user:read:*` |
-| `POST /api/v1/users/{userId}/permissions` | `ADMIN` \| `user:manage:*` |
-| `DELETE /api/v1/users/{userId}/permissions` | `ADMIN` \| `user:manage:*` |
+| `GET /api/v1/users/{userId}/permissions` | `ADMIN` \| `user:read:*` \| `user:grant:*` |
+| `POST /api/v1/users/{userId}/permissions` | `ADMIN` \| `user:grant:*` |
+| `DELETE /api/v1/users/{userId}/permissions` | `ADMIN` \| `user:grant:*` |
 
 ### 5.2 Department
 
@@ -126,8 +107,8 @@ permission code로는 표현되지 않습니다.
 |-----|---------|
 | `GET /api/v1/departments` | 인증만 |
 | `GET /api/v1/departments/{id}` | 인증만 |
-| `POST /api/v1/departments` | `ADMIN` \| `department:manage:*` |
-| `PUT /api/v1/departments/{id}` | `ADMIN` \| `department:manage:*` |
+| `POST /api/v1/departments` | `ADMIN` \| `department:write:*` (+ 권한 포함 시 `department:grant:*`) |
+| `PUT /api/v1/departments/{id}` | `ADMIN` \| `department:manage:*` (+ 권한 포함 시 `department:grant:*`) |
 | `DELETE /api/v1/departments/{id}` | `ADMIN` \| `department:manage:*` |
 
 ### 5.3 Classroom
@@ -136,12 +117,9 @@ permission code로는 표현되지 않습니다.
 |-----|---------|
 | `GET /api/v1/classrooms` | 인증만 |
 | `GET /api/v1/classrooms/{id}` | 인증만 |
-| `POST /api/v1/classrooms` | `ADMIN` \| `classroom:write:*`* |
-| `PUT /api/v1/classrooms/{id}` | `ADMIN` \| `classroom:write:*`* |
-| `DELETE /api/v1/classrooms/{id}` | `ADMIN` \| `classroom:write:*`* |
-
-> \* 코드에서 `classroom:manage:*` 문자열을 사용하나, PermissionRegistry는 `classroom`에 `manage`를 허용하지 않습니다.  
-> 실제로 해당 authority를 부여하려면 `classroom:write:*`을 사용하세요.
+| `POST /api/v1/classrooms` | `ADMIN` |
+| `PUT /api/v1/classrooms/{id}` | `ADMIN` |
+| `DELETE /api/v1/classrooms/{id}` | `ADMIN` |
 
 ### 5.4 Student
 
@@ -149,9 +127,9 @@ permission code로는 표현되지 않습니다.
 |-----|---------|
 | `GET /api/v1/students` | 인증만 |
 | `GET /api/v1/students/{studentId}` | 인증만 |
-| `POST /api/v1/students` | `ADMIN` 전용 |
-| `PATCH /api/v1/students/{studentId}` | `ADMIN` 전용 |
-| `DELETE /api/v1/students/{studentId}` | `ADMIN` 전용 |
+| `POST /api/v1/students` | `ADMIN` \| `student:write:*` |
+| `PATCH /api/v1/students/{studentId}` | `ADMIN` \| `student:manage:*` |
+| `DELETE /api/v1/students/{studentId}` | `ADMIN` \| `student:manage:*` |
 
 ### 5.5 Subject
 
@@ -176,12 +154,9 @@ permission code로는 표현되지 않습니다.
 | `PATCH /api/v1/lessons/{lessonId}/student-attendances` | 인증만 |
 | `PATCH /api/v1/lessons/{lessonId}/status` | 인증만 |
 | `PUT /api/v1/lessons/{lessonId}/note` | 인증만 |
-| `POST /api/v1/lessons` | `ADMIN` \| `lesson:manage:*`* |
-| `PATCH /api/v1/lessons/{lessonId}` (admin) | `ADMIN` \| `lesson:manage:*`* |
-| `DELETE /api/v1/lessons/{lessonId}` | `ADMIN` \| `lesson:manage:*`* |
-
-> \* 코드에서 `lesson:manage:*` 문자열을 사용하나, PermissionRegistry는 `lesson`에 `manage`를 허용하지 않습니다.  
-> 현재 permission API로 부여할 수 없으며 `ADMIN` 역할로 접근하세요.
+| `POST /api/v1/lessons` | `ADMIN` |
+| `PATCH /api/v1/lessons/{lessonId}` (admin) | `ADMIN` |
+| `DELETE /api/v1/lessons/{lessonId}` | `ADMIN` |
 
 ### 5.7 Request (결석/교환/구입)
 
@@ -200,10 +175,11 @@ permission code로는 표현되지 않습니다.
 | `PATCH /api/v1/lesson-exchange-requests/{requestId}/reject` | `ADMIN` \| `MANAGER` |
 | `POST /api/v1/lesson-exchange-requests/{requestId}/proposals` | 인증만 |
 | `POST /api/v1/purchase-requests` | 인증만 |
-| `GET /api/v1/purchase-requests` | 인증만 |
-| `GET /api/v1/purchase-requests/{requestId}` | 인증만 |
-| `PATCH /api/v1/purchase-requests/{requestId}/approve` | `ADMIN` \| `MANAGER` |
-| `PATCH /api/v1/purchase-requests/{requestId}/reject` | `ADMIN` \| `MANAGER` |
+| `GET /api/v1/admin/purchase-requests` | `ADMIN` \| `purchase-request:read:*` |
+| `GET /api/v1/admin/purchase-requests/{requestId}` | `ADMIN` \| `MANAGER` \| `purchase-request:read:*` |
+| `PATCH /api/v1/admin/purchase-requests/{requestId}/approve` | `ADMIN` \| `purchase-request:review:*` |
+| `PATCH /api/v1/admin/purchase-requests/{requestId}/reject` | `ADMIN` \| `purchase-request:review:*` |
+| `PATCH /api/v1/admin/purchase-requests/{requestId}/confirm` | `ADMIN` \| `purchase-request:manage:*` |
 | `POST /api/v1/subject-exchange-requests` | 인증만 |
 | `GET /api/v1/subject-exchange-requests` | 인증만 |
 | `GET /api/v1/subject-exchange-requests/{requestId}` | 인증만 |
@@ -218,12 +194,9 @@ permission code로는 표현되지 않습니다.
 |-----|---------|
 | `GET /api/v1/channels` | 인증만 |
 | `GET /api/v1/channels/{id}` | `ADMIN` \| `channel:read:{id}` \| `channel:read:*` \| accessLevel ≥ READ_ONLY |
-| `POST /api/v1/channels` | `ADMIN` \| `channel:manage:*` (채널 생성)* |
+| `POST /api/v1/channels` | `ADMIN` \| `channel:manage:*` |
 | `PUT /api/v1/channels/{id}` | `ADMIN` \| `channel:manage:*` \| `channel:manage:{id}` |
 | `DELETE /api/v1/channels/{id}` | `ADMIN` \| `channel:manage:*` \| `channel:manage:{id}` |
-
-> \* 코드에서 `channel:create:*`을 사용하나, PermissionRegistry는 `channel`에 `create`를 허용하지 않습니다.  
-> 현재 permission API로 부여할 수 없으며 `ADMIN` 역할 또는 `channel:manage:*`을 사용하세요.
 
 ### 5.9 Post/Comment
 
