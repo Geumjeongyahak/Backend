@@ -28,7 +28,6 @@ import geumjeongyahak.domain.request.v1.dto.request.RejectRequestRequest;
 @RequestMapping("/api/v1/admin/purchase-requests")
 @RequiredArgsConstructor
 @Tag(name = "PurchaseRequest Admin", description = "기자재 구입 요청 관리자 API")
-@PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
 public class PurchaseRequestAdminController {
 
     private final PurchaseRequestService purchaseRequestService;
@@ -37,6 +36,7 @@ public class PurchaseRequestAdminController {
         summary = "구입 요청 전체 목록 조회",
         description = "전체 분반의 구입 요청 목록을 조회합니다. status 파라미터로 필터링할 수 있습니다."
     )
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:read:*')")
     @GetMapping
     public ResponseEntity<List<PurchaseRequestSummaryResponse>> getAllPurchaseRequests(
         @RequestParam(required = false) PurchaseRequestStatus status
@@ -46,6 +46,7 @@ public class PurchaseRequestAdminController {
     }
 
     @Operation(summary = "구입 요청 상세 조회")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasAuthority('purchase-request:read:*')")
     @GetMapping("/{requestId}")
     public ResponseEntity<PurchaseRequestDetailResponse> getPurchaseRequest(
         @PathVariable Long requestId,
@@ -61,6 +62,7 @@ public class PurchaseRequestAdminController {
         summary = "구입 요청 승인",
         description = "PENDING 상태의 구입 요청을 승인합니다. 승인 후 7일 이내에 구매 완료 보고가 이루어져야 합니다."
     )
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:review:*')")
     @PatchMapping("/{requestId}/approve")
     public ResponseEntity<PurchaseRequestDetailResponse> approvePurchaseRequest(
         @PathVariable Long requestId,
@@ -73,6 +75,7 @@ public class PurchaseRequestAdminController {
     }
 
     @Operation(summary = "구입 요청 반려")
+    @PreAuthorize("hasRole('ADMIN') or  hasAuthority('purchase-request:review:*')")
     @PatchMapping("/{requestId}/reject")
     public ResponseEntity<PurchaseRequestDetailResponse> rejectPurchaseRequest(
         @PathVariable Long requestId,
@@ -90,6 +93,7 @@ public class PurchaseRequestAdminController {
         description = "PURCHASED 상태의 요청에 대해 영수증을 확인하고 최종 결재 완료 처리합니다. "
             + "상태가 CONFIRMED 로 변경됩니다."
     )
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
     @PatchMapping("/{requestId}/confirm")
     public ResponseEntity<PurchaseRequestDetailResponse> confirmPurchase(
         @PathVariable Long requestId,

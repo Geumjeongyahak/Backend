@@ -3,7 +3,21 @@
 <head th:replace="~{admin/fragments/layout :: head('구매 요청 상세')}"></head>
 <body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
 <main class="stack">
-    <div class="page-title"><div><h1 th:text="${request.title}">구매 요청</h1><p>구매 요청 상세와 처리</p></div></div>
+    <div class="page-title">
+        <div>
+            <h1 th:text="${request.title}">구매 요청</h1>
+            <p>구매 요청 상세와 처리</p>
+        </div>
+        <div>
+            <a class="button" th:href="@{/admin/request/purchase/purchase-requests/{requestId}/edit(requestId=${request.id})}">수정</a>
+        </div>
+    </div>
+    <div class="panel" style="background: #edf8e8; border-left: 4px solid var(--green); margin-bottom: 24px;" th:if="${request.status.name() == 'APPROVED'}">
+        <p style="margin: 0; color: var(--green-dark); font-weight: 800;">
+            승인된 요청입니다. 물품 구매 후 '수정' 버튼을 눌러 실제 가격과 영수증을 등록해 주세요.
+        </p>
+    </div>
+
     <section class="panel detail-grid">
         <div class="detail-item"><span>상태</span><strong th:text="${request.status.name()}">PENDING</strong></div>
         <div class="detail-item"><span>요청자</span><strong><a class="link" th:href="@{/admin/user/users/{userId}(userId=${request.requestedById})}" th:text="${request.requestedByName}">요청자</a></strong></div>

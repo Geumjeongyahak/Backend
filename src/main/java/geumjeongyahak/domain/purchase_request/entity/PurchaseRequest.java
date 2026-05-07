@@ -103,4 +103,12 @@ public class PurchaseRequest extends BaseEntity {
         this.approvalAt = LocalDateTime.now();
         this.note = note;
     }
+
+    public void update(String title, String content, List<PurchaseRequestItem> items) {
+        this.title = title;
+        this.content = content;
+        this.items.clear();
+        items.forEach(item -> item.assignRequest(this));
+        this.items.addAll(items);
+    }
 }

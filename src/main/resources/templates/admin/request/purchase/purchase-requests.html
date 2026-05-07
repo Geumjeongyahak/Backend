@@ -9,6 +9,9 @@
                 <h1>구매 요청</h1>
                 <p>현재는 기자재 구매 요청의 필터 조회, 승인, 반려만 관리합니다.</p>
             </div>
+            <div>
+                <a class="button" th:href="@{/admin/request/purchase/purchase-requests/new}">구매 요청 등록</a>
+            </div>
         </div>
 
         <form class="panel filter-grid" th:action="@{/admin/request/purchase/purchase-requests}" method="get">

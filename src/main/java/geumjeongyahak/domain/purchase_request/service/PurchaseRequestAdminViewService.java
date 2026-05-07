@@ -2,7 +2,9 @@ package geumjeongyahak.domain.purchase_request.service;
 
 import geumjeongyahak.domain.base.dto.response.AdminPage;
 import geumjeongyahak.domain.base.dto.response.AdminSorts;
+import geumjeongyahak.domain.classroom.service.ClassroomAdminViewService;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ import java.util.Map;
 public class PurchaseRequestAdminViewService {
 
     private final PurchaseRequestService purchaseRequestService;
+    private final ClassroomAdminViewService classroomAdminViewService;
 
     public AdminPage<PurchaseRequestSummaryResponse> getPurchaseRequests(PurchaseRequestFilter filter) {
         List<PurchaseRequestSummaryResponse> rows = purchaseRequestService.getAllPurchaseRequests(filter.status())
@@ -74,6 +77,20 @@ public class PurchaseRequestAdminViewService {
     }
 
     @Transactional
+    public Long createPurchaseRequest(Long requesterId, Long classroomId, String title, String content, List<CreatePurchaseRequestRequest.Item> items) {
+        return purchaseRequestService.createPurchaseRequest(requesterId, classroomId, new CreatePurchaseRequestRequest(title, content, items)).id();
+    }
+
+    @Transactional
+    public void updatePurchaseRequest(Long requesterId, Long requestId, String title, String content, List<CreatePurchaseRequestRequest.Item> items) {
+        purchaseRequestService.updatePurchaseRequest(requesterId, requestId, new CreatePurchaseRequestRequest(title, content, items), true);
+    }
+
+    public List<ClassroomAdminViewService.AdminClassroomRow> getAllClassrooms() {
+        return classroomAdminViewService.getClassrooms(new ClassroomAdminViewService.ClassroomFilter(null, null, "name,ASC"));
+    }
+
+    @Transactional
     public void approve(Long approverId, Long requestId) {
         purchaseRequestService.approvePurchaseRequest(approverId, requestId);
     }
@@ -81,6 +98,11 @@ public class PurchaseRequestAdminViewService {
     @Transactional
     public void reject(Long approverId, Long requestId, String note) {
         purchaseRequestService.rejectPurchaseRequest(approverId, requestId, note);
+    }
+
+    @Transactional
+    public void report(Long requesterId, Long requestId, List<geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.ItemReport> items) {
+        purchaseRequestService.reportPurchase(requesterId, requestId, new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest(items), true);
     }
 
     public record PurchaseRequestFilter(

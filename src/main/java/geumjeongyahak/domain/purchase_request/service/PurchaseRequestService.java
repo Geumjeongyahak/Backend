@@ -90,6 +90,29 @@ public class PurchaseRequestService {
     }
 
     @Transactional
+    public PurchaseRequestDetailResponse updatePurchaseRequest(
+        Long requesterId, Long requestId, CreatePurchaseRequestRequest request, boolean isAdmin
+    ) {
+        log.debug("구입 요청 수정 (requesterId={}, requestId={})", requesterId, requestId);
+        PurchaseRequest purchaseRequest = findById(requestId);
+        checkAccess(purchaseRequest, requesterId, isAdmin);
+
+        List<PurchaseRequestItem> items = request.items().stream()
+            .map(item -> {
+                File receiptFile = item.receiptFileId() != null
+                    ? fileProxyService.getReferenceById(item.receiptFileId())
+                    : null;
+                return new PurchaseRequestItem(item.name(), item.reason(), item.price(), receiptFile);
+            })
+            .toList();
+
+        purchaseRequest.update(request.title(), request.content(), items);
+
+        log.debug("구입 요청 수정 완료 (id={})", purchaseRequest.getId());
+        return PurchaseRequestDetailResponse.from(purchaseRequest);
+    }
+
+    @Transactional
     public PurchaseRequestDetailResponse approvePurchaseRequest(Long approverId, Long requestId) {
         log.debug("구입 요청 승인 (requestId={})", requestId);
         PurchaseRequest purchaseRequest = findById(requestId);
