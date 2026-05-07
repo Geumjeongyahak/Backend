@@ -169,6 +169,117 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .statusCode(403);
     }
 
+    // ── 삭제 (delete) ─────────────────────────────────────
+
+    @Test
+    @DisplayName("요청 작성자가 PENDING 구입 요청 삭제 → 204")
+    void delete_asOwnerAndPending_returns204() {
+        currentRequestId = setupPendingRequest();
+        Long requestId = currentRequestId;
+
+        given()
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{requestId}", requestId)
+            .then()
+            .statusCode(204);
+
+        assertThat(purchaseRequestRepository.existsById(requestId)).isFalse();
+        currentRequestId = null;
+    }
+
+    @Test
+    @DisplayName("타인이 구입 요청 삭제 시도 → 403")
+    void delete_asOtherVolunteer_returns403() {
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
+            .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
+            .delete("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("이미 처리된 구입 요청 삭제 시도 → 409")
+    void delete_processedRequest_returns409() {
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/approve", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(409);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 구입 요청 삭제 → 404")
+    void delete_notFound_returns404() {
+        given()
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{requestId}", 99999L)
+            .then()
+            .statusCode(404);
+    }
+
+    // ── 재확인 요청 (reconfirmation) ───────────────────────
+
+    @Test
+    @DisplayName("요청 작성자가 PURCHASED 구입 요청 재확인 요청 → 204")
+    void requestReconfirmation_asOwnerAndPurchased_returns204() {
+        currentRequestId = setupPurchasedRequest();
+
+        given()
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .post("/{requestId}/reconfirmation", currentRequestId)
+            .then()
+            .statusCode(204);
+    }
+
+    @Test
+    @DisplayName("타인이 구입 요청 재확인 요청 시도 → 403")
+    void requestReconfirmation_asOtherVolunteer_returns403() {
+        currentRequestId = setupPurchasedRequest();
+
+        given()
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
+            .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
+            .post("/{requestId}/reconfirmation", currentRequestId)
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("PURCHASED가 아닌 구입 요청 재확인 요청 → 409")
+    void requestReconfirmation_invalidStatus_returns409() {
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .post("/{requestId}/reconfirmation", currentRequestId)
+            .then()
+            .statusCode(409);
+    }
+
     // ── 조회 ──────────────────────────────────────────────
 
     @Test
@@ -245,5 +356,43 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .get()
             .then()
             .statusCode(401);
+    }
+
+    private Long setupPurchasedRequest() {
+        Long requestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/approve", requestId)
+            .then()
+            .statusCode(200);
+
+        Long itemId = given()
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get("/{requestId}", requestId)
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getLong("items[0].id");
+
+        given()
+            .basePath("/api/v1/classrooms/{classroomId}/purchase-requests")
+            .pathParam("classroomId", CLASSROOM_ID)
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("items", List.of(Map.of(
+                "itemId", itemId,
+                "price", 20000L
+            ))))
+            .post("/{requestId}/report", requestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("PURCHASED"));
+
+        return requestId;
     }
 }

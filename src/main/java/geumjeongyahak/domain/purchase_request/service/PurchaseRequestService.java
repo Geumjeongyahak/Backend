@@ -195,6 +195,20 @@ public class PurchaseRequestService {
         return PurchaseRequestDetailResponse.from(purchaseRequest);
     }
 
+    @Transactional
+    public void deletePurchaseRequest(Long requesterId, Long requestId, boolean isAdmin) {
+        log.debug("구입 요청 삭제 (requesterId={}, requestId={})", requesterId, requestId);
+        PurchaseRequest purchaseRequest = findById(requestId);
+        checkAccess(purchaseRequest, requesterId, isAdmin);
+
+        if (purchaseRequest.getStatus() != PurchaseRequestStatus.PENDING) {
+            throw new BusinessException(PurchaseRequestErrorCode.ALREADY_PROCESSED);
+        }
+
+        purchaseRequestRepository.delete(purchaseRequest);
+        log.debug("구입 요청 삭제 완료 (requestId={})", requestId);
+    }
+
     private PurchaseRequest findById(Long requestId) {
         return purchaseRequestRepository.findById(requestId)
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));

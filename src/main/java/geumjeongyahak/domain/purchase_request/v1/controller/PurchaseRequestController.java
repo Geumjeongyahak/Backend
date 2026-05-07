@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,6 +25,7 @@ import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestItemService;
+import geumjeongyahak.domain.purchase_request.service.PurchaseRequestReconfirmationService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestService;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
@@ -39,6 +41,7 @@ public class PurchaseRequestController {
 
     private final PurchaseRequestService purchaseRequestService;
     private final PurchaseRequestItemService purchaseRequestItemService;
+    private final PurchaseRequestReconfirmationService purchaseRequestReconfirmationService;
 
     @PreAuthorize("isAuthenticated()")
     @Operation(
@@ -91,6 +94,23 @@ public class PurchaseRequestController {
 
     @PreAuthorize("isAuthenticated()")
     @Operation(
+        summary = "구입 요청 삭제",
+        description = "본인이 작성한 PENDING 상태의 구입 요청을 삭제합니다. "
+            + "이미 처리된 요청은 이력 보존을 위해 삭제할 수 없습니다."
+    )
+    @DeleteMapping("/{requestId}")
+    public ResponseEntity<Void> deletePurchaseRequest(
+        @PathVariable Long classroomId,
+        @PathVariable Long requestId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("DELETE /api/v1/classrooms/{}/purchase-requests/{}", classroomId, requestId);
+        purchaseRequestService.deletePurchaseRequest(userDetails.getUserId(), requestId, false);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
         summary = "구매 완료 보고",
         description = "APPROVED 상태에서 승인 후 7일 이내에 실제 구매 금액과 영수증을 제출합니다. "
             + "상태가 PURCHASED 로 변경됩니다."
@@ -106,6 +126,23 @@ public class PurchaseRequestController {
         return ResponseEntity.ok(
             purchaseRequestService.reportPurchase(userDetails.getUserId(), requestId, request, false)
         );
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+        summary = "구입 요청 재확인 요청",
+        description = "PURCHASED 상태의 구입 요청에 대해 결재 확인 재확인을 요청합니다. "
+            + "현재는 알림 서비스 연동 전 임시 엔드포인트이며 상태를 변경하지 않습니다."
+    )
+    @PostMapping("/{requestId}/reconfirmation")
+    public ResponseEntity<Void> requestReconfirmation(
+        @PathVariable Long classroomId,
+        @PathVariable Long requestId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("POST /api/v1/classrooms/{}/purchase-requests/{}/reconfirmation", classroomId, requestId);
+        purchaseRequestReconfirmationService.requestReconfirmation(userDetails.getUserId(), requestId);
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("isAuthenticated()")
