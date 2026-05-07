@@ -18,10 +18,20 @@
     <section class="panel stack">
         <h2>직접 권한</h2>
         <div><span class="tag" th:each="permission : ${user.permissions}" th:text="${permission.code}">user:manage:*</span><span th:if="${#lists.isEmpty(user.permissions)}">-</span></div>
-        <form class="inline-form" th:action="@{/admin/user/users/{userId}/permissions(userId=${user.id})}" method="post">
-            <select name="permissionCode" required>
+        <form class="inline-form permission-form" th:action="@{/admin/user/users/{userId}/permissions(userId=${user.id})}" method="post">
+            <select name="permissionKey" required>
                 <option value="">권한 선택</option>
-                <option th:each="permission : ${permissionOptions}" th:value="${permission.permissionCode}" th:text="|${permission.label} (${permission.permissionCode})|">권한</option>
+                <option th:each="permission : ${permissionOptions}"
+                        th:value="|${permission.resourceCode}:${permission.actionCode}|"
+                        th:attr="data-resource-code=${permission.resourceCode},data-global-allowed=${permission.globalAllowed},data-target-allowed=${permission.targetAllowed}"
+                        th:text="|${permission.label} (${permission.resourceCode}:${permission.actionCode})|">권한</option>
+            </select>
+            <select name="scopeTarget" required>
+                <option value="">범위 선택</option>
+                <option th:each="scope : ${permissionScopeOptions}"
+                        th:value="${scope.value}"
+                        th:attr="data-resource-code=${scope.resourceCode}"
+                        th:text="${scope.label}">범위</option>
             </select>
             <button class="button" type="submit">권한 추가</button>
         </form>

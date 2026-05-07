@@ -36,7 +36,7 @@ public class DepartmentViewController {
         model.addAttribute("adminName", authentication.getName());
         model.addAttribute("filter", filter);
         model.addAttribute("departments", departmentAdminViewService.getDepartments(filter));
-        model.addAttribute("permissionOptions", permissionRegistryViewService.getGlobalPermissions());
+        model.addAttribute("permissionOptions", permissionRegistryViewService.getAssignablePermissions());
         return "admin/department/departments";
     }
 
@@ -67,7 +67,8 @@ public class DepartmentViewController {
         model.addAttribute("active", "departments");
         model.addAttribute("adminName", authentication.getName());
         model.addAttribute("department", departmentAdminViewService.getDepartment(departmentId));
-        model.addAttribute("permissionOptions", permissionRegistryViewService.getGlobalPermissions());
+        model.addAttribute("permissionOptions", permissionRegistryViewService.getAssignablePermissions());
+        model.addAttribute("permissionScopeOptions", permissionRegistryViewService.getAssignableScopes());
         return "admin/department/departments-detail";
     }
 
@@ -98,9 +99,11 @@ public class DepartmentViewController {
     @PostMapping("/{departmentId}/permissions")
     public String addPermission(
         @PathVariable Long departmentId,
-        @RequestParam String permissionCode,
+        @RequestParam String permissionKey,
+        @RequestParam String scopeTarget,
         RedirectAttributes redirectAttributes
     ) {
+        String permissionCode = permissionRegistryViewService.buildPermissionCode(permissionKey, scopeTarget);
         departmentAdminViewService.addPermission(departmentId, permissionCode);
         redirectAttributes.addFlashAttribute("message", "부서 권한을 추가했습니다.");
         return "redirect:/admin/department/departments/" + departmentId;

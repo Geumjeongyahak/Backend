@@ -88,6 +88,16 @@ public class PermissionRegistry {
             .toList();
     }
 
+    public static List<PermissionDefinition> getAssignablePermissions() {
+        return ALLOWED_COMBINATIONS.entrySet().stream()
+            .flatMap(entry -> entry.getValue().entrySet().stream()
+                .map(rule -> PermissionDefinition.of(entry.getKey(), rule.getKey(), rule.getValue())))
+            .sorted(Comparator
+                .comparing(PermissionDefinition::resourceCode)
+                .thenComparing(PermissionDefinition::actionCode))
+            .toList();
+    }
+
     public static String getResourceLabel(ResourceType resource) {
         return RESOURCE_LABELS.getOrDefault(resource, resource.getCode());
     }

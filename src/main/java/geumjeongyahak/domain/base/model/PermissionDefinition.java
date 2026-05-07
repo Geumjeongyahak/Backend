@@ -16,10 +16,20 @@ public record PermissionDefinition(
     String label,
     String description
 ) {
-    static PermissionDefinition global(ResourceType resource, ActionType action, PermissionScope scope) {
+    public static PermissionDefinition global(ResourceType resource, ActionType action, PermissionScope scope) {
+        return of(resource, action, scope, PermissionCode.global(resource, action).value());
+    }
+
+    public static PermissionDefinition of(ResourceType resource, ActionType action, PermissionScope scope) {
+        String code = scope.allowsGlobal()
+            ? PermissionCode.global(resource, action).value()
+            : resource.getCode() + ":" + action.getCode();
+        return of(resource, action, scope, code);
+    }
+
+    private static PermissionDefinition of(ResourceType resource, ActionType action, PermissionScope scope, String code) {
         String resourceLabel = PermissionRegistry.getResourceLabel(resource);
         String actionLabel = PermissionRegistry.getActionLabel(action);
-        String code = PermissionCode.global(resource, action).value();
         return new PermissionDefinition(
             code,
             resource.getCode(),

@@ -40,7 +40,7 @@ public class UserViewController {
         model.addAttribute("filter", filter);
         model.addAttribute("usersPage", userAdminViewService.getUsers(filter));
         model.addAttribute("departments", userAdminViewService.getDepartmentOptions());
-        model.addAttribute("permissionOptions", permissionRegistryViewService.getGlobalPermissions());
+        model.addAttribute("permissionOptions", permissionRegistryViewService.getAssignablePermissions());
         return "admin/user/users";
     }
 
@@ -78,7 +78,8 @@ public class UserViewController {
         model.addAttribute("adminName", authentication.getName());
         model.addAttribute("user", userAdminViewService.getUser(userId));
         model.addAttribute("departments", userAdminViewService.getDepartmentOptions());
-        model.addAttribute("permissionOptions", permissionRegistryViewService.getGlobalPermissions());
+        model.addAttribute("permissionOptions", permissionRegistryViewService.getAssignablePermissions());
+        model.addAttribute("permissionScopeOptions", permissionRegistryViewService.getAssignableScopes());
         return "admin/user/users-detail";
     }
 
@@ -136,9 +137,11 @@ public class UserViewController {
     @PostMapping("/{userId}/permissions")
     public String addPermission(
         @PathVariable Long userId,
-        @RequestParam String permissionCode,
+        @RequestParam String permissionKey,
+        @RequestParam String scopeTarget,
         RedirectAttributes redirectAttributes
     ) {
+        String permissionCode = permissionRegistryViewService.buildPermissionCode(permissionKey, scopeTarget);
         userAdminViewService.addPermission(userId, permissionCode);
         redirectAttributes.addFlashAttribute("message", "사용자 직접 권한을 추가했습니다.");
         return "redirect:/admin/user/users/" + userId;

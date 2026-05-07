@@ -358,6 +358,39 @@
         <div class="flash" th:if="${message}" th:text="${message}">완료되었습니다.</div>
         <th:block th:replace="${content}"></th:block>
     </div>
+    <script>
+document.querySelectorAll('.permission-form').forEach((form) => {
+    const permissionSelect = form.querySelector('select[name="permissionKey"]');
+    const scopeSelect = form.querySelector('select[name="scopeTarget"]');
+    if (!permissionSelect || !scopeSelect) {
+        return;
+    }
+    const placeholder = scopeSelect.querySelector('option[value=""]')?.cloneNode(true);
+    const scopeOptions = Array.from(scopeSelect.options)
+        .filter((option) => option.value)
+        .map((option) => option.cloneNode(true));
+    const updateScopes = () => {
+        const selected = permissionSelect.selectedOptions[0];
+        const resourceCode = selected?.dataset.resourceCode;
+        const globalAllowed = selected?.dataset.globalAllowed === 'true';
+        const targetAllowed = selected?.dataset.targetAllowed === 'true';
+        scopeSelect.replaceChildren();
+        if (placeholder) {
+            scopeSelect.appendChild(placeholder.cloneNode(true));
+        }
+        scopeOptions
+            .filter((option) => {
+                const isGlobal = option.value === '*';
+                const matchesTarget = option.dataset.resourceCode === resourceCode;
+                return isGlobal ? globalAllowed : targetAllowed && matchesTarget;
+            })
+            .forEach((option) => scopeSelect.appendChild(option.cloneNode(true)));
+        scopeSelect.value = '';
+    };
+    permissionSelect.addEventListener('change', updateScopes);
+    updateScopes();
+});
+    </script>
 </div>
 </body>
 </html>
