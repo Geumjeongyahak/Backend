@@ -29,7 +29,7 @@ import geumjeongyahak.domain.channel.v1.dto.response.ChannelResponse;
 public class ChannelAdminController {
     private final ChannelCrudService channelCrudService;
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('channel:create:*')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('channel:manage:*')")
     @Operation(
             summary = "채널 생성",
             description = """
@@ -58,7 +58,7 @@ public class ChannelAdminController {
                 .body(channelCrudService.createChannel(request));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('channel:manage:*')")
+    @PreAuthorize("hasRole('ADMIN') or hasPermission(#id, 'channel', 'manage')")
     @Operation(
             summary = "채널 수정",
             description = """
@@ -89,7 +89,7 @@ public class ChannelAdminController {
         return ResponseEntity.ok(channelCrudService.updateChannel(id, request));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('channel:manage:*')")
+    @PreAuthorize("hasRole('ADMIN') or hasPermission(#id, 'channel', 'manage')")
     @Operation(
             summary = "채널 삭제",
             description = """

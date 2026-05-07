@@ -73,8 +73,8 @@ public class ChannelAccessChecker {
     private boolean isPolicySatisfied(ChannelAccessLevel level, ActionType action) {
         return switch (action) {
             case READ -> level != ChannelAccessLevel.CLOSED;
-            case WRITE, CREATE -> level.getPriority() >= ChannelAccessLevel.READ_WRITE.getPriority();
-            case MANAGE, DELETE, UPDATE -> false; // 관리 권한은 정책만으로 허용 안됨 (ADMIN 또는 명시적 권한 필요)
+            case WRITE -> level.getPriority() >= ChannelAccessLevel.READ_WRITE.getPriority();
+            case MANAGE -> false; // 관리 권한은 정책만으로 허용 안됨 (ADMIN 또는 명시적 권한 필요)
             default -> false;
         };
     }

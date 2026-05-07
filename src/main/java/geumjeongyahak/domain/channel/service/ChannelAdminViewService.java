@@ -2,7 +2,6 @@ package geumjeongyahak.domain.channel.service;
 
 import geumjeongyahak.domain.base.dto.response.AdminPage;
 import geumjeongyahak.domain.base.dto.response.AdminSorts;
-import geumjeongyahak.domain.channel.entity.Channel;
 import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
 import geumjeongyahak.domain.channel.enums.ChannelBindingType;
 import geumjeongyahak.domain.channel.enums.ChannelType;
