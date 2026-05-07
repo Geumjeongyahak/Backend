@@ -65,6 +65,30 @@ public class StudentCreateTest extends StudentBaseTest {
     }
 
     @Test
+    @DisplayName("student:write 권한으로 학생 생성 성공(201 Created)")
+    void createStudent_Success_StudentWritePermission() {
+        String uniqueName = "권한학생" + System.currentTimeMillis();
+        CreateStudentRequest req = new CreateStudentRequest(
+            uniqueName,
+            "010-1234-9999",
+            "student:write 권한 테스트",
+            DEFAULT_CLASSROOM_ID
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(studentWriteAccessToken))
+            .contentType(ContentType.JSON)
+            .body(req)
+            .when()
+            .post()
+            .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .body("name", equalTo(uniqueName))
+            .log().all();
+    }
+
+    @Test
     @DisplayName("인증 없이 학생 생성 실패(401 Unauthorized)")
     void createStudent_Unauthorized() {
         CreateStudentRequest req = new CreateStudentRequest(

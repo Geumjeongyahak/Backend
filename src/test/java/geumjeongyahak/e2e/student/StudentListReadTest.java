@@ -198,6 +198,18 @@ class StudentListReadTest extends StudentBaseTest {
     }
 
     @Test
+    @DisplayName("게스트 권한으로 목록 조회 실패(403 Forbidden)")
+    void getAllStudents_Forbidden_Guest() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(guestAccessToken))
+            .when()
+            .get()
+            .then()
+            .statusCode(403)
+            .log().all();
+    }
+
+    @Test
     @DisplayName("인증 없이 목록 조회 실패(401 Unauthorized)")
     void getAllStudents_Unauthorized() {
         given()

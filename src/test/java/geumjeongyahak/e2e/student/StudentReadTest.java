@@ -63,6 +63,20 @@ public class StudentReadTest extends StudentBaseTest {
     }
 
     @Test
+    @DisplayName("게스트 권한으로 학생 단건 조회 실패(403 Forbidden)")
+    void getStudentById_Forbidden_Guest() {
+        StudentResponse created = createStudent("Guest Forbidden Student", "010-2345-6789");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(guestAccessToken))
+            .when()
+            .get("/{studentId}", created.id())
+            .then()
+            .statusCode(403)
+            .log().all();
+    }
+
+    @Test
     @DisplayName("인증 없이 학생 단건 조회 실패(401 Unauthorized)")
     void getStudentById_Unauthorized() {
         Long studentId = 1L;

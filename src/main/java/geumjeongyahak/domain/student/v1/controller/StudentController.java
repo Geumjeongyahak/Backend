@@ -33,9 +33,12 @@ import org.springframework.web.bind.annotation.RestController;
 )
 public class StudentController {
 
+    private static final String TEACHER_OR_HIGHER_ACCESS =
+        "hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN')";
+
     private final StudentService studentService;
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "학생 목록 조회",
         description = """
@@ -65,7 +68,7 @@ public class StudentController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "학생 단건 조회",
         description = """
