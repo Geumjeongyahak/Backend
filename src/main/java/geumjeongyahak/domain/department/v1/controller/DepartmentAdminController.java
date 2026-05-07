@@ -25,7 +25,12 @@ public class DepartmentAdminController {
     private final DepartmentCrudService departmentCrudService;
 
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('department:manage:*')")
+    @PreAuthorize("""
+        hasRole('ADMIN') or (
+            hasAuthority('department:write:*') and
+            (#request.permissions() == null or #request.permissions().isEmpty() or hasAuthority('department:grant:*'))
+        )
+        """)
     @Operation(summary = "부서 생성", description = "새로운 부서를 생성합니다.")
     @PostMapping
     public ResponseEntity<DepartmentSimpleResponse> createDepartment(
@@ -36,7 +41,12 @@ public class DepartmentAdminController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('department:manage:*')")
+    @PreAuthorize("""
+        hasRole('ADMIN') or (
+            hasAuthority('department:manage:*') and
+            (#request.permissions() == null or #request.permissions().isEmpty() or hasAuthority('department:grant:*'))
+        )
+        """)
     @Operation(summary = "부서 수정", description = "부서 정보를 수정합니다.")
     @PutMapping("/{id}")
     public ResponseEntity<DepartmentSimpleResponse> updateDepartment(
