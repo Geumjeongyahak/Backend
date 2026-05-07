@@ -72,7 +72,7 @@ class UserSubRoleTest extends UserBaseTest {
     @DisplayName("권한 추가 성공(200 OK)")
     void addPermission_Success() {
         Long userId = createVolunteer();
-        UserPermissionRequest req = new UserPermissionRequest("lesson:write:*");
+        UserPermissionRequest req = new UserPermissionRequest("channel:write:*");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -83,7 +83,7 @@ class UserSubRoleTest extends UserBaseTest {
         .then()
             .statusCode(200)
             .body("size()", equalTo(1))
-            .body("[0].code", equalTo("lesson:write:*"))
+            .body("[0].code", equalTo("channel:write:*"))
             .log().all();
     }
 
@@ -95,7 +95,7 @@ class UserSubRoleTest extends UserBaseTest {
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType(ContentType.JSON)
-            .body(new UserPermissionRequest("lesson:write:*"))
+            .body(new UserPermissionRequest("channel:write:*"))
         .when()
             .post("/{userId}/permissions", userId)
         .then()
@@ -104,7 +104,7 @@ class UserSubRoleTest extends UserBaseTest {
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType(ContentType.JSON)
-            .body(new UserPermissionRequest("department:read:*"))
+            .body(new UserPermissionRequest("department:write:*"))
         .when()
             .post("/{userId}/permissions", userId)
         .then()
@@ -117,7 +117,7 @@ class UserSubRoleTest extends UserBaseTest {
     @DisplayName("중복 권한 추가 시 멱등성 보장(200 OK, 중복 없음)")
     void addPermission_Idempotent() {
         Long userId = createVolunteer();
-        UserPermissionRequest req = new UserPermissionRequest("lesson:write:*");
+        UserPermissionRequest req = new UserPermissionRequest("channel:write:*");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -163,7 +163,7 @@ class UserSubRoleTest extends UserBaseTest {
     @Test
     @DisplayName("존재하지 않는 사용자에게 권한 추가 실패(404 Not Found)")
     void addPermission_UserNotFound() {
-        UserPermissionRequest req = new UserPermissionRequest("lesson:write:*");
+        UserPermissionRequest req = new UserPermissionRequest("channel:write:*");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -179,7 +179,7 @@ class UserSubRoleTest extends UserBaseTest {
     @Test
     @DisplayName("일반 사용자 권한으로 권한 추가 실패(403 Forbidden)")
     void addPermission_Forbidden() {
-        UserPermissionRequest req = new UserPermissionRequest("lesson:write:*");
+        UserPermissionRequest req = new UserPermissionRequest("channel:write:*");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
@@ -197,7 +197,7 @@ class UserSubRoleTest extends UserBaseTest {
     @DisplayName("권한 제거 성공(200 OK)")
     void removePermission_Success() {
         Long userId = createVolunteer();
-        UserPermissionRequest req = new UserPermissionRequest("lesson:write:*");
+        UserPermissionRequest req = new UserPermissionRequest("channel:write:*");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -224,7 +224,7 @@ class UserSubRoleTest extends UserBaseTest {
     @DisplayName("존재하지 않는 권한 제거 시 멱등성 보장(200 OK)")
     void removePermission_Idempotent() {
         Long userId = createVolunteer();
-        UserPermissionRequest req = new UserPermissionRequest("lesson:write:*");
+        UserPermissionRequest req = new UserPermissionRequest("channel:write:*");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -241,7 +241,7 @@ class UserSubRoleTest extends UserBaseTest {
     @Test
     @DisplayName("일반 사용자 권한으로 권한 제거 실패(403 Forbidden)")
     void removePermission_Forbidden() {
-        UserPermissionRequest req = new UserPermissionRequest("lesson:write:*");
+        UserPermissionRequest req = new UserPermissionRequest("channel:write:*");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
