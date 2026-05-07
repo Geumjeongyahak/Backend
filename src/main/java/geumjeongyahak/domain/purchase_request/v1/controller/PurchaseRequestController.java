@@ -7,7 +7,6 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,13 +17,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 import geumjeongyahak.common.security.service.CustomUserDetails;
-import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
-import geumjeongyahak.domain.purchase_request.service.PurchaseRequestItemService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestReconfirmationService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestService;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
@@ -34,31 +29,29 @@ import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSum
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/classrooms/{classroomId}/purchase-requests")
+@RequestMapping("/api/v1/purchase-requests")
 @RequiredArgsConstructor
 @Tag(name = "PurchaseRequest", description = "기자재 구입 요청 API")
 public class PurchaseRequestController {
 
     private final PurchaseRequestService purchaseRequestService;
-    private final PurchaseRequestItemService purchaseRequestItemService;
     private final PurchaseRequestReconfirmationService purchaseRequestReconfirmationService;
 
     @PreAuthorize("isAuthenticated()")
     @Operation(
         summary = "구입 요청 생성",
-        description = "분반에 대한 기자재 구입 요청을 생성합니다. "
-            + "품목은 품명과 사유만 입력하며 가격은 승인 후 구매 완료 보고 시점에 입력합니다. "
+        description = "classroomId 로 지정한 분반에 대한 기자재 구입 요청을 생성합니다. "
+            + "품목은 품명, 사유, 예상 가격을 입력하며 실제 가격은 승인 후 구매 완료 보고 시점에 입력합니다. "
             + "상태는 PENDING 으로 시작합니다."
     )
     @PostMapping
     public ResponseEntity<PurchaseRequestDetailResponse> createPurchaseRequest(
-        @PathVariable Long classroomId,
         @Valid @RequestBody CreatePurchaseRequestRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.debug("POST /api/v1/classrooms/{}/purchase-requests", classroomId);
+        log.debug("POST /api/v1/purchase-requests (classroomId={})", request.classroomId());
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(purchaseRequestService.createPurchaseRequest(userDetails.getUserId(), classroomId, request));
+            .body(purchaseRequestService.createPurchaseRequest(userDetails.getUserId(), request));
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -68,11 +61,10 @@ public class PurchaseRequestController {
     )
     @GetMapping
     public ResponseEntity<List<PurchaseRequestSummaryResponse>> getPurchaseRequests(
-        @PathVariable Long classroomId,
         @RequestParam(required = false) PurchaseRequestStatus status,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.debug("GET /api/v1/classrooms/{}/purchase-requests (status={})", classroomId, status);
+        log.debug("GET /api/v1/purchase-requests (status={})", status);
         return ResponseEntity.ok(
             purchaseRequestService.getPurchaseRequests(userDetails.getUserId(), status)
         );
@@ -82,11 +74,10 @@ public class PurchaseRequestController {
     @Operation(summary = "구입 요청 상세 조회")
     @GetMapping("/{requestId}")
     public ResponseEntity<PurchaseRequestDetailResponse> getPurchaseRequest(
-        @PathVariable Long classroomId,
         @PathVariable Long requestId,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.debug("GET /api/v1/classrooms/{}/purchase-requests/{}", classroomId, requestId);
+        log.debug("GET /api/v1/purchase-requests/{}", requestId);
         return ResponseEntity.ok(
             purchaseRequestService.getPurchaseRequest(userDetails.getUserId(), requestId, false)
         );
@@ -100,11 +91,10 @@ public class PurchaseRequestController {
     )
     @DeleteMapping("/{requestId}")
     public ResponseEntity<Void> deletePurchaseRequest(
-        @PathVariable Long classroomId,
         @PathVariable Long requestId,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.debug("DELETE /api/v1/classrooms/{}/purchase-requests/{}", classroomId, requestId);
+        log.debug("DELETE /api/v1/purchase-requests/{}", requestId);
         purchaseRequestService.deletePurchaseRequest(userDetails.getUserId(), requestId, false);
         return ResponseEntity.noContent().build();
     }
@@ -117,12 +107,11 @@ public class PurchaseRequestController {
     )
     @PostMapping("/{requestId}/report")
     public ResponseEntity<PurchaseRequestDetailResponse> reportPurchase(
-        @PathVariable Long classroomId,
         @PathVariable Long requestId,
         @Valid @RequestBody ReportPurchaseRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.debug("POST /api/v1/classrooms/{}/purchase-requests/{}/report", classroomId, requestId);
+        log.debug("POST /api/v1/purchase-requests/{}/report", requestId);
         return ResponseEntity.ok(
             purchaseRequestService.reportPurchase(userDetails.getUserId(), requestId, request, false)
         );
@@ -136,30 +125,12 @@ public class PurchaseRequestController {
     )
     @PostMapping("/{requestId}/reconfirmation")
     public ResponseEntity<Void> requestReconfirmation(
-        @PathVariable Long classroomId,
         @PathVariable Long requestId,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.debug("POST /api/v1/classrooms/{}/purchase-requests/{}/reconfirmation", classroomId, requestId);
+        log.debug("POST /api/v1/purchase-requests/{}/reconfirmation", requestId);
         purchaseRequestReconfirmationService.requestReconfirmation(userDetails.getUserId(), requestId);
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("isAuthenticated()")
-    @Operation(
-        summary = "구입 항목 영수증 업로드",
-        description = "특정 구입 항목에 대한 영수증 이미지를 업로드하고 해당 항목에 연결합니다."
-    )
-    @PostMapping(value = "/{requestId}/items/{itemId}/receipt", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FileUploadResponse> uploadItemReceipt(
-        @PathVariable Long classroomId,
-        @PathVariable Long requestId,
-        @PathVariable Long itemId,
-        @RequestPart("file") MultipartFile file,
-        @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        log.debug("POST /api/v1/classrooms/{}/purchase-requests/{}/items/{}/receipt", classroomId, requestId, itemId);
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(purchaseRequestItemService.uploadItemReceipt(userDetails.getUserId(), requestId, itemId, file, userDetails.isAdminOrManager()));
-    }
 }

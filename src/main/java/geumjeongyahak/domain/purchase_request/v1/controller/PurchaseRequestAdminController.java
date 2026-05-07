@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,9 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestService;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.ReviewPurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
-import geumjeongyahak.domain.request.v1.dto.request.RejectRequestRequest;
 
 @Slf4j
 @RestController
@@ -59,6 +60,21 @@ public class PurchaseRequestAdminController {
     }
 
     @Operation(
+        summary = "구입 요청 삭제",
+        description = "PENDING 상태의 구입 요청을 삭제합니다. 이미 처리된 요청은 삭제할 수 없습니다."
+    )
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
+    @DeleteMapping("/{requestId}")
+    public ResponseEntity<Void> deletePurchaseRequest(
+        @PathVariable Long requestId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("DELETE /api/v1/admin/purchase-requests/{}", requestId);
+        purchaseRequestService.deletePurchaseRequest(userDetails.getUserId(), requestId, true);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(
         summary = "구입 요청 승인",
         description = "PENDING 상태의 구입 요청을 승인합니다. 승인 후 7일 이내에 구매 완료 보고가 이루어져야 합니다."
     )
@@ -66,11 +82,17 @@ public class PurchaseRequestAdminController {
     @PatchMapping("/{requestId}/approve")
     public ResponseEntity<PurchaseRequestDetailResponse> approvePurchaseRequest(
         @PathVariable Long requestId,
+        @Valid @RequestBody ReviewPurchaseRequestRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PATCH /api/v1/admin/purchase-requests/{}/approve", requestId);
         return ResponseEntity.ok(
-            purchaseRequestService.approvePurchaseRequest(userDetails.getUserId(), requestId)
+            purchaseRequestService.approvePurchaseRequest(
+                userDetails.getUserId(),
+                requestId,
+                request.note(),
+                request.advancePaymentApprovedAmount()
+            )
         );
     }
 
@@ -79,7 +101,7 @@ public class PurchaseRequestAdminController {
     @PatchMapping("/{requestId}/reject")
     public ResponseEntity<PurchaseRequestDetailResponse> rejectPurchaseRequest(
         @PathVariable Long requestId,
-        @Valid @RequestBody RejectRequestRequest request,
+        @Valid @RequestBody ReviewPurchaseRequestRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PATCH /api/v1/admin/purchase-requests/{}/reject", requestId);

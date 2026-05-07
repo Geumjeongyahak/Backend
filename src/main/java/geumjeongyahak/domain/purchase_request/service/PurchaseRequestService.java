@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.purchase_request.service;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -8,14 +9,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import geumjeongyahak.common.exception.BadRequestException;
 import geumjeongyahak.common.exception.BusinessException;
+import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
-import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.file.service.FileProxyService;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
+import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestReceipt;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.exception.PurchaseRequestErrorCode;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
@@ -39,24 +43,19 @@ public class PurchaseRequestService {
 
     @Transactional
     public PurchaseRequestDetailResponse createPurchaseRequest(
-        Long requesterId, Long classroomId, CreatePurchaseRequestRequest request
+        Long requesterId, CreatePurchaseRequestRequest request
     ) {
-        log.debug("구입 요청 생성 (requesterId={}, classroomId={})", requesterId, classroomId);
+        log.debug("구입 요청 생성 (requesterId={}, classroomId={})", requesterId, request.classroomId());
 
-        Classroom classroom = classroomProxyService.getActiveById(classroomId);
+        Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
         User requester = userProxyService.getById(requesterId);
 
         List<PurchaseRequestItem> items = request.items().stream()
-            .map(item -> {
-                File receiptFile = item.receiptFileId() != null
-                    ? fileProxyService.getReferenceById(item.receiptFileId())
-                    : null;
-                return new PurchaseRequestItem(item.name(), item.reason(), item.price(), receiptFile);
-            })
+            .map(item -> new PurchaseRequestItem(item.name(), item.reason(), item.expectedPrice()))
             .toList();
 
         PurchaseRequest saved = purchaseRequestRepository.save(
-            new PurchaseRequest(classroom, requester, request.title(), request.content(), items)
+            new PurchaseRequest(classroom, requester, request.title(), request.content(), request.advancePaymentRequestedAmount(), items)
         );
 
         log.debug("구입 요청 생성 완료 (id={})", saved.getId());
@@ -98,30 +97,26 @@ public class PurchaseRequestService {
         checkAccess(purchaseRequest, requesterId, isAdmin);
 
         List<PurchaseRequestItem> items = request.items().stream()
-            .map(item -> {
-                File receiptFile = item.receiptFileId() != null
-                    ? fileProxyService.getReferenceById(item.receiptFileId())
-                    : null;
-                return new PurchaseRequestItem(item.name(), item.reason(), item.price(), receiptFile);
-            })
+            .map(item -> new PurchaseRequestItem(item.name(), item.reason(), item.expectedPrice()))
             .toList();
 
-        purchaseRequest.update(request.title(), request.content(), items);
+        purchaseRequest.update(request.title(), request.content(), request.advancePaymentRequestedAmount(), items);
 
         log.debug("구입 요청 수정 완료 (id={})", purchaseRequest.getId());
         return PurchaseRequestDetailResponse.from(purchaseRequest);
     }
 
     @Transactional
-    public PurchaseRequestDetailResponse approvePurchaseRequest(Long approverId, Long requestId) {
+    public PurchaseRequestDetailResponse approvePurchaseRequest(Long approverId, Long requestId, String note, Long advancePaymentApprovedAmount) {
         log.debug("구입 요청 승인 (requestId={})", requestId);
         PurchaseRequest purchaseRequest = findById(requestId);
+        String processedNote = requireNote(note);
 
         if (purchaseRequest.getStatus() != PurchaseRequestStatus.PENDING) {
             throw new BusinessException(PurchaseRequestErrorCode.ALREADY_PROCESSED);
         }
 
-        purchaseRequest.approve(userProxyService.getById(approverId));
+        purchaseRequest.approve(userProxyService.getById(approverId), processedNote, advancePaymentApprovedAmount);
 
         log.debug("구입 요청 승인 완료 (requestId={})", requestId);
         return PurchaseRequestDetailResponse.from(purchaseRequest);
@@ -131,12 +126,13 @@ public class PurchaseRequestService {
     public PurchaseRequestDetailResponse rejectPurchaseRequest(Long approverId, Long requestId, String note) {
         log.debug("구입 요청 반려 (requestId={})", requestId);
         PurchaseRequest purchaseRequest = findById(requestId);
+        String processedNote = requireNote(note);
 
         if (purchaseRequest.getStatus() != PurchaseRequestStatus.PENDING) {
             throw new BusinessException(PurchaseRequestErrorCode.ALREADY_PROCESSED);
         }
 
-        purchaseRequest.reject(userProxyService.getById(approverId), note);
+        purchaseRequest.reject(userProxyService.getById(approverId), processedNote);
 
         log.debug("구입 요청 반려 완료 (requestId={})", requestId);
         return PurchaseRequestDetailResponse.from(purchaseRequest);
@@ -167,14 +163,16 @@ public class PurchaseRequestService {
             if (item == null) {
                 throw new ResourceNotFoundException(PurchaseRequestErrorCode.ITEM_NOT_FOUND, itemReport.itemId());
             }
-            File receiptFile = itemReport.receiptFileId() != null
-                ? fileProxyService.getReferenceById(itemReport.receiptFileId())
-                : null;
-            item.updatePurchaseDetails(itemReport.price(), receiptFile);
+            item.updatePurchaseDetails(itemReport.price());
             totalPrice += itemReport.price();
         }
 
-        purchaseRequest.reportPurchase(totalPrice);
+        List<PurchaseRequestReceipt> receipts = (request.receiptFileIds() == null ? Collections.<java.util.UUID>emptyList() : request.receiptFileIds()).stream()
+            .map(fileProxyService::getReferenceById)
+            .map(PurchaseRequestReceipt::new)
+            .toList();
+
+        purchaseRequest.reportPurchase(totalPrice, receipts);
 
         log.debug("구매 완료 보고 완료 (requestId={}, totalPrice={})", requestId, totalPrice);
         return PurchaseRequestDetailResponse.from(purchaseRequest);
@@ -218,5 +216,12 @@ public class PurchaseRequestService {
         if (!isAdmin && !purchaseRequest.getRequestedBy().getId().equals(requesterId)) {
             throw new BusinessException(PurchaseRequestErrorCode.FORBIDDEN);
         }
+    }
+
+    private String requireNote(String note) {
+        if (!StringUtils.hasText(note)) {
+            throw new BadRequestException(CommonErrorCode.MISSING_REQUIRED_FIELD, "처리 사유는 필수입니다.");
+        }
+        return note.trim();
     }
 }

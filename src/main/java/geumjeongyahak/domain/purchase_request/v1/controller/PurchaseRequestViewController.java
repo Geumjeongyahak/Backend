@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.purchase_request.v1.controller;
 
 import geumjeongyahak.common.security.service.CustomUserDetails;
+import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestAdminViewService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestAdminViewService.PurchaseRequestFilter;
@@ -9,6 +10,7 @@ import geumjeongyahak.domain.purchase_request.v1.dto.request.PurchaseRequestForm
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,6 +23,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
@@ -98,11 +102,16 @@ public class PurchaseRequestViewController {
         }
 
         List<CreatePurchaseRequestRequest.Item> items = form.getItems().stream()
-            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getPrice(), i.getReceiptFileId()))
+            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getExpectedPrice()))
             .toList();
 
         Long requestId = purchaseRequestAdminViewService.createPurchaseRequest(
-            userDetails.getUserId(), form.getClassroomId(), form.getTitle(), form.getContent(), items);
+            userDetails.getUserId(),
+            form.getClassroomId(),
+            form.getTitle(),
+            form.getContent(),
+            form.getAdvancePaymentRequestedAmount(),
+            items);
 
         redirectAttributes.addFlashAttribute("message", "구매 요청이 생성되었습니다.");
         return "redirect:/admin/request/purchase/purchase-requests/" + requestId;
@@ -121,16 +130,24 @@ public class PurchaseRequestViewController {
         form.setClassroomId(response.classroomId());
         form.setTitle(response.title());
         form.setContent(response.content());
+        form.setAdvancePaymentRequestedAmount(response.advancePaymentRequestedAmount());
+        form.setAdvancePaymentApprovedAmount(response.advancePaymentApprovedAmount());
         form.setItems(response.items().stream()
             .map(i -> {
                 PurchaseRequestForm.ItemForm item = new PurchaseRequestForm.ItemForm();
                 item.setId(i.id());
                 item.setName(i.name());
                 item.setReason(i.reason());
-                item.setPrice(i.price());
-                item.setReceiptFileUrl(i.receiptFileUrl());
+                item.setExpectedPrice(i.expectedPrice());
+                item.setActualPrice(i.actualPrice());
                 return item;
             })
+            .collect(java.util.stream.Collectors.toList()));
+        form.setReceiptFileIds(response.receipts().stream()
+            .map(PurchaseRequestDetailResponse.ReceiptResponse::fileId)
+            .collect(java.util.stream.Collectors.toList()));
+        form.setReceiptFileUrls(response.receipts().stream()
+            .map(PurchaseRequestDetailResponse.ReceiptResponse::fileUrl)
             .collect(java.util.stream.Collectors.toList()));
 
         model.addAttribute("active", "purchaseRequests");
@@ -160,13 +177,30 @@ public class PurchaseRequestViewController {
         }
 
         List<CreatePurchaseRequestRequest.Item> items = form.getItems().stream()
-            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getPrice(), i.getReceiptFileId()))
+            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getExpectedPrice()))
             .toList();
 
-        purchaseRequestAdminViewService.updatePurchaseRequest(userDetails.getUserId(), requestId, form.getTitle(), form.getContent(), items);
+        purchaseRequestAdminViewService.updatePurchaseRequest(
+            userDetails.getUserId(),
+            requestId,
+            form.getTitle(),
+            form.getContent(),
+            form.getAdvancePaymentRequestedAmount(),
+            items);
 
         redirectAttributes.addFlashAttribute("message", "구매 요청이 수정되었습니다.");
         return "redirect:/admin/request/purchase/purchase-requests/" + requestId;
+    }
+
+    @PostMapping("/{requestId}/delete")
+    public String delete(
+        @PathVariable Long requestId,
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        RedirectAttributes redirectAttributes
+    ) {
+        purchaseRequestAdminViewService.deletePurchaseRequest(userDetails.getUserId(), requestId);
+        redirectAttributes.addFlashAttribute("message", "구매 요청이 삭제되었습니다.");
+        return "redirect:/admin/request/purchase/purchase-requests";
     }
 
     @PostMapping("/{requestId}/report")
@@ -186,10 +220,10 @@ public class PurchaseRequestViewController {
 
         List<geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.ItemReport> itemReports = form.getItems().stream()
             .filter(i -> i.getId() != null)
-            .map(i -> new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.ItemReport(i.getId(), i.getPrice() != null ? i.getPrice() : 0L, i.getReceiptFileId()))
+            .map(i -> new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.ItemReport(i.getId(), i.getActualPrice() != null ? i.getActualPrice() : 0L))
             .toList();
 
-        purchaseRequestAdminViewService.report(userDetails.getUserId(), requestId, itemReports);
+        purchaseRequestAdminViewService.report(userDetails.getUserId(), requestId, itemReports, form.getReceiptFileIds());
 
         redirectAttributes.addFlashAttribute("message", "구매 보고가 완료되었습니다.");
         return "redirect:/admin/request/purchase/purchase-requests/" + requestId;
@@ -198,10 +232,12 @@ public class PurchaseRequestViewController {
     @PostMapping("/{requestId}/approve")
     public String approve(
         @PathVariable Long requestId,
+        @RequestParam String note,
+        @RequestParam(required = false) Long advancePaymentApprovedAmount,
         @AuthenticationPrincipal CustomUserDetails userDetails,
         RedirectAttributes redirectAttributes
     ) {
-        purchaseRequestAdminViewService.approve(userDetails.getUserId(), requestId);
+        purchaseRequestAdminViewService.approve(userDetails.getUserId(), requestId, note, advancePaymentApprovedAmount);
         redirectAttributes.addFlashAttribute("message", "구매 요청을 승인했습니다.");
         return "redirect:/admin/request/purchase/purchase-requests/" + requestId;
     }
@@ -216,5 +252,24 @@ public class PurchaseRequestViewController {
         purchaseRequestAdminViewService.reject(userDetails.getUserId(), requestId, note);
         redirectAttributes.addFlashAttribute("message", "구매 요청을 반려했습니다.");
         return "redirect:/admin/request/purchase/purchase-requests/" + requestId;
+    }
+
+    @PostMapping("/{requestId}/confirm")
+    public String confirm(
+        @PathVariable Long requestId,
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        RedirectAttributes redirectAttributes
+    ) {
+        purchaseRequestAdminViewService.confirm(userDetails.getUserId(), requestId);
+        redirectAttributes.addFlashAttribute("message", "구매 결재 확인을 완료했습니다.");
+        return "redirect:/admin/request/purchase/purchase-requests/" + requestId;
+    }
+
+    @ResponseBody
+    @PostMapping("/receipt-images")
+    public ResponseEntity<FileUploadResponse> uploadReceiptImage(
+        @RequestParam("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(purchaseRequestAdminViewService.uploadReceiptImage(file));
     }
 }

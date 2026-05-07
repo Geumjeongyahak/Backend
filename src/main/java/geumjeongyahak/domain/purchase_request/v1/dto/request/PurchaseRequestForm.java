@@ -2,6 +2,7 @@ package geumjeongyahak.domain.purchase_request.v1.dto.request;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -24,8 +25,16 @@ public class PurchaseRequestForm {
     @NotBlank(message = "내용은 필수입니다.")
     private String content;
 
+    private Long advancePaymentRequestedAmount;
+
+    private Long advancePaymentApprovedAmount;
+
     @NotEmpty(message = "최소 하나 이상의 항목이 필요합니다.")
     private List<ItemForm> items = new ArrayList<>();
+
+    private List<UUID> receiptFileIds = new ArrayList<>();
+
+    private List<String> receiptFileUrls = new ArrayList<>();
 
     @Getter
     @Setter
@@ -36,8 +45,7 @@ public class PurchaseRequestForm {
         @NotBlank(message = "품명은 필수입니다.")
         private String name;
         private String reason;
-        private Long price;
-        private java.util.UUID receiptFileId;
-        private String receiptFileUrl; // For display/preview
+        private Long expectedPrice;
+        private Long actualPrice;
     }
 }

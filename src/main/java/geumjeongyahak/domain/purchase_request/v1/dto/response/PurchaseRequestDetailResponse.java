@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
+import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestReceipt;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 
 public record PurchaseRequestDetailResponse(
@@ -33,6 +34,12 @@ public record PurchaseRequestDetailResponse(
     @Schema(description = "총 구매 금액 (원) - 구매 보고 이후 확정", example = "45000")
     Long totalPrice,
 
+    @Schema(description = "요청 전체 선금 요청 금액 (원)", example = "50000")
+    Long advancePaymentRequestedAmount,
+
+    @Schema(description = "승인된 선금 금액 (원)", example = "50000")
+    Long advancePaymentApprovedAmount,
+
     @Schema(description = "요청 상태", example = "PENDING")
     PurchaseRequestStatus status,
 
@@ -51,6 +58,9 @@ public record PurchaseRequestDetailResponse(
     @Schema(description = "구입 항목 목록")
     List<ItemResponse> items,
 
+    @Schema(description = "영수증 목록")
+    List<ReceiptResponse> receipts,
+
     @Schema(description = "생성 시각")
     LocalDateTime createdAt
 ) {
@@ -58,16 +68,30 @@ public record PurchaseRequestDetailResponse(
         Long id,
         String name,
         String reason,
-        Long price,
-        String receiptFileUrl
+        Long expectedPrice,
+        Long actualPrice
     ) {
         static ItemResponse from(PurchaseRequestItem item) {
             return new ItemResponse(
                 item.getId(),
                 item.getName(),
                 item.getReason(),
-                item.getPrice(),
-                item.getReceiptFile() != null ? item.getReceiptFile().getPublicUrl() : null
+                item.getExpectedPrice(),
+                item.getActualPrice()
+            );
+        }
+    }
+
+    public record ReceiptResponse(
+        Long id,
+        java.util.UUID fileId,
+        String fileUrl
+    ) {
+        static ReceiptResponse from(PurchaseRequestReceipt receipt) {
+            return new ReceiptResponse(
+                receipt.getId(),
+                receipt.getFile().getId(),
+                receipt.getFile().getPublicUrl()
             );
         }
     }
@@ -82,12 +106,15 @@ public record PurchaseRequestDetailResponse(
             r.getTitle(),
             r.getContent(),
             r.getTotalPrice(),
+            r.getAdvancePaymentRequestedAmount(),
+            r.getAdvancePaymentApprovedAmount(),
             r.getStatus(),
             r.getApprovalAt(),
             r.getApprovalBy() != null ? r.getApprovalBy().getName() : null,
             r.getPurchasedAt(),
             r.getNote(),
             r.getItems().stream().map(ItemResponse::from).toList(),
+            r.getReceipts().stream().map(ReceiptResponse::from).toList(),
             r.getCreatedAt()
         );
     }
