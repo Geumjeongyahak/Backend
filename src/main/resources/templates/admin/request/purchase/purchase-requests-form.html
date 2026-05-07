@@ -8,9 +8,9 @@
     <div class="panel" style="background: #f8faf9; border-left: 4px solid var(--green); margin-bottom: 24px;">
         <h3 style="margin-top: 0;">구매 프로세스 안내</h3>
         <ol style="margin-bottom: 0; padding-left: 20px; color: #566059; font-size: 14px; line-height: 1.6;">
-            <li><strong>신청</strong>: 필요한 물품의 품명과 사유를 작성하여 요청을 등록합니다.</li>
-            <li><strong>승인</strong>: 관리자가 요청 내용을 검토하여 승인 여부를 결정합니다.</li>
-            <li><strong>구매 및 보고</strong>: 승인된 물품을 구매한 후, <strong>실제 가격</strong>과 <strong>영수증 사진</strong>을 첨부하여 보고합니다.</li>
+            <li><strong>신청</strong>: 필요한 물품의 품명, 사유, 예상 가격과 요청 전체 선금 금액을 작성합니다.</li>
+            <li><strong>승인</strong>: 관리자가 요청 내용을 검토하고 실제 선금 승인 금액을 결정합니다.</li>
+            <li><strong>구매 및 보고</strong>: 승인된 물품을 구매한 후, <strong>실제 가격</strong>과 <strong>영수증 사진</strong>을 요청 단위로 첨부하여 보고합니다.</li>
             <li><strong>확정</strong>: 최종 확인이 완료되면 요청 프로세스가 종료됩니다.</li>
         </ol>
     </div>
@@ -23,19 +23,17 @@
         </label>
         <label>제목 <input th:field="*{title}" required placeholder="예: 교재 구입"></label>
         <label>내용 <textarea th:field="*{content}" required placeholder="구매 요청 사유 및 상세 내용을 입력하세요."></textarea></label>
+        <label>선금 요청 금액
+            <input type="number" th:field="*{advancePaymentRequestedAmount}" min="0" placeholder="예: 50000">
+        </label>
         
         <div class="stack" style="--gap: 1rem;">
             <h3>구매 항목</h3>
             <div id="items-container" class="stack" style="--gap: 0.5rem;">
-                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: 1fr 1.5fr 1fr 1fr auto; gap: 1rem; align-items: end;">
+                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: 1fr 1.5fr 1fr auto; gap: 1rem; align-items: end;">
                     <label>품명 <input th:field="*{items[__${stat.index}__].name}" required></label>
                     <label>사유 <input th:field="*{items[__${stat.index}__].reason}"></label>
-                    <label>가격 (구매후 입력) <input type="number" th:field="*{items[__${stat.index}__].price}" placeholder="0" disabled></label>
-                    <label>영수증 (구매후 첨부) 
-                        <div class="file-input-wrapper" style="position: relative;">
-                            <button type="button" class="button secondary" style="width: 100%;" disabled>파일 선택</button>
-                        </div>
-                    </label>
+                    <label>예상 가격 <input type="number" th:field="*{items[__${stat.index}__].expectedPrice}" min="0" placeholder="예: 15000"></label>
                     <button type="button" class="button danger" th:if="${stat.index > 0}" onclick="removeRow(this)">삭제</button>
                 </div>
             </div>
@@ -51,16 +49,11 @@
             const container = document.getElementById('items-container');
             const newRow = document.createElement('div');
             newRow.className = 'panel item-row';
-            newRow.style.cssText = 'display: grid; grid-template-columns: 1fr 1.5fr 1fr 1fr auto; gap: 1rem; align-items: end;';
+            newRow.style.cssText = 'display: grid; grid-template-columns: 1fr 1.5fr 1fr auto; gap: 1rem; align-items: end;';
             newRow.innerHTML = `
                 <label>품명 <input name="items[${itemIndex}].name" required></label>
                 <label>사유 <input name="items[${itemIndex}].reason"></label>
-                <label>가격 (구매후 입력) <input type="number" name="items[${itemIndex}].price" placeholder="0" disabled></label>
-                <label>영수증 (구매후 첨부) 
-                    <div class="file-input-wrapper">
-                        <button type="button" class="button secondary" style="width: 100%;" disabled>파일 선택</button>
-                    </div>
-                </label>
+                <label>예상 가격 <input type="number" name="items[${itemIndex}].expectedPrice" min="0" placeholder="예: 15000"></label>
                 <button type="button" class="button danger" onclick="removeRow(this)">삭제</button>
             `;
             container.appendChild(newRow);
@@ -77,8 +70,10 @@
             rows.forEach((row, index) => {
                 const nameInput = row.querySelector('input[name*=".name"]');
                 const reasonInput = row.querySelector('input[name*=".reason"]');
+                const expectedPriceInput = row.querySelector('input[name*=".expectedPrice"]');
                 if (nameInput) nameInput.name = `items[${index}].name`;
                 if (reasonInput) reasonInput.name = `items[${index}].reason`;
+                if (expectedPriceInput) expectedPriceInput.name = `items[${index}].expectedPrice`;
             });
             itemIndex = rows.length;
         }
