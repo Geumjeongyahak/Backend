@@ -7,11 +7,15 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import geumjeongyahak.domain.base.entity.BaseEntity;
+import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.student.enums.StudentStatus;
 
 @Entity
@@ -33,18 +37,23 @@ public class Student extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_id", nullable = false)
+    private Classroom classroom;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private StudentStatus status = StudentStatus.ENROLLED;
 
-    public Student(String name, String phoneNumber, String description) {
+    public Student(String name, String phoneNumber, String description, Classroom classroom) {
         this.name = name;
         this.phoneNumber = phoneNumber;
         this.description = description;
+        this.classroom = classroom;
         this.status = StudentStatus.ENROLLED;
     }
 
-    public void update(String name, String phoneNumber, String description, StudentStatus status) {
+    public void update(String name, String phoneNumber, String description, StudentStatus status, Classroom classroom) {
         if (name != null) {
             this.name = name;
         }
@@ -56,6 +65,9 @@ public class Student extends BaseEntity {
         }
         if (status != null) {
             this.status = status;
+        }
+        if (classroom != null) {
+            this.classroom = classroom;
         }
     }
 }

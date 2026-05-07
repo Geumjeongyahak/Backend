@@ -44,7 +44,8 @@ class StudentPaginationTest extends StudentBaseTest {
             CreateStudentRequest req = new CreateStudentRequest(
                 "Page Test Student " + i,
                 "010-" + String.format("%04d", i) + "-5678",
-                "학생 페이지네이션 테스트 " + i
+                "학생 페이지네이션 테스트 " + i,
+                DEFAULT_CLASSROOM_ID
             );
 
             given()

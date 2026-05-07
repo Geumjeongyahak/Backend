@@ -15,6 +15,8 @@ import geumjeongyahak.e2e.BaseE2ETest;
 public abstract class StudentBaseTest extends BaseE2ETest {
 
     public static final String TEST_VOLUNTEER_USERNAME = "volunteer1234";
+    protected static final Long DEFAULT_CLASSROOM_ID = 1L;
+    protected static final String DEFAULT_CLASSROOM_NAME = "벚꽃반";
     protected String adminAccessToken;
     protected String volunteerAccessToken;
 
@@ -33,7 +35,8 @@ public abstract class StudentBaseTest extends BaseE2ETest {
         CreateStudentRequest createReq = new CreateStudentRequest(
             name,
             phoneNumber,
-            "E2E seed"
+            "E2E seed",
+            DEFAULT_CLASSROOM_ID
         );
 
         return given()

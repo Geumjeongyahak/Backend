@@ -2,6 +2,7 @@ package geumjeongyahak.domain.student.v1.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import geumjeongyahak.common.validation.annotation.ValidPhoneNumber;
 
@@ -17,5 +18,9 @@ public record CreateStudentRequest(
     String phoneNumber,
 
     @Schema(description = "설명", example = "학생입니다.")
-    String description
+    String description,
+
+    @Schema(description = "분반 식별자", example = "1")
+    @NotNull(message = "분반 ID는 필수입니다.")
+    Long classroomId
 ) {}

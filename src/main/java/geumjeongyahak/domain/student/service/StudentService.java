@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
+import geumjeongyahak.domain.classroom.entity.Classroom;
+import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
 import geumjeongyahak.domain.student.entity.Student;
 import geumjeongyahak.domain.student.enums.StudentStatus;
 import geumjeongyahak.domain.student.exception.DuplicateStudentException;
@@ -26,6 +28,7 @@ import geumjeongyahak.domain.student.v1.dto.response.StudentResponse;
 public class StudentService {
 
     private final StudentRepository studentRepository;
+    private final ClassroomProxyService classroomProxyService;
 
     @Transactional
     public StudentResponse createStudent(CreateStudentRequest request) {
@@ -37,7 +40,8 @@ public class StudentService {
             throw new DuplicateStudentException(request.name(), request.phoneNumber());
         }
 
-        Student student = new Student(request.name(), request.phoneNumber(), request.description());
+        Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
+        Student student = new Student(request.name(), request.phoneNumber(), request.description(), classroom);
 
         Student savedStudent = studentRepository.save(student);
 
@@ -82,7 +86,11 @@ public class StudentService {
             throw new DuplicateStudentException(newName, newPhone);
         }
 
-        student.update(request.name(), request.phoneNumber(), request.description(), request.status());
+        Classroom classroom = request.classroomId() != null
+            ? classroomProxyService.getActiveById(request.classroomId())
+            : null;
+
+        student.update(request.name(), request.phoneNumber(), request.description(), request.status(), classroom);
 
         log.info("학생 수정 완료 - ID: {}, name: {}", student.getId(), student.getName());
         return StudentResponse.from(student);
