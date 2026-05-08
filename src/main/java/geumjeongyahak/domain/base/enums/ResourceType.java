@@ -9,6 +9,7 @@ import java.util.Arrays;
 @RequiredArgsConstructor
 public enum ResourceType {
     CHANNEL("channel"),
+    SUBJECT("subject"),
     STUDENT("student"),
     DEPARTMENT("department"),
     USER("user"),

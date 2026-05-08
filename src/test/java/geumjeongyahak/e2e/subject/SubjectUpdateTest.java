@@ -70,6 +70,27 @@ public class SubjectUpdateTest extends SubjectBaseTest {
     }
 
     @Test
+    @DisplayName("subject:manage:* 권한으로 과목 수정 성공(200 OK)")
+    void patchSubject_Success_WithSubjectManagePermission() {
+        long subjectId = createSubject(CLASSROOM_1, "국어", "MONDAY", 2);
+
+        Map<String, Object> patch = Map.ofEntries(
+            Map.entry("name", "관리 권한 수정")
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(subjectManageAccessToken))
+            .contentType("application/json")
+            .body(patch)
+            .when()
+            .patch("/{subjectId}", subjectId)
+            .then()
+            .statusCode(200)
+            .body("id", is((int) subjectId))
+            .body("name", is("관리 권한 수정"));
+    }
+
+    @Test
     @DisplayName("PATCH: 스케줄 시간 역전이면 400 Bad Request")
     void patchSubject_InvalidTimeRange_BadRequest() {
         long subjectId = createSubject(CLASSROOM_1, "국어", "MONDAY", 2);

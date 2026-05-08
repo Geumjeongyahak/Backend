@@ -63,9 +63,33 @@ public class SubjectCreateTest extends SubjectBaseTest {
     }
 
     @Test
+    @DisplayName("subject:write:* 권한으로 과목 생성 성공(201 Created)")
+    void createSubject_Success_WithSubjectWritePermission() {
+        Map<String, Object> request = createRequest(
+            "쓰기 권한 과목",
+            "2026-03-02",
+            "2026-06-30",
+            "MONDAY"
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(subjectWriteAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .post()
+            .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .body("name", is("쓰기 권한 과목"));
+    }
+
+    @Test
     @DisplayName("매니저 사용자를 교사로 지정해 과목 생성 성공(201 Created)")
     void createSubject_Success_WhenTeacherIsManager() {
         long managerId = 100L;
+        jdbcTemplate.update("DELETE FROM user_permissions WHERE user_id = ?", managerId);
+        jdbcTemplate.update("DELETE FROM users WHERE id = ? OR nickname = ?", managerId, "subject-manager");
         jdbcTemplate.update("""
             INSERT INTO users (id, nickname, name, primary_email, role)
             VALUES (?, ?, ?, ?, ?)

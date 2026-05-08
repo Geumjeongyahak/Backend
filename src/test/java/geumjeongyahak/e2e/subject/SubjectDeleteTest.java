@@ -71,6 +71,19 @@ public class SubjectDeleteTest extends SubjectBaseTest {
     }
 
     @Test
+    @DisplayName("subject:manage:* 권한으로 과목 삭제(비활성화) 성공(204 No Content)")
+    void deleteSubject_Success_WithSubjectManagePermission() {
+        long subjectId = createSubject();
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(subjectManageAccessToken))
+            .when()
+            .delete("/{subjectId}", subjectId)
+            .then()
+            .statusCode(204);
+    }
+
+    @Test
     @DisplayName("존재하지 않는 과목 삭제 시 404 Not Found")
     void deleteSubject_NotFound() {
         given()
