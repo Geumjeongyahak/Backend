@@ -66,6 +66,10 @@ public class Subject extends BaseEntity {
     @Column(nullable = false)
     private Integer period;
 
+    private LocalDate assignedFrom;
+
+    private LocalDate assignedTo;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 
@@ -83,6 +87,8 @@ public class Subject extends BaseEntity {
             LocalTime startTime,
             LocalTime endTime,
             Integer period,
+            LocalDate assignedFrom,
+            LocalDate assignedTo,
             String description) {
         this.classroom = classroom;
         this.teacher = teacher;
@@ -94,6 +100,8 @@ public class Subject extends BaseEntity {
         this.startTime = startTime;
         this.endTime = endTime;
         this.period = period;
+        this.assignedFrom = assignedFrom;
+        this.assignedTo = assignedTo;
         this.description = description;
     }
 
@@ -108,6 +116,8 @@ public class Subject extends BaseEntity {
         LocalTime startTime,
         LocalTime endTime,
         Integer period,
+        LocalDate assignedFrom,
+        LocalDate assignedTo,
         String description
     ) {
         this.classroom = classroom;
@@ -120,6 +130,8 @@ public class Subject extends BaseEntity {
         this.startTime = startTime;
         this.endTime = endTime;
         this.period = period;
+        this.assignedFrom = assignedFrom;
+        this.assignedTo = assignedTo;
         this.description = description;
     }
 

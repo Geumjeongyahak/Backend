@@ -44,6 +44,12 @@ public record UpdateSubjectRequest(
     @Schema(description = "교시", example = "2")
     Integer period,
 
+    @Schema(description = "담당 교사 배정 시작 일자", example = "2026-06-15")
+    LocalDate assignedFrom,
+
+    @Schema(description = "담당 교사 배정 종료 일자", example = "2026-08-30")
+    LocalDate assignedTo,
+
     @Schema(description = "과목 설명", example = "과목 설명 수정")
     String description
 ) {

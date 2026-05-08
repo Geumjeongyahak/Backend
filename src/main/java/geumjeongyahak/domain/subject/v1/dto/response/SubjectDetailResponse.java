@@ -42,6 +42,12 @@ public record SubjectDetailResponse(
     @Schema(description = "교시", example = "1")
     Integer period,
 
+    @Schema(description = "담당 교사 배정 시작 일자", example = "2026-02-01", nullable = true)
+    LocalDate assignedFrom,
+
+    @Schema(description = "담당 교사 배정 종료 일자", example = "2026-06-30", nullable = true)
+    LocalDate assignedTo,
+
     @Schema(description = "과목 설명", example = "과목 설명")
     String description,
 
@@ -61,6 +67,8 @@ public record SubjectDetailResponse(
             subject.getStartTime(),
             subject.getEndTime(),
             subject.getPeriod(),
+            subject.getAssignedFrom(),
+            subject.getAssignedTo(),
             subject.getDescription(),
             subject.getIsActive()
         );

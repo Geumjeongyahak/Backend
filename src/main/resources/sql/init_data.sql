@@ -89,11 +89,11 @@ VALUES
 ALTER SEQUENCE channels_id_seq RESTART WITH 20;
 
 -- 8. Subjects
-INSERT INTO subjects (id, class_id, teacher_id, name, start_at, end_at, times, day_of_week, start_time, end_time, period, description)
+INSERT INTO subjects (id, class_id, teacher_id, name, start_at, end_at, times, day_of_week, start_time, end_time, period, assigned_from, assigned_to, description)
 VALUES
-    (1, 1, 2, '한글 기초', '2026-02-01', '2026-06-30', 20, 'WEDNESDAY',  '19:20:00', '20:00:00', 1, '기초 한글 수업'),
-    (2, 2, 3, '수학 기초', '2026-02-01', '2026-06-30', 20, 'WEDNESDAY',  '19:20:00', '20:00:00', 1, '기초 수학 수업'),
-    (3, 8, 2, '스마트폰 활용', '2026-02-01', '2026-06-30', 12, 'SATURDAY','19:20:00', '20:00:00', 1, '스마트폰 사용법');
+    (1, 1, 2, '한글 기초', '2026-02-01', '2026-06-30', 20, 'WEDNESDAY',  '19:20:00', '20:00:00', 1, '2026-02-01', '2026-06-30', '기초 한글 수업'),
+    (2, 2, 3, '수학 기초', '2026-02-01', '2026-06-30', 20, 'WEDNESDAY',  '19:20:00', '20:00:00', 1, '2026-02-01', '2026-06-30', '기초 수학 수업'),
+    (3, 8, 2, '스마트폰 활용', '2026-02-01', '2026-06-30', 12, 'SATURDAY','19:20:00', '20:00:00', 1, '2026-02-01', '2026-06-30', '스마트폰 사용법');
 ALTER SEQUENCE subjects_id_seq RESTART WITH 4;
 
 -- 9. Lessons

@@ -80,8 +80,11 @@ public class SubjectService {
             request.startTime(),
             request.endTime(),
             request.period(),
+            resolveAssignedFrom(teacher, request.assignedFrom(), request.startAt()),
+            resolveAssignedTo(teacher, request.assignedTo(), request.endAt()),
             request.description()
         );
+        validateAssignmentRange(teacher, subject.getAssignedFrom(), subject.getAssignedTo(), subject.getStartAt(), subject.getEndAt());
 
         Subject savedSubject = subjectRepository.save(subject);
         log.debug("과목 등록 완료 (id={})", savedSubject.getId());
@@ -90,8 +93,8 @@ public class SubjectService {
             eventPublisher.publish(new SubjectCreatedEvent(
                 savedSubject.getId(),
                 savedSubject.getTeacher().getId(),
-                savedSubject.getStartAt(),
-                savedSubject.getEndAt(),
+                savedSubject.getAssignedFrom(),
+                savedSubject.getAssignedTo(),
                 savedSubject.getTimes(),
                 savedSubject.getDayOfWeek(),
                 savedSubject.getStartTime(),
@@ -175,10 +178,13 @@ public class SubjectService {
         LocalTime startTime = request.startTime() != null ? request.startTime() : subject.getStartTime();
         LocalTime endTime = request.endTime() != null ? request.endTime() : subject.getEndTime();
         Integer period = request.period() != null ? request.period() : subject.getPeriod();
+        LocalDate assignedFrom = resolveUpdatedAssignedFrom(subject, teacher, request.assignedFrom(), startAt);
+        LocalDate assignedTo = resolveUpdatedAssignedTo(subject, teacher, request.assignedTo(), endAt);
         String description = request.description() != null ? request.description() : subject.getDescription();
 
         // 값 검증
         validateScheduleRange(startAt, endAt, startTime, endTime);
+        validateAssignmentRange(teacher, assignedFrom, assignedTo, startAt, endAt);
         validatePatchBasics(name, times, period); // 필요 시
 
         // 비즈니스 검증: 중복 스케줄(자기 자신 제외)
@@ -209,6 +215,8 @@ public class SubjectService {
             startTime,
             endTime,
             period,
+            assignedFrom,
+            assignedTo,
             description
         );
 
@@ -245,6 +253,78 @@ public class SubjectService {
         }
         if (startTime != null && endTime != null && !startTime.isBefore(endTime)) {
             throw new InvalidSubjectScheduleException("startTime은 endTime보다 빨라야 합니다.");
+        }
+    }
+
+    private LocalDate resolveAssignedFrom(User teacher, LocalDate assignedFrom, LocalDate startAt) {
+        if (teacher == null) {
+            return assignedFrom;
+        }
+        return assignedFrom != null ? assignedFrom : startAt;
+    }
+
+    private LocalDate resolveAssignedTo(User teacher, LocalDate assignedTo, LocalDate endAt) {
+        if (teacher == null) {
+            return assignedTo;
+        }
+        return assignedTo != null ? assignedTo : endAt;
+    }
+
+    private LocalDate resolveUpdatedAssignedFrom(
+        Subject subject,
+        User teacher,
+        LocalDate requestedAssignedFrom,
+        LocalDate startAt
+    ) {
+        if (requestedAssignedFrom != null) {
+            return requestedAssignedFrom;
+        }
+        if (teacher == null) {
+            return subject.getAssignedFrom();
+        }
+        if (subject.getAssignedFrom() == null || subject.getAssignedFrom().equals(subject.getStartAt())) {
+            return startAt;
+        }
+        return subject.getAssignedFrom();
+    }
+
+    private LocalDate resolveUpdatedAssignedTo(
+        Subject subject,
+        User teacher,
+        LocalDate requestedAssignedTo,
+        LocalDate endAt
+    ) {
+        if (requestedAssignedTo != null) {
+            return requestedAssignedTo;
+        }
+        if (teacher == null) {
+            return subject.getAssignedTo();
+        }
+        if (subject.getAssignedTo() == null || subject.getAssignedTo().equals(subject.getEndAt())) {
+            return endAt;
+        }
+        return subject.getAssignedTo();
+    }
+
+    private void validateAssignmentRange(
+        User teacher,
+        LocalDate assignedFrom,
+        LocalDate assignedTo,
+        LocalDate subjectStartAt,
+        LocalDate subjectEndAt
+    ) {
+        if (teacher == null) {
+            if (assignedFrom != null || assignedTo != null) {
+                throw new InvalidSubjectScheduleException("교사가 없는 과목에는 배정 기간을 설정할 수 없습니다.");
+            }
+            return;
+        }
+
+        if (assignedFrom == null || assignedTo == null) {
+            throw new InvalidSubjectScheduleException("교사가 배정된 과목은 assignedFrom과 assignedTo가 필요합니다.");
+        }
+        if (assignedFrom.isBefore(subjectStartAt) || assignedTo.isAfter(subjectEndAt)) {
+            throw new InvalidSubjectScheduleException("담당 교사 배정 기간은 과목 운영 기간 안에 있어야 합니다.");
         }
     }
 
