@@ -6,7 +6,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import geumjeongyahak.common.validation.annotation.ValidSubjectSchedule;
 import geumjeongyahak.domain.subject.v1.dto.request.CreateSubjectRequest;
-import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectRequest;
 
 public class SubjectScheduleValidator implements ConstraintValidator<ValidSubjectSchedule, Object> {
 
@@ -24,13 +23,6 @@ public class SubjectScheduleValidator implements ConstraintValidator<ValidSubjec
         LocalTime endTime;
 
         if (value instanceof CreateSubjectRequest req) {
-            startAt = req.startAt();
-            endAt = req.endAt();
-            assignedFrom = req.assignedFrom();
-            assignedTo = req.assignedTo();
-            startTime = req.startTime();
-            endTime = req.endTime();
-        } else if (value instanceof UpdateSubjectRequest req) {
             startAt = req.startAt();
             endAt = req.endAt();
             assignedFrom = req.assignedFrom();

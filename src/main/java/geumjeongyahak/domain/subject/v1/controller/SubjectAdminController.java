@@ -2,7 +2,7 @@ package geumjeongyahak.domain.subject.v1.controller;
 
 import geumjeongyahak.domain.subject.service.SubjectService;
 import geumjeongyahak.domain.subject.v1.dto.request.CreateSubjectRequest;
-import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectRequest;
+import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectBasicRequest;
 import geumjeongyahak.domain.subject.v1.dto.response.SubjectDetailResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -87,27 +87,19 @@ public class SubjectAdminController {
     @Operation(
         summary = "과목 부분 수정",
         description = """
-            기존 과목 정보를 부분 수정합니다.
+            기존 과목의 기본 정보를 부분 수정합니다.
 
             권한 정책:
             - 관리자 또는 subject:manage:* 권한을 가진 사용자만 수정할 수 있습니다.
             - subject:write:* 권한은 과목 생성 전용이며 수정 권한을 포함하지 않습니다.
 
             수정 정책:
-            - 전달된 필드만 수정합니다.
-            - classroomId가 전달되면 존재하는 분반인지 확인한 뒤 과목의 분반을 변경합니다.
-            - teacherId가 전달되면 존재하는 사용자이며 봉사자 또는 매니저 역할인지 확인합니다.
-            - teacherId가 null로 전달된 경우에는 기존 교사를 유지합니다.
-            - assignedFrom 또는 assignedTo가 전달되면 담당 교사 배정 기간을 수정합니다.
-            - 담당 교사 배정 기간은 과목 운영 기간 안에 있어야 합니다.
-            - 기존 배정 기간이 과목 운영 기간과 같았고 운영 기간만 수정하면, 배정 기간도 새 운영 기간을 따릅니다.
-            - 같은 분반에서 운영 기간이 겹치고 요일과 교시가 같은 다른 과목이 있으면 수정할 수 없습니다.
-            - startAt은 endAt보다 늦을 수 없습니다.
-            - startTime은 endTime보다 빨라야 합니다.
-            - times와 period는 1 이상이어야 합니다.
+            - 전달된 name, description 필드만 수정합니다.
+            - name은 공백일 수 없습니다.
+            - 교사, 담당 교사 배정 기간, 운영 기간, 요일, 교시, 시작/종료 시간, 수업 횟수는 이 API에서 수정할 수 없습니다.
 
             현재 Lesson 반영 정책:
-            - 이 API는 현재 Subject 정보만 수정합니다.
+            - 이 API는 Lesson에 영향을 주지 않는 Subject 기본 정보만 수정합니다.
             - 이미 생성된 Lesson의 교사, 날짜, 교시, 시간은 자동으로 변경하지 않습니다.
             - Lesson에 영향을 주는 담당 교사 배정 및 일정 변경 API는 별도 정책으로 분리될 예정입니다.
 
@@ -120,9 +112,9 @@ public class SubjectAdminController {
     public ResponseEntity<SubjectDetailResponse> updateSubject(
         @Parameter(description = "과목 식별자", example = "1")
         @PathVariable Long subjectId,
-        @Valid @RequestBody UpdateSubjectRequest request
+        @Valid @RequestBody UpdateSubjectBasicRequest request
     ) {
-        log.debug("PATCH /api/v1/subjects/{} - 과목 부분 수정 요청", subjectId);
+        log.debug("PATCH /api/v1/subjects/{} - 과목 기본 정보 수정 요청", subjectId);
         SubjectDetailResponse response = subjectService.updateSubject(subjectId, request);
         return ResponseEntity.ok(response);
     }

@@ -48,12 +48,13 @@ public class SubjectUpdateTest extends SubjectBaseTest {
     }
 
     @Test
-    @DisplayName("PATCH: 이름만 수정 성공(200 OK)")
+    @DisplayName("PATCH: 기본 정보만 수정 성공(200 OK)")
     void patchSubject_UpdateNameOnly_Success() {
         long subjectId = createSubject(CLASSROOM_1, "국어", "MONDAY", 2);
 
         Map<String, Object> patch = Map.ofEntries(
-            Map.entry("name", "국어(수정)")
+            Map.entry("name", "국어(수정)"),
+            Map.entry("description", "기본 정보 수정")
         );
 
         given()
@@ -66,6 +67,8 @@ public class SubjectUpdateTest extends SubjectBaseTest {
             .statusCode(200)
             .body("id", is((int) subjectId))
             .body("name", is("국어(수정)"))
+            .body("description", is("기본 정보 수정"))
+            .body("period", is(2))
             .log().all();
     }
 
@@ -91,13 +94,12 @@ public class SubjectUpdateTest extends SubjectBaseTest {
     }
 
     @Test
-    @DisplayName("PATCH: 스케줄 시간 역전이면 400 Bad Request")
-    void patchSubject_InvalidTimeRange_BadRequest() {
+    @DisplayName("PATCH: 과목명이 공백이면 400 Bad Request")
+    void patchSubject_BadRequest_WhenNameIsBlank() {
         long subjectId = createSubject(CLASSROOM_1, "국어", "MONDAY", 2);
 
         Map<String, Object> patch = Map.ofEntries(
-            Map.entry("startTime", "20:00:00"),
-            Map.entry("endTime", "19:20:00")
+            Map.entry("name", "   ")
         );
 
         given()
@@ -112,15 +114,10 @@ public class SubjectUpdateTest extends SubjectBaseTest {
     }
 
     @Test
-    @DisplayName("PATCH: 다른 과목과 중복되는 스케줄로 수정 시 409 Conflict")
-    void patchSubject_Conflict() {
-        // A 과목: 월 2교시, 2099-03-02 ~ 2099-06-30
-        createSubject(CLASSROOM_1, "A", "MONDAY", 2);
+    @DisplayName("PATCH: 일정 필드는 기본 정보 수정 대상이 아니므로 변경되지 않는다")
+    void patchSubject_IgnoresScheduleFields() {
+        long subjectId = createSubject(CLASSROOM_1, "국어", "MONDAY", 2);
 
-        // B: 다른 슬롯
-        long b = createSubject(CLASSROOM_1, "B", "TUESDAY", 1);
-
-        // B를 A와 같은 슬롯으로 + A 기간과 겹치게 수정 => 409
         Map<String, Object> patch = Map.ofEntries(
             Map.entry("dayOfWeek", "MONDAY"),
             Map.entry("period", 2),
@@ -133,9 +130,13 @@ public class SubjectUpdateTest extends SubjectBaseTest {
             .contentType("application/json")
             .body(patch)
             .when()
-            .patch("/{subjectId}", b)
+            .patch("/{subjectId}", subjectId)
             .then()
-            .statusCode(409)
+            .statusCode(200)
+            .body("dayOfWeek", is("MONDAY"))
+            .body("period", is(2))
+            .body("startAt", is("2099-03-02"))
+            .body("endAt", is("2099-06-30"))
             .log().all();
     }
 

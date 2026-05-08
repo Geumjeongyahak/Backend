@@ -135,6 +135,15 @@ public class Subject extends BaseEntity {
         this.description = description;
     }
 
+    public void updateBasic(String name, String description) {
+        if (name != null) {
+            this.name = name;
+        }
+        if (description != null) {
+            this.description = description;
+        }
+    }
+
     public void deactivate() {
         this.isActive = false;
     }
