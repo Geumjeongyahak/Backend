@@ -29,9 +29,12 @@ import org.springframework.web.bind.annotation.*;
 )
 public class StudentAdminController {
 
+    private static final String STUDENT_WRITE_ACCESS = "hasRole('ADMIN') or hasAuthority('student:write:*')";
+    private static final String STUDENT_MANAGE_ACCESS = "hasRole('ADMIN') or hasAuthority('student:manage:*')";
+
     private final StudentService studentService;
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('student:write:*')")
+    @PreAuthorize(STUDENT_WRITE_ACCESS)
     @Operation(
         summary = "학생 등록",
         description = """
@@ -43,6 +46,7 @@ public class StudentAdminController {
 
             동작 방식:
             - 이름과 전화번호 조합으로 중복 등록 여부를 확인합니다.
+            - classroomId로 삭제되지 않은 분반을 확인한 뒤 학생과 연결합니다.
             - 초기 상태는 자동으로 'ENROLLED(재학)'로 설정됩니다.
 
             사이드 이펙트:
@@ -59,7 +63,7 @@ public class StudentAdminController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('student:manage:*')")
+    @PreAuthorize(STUDENT_MANAGE_ACCESS)
     @Operation(
         summary = "학생 수정",
         description = """
@@ -72,6 +76,7 @@ public class StudentAdminController {
 
             동작 방식:
             - 전달된 필드만 반영됩니다 (Patch).
+            - classroomId가 전달되면 소속 분반을 변경합니다.
             - 수정 후 이름과 전화번호 조합이 다른 학생과 중복되는지 검사합니다.
 
             사이드 이펙트:
@@ -90,22 +95,22 @@ public class StudentAdminController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('student:manage:*')")
+    @PreAuthorize(STUDENT_MANAGE_ACCESS)
     @Operation(
         summary = "학생 삭제",
         description = """
             학생을 삭제합니다.
 
             사용 사례:
-            - 잘못 등록된 학생 정보 완전 삭제
+            - 잘못 등록된 학생 정보 삭제 처리
             - 운영상 데이터 정리가 필요한 경우
 
             주의 사항:
-            - 현재 구현은 물리 삭제를 수행합니다.
-            - 연관된 수업 데이터나 출석 데이터가 있을 경우 제약 조건에 의해 삭제가 실패할 수 있습니다.
+            - 현재 구현은 soft delete를 수행합니다.
+            - 삭제된 학생은 목록 조회와 상세 조회에서 제외됩니다.
 
             사이드 이펙트:
-            - students 테이블에서 해당 레코드가 제거됩니다.
+            - students 테이블의 isDeleted 값이 true로 변경됩니다.
             """
     )
     @DeleteMapping("/{studentId}")

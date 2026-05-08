@@ -16,6 +16,12 @@ public record StudentResponse(
     @Schema(description = "설명", example = "학생입니다.")
     String description,
 
+    @Schema(description = "분반 식별자", example = "1")
+    Long classroomId,
+
+    @Schema(description = "분반 이름", example = "벚꽃반")
+    String classroomName,
+
     @Schema(description = "상태", example = "ENROLLED")
     String status
 ) {
@@ -26,6 +32,8 @@ public record StudentResponse(
             savedStudent.getName(),
             savedStudent.getPhoneNumber(),
             savedStudent.getDescription(),
+            savedStudent.getClassroom().getId(),
+            savedStudent.getClassroom().getName(),
             savedStudent.getStatus().name()
         );
     }

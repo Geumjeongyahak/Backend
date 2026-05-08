@@ -22,5 +22,8 @@ public record UpdateStudentRequest(
         example = "ON_LEAVE",
         allowableValues = { "ENROLLED", "ON_LEAVE", "COMPLETED" }
     )
-    StudentStatus status
+    StudentStatus status,
+
+    @Schema(description = "분반 식별자", example = "1")
+    Long classroomId
 ) {}

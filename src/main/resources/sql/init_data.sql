@@ -108,10 +108,10 @@ VALUES
 ALTER SEQUENCE lessons_id_seq RESTART WITH 7;
 
 -- 10. Students
-INSERT INTO students (id, name, phone_number, description, status)
+INSERT INTO students (id, class_id, name, phone_number, description, status)
 VALUES
-    (1, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),
-    (2, '박민수', '010-4444-4444', '기초반', 'ENROLLED');
+    (1, 1, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),
+    (2, 1, '박민수', '010-4444-4444', '기초반', 'ENROLLED');
 ALTER SEQUENCE students_id_seq RESTART WITH 3;
 
 -- 11. Student Attendances

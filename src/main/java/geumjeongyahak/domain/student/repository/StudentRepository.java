@@ -1,17 +1,14 @@
 package geumjeongyahak.domain.student.repository;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import geumjeongyahak.domain.student.entity.Student;
-import geumjeongyahak.domain.student.enums.StudentStatus;
 
-public interface StudentRepository extends JpaRepository<Student, Long> {
+public interface StudentRepository extends JpaRepository<Student, Long>, JpaSpecificationExecutor<Student> {
 
-    boolean existsByNameAndPhoneNumber(String name, String phoneNumber);
-    boolean existsByNameAndPhoneNumberAndIdNot(String newName, String newPhone, Long studentId);
-    Page<Student> findAllBy(Pageable pageable);
-    Page<Student> findAllByNameContaining(String name, Pageable pageable);
-    Page<Student> findAllByStatus(StudentStatus status, Pageable pageable);
-    Page<Student> findAllByNameContainingAndStatus(String name, StudentStatus status, Pageable pageable);
+    Optional<Student> findByIdAndIsDeletedFalse(Long id);
+    boolean existsByNameAndPhoneNumberAndIsDeletedFalse(String name, String phoneNumber);
+    boolean existsByNameAndPhoneNumberAndIdNotAndIsDeletedFalse(String newName, String newPhone, Long studentId);
 }

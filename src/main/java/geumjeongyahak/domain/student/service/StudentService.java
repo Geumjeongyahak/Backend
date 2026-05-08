@@ -1,21 +1,22 @@
 package geumjeongyahak.domain.student.service;
 
+import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
-import geumjeongyahak.domain.base.dto.response.PaginationResponse;
+import geumjeongyahak.domain.classroom.entity.Classroom;
+import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
 import geumjeongyahak.domain.student.entity.Student;
-import geumjeongyahak.domain.student.enums.StudentStatus;
 import geumjeongyahak.domain.student.exception.DuplicateStudentException;
 import geumjeongyahak.domain.student.exception.StudentNotFoundException;
 import geumjeongyahak.domain.student.repository.StudentRepository;
+import geumjeongyahak.domain.student.repository.specification.StudentSpecs;
 import geumjeongyahak.domain.student.v1.dto.request.CreateStudentRequest;
-import geumjeongyahak.domain.student.v1.dto.request.StudentPaginationRequest;
+import geumjeongyahak.domain.student.v1.dto.request.StudentSearchRequest;
 import geumjeongyahak.domain.student.v1.dto.request.UpdateStudentRequest;
 import geumjeongyahak.domain.student.v1.dto.response.StudentResponse;
 
@@ -25,19 +26,23 @@ import geumjeongyahak.domain.student.v1.dto.response.StudentResponse;
 @Transactional(readOnly = true)
 public class StudentService {
 
+    private static final String DEFAULT_SORT_PROPERTY = "name";
+
     private final StudentRepository studentRepository;
+    private final ClassroomProxyService classroomProxyService;
 
     @Transactional
     public StudentResponse createStudent(CreateStudentRequest request) {
         log.info("학생 등록 요청: - name: {}", request.name());
 
-        if (studentRepository.existsByNameAndPhoneNumber(request.name(), request.phoneNumber())) {
+        if (studentRepository.existsByNameAndPhoneNumberAndIsDeletedFalse(request.name(), request.phoneNumber())) {
             log.warn("학생 등록 실패 - 이미 등록된 학생입니다. name: {}, phoneNumber: {}",
                 request.name(), request.phoneNumber());
             throw new DuplicateStudentException(request.name(), request.phoneNumber());
         }
 
-        Student student = new Student(request.name(), request.phoneNumber(), request.description());
+        Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
+        Student student = new Student(request.name(), request.phoneNumber(), request.description(), classroom);
 
         Student savedStudent = studentRepository.save(student);
 
@@ -45,19 +50,26 @@ public class StudentService {
         return StudentResponse.from(savedStudent);
     }
 
-    public PaginationResponse<StudentResponse> getAllStudents(StudentPaginationRequest request) {
+    public List<StudentResponse> getAllStudents(StudentSearchRequest request) {
         log.debug("학생 목록 조회 요청");
-        PageRequest pageable = request.toRequest();
-        Page<Student> page = findStudentsByFilter(request, pageable);
+        if (request.getClassroomId() != null) {
+            classroomProxyService.getActiveById(request.getClassroomId());
+        }
 
-        var pageResponse = new PaginationResponse<>(page);
-        log.debug("학생 목록 조회 완료 - 총 {}명", pageResponse.getTotalElements());
-        return PaginationResponse.mapTo(pageResponse, StudentResponse::from);
+        List<Student> students = studentRepository.findAll(
+            createSearchSpec(request),
+            defaultSort()
+        );
+
+        log.debug("학생 목록 조회 완료 - 총 {}명", students.size());
+        return students.stream()
+            .map(StudentResponse::from)
+            .toList();
     }
 
     public StudentResponse getStudentById(Long studentId) {
         log.debug("학생 단건 조회 요청 - ID: {}", studentId);
-        return studentRepository.findById(studentId)
+        return studentRepository.findByIdAndIsDeletedFalse(studentId)
             .map(StudentResponse::from)
             .orElseThrow(() -> {
                 log.warn("학생을 찾을 수 없습니다 - ID: {}", studentId);
@@ -69,7 +81,7 @@ public class StudentService {
     public StudentResponse updateStudent(Long studentId, UpdateStudentRequest request) {
         log.info("학생 수정 요청 - ID: {}", studentId);
 
-        Student student = studentRepository.findById(studentId)
+        Student student = studentRepository.findByIdAndIsDeletedFalse(studentId)
             .orElseThrow(() -> {
                 log.warn("학생 수정 실패 - 학생을 찾을 수 없습니다. ID: {}", studentId);
                 return new StudentNotFoundException(studentId);
@@ -78,11 +90,15 @@ public class StudentService {
         String newName = (request.name() != null) ? request.name() : student.getName();
         String newPhone = (request.phoneNumber() != null) ? request.phoneNumber() : student.getPhoneNumber();
 
-        if (studentRepository.existsByNameAndPhoneNumberAndIdNot(newName, newPhone, studentId)) {
+        if (studentRepository.existsByNameAndPhoneNumberAndIdNotAndIsDeletedFalse(newName, newPhone, studentId)) {
             throw new DuplicateStudentException(newName, newPhone);
         }
 
-        student.update(request.name(), request.phoneNumber(), request.description(), request.status());
+        Classroom classroom = request.classroomId() != null
+            ? classroomProxyService.getActiveById(request.classroomId())
+            : null;
+
+        student.update(request.name(), request.phoneNumber(), request.description(), request.status(), classroom);
 
         log.info("학생 수정 완료 - ID: {}, name: {}", student.getId(), student.getName());
         return StudentResponse.from(student);
@@ -91,30 +107,24 @@ public class StudentService {
     @Transactional
     public void deleteStudentById(Long studentId) {
         log.info("학생 삭제 요청 - ID: {}", studentId);
-        if (!studentRepository.existsById(studentId)) {
-            log.warn("학생 삭제 실패 - 학생을 찾을 수 없습니다. ID: {}", studentId);
-            throw new StudentNotFoundException(studentId);
-        }
-        studentRepository.deleteById(studentId);
+        Student student = studentRepository.findByIdAndIsDeletedFalse(studentId)
+            .orElseThrow(() -> {
+                log.warn("학생 삭제 실패 - 학생을 찾을 수 없습니다. ID: {}", studentId);
+                return new StudentNotFoundException(studentId);
+            });
+
+        student.delete();
         log.info("학생 삭제 완료 - ID: {}", studentId);
     }
 
-    private Page<Student> findStudentsByFilter(StudentPaginationRequest request, Pageable pageable) {
-        String name = request.getName();
-        StudentStatus status = request.getStatus();
+    private Specification<Student> createSearchSpec(StudentSearchRequest request) {
+        return StudentSpecs.withoutDeleted()
+            .and(StudentSpecs.containsName(request.getName()))
+            .and(StudentSpecs.hasStatus(request.getStatus()))
+            .and(StudentSpecs.hasClassroomId(request.getClassroomId()));
+    }
 
-        boolean hasName = StringUtils.hasText(name);
-        boolean hasStatus = status != null;
-
-        if (hasName && hasStatus) {
-            return studentRepository.findAllByNameContainingAndStatus(name, status, pageable);
-        }
-        if (hasName) {
-            return studentRepository.findAllByNameContaining(name, pageable);
-        }
-        if (hasStatus) {
-            return studentRepository.findAllByStatus(status, pageable);
-        }
-        return studentRepository.findAllBy(pageable);
+    private Sort defaultSort() {
+        return Sort.by(Sort.Direction.ASC, DEFAULT_SORT_PROPERTY);
     }
 }

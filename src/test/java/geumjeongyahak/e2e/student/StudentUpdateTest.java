@@ -24,6 +24,7 @@ class StudentUpdateTest extends StudentBaseTest {
             "Updated Student Name",
             null,
             "updated description",
+            null,
             null
         );
 
@@ -40,6 +41,8 @@ class StudentUpdateTest extends StudentBaseTest {
             // phoneNumber는 null로 보내서 기존 값 유지
             .body("phoneNumber", equalTo("010-1111-2222"))
             .body("description", equalTo("updated description"))
+            .body("classroomId", equalTo(DEFAULT_CLASSROOM_ID.intValue()))
+            .body("classroomName", equalTo(DEFAULT_CLASSROOM_NAME))
             .log().all();
     }
 
@@ -52,7 +55,8 @@ class StudentUpdateTest extends StudentBaseTest {
             null,
             null,
             null,
-            ON_LEAVE
+            ON_LEAVE,
+            null
         );
 
         given()
@@ -77,6 +81,7 @@ class StudentUpdateTest extends StudentBaseTest {
             "Hacker Name",
             null,
             null,
+            null,
             null
         );
 
@@ -96,6 +101,7 @@ class StudentUpdateTest extends StudentBaseTest {
     void updateStudent_NotFound() {
         UpdateStudentRequest updateReq = new UpdateStudentRequest(
             "New Name",
+            null,
             null,
             null,
             null
@@ -125,6 +131,7 @@ class StudentUpdateTest extends StudentBaseTest {
             a.name(),
             a.phoneNumber(),
             null,
+            null,
             null
         );
 
@@ -148,6 +155,7 @@ class StudentUpdateTest extends StudentBaseTest {
             "New Name",
             null,
             null,
+            null,
             null
         );
 
@@ -158,6 +166,58 @@ class StudentUpdateTest extends StudentBaseTest {
             .patch("/{studentId}", created.id())
             .then()
             .statusCode(401)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("관리자 권한으로 학생 분반 수정 성공(200 OK)")
+    void updateStudent_Classroom_Success_Admin() {
+        StudentResponse created = createStudent("Classroom Move Student", "010-8888-9999");
+
+        UpdateStudentRequest updateReq = new UpdateStudentRequest(
+            null,
+            null,
+            null,
+            null,
+            2L
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(updateReq)
+            .when()
+            .patch("/{studentId}", created.id())
+            .then()
+            .statusCode(200)
+            .body("id", equalTo(created.id().intValue()))
+            .body("classroomId", equalTo(2))
+            .body("classroomName", equalTo("장미반"))
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 분반으로 학생 수정 실패(404 Not Found)")
+    void updateStudent_ClassroomNotFound() {
+        StudentResponse created = createStudent("Missing Classroom Student", "010-9999-0000");
+
+        UpdateStudentRequest updateReq = new UpdateStudentRequest(
+            null,
+            null,
+            null,
+            null,
+            99999L
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(updateReq)
+            .when()
+            .patch("/{studentId}", created.id())
+            .then()
+            .statusCode(404)
+            .body("code", equalTo("RES-03-001"))
             .log().all();
     }
 }

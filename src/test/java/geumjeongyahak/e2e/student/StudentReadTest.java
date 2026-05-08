@@ -26,6 +26,8 @@ public class StudentReadTest extends StudentBaseTest {
             .body("name", equalTo("TestStudent1"))
             .body("phoneNumber", equalTo("010-1234-5678"))
             .body("description", equalTo("E2E seed")) // BaseTest 헬퍼가 고정 description 사용
+            .body("classroomId", equalTo(DEFAULT_CLASSROOM_ID.intValue()))
+            .body("classroomName", equalTo(DEFAULT_CLASSROOM_NAME))
             .log().all();
     }
 
@@ -57,6 +59,20 @@ public class StudentReadTest extends StudentBaseTest {
             .get("/{studentId}", nonExistentId)
             .then()
             .statusCode(404)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("게스트 권한으로 학생 단건 조회 실패(403 Forbidden)")
+    void getStudentById_Forbidden_Guest() {
+        StudentResponse created = createStudent("Guest Forbidden Student", "010-2345-6789");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(guestAccessToken))
+            .when()
+            .get("/{studentId}", created.id())
+            .then()
+            .statusCode(403)
             .log().all();
     }
 
