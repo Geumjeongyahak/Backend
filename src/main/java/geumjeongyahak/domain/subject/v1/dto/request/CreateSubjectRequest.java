@@ -17,8 +17,7 @@ public record CreateSubjectRequest(
     @Schema(description = "교실 ID", example = "1")
     Long classroomId,
 
-    @NotNull
-    @Schema(description = "교사 ID", example = "2")
+    @Schema(description = "교사 ID. 미배정 상태로 생성할 수 있습니다.", example = "2", nullable = true)
     Long teacherId,
 
     @NotBlank

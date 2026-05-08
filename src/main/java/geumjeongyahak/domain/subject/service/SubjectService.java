@@ -47,12 +47,15 @@ public class SubjectService {
                 log.info("과목 등록 실패 - 교실을 찾을 수 없습니다. ID: {}", request.classroomId());
                 return new ClassroomNotFoundException(request.classroomId());
             });
-        User teacher = userRepository.findById(request.teacherId())
-            .orElseThrow(() -> {
-                log.info("과목 등록 실패 - 교사를 찾을 수 없습니다. ID: {}", request.teacherId());
-                return new UserNotFoundException(request.teacherId());
-            });
-        validateTeacherAssignable(teacher);
+        User teacher = null;
+        if (request.teacherId() != null) {
+            teacher = userRepository.findById(request.teacherId())
+                .orElseThrow(() -> {
+                    log.info("과목 등록 실패 - 교사를 찾을 수 없습니다. ID: {}", request.teacherId());
+                    return new UserNotFoundException(request.teacherId());
+                });
+            validateTeacherAssignable(teacher);
+        }
 
         // 같은 분반에서 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재하는지 확인
         if (subjectRepository.existsByClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqual(
@@ -83,17 +86,19 @@ public class SubjectService {
         Subject savedSubject = subjectRepository.save(subject);
         log.debug("과목 등록 완료 (id={})", savedSubject.getId());
 
-        eventPublisher.publish(new SubjectCreatedEvent(
-            savedSubject.getId(),
-            savedSubject.getTeacher().getId(),
-            savedSubject.getStartAt(),
-            savedSubject.getEndAt(),
-            savedSubject.getTimes(),
-            savedSubject.getDayOfWeek(),
-            savedSubject.getStartTime(),
-            savedSubject.getEndTime(),
-            savedSubject.getPeriod()
-        ));
+        if (savedSubject.getTeacher() != null) {
+            eventPublisher.publish(new SubjectCreatedEvent(
+                savedSubject.getId(),
+                savedSubject.getTeacher().getId(),
+                savedSubject.getStartAt(),
+                savedSubject.getEndAt(),
+                savedSubject.getTimes(),
+                savedSubject.getDayOfWeek(),
+                savedSubject.getStartTime(),
+                savedSubject.getEndTime(),
+                savedSubject.getPeriod()
+            ));
+        }
 
         return SubjectDetailResponse.from(savedSubject);
     }
@@ -256,8 +261,8 @@ public class SubjectService {
     }
 
     private void validateTeacherAssignable(User teacher) {
-        if (teacher.getRole() != RoleType.VOLUNTEER) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "봉사자 사용자만 교사로 배정할 수 있습니다.");
+        if (teacher.getRole() != RoleType.VOLUNTEER && teacher.getRole() != RoleType.MANAGER) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "봉사자 또는 매니저 사용자만 교사로 배정할 수 있습니다.");
         }
     }
 }

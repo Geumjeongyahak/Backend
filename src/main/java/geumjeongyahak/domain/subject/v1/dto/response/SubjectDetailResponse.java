@@ -52,7 +52,7 @@ public record SubjectDetailResponse(
         return new SubjectDetailResponse(
             subject.getId(),
             subject.getClassroom().getId(),
-            subject.getTeacher().getId(),
+            subject.getTeacher() != null ? subject.getTeacher().getId() : null,
             subject.getName(),
             subject.getStartAt(),
             subject.getEndAt(),
