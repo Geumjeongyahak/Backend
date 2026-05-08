@@ -15,8 +15,14 @@ public record SubjectDetailResponse(
     @Schema(description = "교실 ID", example = "1")
     Long classroomId,
 
-    @Schema(description = "교사 ID", example = "1")
+    @Schema(description = "교실명", example = "벚꽃반")
+    String classroomName,
+
+    @Schema(description = "교사 ID. 교사가 미배정된 과목은 null입니다.", example = "1", nullable = true)
     Long teacherId,
+
+    @Schema(description = "교사 이름. 교사가 미배정된 과목은 null입니다.", example = "홍길동", nullable = true)
+    String teacherName,
 
     @Schema(description = "과목명", example = "국어")
     String name,
@@ -58,7 +64,9 @@ public record SubjectDetailResponse(
         return new SubjectDetailResponse(
             subject.getId(),
             subject.getClassroom().getId(),
+            subject.getClassroom().getName(),
             subject.getTeacher() != null ? subject.getTeacher().getId() : null,
+            subject.getTeacher() != null ? subject.getTeacher().getName() : null,
             subject.getName(),
             subject.getStartAt(),
             subject.getEndAt(),

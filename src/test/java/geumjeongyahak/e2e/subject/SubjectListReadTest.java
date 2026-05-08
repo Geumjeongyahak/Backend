@@ -73,6 +73,9 @@ public class SubjectListReadTest extends SubjectBaseTest {
             .statusCode(200)
             .body("size()", is(1))
             .body("[0].classroomId", is((int) CLASSROOM_1))
+            .body("[0].classroomName", is("벚꽃반"))
+            .body("[0].teacherId", is((int) TEACHER_ID))
+            .body("[0].teacherName", is("홍길동"))
             .log().all();
     }
 
