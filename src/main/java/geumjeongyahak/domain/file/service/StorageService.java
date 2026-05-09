@@ -10,7 +10,7 @@ public interface StorageService {
 
     StoredFile upload(byte[] content, String contentType, String originalFilename, String directory);
 
-    void delete(String path);
+    boolean delete(String path);
 
     String getPublicUrl(String path);
 

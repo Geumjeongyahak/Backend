@@ -53,6 +53,9 @@ public class File {
     @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -78,5 +81,6 @@ public class File {
 
     public void delete() {
         this.isDeleted = true;
+        this.deletedAt = LocalDateTime.now();
     }
 }
