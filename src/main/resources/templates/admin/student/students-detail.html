@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('학생 상세')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1 th:text="${student.name}">학생</h1>
+                <p th:text="${student.description ?: '등록된 설명이 없습니다.'}">설명</p>
+            </div>
+            <div class="inline-form">
+                <a class="button secondary" th:href="@{/admin/student/students/{studentId}/edit(studentId=${student.id})}">수정</a>
+                <form th:action="@{/admin/student/students/{studentId}/delete(studentId=${student.id})}" method="post" onsubmit="return confirm('이 학생을 삭제하시겠습니까?');">
+                    <button class="button danger" type="submit">삭제</button>
+                </form>
+            </div>
+        </div>
+        <section class="panel detail-grid">
+            <div class="detail-item"><span>ID</span><strong th:text="${student.id}">1</strong></div>
+            <div class="detail-item"><span>상태</span><strong><span class="pill" th:text="${student.status}">ENROLLED</span></strong></div>
+            <div class="detail-item"><span>연락처</span><strong th:text="${student.phoneNumber ?: '-'}">010</strong></div>
+            <div class="detail-item"><span>분반</span><strong><a class="link" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${student.classroomId})}" th:text="${student.classroomName}">벚꽃반</a></strong></div>
+            <div class="detail-item" style="grid-column: 1 / -1;"><span>설명</span><strong th:text="${student.description ?: '-'}">설명</strong></div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

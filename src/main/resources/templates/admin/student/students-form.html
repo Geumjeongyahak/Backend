@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('학생 등록')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>학생 등록</h1>
+                <p>신규 학생의 기본 정보와 소속 분반을 등록합니다.</p>
+            </div>
+        </div>
+        <form class="panel form-grid" th:action="@{/admin/student/students}" method="post">
+            <label>이름 <input name="name" maxlength="50" required></label>
+            <label>연락처 <input name="phoneNumber" placeholder="010-1234-5678"></label>
+            <label>분반
+                <select name="classroomId" required>
+                    <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}">분반</option>
+                </select>
+            </label>
+            <label>설명 <textarea name="description"></textarea></label>
+            <button class="button" type="submit">등록</button>
+        </form>
+    </main>
+</div>
+</body>
+</html>
