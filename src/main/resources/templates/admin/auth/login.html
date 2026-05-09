@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#89ca6b">
     <title>관리자 로그인 | 금정열린배움터</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/geumjeongyahak-icon.svg}">
-    <link rel="apple-touch-icon" th:href="@{/icons/geumjeongyahak-icon.svg}">
+    <link rel="apple-touch-icon" th:href="@{/icons/apple-touch-icon.png}">
     <link rel="manifest" th:href="@{/site.webmanifest}">
     <style>
         :root {
@@ -110,5 +111,12 @@
     <div class="message error" th:if="${param.denied}">관리자 페이지 접근 권한이 없습니다.</div>
     <div class="message success" th:if="${param.logout}">로그아웃되었습니다.</div>
 </main>
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+}
+</script>
 </body>
 </html>
