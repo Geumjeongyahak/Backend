@@ -4,6 +4,7 @@ import geumjeongyahak.domain.subject.service.SubjectService;
 import geumjeongyahak.domain.subject.v1.dto.request.AssignSubjectTeacherRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.CreateSubjectRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectBasicRequest;
+import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectScheduleRequest;
 import geumjeongyahak.domain.subject.v1.dto.response.SubjectDetailResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -116,6 +117,46 @@ public class SubjectAdminController {
     ) {
         log.debug("PATCH /api/v1/subjects/{}/teacher - 과목 담당 교사 배정 요청", subjectId);
         SubjectDetailResponse response = subjectService.assignTeacher(subjectId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize(SUBJECT_MANAGE_ACCESS)
+    @Operation(
+        summary = "과목 일정 수정",
+        description = """
+            과목의 운영 기간, 요일, 교시, 수업 시간을 수정합니다.
+
+            권한 정책:
+            - 관리자 또는 subject:manage:* 권한을 가진 사용자만 수정할 수 있습니다.
+
+            수정 정책:
+            - 전달된 일정 필드만 수정합니다.
+            - startAt은 endAt보다 늦을 수 없습니다.
+            - startTime은 endTime보다 빨라야 합니다.
+            - 같은 분반에서 운영 기간이 겹치고 요일과 교시가 같은 다른 과목이 있으면 409 Conflict를 반환합니다.
+
+            Lesson 자동 반영 정책:
+            - 과거 Lesson은 수정하거나 삭제하지 않습니다.
+            - 담당 교사가 없는 과목은 Subject 일정만 수정하고 Lesson은 생성하지 않습니다.
+            - period, startTime, endTime만 바뀌면 운영 기록이 없는 미래 SCHEDULED Lesson의 시간/교시를 수정합니다.
+            - dayOfWeek, startAt, endAt, times가 바뀌면 운영 기록이 없는 미래 SCHEDULED Lesson을 soft delete한 뒤 새 일정으로 미래 Lesson을 재생성합니다.
+            - 운영 기록(note, 학생 출석, 결석 요청, 진행 중인 수업 교환 요청/제안)이 있는 미래 Lesson이 있으면 409 Conflict를 반환합니다.
+            - 새 일정이 담당 교사의 기존 수업과 시간이 겹치면 409 Conflict를 반환합니다.
+            - 이미 완료된 수업 교환 결과는 현재 Lesson의 담당 교사 상태로 존중하며, 별도의 차단 조건으로 보지 않습니다.
+
+            사이드 이펙트:
+            - subjects 테이블의 일정 필드가 변경됩니다.
+            - 조건을 만족하는 미래 lessons 테이블의 시간/교시가 변경되거나, soft delete 후 새 Lesson이 생성될 수 있습니다.
+            """
+    )
+    @PatchMapping("/{subjectId}/schedule")
+    public ResponseEntity<SubjectDetailResponse> updateSchedule(
+        @Parameter(description = "과목 식별자", example = "1")
+        @PathVariable Long subjectId,
+        @Valid @RequestBody UpdateSubjectScheduleRequest request
+    ) {
+        log.debug("PATCH /api/v1/subjects/{}/schedule - 과목 일정 수정 요청", subjectId);
+        SubjectDetailResponse response = subjectService.updateSchedule(subjectId, request);
         return ResponseEntity.ok(response);
     }
 

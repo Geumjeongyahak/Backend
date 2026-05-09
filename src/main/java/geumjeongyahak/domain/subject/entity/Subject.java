@@ -156,5 +156,23 @@ public class Subject extends BaseEntity {
         this.teacher = teacher;
         this.teacherAssignedAt = teacherAssignedAt;
     }
+
+    public void updateSchedule(
+        LocalDate startAt,
+        LocalDate endAt,
+        Integer times,
+        DayOfWeek dayOfWeek,
+        LocalTime startTime,
+        LocalTime endTime,
+        Integer period
+    ) {
+        this.startAt = startAt;
+        this.endAt = endAt;
+        this.times = times;
+        this.dayOfWeek = dayOfWeek;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.period = period;
+    }
 }
 

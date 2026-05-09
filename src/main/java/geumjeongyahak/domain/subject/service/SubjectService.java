@@ -3,6 +3,7 @@ package geumjeongyahak.domain.subject.service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,12 +22,15 @@ import geumjeongyahak.domain.subject.exception.SubjectDuplicateException;
 import geumjeongyahak.domain.subject.exception.SubjectNotFoundException;
 import geumjeongyahak.domain.subject.exception.SubjectTeacherAssignmentConflictException;
 import geumjeongyahak.domain.subject.event.SubjectCreatedEvent;
+import geumjeongyahak.domain.subject.event.SubjectScheduleRecreatedEvent;
+import geumjeongyahak.domain.subject.event.SubjectScheduleUpdatedEvent;
 import geumjeongyahak.domain.subject.event.SubjectTeacherAssignedEvent;
 import geumjeongyahak.domain.subject.event.SubjectTeacherUnassignedEvent;
 import geumjeongyahak.domain.subject.repository.SubjectRepository;
 import geumjeongyahak.domain.subject.v1.dto.request.AssignSubjectTeacherRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.CreateSubjectRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectBasicRequest;
+import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectScheduleRequest;
 import geumjeongyahak.domain.subject.v1.dto.response.SubjectDetailResponse;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.users.entity.User;
@@ -223,6 +227,99 @@ public class SubjectService {
     }
 
     @Transactional
+    public SubjectDetailResponse updateSchedule(Long subjectId, UpdateSubjectScheduleRequest request) {
+        log.debug("과목 일정 수정 요청 (subjectId={})", subjectId);
+
+        Subject subject = subjectRepository.findById(subjectId)
+            .orElseThrow(() -> {
+                log.info("과목 일정 수정 실패 - 과목을 찾을 수 없습니다. ID: {}", subjectId);
+                return new SubjectNotFoundException(subjectId);
+            });
+
+        LocalDate newStartAt = request.startAt() != null ? request.startAt() : subject.getStartAt();
+        LocalDate newEndAt = request.endAt() != null ? request.endAt() : subject.getEndAt();
+        Integer newTimes = request.times() != null ? request.times() : subject.getTimes();
+        var newDayOfWeek = request.dayOfWeek() != null ? request.dayOfWeek() : subject.getDayOfWeek();
+        var newStartTime = request.startTime() != null ? request.startTime() : subject.getStartTime();
+        var newEndTime = request.endTime() != null ? request.endTime() : subject.getEndTime();
+        Integer newPeriod = request.period() != null ? request.period() : subject.getPeriod();
+
+        validateSchedule(newStartAt, newEndAt, newStartTime, newEndTime);
+        validateSubjectDuplicate(
+            subject.getId(),
+            subject.getClassroom().getId(),
+            newDayOfWeek,
+            newPeriod,
+            newStartAt,
+            newEndAt
+        );
+
+        boolean recreateLessons = isChanged(subject.getStartAt(), newStartAt)
+            || isChanged(subject.getEndAt(), newEndAt)
+            || isChanged(subject.getTimes(), newTimes)
+            || isChanged(subject.getDayOfWeek(), newDayOfWeek);
+        boolean updateLessons = recreateLessons
+            || isChanged(subject.getStartTime(), newStartTime)
+            || isChanged(subject.getEndTime(), newEndTime)
+            || isChanged(subject.getPeriod(), newPeriod);
+
+        LocalDate today = LocalDate.now();
+        Long teacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
+        if (updateLessons && teacherId != null) {
+            validateFutureLessonsChangeable(subjectId, today);
+            validateNoTeacherConflictForSchedule(
+                subjectId,
+                teacherId,
+                max(today, newStartAt),
+                newEndAt,
+                newTimes,
+                newDayOfWeek,
+                newStartTime,
+                newEndTime,
+                recreateLessons
+            );
+        }
+
+        subject.updateSchedule(
+            newStartAt,
+            newEndAt,
+            newTimes,
+            newDayOfWeek,
+            newStartTime,
+            newEndTime,
+            newPeriod
+        );
+
+        if (updateLessons && teacherId != null) {
+            if (recreateLessons) {
+                eventPublisher.publish(new SubjectScheduleRecreatedEvent(
+                    subject.getId(),
+                    teacherId,
+                    today,
+                    max(today, newStartAt),
+                    newEndAt,
+                    newTimes,
+                    newDayOfWeek,
+                    newStartTime,
+                    newEndTime,
+                    newPeriod
+                ));
+            } else {
+                eventPublisher.publish(new SubjectScheduleUpdatedEvent(
+                    subject.getId(),
+                    today,
+                    newStartTime,
+                    newEndTime,
+                    newPeriod
+                ));
+            }
+        }
+
+        log.debug("과목 일정 수정 완료 (subjectId={})", subject.getId());
+        return SubjectDetailResponse.from(subject);
+    }
+
+    @Transactional
     public void deleteSubject(Long subjectId) {
         log.debug("과목 삭제(비활성화) 요청 (id={})", subjectId);
 
@@ -272,6 +369,83 @@ public class SubjectService {
         )) {
             throw new SubjectTeacherAssignmentConflictException("새 담당 교사의 기존 수업과 시간이 겹쳐 자동 변경할 수 없습니다.");
         }
+    }
+
+    private void validateNoTeacherConflictForSchedule(
+        Long subjectId,
+        Long teacherId,
+        LocalDate startAt,
+        LocalDate endAt,
+        Integer times,
+        java.time.DayOfWeek dayOfWeek,
+        java.time.LocalTime startTime,
+        java.time.LocalTime endTime,
+        boolean recreateLessons
+    ) {
+        boolean conflict;
+        if (recreateLessons) {
+            conflict = !startAt.isAfter(endAt)
+                && lessonProxyService.existsTeacherConflictForSubjectSchedule(
+                    subjectId,
+                    teacherId,
+                    startAt,
+                    endAt,
+                    times,
+                    dayOfWeek,
+                    startTime,
+                    endTime
+                );
+        } else {
+            conflict = lessonProxyService.existsTeacherConflictForFutureSubjectScheduledLessons(
+                subjectId,
+                teacherId,
+                LocalDate.now(),
+                startTime,
+                endTime
+            );
+        }
+
+        if (conflict) {
+            throw new SubjectTeacherAssignmentConflictException("변경할 일정이 담당 교사의 기존 수업과 겹쳐 자동 변경할 수 없습니다.");
+        }
+    }
+
+    private void validateSchedule(
+        LocalDate startAt,
+        LocalDate endAt,
+        java.time.LocalTime startTime,
+        java.time.LocalTime endTime
+    ) {
+        if (startAt.isAfter(endAt)) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "startAt은 endAt보다 늦을 수 없습니다.");
+        }
+        if (!startTime.isBefore(endTime)) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "startTime은 endTime보다 빨라야 합니다.");
+        }
+    }
+
+    private void validateSubjectDuplicate(
+        Long subjectId,
+        Long classroomId,
+        java.time.DayOfWeek dayOfWeek,
+        Integer period,
+        LocalDate startAt,
+        LocalDate endAt
+    ) {
+        if (subjectRepository.existsByIdNotAndClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqual(
+            subjectId,
+            classroomId,
+            dayOfWeek,
+            period,
+            endAt,
+            startAt
+        )) {
+            throw new SubjectDuplicateException("같은 분반에서 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재합니다.");
+        }
+    }
+
+    private boolean isChanged(Object before, Object after) {
+        return !Objects.equals(before, after);
     }
 
     private LocalDate max(LocalDate left, LocalDate right) {

@@ -366,8 +366,8 @@ public class LessonService {
     }
 
     @Transactional
-    public void deleteSubjectScheduledLessons(Long subjectId, LocalDate from) {
-        log.debug("과목 담당 교사 해제에 따른 수업 삭제 (subjectId={})", subjectId);
+    public void deleteFutureSubjectScheduledLessons(Long subjectId, LocalDate from) {
+        log.debug("과목 변경에 따른 미래 예정 수업 삭제 (subjectId={}, from={})", subjectId, from);
         List<Lesson> lessons = lessonRepository
             .findAllBySubjectIdAndStatusAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(
                 subjectId,
@@ -376,6 +376,56 @@ public class LessonService {
             );
 
         lessons.forEach(Lesson::softDelete);
+    }
+
+    @Transactional
+    public void updateSubjectScheduledLessonsSchedule(
+        Long subjectId,
+        LocalDate from,
+        LocalTime startTime,
+        LocalTime endTime,
+        Integer period
+    ) {
+        log.debug("과목 일정 변경에 따른 수업 시간 변경 (subjectId={})", subjectId);
+        List<Lesson> lessons = lessonRepository
+            .findAllBySubjectIdAndStatusAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(
+                subjectId,
+                LessonStatus.SCHEDULED,
+                from
+            );
+
+        lessons.forEach(lesson -> lesson.changeSchedule(startTime, endTime, period));
+    }
+
+    @Transactional
+    public void recreateSubjectScheduledLessons(
+        Long subjectId,
+        Long teacherId,
+        LocalDate effectiveFrom,
+        LocalDate startAt,
+        LocalDate endAt,
+        Integer times,
+        DayOfWeek dayOfWeek,
+        LocalTime startTime,
+        LocalTime endTime,
+        Integer period
+    ) {
+        log.debug("과목 일정 변경에 따른 수업 재생성 (subjectId={})", subjectId);
+        deleteFutureSubjectScheduledLessons(subjectId, effectiveFrom);
+        if (teacherId == null || startAt.isAfter(endAt)) {
+            return;
+        }
+        createLessonsFromSubject(
+            subjectId,
+            teacherId,
+            startAt,
+            endAt,
+            times,
+            dayOfWeek,
+            startTime,
+            endTime,
+            period
+        );
     }
 
     @Transactional

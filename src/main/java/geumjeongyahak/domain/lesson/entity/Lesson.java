@@ -112,4 +112,10 @@ public class Lesson extends BaseEntity {
     public void changeTeacher(User newTeacher) {
         this.teacher = newTeacher;
     }
+
+    public void changeSchedule(LocalTime startTime, LocalTime endTime, Integer period) {
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.period = period;
+    }
 }

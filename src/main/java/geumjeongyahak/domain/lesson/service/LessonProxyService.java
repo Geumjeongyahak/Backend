@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.lesson.service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -127,6 +128,61 @@ public class LessonProxyService {
                     lesson.getId(),
                     lesson.getEndTime(),
                     lesson.getStartTime()
+                )
+            );
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsTeacherConflictForFutureSubjectScheduledLessons(
+        Long subjectId,
+        Long teacherId,
+        LocalDate from,
+        LocalTime startTime,
+        LocalTime endTime
+    ) {
+        List<Lesson> lessons = lessonRepository
+            .findAllBySubjectIdAndStatusAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(
+                subjectId,
+                LessonStatus.SCHEDULED,
+                from
+            );
+
+        return lessons.stream()
+            .anyMatch(lesson -> lessonRepository
+                .existsByTeacherIdAndDateAndIsDeletedFalseAndIdNotAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+                    teacherId,
+                    lesson.getDate(),
+                    lesson.getId(),
+                    endTime,
+                    startTime
+                )
+            );
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsTeacherConflictForSubjectSchedule(
+        Long subjectId,
+        Long teacherId,
+        LocalDate startAt,
+        LocalDate endAt,
+        Integer times,
+        DayOfWeek dayOfWeek,
+        LocalTime startTime,
+        LocalTime endTime
+    ) {
+        List<LocalDate> dates = startAt.datesUntil(endAt.plusDays(1))
+            .filter(date -> date.getDayOfWeek() == dayOfWeek)
+            .limit(times)
+            .toList();
+
+        return dates.stream()
+            .anyMatch(date -> lessonRepository
+                .existsByTeacherIdAndDateAndIsDeletedFalseAndSubjectIdNotAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+                    teacherId,
+                    date,
+                    subjectId,
+                    endTime,
+                    startTime
                 )
             );
     }
