@@ -224,8 +224,7 @@ public record SubjectCreatedEvent(
     LocalDate endAt,
     DayOfWeek dayOfWeek,
     LocalTime startTime,
-    LocalTime endTime,
-    int times
+    LocalTime endTime
 ) {}
 
 // 이벤트 발행 (Subject Service)
@@ -246,8 +245,7 @@ public class SubjectService {
             subject.getEndAt(),
             subject.getDayOfWeek(),
             subject.getStartTime(),
-            subject.getEndTime(),
-            subject.getTimes()
+            subject.getEndTime()
         ));
 
         return subject;

@@ -1,18 +1,19 @@
 package geumjeongyahak.domain.subject.event;
 
+import geumjeongyahak.common.event.dto.BaseEventDto;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.Getter;
-import geumjeongyahak.common.event.dto.BaseEventDto;
 
 @Getter
-public class SubjectCreatedEvent extends BaseEventDto {
+public class SubjectScheduleRecreatedEvent extends BaseEventDto {
 
     private final Long subjectId;
     private final Long teacherId;
+    private final LocalDate effectiveFrom;
     private final LocalDate startAt;
     private final LocalDate endAt;
     private final DayOfWeek dayOfWeek;
@@ -20,9 +21,10 @@ public class SubjectCreatedEvent extends BaseEventDto {
     private final LocalTime endTime;
     private final Integer period;
 
-    public SubjectCreatedEvent(
+    public SubjectScheduleRecreatedEvent(
         Long subjectId,
         Long teacherId,
+        LocalDate effectiveFrom,
         LocalDate startAt,
         LocalDate endAt,
         DayOfWeek dayOfWeek,
@@ -32,6 +34,7 @@ public class SubjectCreatedEvent extends BaseEventDto {
     ) {
         this.subjectId = subjectId;
         this.teacherId = teacherId;
+        this.effectiveFrom = effectiveFrom;
         this.startAt = startAt;
         this.endAt = endAt;
         this.dayOfWeek = dayOfWeek;
@@ -45,6 +48,7 @@ public class SubjectCreatedEvent extends BaseEventDto {
         Map<String, Object> data = new HashMap<>();
         data.put("subjectId", subjectId);
         data.put("teacherId", teacherId);
+        data.put("effectiveFrom", effectiveFrom);
         data.put("startAt", startAt);
         data.put("endAt", endAt);
         data.put("dayOfWeek", dayOfWeek != null ? dayOfWeek.name() : null);

@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.lesson.repository;
 
 import geumjeongyahak.domain.lesson.entity.Lesson;
+import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -43,6 +44,19 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
         LocalTime endTime
     );
 
+    @EntityGraph(attributePaths = {"teacher", "subject"})
+    List<Lesson> findAllBySubjectIdAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(
+        Long subjectId,
+        LocalDate date
+    );
+
+    @EntityGraph(attributePaths = {"teacher", "subject"})
+    List<Lesson> findAllBySubjectIdAndStatusAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(
+        Long subjectId,
+        LessonStatus status,
+        LocalDate startDate
+    );
+
     boolean existsByTeacherIdAndDateAndIsDeletedFalseAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
         Long teacherId, LocalDate date, LocalTime endTime, LocalTime startTime);
 
@@ -53,5 +67,12 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
         LocalTime endTime,
         LocalTime startTime
     );
-}
 
+    boolean existsByTeacherIdAndDateAndIsDeletedFalseAndSubjectIdNotAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+        Long teacherId,
+        LocalDate date,
+        Long subjectId,
+        LocalTime endTime,
+        LocalTime startTime
+    );
+}

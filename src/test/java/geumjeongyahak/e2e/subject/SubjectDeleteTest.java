@@ -22,7 +22,6 @@ public class SubjectDeleteTest extends SubjectBaseTest {
             Map.entry("name", "삭제 테스트 과목"),
             Map.entry("startAt", "2099-03-02"),
             Map.entry("endAt", "2099-06-30"),
-            Map.entry("times", 12),
             Map.entry("dayOfWeek", "MONDAY"),
             Map.entry("startTime", "19:20:00"),
             Map.entry("endTime", "20:00:00"),
@@ -68,6 +67,19 @@ public class SubjectDeleteTest extends SubjectBaseTest {
             .statusCode(200)
             .body("isActive", is(false))
             .log().all();
+    }
+
+    @Test
+    @DisplayName("subject:manage:* 권한으로 과목 삭제(비활성화) 성공(204 No Content)")
+    void deleteSubject_Success_WithSubjectManagePermission() {
+        long subjectId = createSubject();
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(subjectManageAccessToken))
+            .when()
+            .delete("/{subjectId}", subjectId)
+            .then()
+            .statusCode(204);
     }
 
     @Test

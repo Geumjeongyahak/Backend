@@ -95,7 +95,6 @@ public class LessonBaseTest extends BaseE2ETest {
             entry("name", namePrefix + "-" + unique),
             entry("startAt", uniqueDate),
             entry("endAt", uniqueDate),
-            entry("times", 12),
             entry("dayOfWeek", dayOfWeek),
             entry("startTime", "20:10:00"),
             entry("endTime", "20:50:00"),

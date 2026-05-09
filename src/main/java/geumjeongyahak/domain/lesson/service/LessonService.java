@@ -268,7 +268,7 @@ public class LessonService {
     // ── 이벤트 핸들러 전용 내부 메서드 ─────────────────────────────────────────
 
     /**
-     * 과목 생성 이벤트 처리용 - startAt~endAt 사이 dayOfWeek에 해당하는 날짜를 times개 골라 수업을 자동 생성한다.
+     * 과목 생성 이벤트 처리용 - startAt~endAt 사이 dayOfWeek에 해당하는 날짜에 수업을 자동 생성한다.
      * 특정 날짜에 교사 시간 충돌이 있으면 해당 날짜만 스킵하고 계속 진행한다.
      */
     @Transactional
@@ -277,13 +277,12 @@ public class LessonService {
         Long teacherId,
         LocalDate startAt,
         LocalDate endAt,
-        int times,
         DayOfWeek dayOfWeek,
         LocalTime startTime,
         LocalTime endTime,
         int period
     ) {
-        log.debug("과목 수업 자동 생성 (subjectId={}, times={})", subjectId, times);
+        log.debug("과목 수업 자동 생성 (subjectId={})", subjectId);
 
         Subject subject = subjectRepository.findById(subjectId)
             .orElseThrow(() -> new SubjectNotFoundException(subjectId));
@@ -293,7 +292,6 @@ public class LessonService {
 
         List<LocalDate> dates = startAt.datesUntil(endAt.plusDays(1))
             .filter(d -> d.getDayOfWeek() == dayOfWeek)
-            .limit(times)
             .toList();
 
         int created = 0;
@@ -325,8 +323,10 @@ public class LessonService {
     }
 
     private void validateTeacherAssignable(User teacher) {
-        if (teacher.getRole() != RoleType.VOLUNTEER) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "봉사자 사용자만 교사로 배정할 수 있습니다.");
+        if (teacher.getRole() != RoleType.VOLUNTEER
+            && teacher.getRole() != RoleType.MANAGER
+            && teacher.getRole() != RoleType.ADMIN) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "봉사자, 매니저 또는 관리자 사용자만 교사로 배정할 수 있습니다.");
         }
     }
 
@@ -342,6 +342,88 @@ public class LessonService {
             .orElseThrow(() -> new UserNotFoundException(newTeacherId));
 
         lesson.changeTeacher(newTeacher);
+    }
+
+    @Transactional
+    public void assignTeacherToSubjectScheduledLessons(
+        Long subjectId,
+        Long teacherId,
+        LocalDate from
+    ) {
+        log.debug("과목 담당 교사 배정에 따른 수업 교사 변경 (subjectId={}, teacherId={})", subjectId, teacherId);
+        User newTeacher = userRepository.findById(teacherId)
+            .orElseThrow(() -> new UserNotFoundException(teacherId));
+        validateTeacherAssignable(newTeacher);
+
+        List<Lesson> lessons = lessonRepository
+            .findAllBySubjectIdAndStatusAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(
+                subjectId,
+                LessonStatus.SCHEDULED,
+                from
+            );
+
+        lessons.forEach(lesson -> lesson.changeTeacher(newTeacher));
+    }
+
+    @Transactional
+    public void deleteFutureSubjectScheduledLessons(Long subjectId, LocalDate from) {
+        log.debug("과목 변경에 따른 미래 예정 수업 삭제 (subjectId={}, from={})", subjectId, from);
+        List<Lesson> lessons = lessonRepository
+            .findAllBySubjectIdAndStatusAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(
+                subjectId,
+                LessonStatus.SCHEDULED,
+                from
+            );
+
+        lessons.forEach(Lesson::softDelete);
+    }
+
+    @Transactional
+    public void updateSubjectScheduledLessonsSchedule(
+        Long subjectId,
+        LocalDate from,
+        LocalTime startTime,
+        LocalTime endTime,
+        Integer period
+    ) {
+        log.debug("과목 일정 변경에 따른 수업 시간 변경 (subjectId={})", subjectId);
+        List<Lesson> lessons = lessonRepository
+            .findAllBySubjectIdAndStatusAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(
+                subjectId,
+                LessonStatus.SCHEDULED,
+                from
+            );
+
+        lessons.forEach(lesson -> lesson.changeSchedule(startTime, endTime, period));
+    }
+
+    @Transactional
+    public void recreateSubjectScheduledLessons(
+        Long subjectId,
+        Long teacherId,
+        LocalDate effectiveFrom,
+        LocalDate startAt,
+        LocalDate endAt,
+        DayOfWeek dayOfWeek,
+        LocalTime startTime,
+        LocalTime endTime,
+        Integer period
+    ) {
+        log.debug("과목 일정 변경에 따른 수업 재생성 (subjectId={})", subjectId);
+        deleteFutureSubjectScheduledLessons(subjectId, effectiveFrom);
+        if (teacherId == null || startAt.isAfter(endAt)) {
+            return;
+        }
+        createLessonsFromSubject(
+            subjectId,
+            teacherId,
+            startAt,
+            endAt,
+            dayOfWeek,
+            startTime,
+            endTime,
+            period
+        );
     }
 
     @Transactional

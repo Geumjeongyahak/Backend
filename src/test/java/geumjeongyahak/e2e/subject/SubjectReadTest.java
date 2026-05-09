@@ -22,7 +22,6 @@ public class SubjectReadTest extends SubjectBaseTest {
             Map.entry("name", "국어"),
             Map.entry("startAt", "2099-03-02"),
             Map.entry("endAt", "2099-06-30"),
-            Map.entry("times", 12),
             Map.entry("dayOfWeek", "MONDAY"),
             Map.entry("startTime", "19:20:00"),
             Map.entry("endTime", "20:00:00"),
@@ -56,10 +55,13 @@ public class SubjectReadTest extends SubjectBaseTest {
             .statusCode(200)
             .body("id", is((int) subjectId))
             .body("classroomId", is((int) CLASSROOM_ID))
+            .body("classroomName", is("벚꽃반"))
             .body("teacherId", is((int) TEACHER_ID))
+            .body("teacherName", is("홍길동"))
             .body("name", is("국어"))
             .body("dayOfWeek", is("MONDAY"))
             .body("period", is(2))
+            .body("teacherAssignedAt", notNullValue())
             .log().all();
     }
 

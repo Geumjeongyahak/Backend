@@ -35,6 +35,12 @@ public interface LessonExchangeRequestRepository extends JpaRepository<LessonExc
         Collection<LessonExchangeRequestStatus> activeStatuses
     );
 
+    boolean existsByRequestedBy_IdAndLessonDateAndStatusIn(
+        Long requesterId,
+        LocalDate lessonDate,
+        Collection<LessonExchangeRequestStatus> statuses
+    );
+
     List<LessonExchangeRequest> findAllByStatusInAndExpiresAtBefore(
         Collection<LessonExchangeRequestStatus> statuses,
         LocalDateTime expiresAt

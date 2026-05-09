@@ -5,16 +5,24 @@ import static java.util.Map.entry;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @DisplayName("E2E: 과목 생성 테스트")
 public class SubjectCreateTest extends SubjectBaseTest {
 
     private static final long CLASSROOM_ID = 1L;
+    private static final long ADMIN_ID = 1L;
     private static final long TEACHER_ID = 2L;
     private static final long GUEST_ID = 4L;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private Map<String, Object> createRequest(String name, String startAt, String endAt, String dayOfWeek) {
         return Map.ofEntries(
@@ -23,7 +31,6 @@ public class SubjectCreateTest extends SubjectBaseTest {
             entry("name", name),
             entry("startAt", startAt),
             entry("endAt", endAt),
-            entry("times", 12),
             entry("dayOfWeek", dayOfWeek),
             entry("startTime", "20:10:00"),
             entry("endTime", "20:50:00"),
@@ -53,7 +60,151 @@ public class SubjectCreateTest extends SubjectBaseTest {
             .body("id", notNullValue())
             .body("name", is("국어"))
             .body("period", is(2))
+            .body("teacherAssignedAt", notNullValue())
             .log().all();
+    }
+
+    @Test
+    @DisplayName("subject:write:* 권한으로 과목 생성 성공(201 Created)")
+    void createSubject_Success_WithSubjectWritePermission() {
+        Map<String, Object> request = createRequest(
+            "쓰기 권한 과목",
+            "2026-03-02",
+            "2026-06-30",
+            "MONDAY"
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(subjectWriteAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .post()
+            .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .body("name", is("쓰기 권한 과목"));
+    }
+
+    @Test
+    @DisplayName("매니저 사용자를 교사로 지정해 과목 생성 성공(201 Created)")
+    void createSubject_Success_WhenTeacherIsManager() {
+        long managerId = 100L;
+        jdbcTemplate.update("DELETE FROM user_permissions WHERE user_id = ?", managerId);
+        jdbcTemplate.update("DELETE FROM users WHERE id = ? OR nickname = ?", managerId, "subject-manager");
+        jdbcTemplate.update("""
+            INSERT INTO users (id, nickname, name, primary_email, role)
+            VALUES (?, ?, ?, ?, ?)
+            """, managerId, "subject-manager", "과목 매니저", "subject-manager@test.com", "MANAGER");
+
+        Map<String, Object> request = new HashMap<>(createRequest(
+            "매니저 담당 과목",
+            "2026-03-02",
+            "2026-06-30",
+            "MONDAY"
+        ));
+        request.put("teacherId", managerId);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .post()
+            .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .body("teacherId", is((int) managerId))
+            .body("name", is("매니저 담당 과목"));
+    }
+
+    @Test
+    @DisplayName("관리자 사용자를 교사로 지정해 과목 생성 성공(201 Created)")
+    void createSubject_Success_WhenTeacherIsAdmin() {
+        Map<String, Object> request = new HashMap<>(createRequest(
+            "관리자 담당 과목",
+            "2026-03-02",
+            "2026-06-30",
+            "MONDAY"
+        ));
+        request.put("teacherId", ADMIN_ID);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .post()
+            .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .body("teacherId", is((int) ADMIN_ID))
+            .body("name", is("관리자 담당 과목"));
+    }
+
+    @Test
+    @DisplayName("교사 미배정 상태로 과목 생성 시 수업을 자동 생성하지 않는다")
+    void createSubject_Success_WithoutTeacherAndDoesNotCreateLessons() {
+        Map<String, Object> request = new HashMap<>(createRequest(
+            "교사 미배정 과목",
+            "2026-03-02",
+            "2026-06-30",
+            "MONDAY"
+        ));
+        request.remove("teacherId");
+
+        Integer subjectId = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .post()
+            .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .body("teacherId", is((Object) null))
+            .body("teacherAssignedAt", is((Object) null))
+            .extract()
+            .path("id");
+
+        Integer lessonCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM lessons WHERE subject_id = ?",
+            Integer.class,
+            subjectId
+        );
+        org.assertj.core.api.Assertions.assertThat(lessonCount).isZero();
+    }
+
+    @Test
+    @DisplayName("과목 생성 시 이미 지난 날짜의 수업은 자동 생성하지 않는다")
+    void createSubject_DoesNotCreatePastLessons() {
+        Map<String, Object> request = createRequest(
+            "과거 수업 제외 과목",
+            "2026-03-02",
+            "2099-06-30",
+            "MONDAY"
+        );
+
+        Integer subjectId = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .post()
+            .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .extract()
+            .path("id");
+
+        Integer pastLessonCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM lessons WHERE subject_id = ? AND date < ?",
+            Integer.class,
+            subjectId,
+            LocalDate.now()
+        );
+
+        org.assertj.core.api.Assertions.assertThat(pastLessonCount).isZero();
     }
 
     @Test
@@ -127,7 +278,6 @@ public class SubjectCreateTest extends SubjectBaseTest {
             "name", "과학",
             "startAt", "2026-03-02",
             "endAt", "2026-06-30",
-            "times", 12,
             "dayOfWeek", "MONDAY",
             "startTime", "20:00:00",
             "endTime", "19:20:00",
@@ -186,15 +336,14 @@ public class SubjectCreateTest extends SubjectBaseTest {
     }
 
     @Test
-    @DisplayName("봉사자가 아닌 사용자를 교사로 지정하면 과목 생성 실패(400 Bad Request)")
-    void createSubject_BadRequest_WhenTeacherIsNotVolunteer() {
+    @DisplayName("교사 배정 불가 사용자를 교사로 지정하면 과목 생성 실패(400 Bad Request)")
+    void createSubject_BadRequest_WhenTeacherIsNotAssignable() {
         Map<String, Object> request = Map.ofEntries(
             entry("classroomId", CLASSROOM_ID),
             entry("teacherId", GUEST_ID),
             entry("name", "잘못된 교사 배정"),
             entry("startAt", "2026-03-02"),
             entry("endAt", "2026-06-30"),
-            entry("times", 12),
             entry("dayOfWeek", "MONDAY"),
             entry("startTime", "20:10:00"),
             entry("endTime", "20:50:00"),
