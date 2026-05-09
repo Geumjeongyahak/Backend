@@ -1,6 +1,8 @@
 package geumjeongyahak.e2e;
 
 import java.time.Duration;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.boot.test.context.TestConfiguration;
@@ -25,40 +27,52 @@ public class TestStorageConfig {
 
     @Bean
     @Primary
-    StorageService testStorageService() {
-        return new StorageService() {
-            private static final String TEST_BUCKET = "test-bucket";
+    ControlledStorageService testStorageService() {
+        return new ControlledStorageService();
+    }
 
-            @Override
-            public StoredFile upload(MultipartFile file, String directory) {
-                return upload(
-                    new byte[0],
-                    file.getContentType(),
-                    file.getOriginalFilename(),
-                    directory
-                );
-            }
+    public static class ControlledStorageService implements StorageService {
+        private static final String TEST_BUCKET = "test-bucket";
+        private final Set<String> failDeletePaths = new HashSet<>();
 
-            @Override
-            public StoredFile upload(byte[] content, String contentType, String originalFilename, String directory) {
-                String safeName = originalFilename == null ? "file" : originalFilename.replace(" ", "_");
-                String path = directory + "/" + UUID.randomUUID() + "-" + safeName;
-                return new StoredFile(path, TEST_BUCKET, getPublicUrl(path));
-            }
+        public void failDeleteFor(String path) {
+            failDeletePaths.add(path);
+        }
 
-            @Override
-            public void delete(String path) {
-            }
+        public void resetFailPaths() {
+            failDeletePaths.clear();
+        }
 
-            @Override
-            public String getPublicUrl(String path) {
-                return "https://test-storage.local/" + TEST_BUCKET + "/" + path;
-            }
+        @Override
+        public StoredFile upload(MultipartFile file, String directory) {
+            return upload(
+                new byte[0],
+                file.getContentType(),
+                file.getOriginalFilename(),
+                directory
+            );
+        }
 
-            @Override
-            public String generateDownloadUrl(String path, Duration duration) {
-                return "https://test-storage.local/" + TEST_BUCKET + "/" + path + "?expires=" + duration.toMinutes();
-            }
-        };
+        @Override
+        public StoredFile upload(byte[] content, String contentType, String originalFilename, String directory) {
+            String safeName = originalFilename == null ? "file" : originalFilename.replace(" ", "_");
+            String path = directory + "/" + UUID.randomUUID() + "-" + safeName;
+            return new StoredFile(path, TEST_BUCKET, getPublicUrl(path));
+        }
+
+        @Override
+        public boolean delete(String path) {
+            return !failDeletePaths.contains(path);
+        }
+
+        @Override
+        public String getPublicUrl(String path) {
+            return "https://test-storage.local/" + TEST_BUCKET + "/" + path;
+        }
+
+        @Override
+        public String generateDownloadUrl(String path, Duration duration) {
+            return "https://test-storage.local/" + TEST_BUCKET + "/" + path + "?expires=" + duration.toMinutes();
+        }
     }
 }
