@@ -1,17 +1,28 @@
 package geumjeongyahak.e2e.post;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+
+import java.util.UUID;
 
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import geumjeongyahak.domain.file.entity.File;
+import geumjeongyahak.domain.file.repository.FileRepository;
 import geumjeongyahak.domain.post.v1.dto.request.PublishPostRequest;
+import geumjeongyahak.domain.post.v1.dto.request.SaveDraftRequest;
 
 @DisplayName("E2E: Post 파일 및 썸네일 테스트")
 @ResourceLock("post-e2e-shared-state")
 class PostFileTest extends BasePostTest {
+
+    @Autowired
+    private FileRepository fileRepository;
 
     @Test
     @DisplayName("이미지를 업로드하면 발행 시 첫 번째 이미지가 자동으로 썸네일이 된다")
@@ -41,7 +52,7 @@ class PostFileTest extends BasePostTest {
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType(ContentType.JSON)
-            .body(new PublishPostRequest("자동 썸네일 테스트", "본문", true, null))
+            .body(new PublishPostRequest("자동 썸네일 테스트", imageTag(imageUrl1), true, null))
         .when()
             .put("/api/v1/channels/{channelId}/posts/{postId}/publish", noticeChannelId, postId)
         .then()
@@ -64,5 +75,47 @@ class PostFileTest extends BasePostTest {
         .then()
             .statusCode(200)
             .body("thumbnailUrl", equalTo(customThumbnail));
+    }
+
+    @Test
+    @DisplayName("초안 저장 시 본문 HTML에서 제거된 이미지는 soft delete된다")
+    void saveDraft_softDeletesImageRemovedFromContentHtml() {
+        Long postId = testPostHelper.createDraftAndRegister(noticeChannelId, adminAccessToken);
+
+        String imageUrl = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .multiPart(testFileHelper.multipartImageRequest("file", "used.png"))
+        .when()
+            .post("/api/v1/channels/{channelId}/posts/{postId}/images", noticeChannelId, postId)
+        .then()
+            .statusCode(200)
+            .extract().jsonPath().getString("url");
+
+        String removedFileIdStr = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .multiPart(testFileHelper.multipartImageRequest("file", "removed.png"))
+        .when()
+            .post("/api/v1/channels/{channelId}/posts/{postId}/images", noticeChannelId, postId)
+        .then()
+            .statusCode(200)
+            .extract().jsonPath().getString("fileId");
+        UUID removedFileId = UUID.fromString(removedFileIdStr);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new SaveDraftRequest("미사용 이미지 정리 테스트", imageTag(imageUrl), true, null))
+        .when()
+            .put("/api/v1/channels/{channelId}/posts/{postId}/draft", noticeChannelId, postId)
+        .then()
+            .statusCode(200);
+
+        File removedFile = fileRepository.findById(removedFileId).orElseThrow();
+        assertThat(removedFile.isDeleted()).isTrue();
+        assertThat(removedFile.getDeletedAt()).isNotNull();
+    }
+
+    private String imageTag(String imageUrl) {
+        return "<p>본문</p><img src=\"" + imageUrl + "\" alt=\"image\">";
     }
 }

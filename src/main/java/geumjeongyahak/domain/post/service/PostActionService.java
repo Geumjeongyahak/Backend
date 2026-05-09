@@ -13,7 +13,6 @@ import geumjeongyahak.domain.post.enums.PostStatus;
 import geumjeongyahak.domain.post.event.PostChangedEvent;
 import geumjeongyahak.domain.post.event.PostPublishedEvent;
 import geumjeongyahak.domain.post.exception.PostErrorCode;
-import geumjeongyahak.domain.post.repository.PostFileRepository;
 import geumjeongyahak.domain.post.repository.PostRepository;
 import geumjeongyahak.domain.post.v1.dto.response.PostDetailResponse;
 import geumjeongyahak.domain.users.entity.User;
@@ -34,11 +33,11 @@ import java.time.LocalDateTime;
 public class PostActionService {
 
     private final PostRepository postRepository;
-    private final PostFileRepository postFileRepository;
     private final ChannelProxyService channelProxyService;
     private final UserProxyService userProxyService;
     private final EventPublisher eventPublisher;
     private final PostProperties postProperties;
+    private final PostContentImageCleanupService postContentImageCleanupService;
 
     @Transactional
     public PostDetailResponse createDraft(Long channelId, CustomUserDetails userDetails) {
@@ -84,6 +83,7 @@ public class PostActionService {
         draft.updateDraftExpiration(nextDraftExpiration());
 
         postRepository.save(draft);
+        postContentImageCleanupService.deleteUnusedImages(postId, draft.getContentHtml());
         log.info("게시글 초안 저장 완료 - channelId: {}, postId: {}", channelId, postId);
         return reloadForResponse(channelId, postId);
     }
@@ -101,8 +101,7 @@ public class PostActionService {
 
         String thumbnail = command.thumbnailUrl() != null
                 ? command.thumbnailUrl()
-                : postFileRepository.findFirstByPostIdOrderBySortOrderAsc(postId)
-                        .map(pf -> pf.getFile().getPublicUrl())
+                : postContentImageCleanupService.findFirstUsedImageUrl(postId, command.contentHtml())
                         .orElse(null);
 
         draft.update(
@@ -117,6 +116,7 @@ public class PostActionService {
         draft.publish();
 
         Post publishedPost = postRepository.save(draft);
+        postContentImageCleanupService.deleteUnusedImages(postId, publishedPost.getContentHtml());
         publishPostEvents(publishedPost);
 
         log.info("게시글 발행 완료 - channelId: {}, postId: {}", channelId, postId);
