@@ -323,8 +323,10 @@ public class LessonService {
     }
 
     private void validateTeacherAssignable(User teacher) {
-        if (teacher.getRole() != RoleType.VOLUNTEER && teacher.getRole() != RoleType.MANAGER) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "봉사자 또는 매니저 사용자만 교사로 배정할 수 있습니다.");
+        if (teacher.getRole() != RoleType.VOLUNTEER
+            && teacher.getRole() != RoleType.MANAGER
+            && teacher.getRole() != RoleType.ADMIN) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "봉사자, 매니저 또는 관리자 사용자만 교사로 배정할 수 있습니다.");
         }
     }
 

@@ -17,6 +17,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 public class SubjectCreateTest extends SubjectBaseTest {
 
     private static final long CLASSROOM_ID = 1L;
+    private static final long ADMIN_ID = 1L;
     private static final long TEACHER_ID = 2L;
     private static final long GUEST_ID = 4L;
 
@@ -115,6 +116,30 @@ public class SubjectCreateTest extends SubjectBaseTest {
             .body("id", notNullValue())
             .body("teacherId", is((int) managerId))
             .body("name", is("매니저 담당 과목"));
+    }
+
+    @Test
+    @DisplayName("관리자 사용자를 교사로 지정해 과목 생성 성공(201 Created)")
+    void createSubject_Success_WhenTeacherIsAdmin() {
+        Map<String, Object> request = new HashMap<>(createRequest(
+            "관리자 담당 과목",
+            "2026-03-02",
+            "2026-06-30",
+            "MONDAY"
+        ));
+        request.put("teacherId", ADMIN_ID);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .post()
+            .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .body("teacherId", is((int) ADMIN_ID))
+            .body("name", is("관리자 담당 과목"));
     }
 
     @Test

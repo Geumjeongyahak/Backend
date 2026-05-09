@@ -55,7 +55,7 @@ public class SubjectAdminController {
             생성 정책:
             - classroomId는 필수이며 존재하는 분반이어야 합니다.
             - teacherId는 선택 값입니다. 교사가 아직 정해지지 않은 과목은 teacherId 없이 생성할 수 있습니다.
-            - teacherId가 전달되면 해당 사용자는 봉사자 또는 매니저 역할이어야 합니다.
+            - teacherId가 전달되면 해당 사용자는 봉사자, 매니저 또는 관리자 역할이어야 합니다.
             - teacherId가 전달되면 teacherAssignedAt에 현재 시각을 기록합니다.
             - 같은 분반에서 운영 기간이 겹치고 요일과 교시가 같은 과목은 중복으로 생성할 수 없습니다.
             - startAt은 endAt보다 늦을 수 없습니다.
@@ -94,7 +94,7 @@ public class SubjectAdminController {
 
             배정 정책:
             - teacherId가 null이면 과목의 담당 교사를 비우고 teacherAssignedAt도 null로 변경합니다.
-            - teacherId가 있으면 해당 사용자는 봉사자 또는 매니저 역할이어야 합니다.
+            - teacherId가 있으면 해당 사용자는 봉사자, 매니저 또는 관리자 역할이어야 합니다.
             - teacherId가 있으면 teacherAssignedAt에 현재 시각을 기록합니다.
 
             Lesson 자동 반영 정책:

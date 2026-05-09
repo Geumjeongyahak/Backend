@@ -10,7 +10,7 @@ Subject는 특정 분반의 특정 요일/교시 정기 수업 편성입니다.
 - 조회는 인증 사용자만 사용할 수 있습니다.
 - 생성은 `ADMIN` 또는 `subject:write:*` 권한이 필요합니다.
 - 수정/삭제는 `ADMIN` 또는 `subject:manage:*` 권한이 필요합니다.
-- 담당 교사는 `VOLUNTEER` 또는 `MANAGER` 역할 사용자만 배정할 수 있습니다.
+- 담당 교사는 `VOLUNTEER`, `MANAGER`, `ADMIN` 역할 사용자만 배정할 수 있습니다.
 - 담당 교사가 없는 Subject는 생성할 수 있으며, 이 경우 Lesson을 자동 생성하지 않습니다.
 - Lesson 자동 변경은 과거 Lesson을 건드리지 않고 미래 Lesson만 대상으로 합니다.
 - 미래 Lesson 중 운영 기록이 없는 `SCHEDULED` 상태만 자동 변경 대상입니다.
