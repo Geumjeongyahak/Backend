@@ -143,7 +143,6 @@ CREATE TABLE subjects (
     name VARCHAR(50) NOT NULL,
     start_at DATE NOT NULL,
     end_at DATE NOT NULL,
-    times INTEGER NOT NULL,
     day_of_week VARCHAR(20) NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,

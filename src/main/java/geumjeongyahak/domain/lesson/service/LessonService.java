@@ -268,7 +268,7 @@ public class LessonService {
     // ── 이벤트 핸들러 전용 내부 메서드 ─────────────────────────────────────────
 
     /**
-     * 과목 생성 이벤트 처리용 - startAt~endAt 사이 dayOfWeek에 해당하는 날짜를 times개 골라 수업을 자동 생성한다.
+     * 과목 생성 이벤트 처리용 - startAt~endAt 사이 dayOfWeek에 해당하는 날짜에 수업을 자동 생성한다.
      * 특정 날짜에 교사 시간 충돌이 있으면 해당 날짜만 스킵하고 계속 진행한다.
      */
     @Transactional
@@ -277,13 +277,12 @@ public class LessonService {
         Long teacherId,
         LocalDate startAt,
         LocalDate endAt,
-        int times,
         DayOfWeek dayOfWeek,
         LocalTime startTime,
         LocalTime endTime,
         int period
     ) {
-        log.debug("과목 수업 자동 생성 (subjectId={}, times={})", subjectId, times);
+        log.debug("과목 수업 자동 생성 (subjectId={})", subjectId);
 
         Subject subject = subjectRepository.findById(subjectId)
             .orElseThrow(() -> new SubjectNotFoundException(subjectId));
@@ -293,7 +292,6 @@ public class LessonService {
 
         List<LocalDate> dates = startAt.datesUntil(endAt.plusDays(1))
             .filter(d -> d.getDayOfWeek() == dayOfWeek)
-            .limit(times)
             .toList();
 
         int created = 0;
@@ -404,7 +402,6 @@ public class LessonService {
         LocalDate effectiveFrom,
         LocalDate startAt,
         LocalDate endAt,
-        Integer times,
         DayOfWeek dayOfWeek,
         LocalTime startTime,
         LocalTime endTime,
@@ -420,7 +417,6 @@ public class LessonService {
             teacherId,
             startAt,
             endAt,
-            times,
             dayOfWeek,
             startTime,
             endTime,

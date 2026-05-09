@@ -60,12 +60,12 @@ public class SubjectAdminController {
             - 같은 분반에서 운영 기간이 겹치고 요일과 교시가 같은 과목은 중복으로 생성할 수 없습니다.
             - startAt은 endAt보다 늦을 수 없습니다.
             - startTime은 endTime보다 빨라야 합니다.
-            - times와 period는 1 이상이어야 합니다.
+            - period는 1 이상이어야 합니다.
 
             Lesson 자동 생성 정책:
             - teacherId가 있으면 SubjectCreatedEvent를 발행하고 Lesson을 자동 생성합니다.
             - teacherId가 없으면 Lesson을 자동 생성하지 않습니다.
-            - 자동 생성 시 현재 날짜 이후 과목 운영 기간 안에서 dayOfWeek에 해당하는 날짜를 times개까지 선택합니다.
+            - 자동 생성 시 현재 날짜 이후 과목 운영 기간 안에서 dayOfWeek에 해당하는 날짜에 수업을 생성합니다.
             - 이미 지난 과목 운영일에 대한 과거 Lesson은 자동 생성하지 않습니다.
             - 동일 교사의 같은 날짜/시간대 Lesson이 이미 있으면 해당 날짜의 자동 생성은 건너뜁니다.
 
@@ -139,7 +139,7 @@ public class SubjectAdminController {
             - 과거 Lesson은 수정하거나 삭제하지 않습니다.
             - 담당 교사가 없는 과목은 Subject 일정만 수정하고 Lesson은 생성하지 않습니다.
             - period, startTime, endTime만 바뀌면 운영 기록이 없는 미래 SCHEDULED Lesson의 시간/교시를 수정합니다.
-            - dayOfWeek, startAt, endAt, times가 바뀌면 운영 기록이 없는 미래 SCHEDULED Lesson을 soft delete한 뒤 새 일정으로 미래 Lesson을 재생성합니다.
+            - dayOfWeek, startAt, endAt이 바뀌면 운영 기록이 없는 미래 SCHEDULED Lesson을 soft delete한 뒤 새 일정으로 미래 Lesson을 재생성합니다.
             - 운영 기록(note, 학생 출석, 결석 요청, 진행 중인 수업 교환 요청/제안)이 있는 미래 Lesson이 있으면 409 Conflict를 반환합니다.
             - 새 일정이 담당 교사의 기존 수업과 시간이 겹치면 409 Conflict를 반환합니다.
             - 이미 완료된 수업 교환 결과는 현재 Lesson의 담당 교사 상태로 존중하며, 별도의 차단 조건으로 보지 않습니다.
@@ -173,7 +173,7 @@ public class SubjectAdminController {
             수정 정책:
             - 전달된 name, description 필드만 수정합니다.
             - name은 공백일 수 없습니다.
-            - 교사, 담당 교사 배정 시각, 운영 기간, 요일, 교시, 시작/종료 시간, 수업 횟수는 이 API에서 수정할 수 없습니다.
+            - 교사, 담당 교사 배정 시각, 운영 기간, 요일, 교시, 시작/종료 시간은 이 API에서 수정할 수 없습니다.
 
             현재 Lesson 반영 정책:
             - 이 API는 Lesson에 영향을 주지 않는 Subject 기본 정보만 수정합니다.

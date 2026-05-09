@@ -34,7 +34,7 @@ public record SubjectDetailResponse(
     @Schema(description = "과목 운영 종료 일자", example = "2026-02-28")
     LocalDate endAt,
 
-    @Schema(description = "과목의 총 수업 횟수", example = "12")
+    @Schema(description = "과목 운영 기간 안에서 정기 수업 요일에 해당하는 총 수업 횟수", example = "12")
     Integer times,
 
     @Schema(description = "과목의 정기 수업 요일", example = "MONDAY")

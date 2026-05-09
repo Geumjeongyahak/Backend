@@ -34,7 +34,6 @@ public class SubjectUpdateTest extends SubjectBaseTest {
             Map.entry("name", name),
             Map.entry("startAt", "2099-03-02"),
             Map.entry("endAt", "2099-06-30"),
-            Map.entry("times", 12),
             Map.entry("dayOfWeek", dayOfWeek),
             Map.entry("startTime", "19:20:00"),
             Map.entry("endTime", "20:00:00"),
@@ -199,7 +198,7 @@ public class SubjectUpdateTest extends SubjectBaseTest {
             NEW_TEACHER_ID
         );
 
-        assertThat(changedLessonCount).isEqualTo(12);
+        assertThat(changedLessonCount).isEqualTo(18);
     }
 
     @Test
@@ -229,7 +228,7 @@ public class SubjectUpdateTest extends SubjectBaseTest {
             NEW_TEACHER_ID
         );
 
-        assertThat(lessonCount).isEqualTo(12);
+        assertThat(lessonCount).isEqualTo(18);
     }
 
     @Test
@@ -264,7 +263,7 @@ public class SubjectUpdateTest extends SubjectBaseTest {
         );
 
         assertThat(activeLessonCount).isZero();
-        assertThat(deletedLessonCount).isEqualTo(12);
+        assertThat(deletedLessonCount).isEqualTo(18);
     }
 
     @Test
@@ -311,8 +310,8 @@ public class SubjectUpdateTest extends SubjectBaseTest {
             subjectId
         );
 
-        assertThat(activeLessonCount).isEqualTo(12);
-        assertThat(totalLessonCount).isEqualTo(24);
+        assertThat(activeLessonCount).isEqualTo(18);
+        assertThat(totalLessonCount).isEqualTo(36);
     }
 
     @Test
@@ -413,8 +412,8 @@ public class SubjectUpdateTest extends SubjectBaseTest {
             subjectId
         );
 
-        assertThat(updatedLessonCount).isEqualTo(12);
-        assertThat(totalLessonCount).isEqualTo(12);
+        assertThat(updatedLessonCount).isEqualTo(18);
+        assertThat(totalLessonCount).isEqualTo(18);
     }
 
     @Test
@@ -452,8 +451,8 @@ public class SubjectUpdateTest extends SubjectBaseTest {
             subjectId
         );
 
-        assertThat(activeLessonCount).isEqualTo(12);
-        assertThat(deletedLessonCount).isEqualTo(12);
+        assertThat(activeLessonCount).isEqualTo(18);
+        assertThat(deletedLessonCount).isEqualTo(18);
         assertThat(activeLessonDates)
             .isNotEmpty()
             .allMatch(date -> date.getDayOfWeek() == DayOfWeek.TUESDAY);
@@ -523,10 +522,10 @@ public class SubjectUpdateTest extends SubjectBaseTest {
         jdbcTemplate.update(
             """
             INSERT INTO subjects (
-                id, class_id, teacher_id, name, start_at, end_at, times, day_of_week,
+                id, class_id, teacher_id, name, start_at, end_at, day_of_week,
                 start_time, end_time, period, teacher_assigned_at, description, is_active
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)
             """,
             100L,
             CLASSROOM_1,
@@ -534,7 +533,6 @@ public class SubjectUpdateTest extends SubjectBaseTest {
             "충돌 과목",
             "2099-03-02",
             "2099-06-30",
-            12,
             "MONDAY",
             "20:10:00",
             "20:50:00",

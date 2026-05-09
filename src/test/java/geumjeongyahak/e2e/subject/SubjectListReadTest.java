@@ -22,7 +22,6 @@ public class SubjectListReadTest extends SubjectBaseTest {
             Map.entry("name", name),
             Map.entry("startAt", "2099-03-02"),
             Map.entry("endAt", "2099-06-30"),
-            Map.entry("times", 12),
             Map.entry("dayOfWeek", dayOfWeek),
             Map.entry("startTime", "19:20:00"),
             Map.entry("endTime", "20:00:00"),

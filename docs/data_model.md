@@ -268,7 +268,6 @@ erDiagram
 | teacher_id | BIGINT | FOREIGN KEY | 선생님 ID |
 | start_at | DATE | NOT NULL | 과목 시작일 |
 | end_at | DATE | NOT NULL | 과목 종료일 |
-| times | INT | NOT NULL | 과목 횟수 |
 | day_of_week | VARCHAR(20) | NOT NULL | 요일 |
 | start_time | TIME | NOT NULL | 시작 시간 |
 | end_time | TIME | NOT NULL | 종료 시간 |
@@ -281,7 +280,7 @@ erDiagram
 
 ### 3.7 수업 (lessons)
 
-수업을 관리하는 엔티티입니다. 봉사자가 관리자와 협의하여 수업을 생성할 때, 시작일, 요일, 횟수, 시간 등을 기반으로 자동 생성됩니다. 수업이 생성된 후에는 수업에 등록된 학생들에게 자동으로 수업 출석을 생성합니다. 
+수업을 관리하는 엔티티입니다. 봉사자가 관리자와 협의하여 수업을 생성할 때, 시작일, 종료일, 요일, 시간 등을 기반으로 자동 생성됩니다. 수업이 생성된 후에는 수업에 등록된 학생들에게 자동으로 수업 출석을 생성합니다. 
 이 수업은 캘린더 뷰 형태로 일별 / 월별로 조회할 수 있습니다. 
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |

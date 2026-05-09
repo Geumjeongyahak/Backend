@@ -22,7 +22,6 @@ public class SubjectDeleteTest extends SubjectBaseTest {
             Map.entry("name", "삭제 테스트 과목"),
             Map.entry("startAt", "2099-03-02"),
             Map.entry("endAt", "2099-06-30"),
-            Map.entry("times", 12),
             Map.entry("dayOfWeek", "MONDAY"),
             Map.entry("startTime", "19:20:00"),
             Map.entry("endTime", "20:00:00"),

@@ -77,7 +77,6 @@ Subject는 특정 분반의 특정 요일/교시 정기 수업 편성입니다.
   "name": "국어",
   "startAt": "2026-06-01",
   "endAt": "2026-08-30",
-  "times": 12,
   "dayOfWeek": "MONDAY",
   "startTime": "19:20:00",
   "endTime": "20:00:00",
@@ -86,7 +85,8 @@ Subject는 특정 분반의 특정 요일/교시 정기 수업 편성입니다.
 }
 ```
 
-`teacherId`는 선택 값입니다. `teacherId`가 있으면 `teacherAssignedAt`에 현재 시각을 기록하고, 현재 날짜 이후 과목 운영 기간 안에서 Lesson을 자동 생성합니다. 과거 Lesson은 생성하지 않습니다.
+`teacherId`는 선택 값입니다. `teacherId`가 있으면 `teacherAssignedAt`에 현재 시각을 기록하고, 현재 날짜 이후 과목 운영 기간 안에서 정기 수업 요일에 해당하는 Lesson을 자동 생성합니다. 과거 Lesson은 생성하지 않습니다.
+`times`는 요청으로 받지 않고 `startAt`, `endAt`, `dayOfWeek`를 기준으로 계산해 응답합니다.
 
 ## 4. 과목 기본 정보 수정
 
@@ -147,7 +147,6 @@ Subject는 특정 분반의 특정 요일/교시 정기 수업 편성입니다.
 {
   "startAt": "2026-06-01",
   "endAt": "2026-08-30",
-  "times": 12,
   "dayOfWeek": "TUESDAY",
   "startTime": "20:10:00",
   "endTime": "20:50:00",
@@ -158,7 +157,7 @@ Subject는 특정 분반의 특정 요일/교시 정기 수업 편성입니다.
 전달된 필드만 수정합니다.
 
 - `period`, `startTime`, `endTime`만 바뀌면 미래 `SCHEDULED` Lesson의 시간/교시를 수정합니다.
-- `dayOfWeek`, `startAt`, `endAt`, `times`가 바뀌면 미래 `SCHEDULED` Lesson을 soft delete한 뒤 새 일정으로 미래 Lesson을 재생성합니다.
+- `dayOfWeek`, `startAt`, `endAt`이 바뀌면 미래 `SCHEDULED` Lesson을 soft delete한 뒤 새 일정으로 미래 Lesson을 재생성합니다.
 - 담당 교사가 없는 과목은 Subject 일정만 수정하고 Lesson은 생성하지 않습니다.
 
 ## 7. 과목 삭제

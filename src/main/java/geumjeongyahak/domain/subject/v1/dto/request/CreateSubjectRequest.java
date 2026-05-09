@@ -34,11 +34,6 @@ public record CreateSubjectRequest(
     LocalDate endAt,
 
     @NotNull
-    @Min(1)
-    @Schema(description = "과목의 총 수업 횟수", example = "12")
-    Integer times,
-
-    @NotNull
     @Schema(description = "과목의 정기 수업 요일", example = "MONDAY")
     DayOfWeek dayOfWeek,
 

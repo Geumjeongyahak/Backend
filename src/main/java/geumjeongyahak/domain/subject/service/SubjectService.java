@@ -87,7 +87,6 @@ public class SubjectService {
             request.name(),
             request.startAt(),
             request.endAt(),
-            request.times(),
             request.dayOfWeek(),
             request.startTime(),
             request.endTime(),
@@ -107,7 +106,6 @@ public class SubjectService {
                     savedSubject.getTeacher().getId(),
                     lessonStartAt,
                     savedSubject.getEndAt(),
-                    savedSubject.getTimes(),
                     savedSubject.getDayOfWeek(),
                     savedSubject.getStartTime(),
                     savedSubject.getEndTime(),
@@ -213,7 +211,6 @@ public class SubjectService {
                     teacher.getId(),
                     lessonStartAt,
                     subject.getEndAt(),
-                    subject.getTimes(),
                     subject.getDayOfWeek(),
                     subject.getStartTime(),
                     subject.getEndTime(),
@@ -238,7 +235,6 @@ public class SubjectService {
 
         LocalDate newStartAt = request.startAt() != null ? request.startAt() : subject.getStartAt();
         LocalDate newEndAt = request.endAt() != null ? request.endAt() : subject.getEndAt();
-        Integer newTimes = request.times() != null ? request.times() : subject.getTimes();
         var newDayOfWeek = request.dayOfWeek() != null ? request.dayOfWeek() : subject.getDayOfWeek();
         var newStartTime = request.startTime() != null ? request.startTime() : subject.getStartTime();
         var newEndTime = request.endTime() != null ? request.endTime() : subject.getEndTime();
@@ -256,7 +252,6 @@ public class SubjectService {
 
         boolean recreateLessons = isChanged(subject.getStartAt(), newStartAt)
             || isChanged(subject.getEndAt(), newEndAt)
-            || isChanged(subject.getTimes(), newTimes)
             || isChanged(subject.getDayOfWeek(), newDayOfWeek);
         boolean updateLessons = recreateLessons
             || isChanged(subject.getStartTime(), newStartTime)
@@ -272,7 +267,6 @@ public class SubjectService {
                 teacherId,
                 max(today, newStartAt),
                 newEndAt,
-                newTimes,
                 newDayOfWeek,
                 newStartTime,
                 newEndTime,
@@ -283,7 +277,6 @@ public class SubjectService {
         subject.updateSchedule(
             newStartAt,
             newEndAt,
-            newTimes,
             newDayOfWeek,
             newStartTime,
             newEndTime,
@@ -298,7 +291,6 @@ public class SubjectService {
                     today,
                     max(today, newStartAt),
                     newEndAt,
-                    newTimes,
                     newDayOfWeek,
                     newStartTime,
                     newEndTime,
@@ -376,7 +368,6 @@ public class SubjectService {
         Long teacherId,
         LocalDate startAt,
         LocalDate endAt,
-        Integer times,
         java.time.DayOfWeek dayOfWeek,
         java.time.LocalTime startTime,
         java.time.LocalTime endTime,
@@ -390,7 +381,6 @@ public class SubjectService {
                     teacherId,
                     startAt,
                     endAt,
-                    times,
                     dayOfWeek,
                     startTime,
                     endTime

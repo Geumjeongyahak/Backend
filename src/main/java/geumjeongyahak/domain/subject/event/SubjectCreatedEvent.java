@@ -15,7 +15,6 @@ public class SubjectCreatedEvent extends BaseEventDto {
     private final Long teacherId;
     private final LocalDate startAt;
     private final LocalDate endAt;
-    private final Integer times;
     private final DayOfWeek dayOfWeek;
     private final LocalTime startTime;
     private final LocalTime endTime;
@@ -26,7 +25,6 @@ public class SubjectCreatedEvent extends BaseEventDto {
         Long teacherId,
         LocalDate startAt,
         LocalDate endAt,
-        Integer times,
         DayOfWeek dayOfWeek,
         LocalTime startTime,
         LocalTime endTime,
@@ -36,7 +34,6 @@ public class SubjectCreatedEvent extends BaseEventDto {
         this.teacherId = teacherId;
         this.startAt = startAt;
         this.endAt = endAt;
-        this.times = times;
         this.dayOfWeek = dayOfWeek;
         this.startTime = startTime;
         this.endTime = endTime;
@@ -50,7 +47,6 @@ public class SubjectCreatedEvent extends BaseEventDto {
         data.put("teacherId", teacherId);
         data.put("startAt", startAt);
         data.put("endAt", endAt);
-        data.put("times", times);
         data.put("dayOfWeek", dayOfWeek != null ? dayOfWeek.name() : null);
         data.put("startTime", startTime);
         data.put("endTime", endTime);

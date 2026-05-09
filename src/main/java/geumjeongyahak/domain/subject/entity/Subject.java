@@ -51,9 +51,6 @@ public class Subject extends BaseEntity {
     @Column(nullable = false)
     private LocalDate endAt;
 
-    @Column(nullable = false)
-    private Integer times;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private DayOfWeek dayOfWeek;
@@ -81,7 +78,6 @@ public class Subject extends BaseEntity {
             String name,
             LocalDate startAt,
             LocalDate endAt,
-            Integer times,
             DayOfWeek dayOfWeek,
             LocalTime startTime,
             LocalTime endTime,
@@ -93,7 +89,6 @@ public class Subject extends BaseEntity {
         this.name = name;
         this.startAt = startAt;
         this.endAt = endAt;
-        this.times = times;
         this.dayOfWeek = dayOfWeek;
         this.startTime = startTime;
         this.endTime = endTime;
@@ -108,7 +103,6 @@ public class Subject extends BaseEntity {
         String name,
         LocalDate startAt,
         LocalDate endAt,
-        Integer times,
         DayOfWeek dayOfWeek,
         LocalTime startTime,
         LocalTime endTime,
@@ -121,7 +115,6 @@ public class Subject extends BaseEntity {
         this.name = name;
         this.startAt = startAt;
         this.endAt = endAt;
-        this.times = times;
         this.dayOfWeek = dayOfWeek;
         this.startTime = startTime;
         this.endTime = endTime;
@@ -160,7 +153,6 @@ public class Subject extends BaseEntity {
     public void updateSchedule(
         LocalDate startAt,
         LocalDate endAt,
-        Integer times,
         DayOfWeek dayOfWeek,
         LocalTime startTime,
         LocalTime endTime,
@@ -168,11 +160,19 @@ public class Subject extends BaseEntity {
     ) {
         this.startAt = startAt;
         this.endAt = endAt;
-        this.times = times;
         this.dayOfWeek = dayOfWeek;
         this.startTime = startTime;
         this.endTime = endTime;
         this.period = period;
+    }
+
+    public Integer getTimes() {
+        if (startAt == null || endAt == null || dayOfWeek == null || startAt.isAfter(endAt)) {
+            return 0;
+        }
+        return Math.toIntExact(startAt.datesUntil(endAt.plusDays(1))
+            .filter(date -> date.getDayOfWeek() == dayOfWeek)
+            .count());
     }
 }
 

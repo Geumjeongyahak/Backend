@@ -165,14 +165,12 @@ public class LessonProxyService {
         Long teacherId,
         LocalDate startAt,
         LocalDate endAt,
-        Integer times,
         DayOfWeek dayOfWeek,
         LocalTime startTime,
         LocalTime endTime
     ) {
         List<LocalDate> dates = startAt.datesUntil(endAt.plusDays(1))
             .filter(date -> date.getDayOfWeek() == dayOfWeek)
-            .limit(times)
             .toList();
 
         return dates.stream()
