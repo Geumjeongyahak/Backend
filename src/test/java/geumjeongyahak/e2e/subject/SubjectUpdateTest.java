@@ -1,19 +1,27 @@
 package geumjeongyahak.e2e.subject;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
 import io.restassured.path.json.JsonPath;
+import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @DisplayName("E2E: 과목 PATCH 수정 테스트")
 public class SubjectUpdateTest extends SubjectBaseTest {
 
     private static final long CLASSROOM_1 = 1L;
     private static final long TEACHER_ID = 2L;
+    private static final long NEW_TEACHER_ID = 3L;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private Map<String, Object> createRequest(long classroomId, String name, String dayOfWeek, int period) {
         return Map.ofEntries(
@@ -45,6 +53,72 @@ public class SubjectUpdateTest extends SubjectBaseTest {
             .jsonPath();
 
         return created.getLong("id");
+    }
+
+    private long createSubjectWithoutTeacher() {
+        Map<String, Object> request = new HashMap<>(createRequest(CLASSROOM_1, "미배정 과목", "MONDAY", 2));
+        request.remove("teacherId");
+
+        JsonPath created = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .post()
+            .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .body("teacherId", is((Object) null))
+            .extract()
+            .jsonPath();
+
+        return created.getLong("id");
+    }
+
+    private void createLessonExchangeRequestForTeacher(long teacherId, String lessonDate) {
+        createLessonExchangeRequestForTeacher(teacherId, lessonDate, "PENDING");
+    }
+
+    private void createLessonExchangeRequestForTeacher(long teacherId, String lessonDate, String status) {
+        jdbcTemplate.update(
+            """
+            INSERT INTO lesson_exchange_requests (
+                id, lesson_date, requested_by, title, classroom_name_snapshot, content, status, scope, expires_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            1L,
+            lessonDate,
+            teacherId,
+            "교환 요청",
+            "벚꽃반",
+            "교환 요청 내용",
+            status,
+            "FULL",
+            "2099-02-28 23:59:59"
+        );
+    }
+
+    private void createLessonExchangeProposalForTeacher(long teacherId, String lessonDate) {
+        createLessonExchangeRequestForTeacher(NEW_TEACHER_ID, lessonDate);
+        jdbcTemplate.update(
+            """
+            INSERT INTO lesson_exchange_proposals (
+                id, request_id, proposed_by, proposal_type, proposal_scope, lesson_date, content,
+                classroom_name_snapshot, status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            1L,
+            1L,
+            teacherId,
+            "EXCHANGE",
+            "FULL",
+            lessonDate,
+            "교환 제안 내용",
+            "벚꽃반",
+            "ACTIVE"
+        );
     }
 
     @Test
@@ -91,6 +165,210 @@ public class SubjectUpdateTest extends SubjectBaseTest {
             .statusCode(200)
             .body("id", is((int) subjectId))
             .body("name", is("관리 권한 수정"));
+    }
+
+    @Test
+    @DisplayName("PATCH /teacher: 담당 교사를 변경하면 미래 수업 교사도 변경된다")
+    void assignTeacher_UpdatesFutureLessons() {
+        long subjectId = createSubject(CLASSROOM_1, "국어", "MONDAY", 2);
+
+        Map<String, Object> request = Map.ofEntries(
+            Map.entry("teacherId", NEW_TEACHER_ID)
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .patch("/{subjectId}/teacher", subjectId)
+            .then()
+            .statusCode(200)
+            .body("teacherId", is((int) NEW_TEACHER_ID))
+            .body("teacherName", is("김철수"))
+            .body("teacherAssignedAt", notNullValue());
+
+        Integer changedLessonCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM lessons WHERE subject_id = ? AND teacher_id = ?",
+            Integer.class,
+            subjectId,
+            NEW_TEACHER_ID
+        );
+
+        assertThat(changedLessonCount).isEqualTo(12);
+    }
+
+    @Test
+    @DisplayName("PATCH /teacher: 미배정 과목에 교사를 배정하면 미래 수업을 생성한다")
+    void assignTeacher_CreatesLessonsForUnassignedSubject() {
+        long subjectId = createSubjectWithoutTeacher();
+
+        Map<String, Object> request = Map.ofEntries(
+            Map.entry("teacherId", NEW_TEACHER_ID)
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .patch("/{subjectId}/teacher", subjectId)
+            .then()
+            .statusCode(200)
+            .body("teacherId", is((int) NEW_TEACHER_ID))
+            .body("teacherAssignedAt", notNullValue());
+
+        Integer lessonCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM lessons WHERE subject_id = ? AND teacher_id = ?",
+            Integer.class,
+            subjectId,
+            NEW_TEACHER_ID
+        );
+
+        assertThat(lessonCount).isEqualTo(12);
+    }
+
+    @Test
+    @DisplayName("PATCH /teacher: teacherId가 null이면 과목 담당 교사를 비우고 미래 수업을 삭제한다")
+    void assignTeacher_ClearsSubjectTeacher() {
+        long subjectId = createSubject(CLASSROOM_1, "국어", "MONDAY", 2);
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("teacherId", null);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .patch("/{subjectId}/teacher", subjectId)
+            .then()
+            .statusCode(200)
+            .body("teacherId", is((Object) null))
+            .body("teacherName", is((Object) null))
+            .body("teacherAssignedAt", is((Object) null));
+
+        Integer activeLessonCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM lessons WHERE subject_id = ? AND is_deleted = FALSE",
+            Integer.class,
+            subjectId
+        );
+        Integer deletedLessonCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM lessons WHERE subject_id = ? AND is_deleted = TRUE",
+            Integer.class,
+            subjectId
+        );
+
+        assertThat(activeLessonCount).isZero();
+        assertThat(deletedLessonCount).isEqualTo(12);
+    }
+
+    @Test
+    @DisplayName("PATCH /teacher: 담당 교사 해제 후 다시 배정하면 미래 수업을 새로 생성한다")
+    void assignTeacher_RecreatesLessonsAfterClearingTeacher() {
+        long subjectId = createSubject(CLASSROOM_1, "국어", "MONDAY", 2);
+
+        Map<String, Object> clearRequest = new HashMap<>();
+        clearRequest.put("teacherId", null);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(clearRequest)
+            .when()
+            .patch("/{subjectId}/teacher", subjectId)
+            .then()
+            .statusCode(200);
+
+        Map<String, Object> assignRequest = Map.ofEntries(
+            Map.entry("teacherId", NEW_TEACHER_ID)
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(assignRequest)
+            .when()
+            .patch("/{subjectId}/teacher", subjectId)
+            .then()
+            .statusCode(200)
+            .body("teacherId", is((int) NEW_TEACHER_ID))
+            .body("teacherAssignedAt", notNullValue());
+
+        Integer activeLessonCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM lessons WHERE subject_id = ? AND teacher_id = ? AND is_deleted = FALSE",
+            Integer.class,
+            subjectId,
+            NEW_TEACHER_ID
+        );
+        Integer totalLessonCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM lessons WHERE subject_id = ?",
+            Integer.class,
+            subjectId
+        );
+
+        assertThat(activeLessonCount).isEqualTo(12);
+        assertThat(totalLessonCount).isEqualTo(24);
+    }
+
+    @Test
+    @DisplayName("PATCH /teacher: 미래 수업에 교환 요청이 있으면 담당 교사를 변경할 수 없다")
+    void assignTeacher_Conflict_WhenFutureLessonHasExchangeRequest() {
+        long subjectId = createSubject(CLASSROOM_1, "국어", "MONDAY", 2);
+        createLessonExchangeRequestForTeacher(TEACHER_ID, "2099-03-02");
+
+        Map<String, Object> request = Map.ofEntries(
+            Map.entry("teacherId", NEW_TEACHER_ID)
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .patch("/{subjectId}/teacher", subjectId)
+            .then()
+            .statusCode(409);
+    }
+
+    @Test
+    @DisplayName("PATCH /teacher: 미래 수업에 교환 제안이 있으면 담당 교사를 해제할 수 없다")
+    void assignTeacher_Conflict_WhenFutureLessonHasExchangeProposal() {
+        long subjectId = createSubject(CLASSROOM_1, "국어", "MONDAY", 2);
+        createLessonExchangeProposalForTeacher(TEACHER_ID, "2099-03-02");
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("teacherId", null);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .patch("/{subjectId}/teacher", subjectId)
+            .then()
+            .statusCode(409);
+    }
+
+    @Test
+    @DisplayName("PATCH /teacher: 완료된 교환 요청은 담당 교사 변경을 막지 않는다")
+    void assignTeacher_Success_WhenFutureLessonHasCompletedExchangeRequest() {
+        long subjectId = createSubject(CLASSROOM_1, "국어", "MONDAY", 2);
+        createLessonExchangeRequestForTeacher(TEACHER_ID, "2099-03-02", "COMPLETED");
+
+        Map<String, Object> request = Map.ofEntries(
+            Map.entry("teacherId", NEW_TEACHER_ID)
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .patch("/{subjectId}/teacher", subjectId)
+            .then()
+            .statusCode(200)
+            .body("teacherId", is((int) NEW_TEACHER_ID));
     }
 
     @Test

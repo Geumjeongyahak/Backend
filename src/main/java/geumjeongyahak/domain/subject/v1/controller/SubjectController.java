@@ -45,10 +45,10 @@ public class SubjectController {
             - 봉사자, 매니저, 관리자 역할만 조회할 수 있습니다.
 
             응답 정보:
-            - 과목명, 분반 ID/이름, 교사 ID/이름, 운영 기간, 담당 교사 배정 기간, 요일, 교시, 시작/종료 시간, 활성화 여부를 반환합니다.
+            - 과목명, 분반 ID/이름, 교사 ID/이름, 운영 기간, 담당 교사 배정 시각, 요일, 교시, 시작/종료 시간, 활성화 여부를 반환합니다.
             - 교사가 아직 배정되지 않은 과목은 teacherId가 null로 반환됩니다.
             - 교사가 아직 배정되지 않은 과목은 teacherName도 null로 반환됩니다.
-            - 교사가 아직 배정되지 않은 과목은 assignedFrom과 assignedTo도 null로 반환됩니다.
+            - 교사가 아직 배정되지 않은 과목은 teacherAssignedAt도 null로 반환됩니다.
 
             운영 정책:
             - Subject는 하루 단위 수업 기록이 아니라 정기 수업 편성 정보입니다.
@@ -84,7 +84,7 @@ public class SubjectController {
             운영 정책:
             - 활성/비활성 과목을 모두 반환합니다.
             - 교사가 아직 배정되지 않은 과목도 목록에 포함될 수 있습니다.
-            - 교사가 아직 배정되지 않은 과목은 teacherId, assignedFrom, assignedTo가 null일 수 있습니다.
+            - 교사가 아직 배정되지 않은 과목은 teacherId, teacherName, teacherAssignedAt이 null일 수 있습니다.
             - 과목은 특정 분반의 특정 요일/교시 정기 수업 편성 단위입니다.
 
             사이드 이펙트:

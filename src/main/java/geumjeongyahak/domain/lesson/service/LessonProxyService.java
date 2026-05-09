@@ -6,9 +6,12 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import geumjeongyahak.domain.lesson.dto.LessonTeacherDate;
 import geumjeongyahak.domain.lesson.entity.Lesson;
+import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.exception.LessonNotFoundException;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
+import geumjeongyahak.domain.lesson.repository.StudentAttendanceRepository;
 
 /**
  * Lesson 도메인의 Proxy Service.
@@ -19,6 +22,7 @@ import geumjeongyahak.domain.lesson.repository.LessonRepository;
 public class LessonProxyService {
 
     private final LessonRepository lessonRepository;
+    private final StudentAttendanceRepository studentAttendanceRepository;
 
     /**
      * 삭제되지 않은 수업 조회. 없으면 예외 발생.
@@ -62,5 +66,68 @@ public class LessonProxyService {
             endTime,
             startTime
         );
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsFutureActiveLessonBySubjectId(Long subjectId, LocalDate from) {
+        return !lessonRepository
+            .findAllBySubjectIdAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(subjectId, from)
+            .isEmpty();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Long> getFutureActiveLessonIdsBySubjectId(Long subjectId, LocalDate from) {
+        return lessonRepository
+            .findAllBySubjectIdAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(subjectId, from)
+            .stream()
+            .map(Lesson::getId)
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<LessonTeacherDate> getFutureActiveLessonTeacherDatesBySubjectId(Long subjectId, LocalDate from) {
+        return lessonRepository
+            .findAllBySubjectIdAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(subjectId, from)
+            .stream()
+            .map(lesson -> new LessonTeacherDate(lesson.getTeacher().getId(), lesson.getDate()))
+            .distinct()
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsUnchangeableFutureActiveLessonBySubjectId(Long subjectId, LocalDate from) {
+        return lessonRepository
+            .findAllBySubjectIdAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(subjectId, from)
+            .stream()
+            .anyMatch(lesson ->
+                lesson.getStatus() != LessonStatus.SCHEDULED
+                    || (lesson.getNote() != null && !lesson.getNote().isBlank())
+                    || studentAttendanceRepository.existsByLessonId(lesson.getId())
+            );
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsTeacherConflictForFutureSubjectScheduledLessons(
+        Long subjectId,
+        Long teacherId,
+        LocalDate from
+    ) {
+        List<Lesson> lessons = lessonRepository
+            .findAllBySubjectIdAndStatusAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(
+                subjectId,
+                LessonStatus.SCHEDULED,
+                from
+            );
+
+        return lessons.stream()
+            .anyMatch(lesson -> lessonRepository
+                .existsByTeacherIdAndDateAndIsDeletedFalseAndIdNotAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+                    teacherId,
+                    lesson.getDate(),
+                    lesson.getId(),
+                    lesson.getEndTime(),
+                    lesson.getStartTime()
+                )
+            );
     }
 }

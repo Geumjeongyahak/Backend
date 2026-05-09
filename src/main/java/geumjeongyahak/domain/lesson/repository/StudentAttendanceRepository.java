@@ -9,4 +9,6 @@ public interface StudentAttendanceRepository extends JpaRepository<StudentAttend
 
     @EntityGraph(attributePaths = {"student"})
     List<StudentAttendance> findAllByLessonId(Long lessonId);
+
+    boolean existsByLessonId(Long lessonId);
 }

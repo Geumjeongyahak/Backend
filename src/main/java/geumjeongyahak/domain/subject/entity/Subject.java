@@ -2,6 +2,7 @@ package geumjeongyahak.domain.subject.entity;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 import geumjeongyahak.domain.base.entity.BaseEntity;
@@ -66,9 +67,7 @@ public class Subject extends BaseEntity {
     @Column(nullable = false)
     private Integer period;
 
-    private LocalDate assignedFrom;
-
-    private LocalDate assignedTo;
+    private LocalDateTime teacherAssignedAt;
 
     @Column(columnDefinition = "TEXT")
     private String description;
@@ -87,8 +86,7 @@ public class Subject extends BaseEntity {
             LocalTime startTime,
             LocalTime endTime,
             Integer period,
-            LocalDate assignedFrom,
-            LocalDate assignedTo,
+            LocalDateTime teacherAssignedAt,
             String description) {
         this.classroom = classroom;
         this.teacher = teacher;
@@ -100,8 +98,7 @@ public class Subject extends BaseEntity {
         this.startTime = startTime;
         this.endTime = endTime;
         this.period = period;
-        this.assignedFrom = assignedFrom;
-        this.assignedTo = assignedTo;
+        this.teacherAssignedAt = teacherAssignedAt;
         this.description = description;
     }
 
@@ -116,8 +113,7 @@ public class Subject extends BaseEntity {
         LocalTime startTime,
         LocalTime endTime,
         Integer period,
-        LocalDate assignedFrom,
-        LocalDate assignedTo,
+        LocalDateTime teacherAssignedAt,
         String description
     ) {
         this.classroom = classroom;
@@ -130,8 +126,7 @@ public class Subject extends BaseEntity {
         this.startTime = startTime;
         this.endTime = endTime;
         this.period = period;
-        this.assignedFrom = assignedFrom;
-        this.assignedTo = assignedTo;
+        this.teacherAssignedAt = teacherAssignedAt;
         this.description = description;
     }
 
@@ -154,6 +149,12 @@ public class Subject extends BaseEntity {
 
     public void changeTeacher(User teacher) {
         this.teacher = teacher;
+        this.teacherAssignedAt = teacher != null ? LocalDateTime.now() : null;
+    }
+
+    public void assignTeacher(User teacher, LocalDateTime teacherAssignedAt) {
+        this.teacher = teacher;
+        this.teacherAssignedAt = teacherAssignedAt;
     }
 }
 

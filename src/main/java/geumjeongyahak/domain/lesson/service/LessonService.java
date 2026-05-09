@@ -345,6 +345,40 @@ public class LessonService {
     }
 
     @Transactional
+    public void assignTeacherToSubjectScheduledLessons(
+        Long subjectId,
+        Long teacherId,
+        LocalDate from
+    ) {
+        log.debug("과목 담당 교사 배정에 따른 수업 교사 변경 (subjectId={}, teacherId={})", subjectId, teacherId);
+        User newTeacher = userRepository.findById(teacherId)
+            .orElseThrow(() -> new UserNotFoundException(teacherId));
+        validateTeacherAssignable(newTeacher);
+
+        List<Lesson> lessons = lessonRepository
+            .findAllBySubjectIdAndStatusAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(
+                subjectId,
+                LessonStatus.SCHEDULED,
+                from
+            );
+
+        lessons.forEach(lesson -> lesson.changeTeacher(newTeacher));
+    }
+
+    @Transactional
+    public void deleteSubjectScheduledLessons(Long subjectId, LocalDate from) {
+        log.debug("과목 담당 교사 해제에 따른 수업 삭제 (subjectId={})", subjectId);
+        List<Lesson> lessons = lessonRepository
+            .findAllBySubjectIdAndStatusAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(
+                subjectId,
+                LessonStatus.SCHEDULED,
+                from
+            );
+
+        lessons.forEach(Lesson::softDelete);
+    }
+
+    @Transactional
     public void deleteLesson(Long lessonId) {
         log.debug("수업 삭제 요청 (lessonId={})", lessonId);
         Lesson lesson = lessonRepository.findById(lessonId)

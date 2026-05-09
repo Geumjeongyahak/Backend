@@ -1,23 +1,30 @@
 package geumjeongyahak.domain.subject.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import geumjeongyahak.domain.classroom.entity.Classroom;
-import geumjeongyahak.domain.classroom.exception.ClassroomNotFoundException;
-import geumjeongyahak.domain.classroom.repository.ClassroomRepository;
-import geumjeongyahak.domain.subject.entity.Subject;
-import geumjeongyahak.domain.subject.exception.InvalidSubjectScheduleException;
-import geumjeongyahak.domain.subject.exception.SubjectDuplicateException;
-import geumjeongyahak.domain.subject.exception.SubjectNotFoundException;
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.event.EventPublisher;
+import geumjeongyahak.domain.classroom.entity.Classroom;
+import geumjeongyahak.domain.classroom.exception.ClassroomNotFoundException;
+import geumjeongyahak.domain.classroom.repository.ClassroomRepository;
+import geumjeongyahak.domain.lesson.service.LessonProxyService;
+import geumjeongyahak.domain.request.service.AbsenceRequestProxyService;
+import geumjeongyahak.domain.request.service.LessonExchangeRequestProxyService;
+import geumjeongyahak.domain.subject.entity.Subject;
+import geumjeongyahak.domain.subject.exception.SubjectDuplicateException;
+import geumjeongyahak.domain.subject.exception.SubjectNotFoundException;
+import geumjeongyahak.domain.subject.exception.SubjectTeacherAssignmentConflictException;
 import geumjeongyahak.domain.subject.event.SubjectCreatedEvent;
+import geumjeongyahak.domain.subject.event.SubjectTeacherAssignedEvent;
+import geumjeongyahak.domain.subject.event.SubjectTeacherUnassignedEvent;
 import geumjeongyahak.domain.subject.repository.SubjectRepository;
+import geumjeongyahak.domain.subject.v1.dto.request.AssignSubjectTeacherRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.CreateSubjectRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectBasicRequest;
 import geumjeongyahak.domain.subject.v1.dto.response.SubjectDetailResponse;
@@ -35,6 +42,9 @@ public class SubjectService {
     private final SubjectRepository subjectRepository;
     private final ClassroomRepository classroomRepository;
     private final UserRepository userRepository;
+    private final LessonProxyService lessonProxyService;
+    private final AbsenceRequestProxyService absenceRequestProxyService;
+    private final LessonExchangeRequestProxyService lessonExchangeRequestProxyService;
     private final EventPublisher eventPublisher;
 
     @Transactional
@@ -78,27 +88,28 @@ public class SubjectService {
             request.startTime(),
             request.endTime(),
             request.period(),
-            resolveAssignedFrom(teacher, request.assignedFrom(), request.startAt()),
-            resolveAssignedTo(teacher, request.assignedTo(), request.endAt()),
+            teacher != null ? LocalDateTime.now() : null,
             request.description()
         );
-        validateAssignmentRange(teacher, subject.getAssignedFrom(), subject.getAssignedTo(), subject.getStartAt(), subject.getEndAt());
 
         Subject savedSubject = subjectRepository.save(subject);
         log.debug("과목 등록 완료 (id={})", savedSubject.getId());
 
         if (savedSubject.getTeacher() != null) {
-            eventPublisher.publish(new SubjectCreatedEvent(
-                savedSubject.getId(),
-                savedSubject.getTeacher().getId(),
-                savedSubject.getAssignedFrom(),
-                savedSubject.getAssignedTo(),
-                savedSubject.getTimes(),
-                savedSubject.getDayOfWeek(),
-                savedSubject.getStartTime(),
-                savedSubject.getEndTime(),
-                savedSubject.getPeriod()
-            ));
+            LocalDate lessonStartAt = max(LocalDate.now(), savedSubject.getStartAt());
+            if (!lessonStartAt.isAfter(savedSubject.getEndAt())) {
+                eventPublisher.publish(new SubjectCreatedEvent(
+                    savedSubject.getId(),
+                    savedSubject.getTeacher().getId(),
+                    lessonStartAt,
+                    savedSubject.getEndAt(),
+                    savedSubject.getTimes(),
+                    savedSubject.getDayOfWeek(),
+                    savedSubject.getStartTime(),
+                    savedSubject.getEndTime(),
+                    savedSubject.getPeriod()
+                ));
+            }
         }
 
         return SubjectDetailResponse.from(savedSubject);
@@ -155,6 +166,63 @@ public class SubjectService {
     }
 
     @Transactional
+    public SubjectDetailResponse assignTeacher(Long subjectId, AssignSubjectTeacherRequest request) {
+        log.debug("과목 담당 교사 배정 요청 (subjectId={}, teacherId={})", subjectId, request.teacherId());
+
+        Subject subject = subjectRepository.findById(subjectId)
+            .orElseThrow(() -> {
+                log.info("과목 담당 교사 배정 실패 - 과목을 찾을 수 없습니다. ID: {}", subjectId);
+                return new SubjectNotFoundException(subjectId);
+            });
+        LocalDate today = LocalDate.now();
+        if (request.teacherId() == null) {
+            validateFutureLessonsChangeable(subjectId, today);
+            subject.assignTeacher(null, null);
+            eventPublisher.publish(new SubjectTeacherUnassignedEvent(subject.getId(), today));
+            log.debug("과목 담당 교사 해제 완료 (subjectId={})", subject.getId());
+            return SubjectDetailResponse.from(subject);
+        }
+
+        User teacher = userRepository.findById(request.teacherId())
+            .orElseThrow(() -> {
+                log.info("과목 담당 교사 배정 실패 - 교사를 찾을 수 없습니다. ID: {}", request.teacherId());
+                return new UserNotFoundException(request.teacherId());
+            });
+        validateTeacherAssignable(teacher);
+
+        validateFutureLessonsChangeable(subjectId, today);
+        validateNoTeacherConflict(subjectId, teacher.getId(), today);
+
+        subject.assignTeacher(teacher, LocalDateTime.now());
+
+        if (lessonProxyService.existsFutureActiveLessonBySubjectId(subjectId, today)) {
+            eventPublisher.publish(new SubjectTeacherAssignedEvent(
+                subject.getId(),
+                teacher.getId(),
+                today
+            ));
+        } else {
+            LocalDate lessonStartAt = max(today, subject.getStartAt());
+            if (!lessonStartAt.isAfter(subject.getEndAt())) {
+                eventPublisher.publish(new SubjectCreatedEvent(
+                    subject.getId(),
+                    teacher.getId(),
+                    lessonStartAt,
+                    subject.getEndAt(),
+                    subject.getTimes(),
+                    subject.getDayOfWeek(),
+                    subject.getStartTime(),
+                    subject.getEndTime(),
+                    subject.getPeriod()
+                ));
+            }
+        }
+
+        log.debug("과목 담당 교사 배정 완료 (subjectId={}, teacherId={})", subject.getId(), teacher.getId());
+        return SubjectDetailResponse.from(subject);
+    }
+
+    @Transactional
     public void deleteSubject(Long subjectId) {
         log.debug("과목 삭제(비활성화) 요청 (id={})", subjectId);
 
@@ -176,40 +244,38 @@ public class SubjectService {
         log.debug("과목 삭제(비활성화) 완료 (id={})", subjectId);
     }
 
-    private LocalDate resolveAssignedFrom(User teacher, LocalDate assignedFrom, LocalDate startAt) {
-        if (teacher == null) {
-            return assignedFrom;
+    private void validateFutureLessonsChangeable(Long subjectId, LocalDate today) {
+        if (lessonProxyService.existsUnchangeableFutureActiveLessonBySubjectId(subjectId, today)) {
+            throw new SubjectTeacherAssignmentConflictException("운영 기록이 있는 미래 수업은 자동 변경할 수 없습니다.");
         }
-        return assignedFrom != null ? assignedFrom : startAt;
+        if (absenceRequestProxyService.existsAbsenceRequestByLessonIds(
+            lessonProxyService.getFutureActiveLessonIdsBySubjectId(subjectId, today)
+        )) {
+            throw new SubjectTeacherAssignmentConflictException("결석 요청이 연결된 미래 수업은 자동 변경할 수 없습니다.");
+        }
+        if (lessonExchangeRequestProxyService.existsActiveExchangeByLessonTeacherDates(
+            lessonProxyService.getFutureActiveLessonTeacherDatesBySubjectId(subjectId, today)
+        )) {
+            throw new SubjectTeacherAssignmentConflictException("수업 교환 요청 또는 제안이 연결된 미래 수업은 자동 변경할 수 없습니다.");
+        }
     }
 
-    private LocalDate resolveAssignedTo(User teacher, LocalDate assignedTo, LocalDate endAt) {
-        if (teacher == null) {
-            return assignedTo;
-        }
-        return assignedTo != null ? assignedTo : endAt;
-    }
-
-    private void validateAssignmentRange(
-        User teacher,
-        LocalDate assignedFrom,
-        LocalDate assignedTo,
-        LocalDate subjectStartAt,
-        LocalDate subjectEndAt
+    private void validateNoTeacherConflict(
+        Long subjectId,
+        Long teacherId,
+        LocalDate today
     ) {
-        if (teacher == null) {
-            if (assignedFrom != null || assignedTo != null) {
-                throw new InvalidSubjectScheduleException("교사가 없는 과목에는 배정 기간을 설정할 수 없습니다.");
-            }
-            return;
+        if (lessonProxyService.existsTeacherConflictForFutureSubjectScheduledLessons(
+            subjectId,
+            teacherId,
+            today
+        )) {
+            throw new SubjectTeacherAssignmentConflictException("새 담당 교사의 기존 수업과 시간이 겹쳐 자동 변경할 수 없습니다.");
         }
+    }
 
-        if (assignedFrom == null || assignedTo == null) {
-            throw new InvalidSubjectScheduleException("교사가 배정된 과목은 assignedFrom과 assignedTo가 필요합니다.");
-        }
-        if (assignedFrom.isBefore(subjectStartAt) || assignedTo.isAfter(subjectEndAt)) {
-            throw new InvalidSubjectScheduleException("담당 교사 배정 기간은 과목 운영 기간 안에 있어야 합니다.");
-        }
+    private LocalDate max(LocalDate left, LocalDate right) {
+        return left.isAfter(right) ? left : right;
     }
 
     private void validateTeacherAssignable(User teacher) {

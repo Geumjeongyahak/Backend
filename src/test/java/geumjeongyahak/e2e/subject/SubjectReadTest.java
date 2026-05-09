@@ -62,8 +62,7 @@ public class SubjectReadTest extends SubjectBaseTest {
             .body("name", is("국어"))
             .body("dayOfWeek", is("MONDAY"))
             .body("period", is(2))
-            .body("assignedFrom", is("2099-03-02"))
-            .body("assignedTo", is("2099-06-30"))
+            .body("teacherAssignedAt", notNullValue())
             .log().all();
     }
 

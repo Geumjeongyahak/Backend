@@ -60,8 +60,7 @@ public class SubjectCreateTest extends SubjectBaseTest {
             .body("id", notNullValue())
             .body("name", is("국어"))
             .body("period", is(2))
-            .body("assignedFrom", is("2026-03-02"))
-            .body("assignedTo", is("2026-06-30"))
+            .body("teacherAssignedAt", notNullValue())
             .log().all();
     }
 
@@ -120,64 +119,6 @@ public class SubjectCreateTest extends SubjectBaseTest {
     }
 
     @Test
-    @DisplayName("교사가 배정된 기간만 수업 자동 생성 대상으로 사용한다")
-    void createSubject_CreatesLessonsOnlyWithinAssignmentPeriod() {
-        Map<String, Object> request = new HashMap<>(createRequest(
-            "배정 기간 수업 생성",
-            "2026-03-02",
-            "2026-06-30",
-            "MONDAY"
-        ));
-        request.put("times", 20);
-        request.put("assignedFrom", "2026-04-01");
-        request.put("assignedTo", "2026-04-30");
-
-        Integer subjectId = given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType("application/json")
-            .body(request)
-            .when()
-            .post()
-            .then()
-            .statusCode(201)
-            .body("id", notNullValue())
-            .body("startAt", is("2026-03-02"))
-            .body("endAt", is("2026-06-30"))
-            .body("assignedFrom", is("2026-04-01"))
-            .body("assignedTo", is("2026-04-30"))
-            .extract()
-            .path("id");
-
-        Integer lessonCount = jdbcTemplate.queryForObject(
-            """
-            SELECT COUNT(*)
-            FROM lessons
-            WHERE subject_id = ?
-              AND date BETWEEN ? AND ?
-            """,
-            Integer.class,
-            subjectId,
-            LocalDate.parse("2026-04-01"),
-            LocalDate.parse("2026-04-30")
-        );
-        Integer outOfAssignmentLessonCount = jdbcTemplate.queryForObject(
-            """
-            SELECT COUNT(*)
-            FROM lessons
-            WHERE subject_id = ?
-              AND (date < ? OR date > ?)
-            """,
-            Integer.class,
-            subjectId,
-            LocalDate.parse("2026-04-01"),
-            LocalDate.parse("2026-04-30")
-        );
-
-        org.assertj.core.api.Assertions.assertThat(lessonCount).isEqualTo(4);
-        org.assertj.core.api.Assertions.assertThat(outOfAssignmentLessonCount).isZero();
-    }
-
-    @Test
     @DisplayName("교사 미배정 상태로 과목 생성 시 수업을 자동 생성하지 않는다")
     void createSubject_Success_WithoutTeacherAndDoesNotCreateLessons() {
         Map<String, Object> request = new HashMap<>(createRequest(
@@ -198,8 +139,7 @@ public class SubjectCreateTest extends SubjectBaseTest {
             .statusCode(201)
             .body("id", notNullValue())
             .body("teacherId", is((Object) null))
-            .body("assignedFrom", is((Object) null))
-            .body("assignedTo", is((Object) null))
+            .body("teacherAssignedAt", is((Object) null))
             .extract()
             .path("id");
 
@@ -212,70 +152,35 @@ public class SubjectCreateTest extends SubjectBaseTest {
     }
 
     @Test
-    @DisplayName("검증 실패(배정 기간 역전: assignedFrom > assignedTo) 시 400 Bad Request")
-    void createSubject_BadRequest_InvalidAssignmentDateRange() {
-        Map<String, Object> request = new HashMap<>(createRequest(
-            "배정 기간 역전",
+    @DisplayName("과목 생성 시 이미 지난 날짜의 수업은 자동 생성하지 않는다")
+    void createSubject_DoesNotCreatePastLessons() {
+        Map<String, Object> request = createRequest(
+            "과거 수업 제외 과목",
             "2026-03-02",
-            "2026-06-30",
+            "2099-06-30",
             "MONDAY"
-        ));
-        request.put("assignedFrom", "2026-06-30");
-        request.put("assignedTo", "2026-03-02");
+        );
 
-        given()
+        Integer subjectId = given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType("application/json")
             .body(request)
             .when()
             .post()
             .then()
-            .statusCode(400);
-    }
+            .statusCode(201)
+            .body("id", notNullValue())
+            .extract()
+            .path("id");
 
-    @Test
-    @DisplayName("교사 미배정 상태에서 배정 기간을 전달하면 생성 실패(400 Bad Request)")
-    void createSubject_BadRequest_WhenAssignmentPeriodWithoutTeacher() {
-        Map<String, Object> request = new HashMap<>(createRequest(
-            "잘못된 배정 기간",
-            "2026-03-02",
-            "2026-06-30",
-            "MONDAY"
-        ));
-        request.remove("teacherId");
-        request.put("assignedFrom", "2026-03-02");
-        request.put("assignedTo", "2026-06-30");
+        Integer pastLessonCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM lessons WHERE subject_id = ? AND date < ?",
+            Integer.class,
+            subjectId,
+            LocalDate.now()
+        );
 
-        given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType("application/json")
-            .body(request)
-            .when()
-            .post()
-            .then()
-            .statusCode(400);
-    }
-
-    @Test
-    @DisplayName("배정 기간이 과목 운영 기간 밖이면 생성 실패(400 Bad Request)")
-    void createSubject_BadRequest_WhenAssignmentPeriodOutOfSubjectRange() {
-        Map<String, Object> request = new HashMap<>(createRequest(
-            "범위 밖 배정 기간",
-            "2026-03-02",
-            "2026-06-30",
-            "MONDAY"
-        ));
-        request.put("assignedFrom", "2026-02-28");
-        request.put("assignedTo", "2026-06-30");
-
-        given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType("application/json")
-            .body(request)
-            .when()
-            .post()
-            .then()
-            .statusCode(400);
+        org.assertj.core.api.Assertions.assertThat(pastLessonCount).isZero();
     }
 
     @Test

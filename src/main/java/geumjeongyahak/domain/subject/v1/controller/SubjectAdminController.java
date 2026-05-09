@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.subject.v1.controller;
 
 import geumjeongyahak.domain.subject.service.SubjectService;
+import geumjeongyahak.domain.subject.v1.dto.request.AssignSubjectTeacherRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.CreateSubjectRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectBasicRequest;
 import geumjeongyahak.domain.subject.v1.dto.response.SubjectDetailResponse;
@@ -54,10 +55,7 @@ public class SubjectAdminController {
             - classroomId는 필수이며 존재하는 분반이어야 합니다.
             - teacherId는 선택 값입니다. 교사가 아직 정해지지 않은 과목은 teacherId 없이 생성할 수 있습니다.
             - teacherId가 전달되면 해당 사용자는 봉사자 또는 매니저 역할이어야 합니다.
-            - teacherId가 전달되면 assignedFrom과 assignedTo로 담당 교사 배정 기간을 관리합니다.
-            - teacherId가 있고 assignedFrom 또는 assignedTo가 생략되면 각각 startAt, endAt으로 설정됩니다.
-            - teacherId가 없으면 assignedFrom과 assignedTo를 설정할 수 없습니다.
-            - 담당 교사 배정 기간은 과목 운영 기간 안에 있어야 합니다.
+            - teacherId가 전달되면 teacherAssignedAt에 현재 시각을 기록합니다.
             - 같은 분반에서 운영 기간이 겹치고 요일과 교시가 같은 과목은 중복으로 생성할 수 없습니다.
             - startAt은 endAt보다 늦을 수 없습니다.
             - startTime은 endTime보다 빨라야 합니다.
@@ -66,7 +64,8 @@ public class SubjectAdminController {
             Lesson 자동 생성 정책:
             - teacherId가 있으면 SubjectCreatedEvent를 발행하고 Lesson을 자동 생성합니다.
             - teacherId가 없으면 Lesson을 자동 생성하지 않습니다.
-            - 자동 생성 시 담당 교사 배정 기간 안에서 dayOfWeek에 해당하는 날짜를 times개까지 선택합니다.
+            - 자동 생성 시 현재 날짜 이후 과목 운영 기간 안에서 dayOfWeek에 해당하는 날짜를 times개까지 선택합니다.
+            - 이미 지난 과목 운영일에 대한 과거 Lesson은 자동 생성하지 않습니다.
             - 동일 교사의 같은 날짜/시간대 Lesson이 이미 있으면 해당 날짜의 자동 생성은 건너뜁니다.
 
             사이드 이펙트:
@@ -85,6 +84,43 @@ public class SubjectAdminController {
 
     @PreAuthorize(SUBJECT_MANAGE_ACCESS)
     @Operation(
+        summary = "과목 담당 교사 배정",
+        description = """
+            과목의 현재 담당 교사를 배정하거나 비웁니다.
+
+            권한 정책:
+            - 관리자 또는 subject:manage:* 권한을 가진 사용자만 배정할 수 있습니다.
+
+            배정 정책:
+            - teacherId가 null이면 과목의 담당 교사를 비우고 teacherAssignedAt도 null로 변경합니다.
+            - teacherId가 있으면 해당 사용자는 봉사자 또는 매니저 역할이어야 합니다.
+            - teacherId가 있으면 teacherAssignedAt에 현재 시각을 기록합니다.
+
+            Lesson 자동 반영 정책:
+            - teacherId가 null이면 운영 기록이 없는 미래 SCHEDULED Lesson을 soft delete합니다.
+            - teacherId가 있고 미래 Lesson이 있으면 미래 SCHEDULED Lesson 중 운영 기록이 없는 Lesson만 새 teacherId로 변경합니다.
+            - teacherId가 있고 미래 Lesson이 없으면 배정일 이후 과목 운영 기간 안에서 Lesson을 자동 생성합니다.
+            - 운영 기록(note, 학생 출석, 결석 요청, 진행 중인 수업 교환 요청/제안)이 있는 미래 Lesson이 있거나 새 교사의 기존 수업과 시간이 겹치면 409 Conflict를 반환합니다.
+            - 이미 완료된 수업 교환 결과는 현재 Lesson의 담당 교사 상태로 존중하며, 별도의 차단 조건으로 보지 않습니다.
+
+            사이드 이펙트:
+            - subjects 테이블의 teacherId, teacherAssignedAt이 변경됩니다.
+            - 조건을 만족하는 미래 lessons 테이블의 teacherId가 변경되거나, soft delete되거나, 새 Lesson이 생성될 수 있습니다.
+            """
+    )
+    @PatchMapping("/{subjectId}/teacher")
+    public ResponseEntity<SubjectDetailResponse> assignTeacher(
+        @Parameter(description = "과목 식별자", example = "1")
+        @PathVariable Long subjectId,
+        @Valid @RequestBody AssignSubjectTeacherRequest request
+    ) {
+        log.debug("PATCH /api/v1/subjects/{}/teacher - 과목 담당 교사 배정 요청", subjectId);
+        SubjectDetailResponse response = subjectService.assignTeacher(subjectId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize(SUBJECT_MANAGE_ACCESS)
+    @Operation(
         summary = "과목 부분 수정",
         description = """
             기존 과목의 기본 정보를 부분 수정합니다.
@@ -96,7 +132,7 @@ public class SubjectAdminController {
             수정 정책:
             - 전달된 name, description 필드만 수정합니다.
             - name은 공백일 수 없습니다.
-            - 교사, 담당 교사 배정 기간, 운영 기간, 요일, 교시, 시작/종료 시간, 수업 횟수는 이 API에서 수정할 수 없습니다.
+            - 교사, 담당 교사 배정 시각, 운영 기간, 요일, 교시, 시작/종료 시간, 수업 횟수는 이 API에서 수정할 수 없습니다.
 
             현재 Lesson 반영 정책:
             - 이 API는 Lesson에 영향을 주지 않는 Subject 기본 정보만 수정합니다.

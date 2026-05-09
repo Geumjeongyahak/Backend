@@ -55,11 +55,19 @@ public class SubjectBaseTest extends BaseE2ETest {
         // H2에서 FK 때문에 truncate 실패하는 경우가 있어 referential integrity를 잠깐 꺼줌
         jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE");
 
-        // lessons -> subjects 순서(lessons가 subject_id FK 가짐)
+        // lesson 의존 테이블 -> lessons -> subjects 순서(lessons가 subject_id FK 가짐)
+        jdbcTemplate.execute("TRUNCATE TABLE student_attendances");
+        jdbcTemplate.execute("TRUNCATE TABLE absence_requests");
+        jdbcTemplate.execute("TRUNCATE TABLE lesson_exchange_proposals");
+        jdbcTemplate.execute("TRUNCATE TABLE lesson_exchange_requests");
         jdbcTemplate.execute("TRUNCATE TABLE lessons");
         jdbcTemplate.execute("TRUNCATE TABLE subjects");
 
         // ID를 1부터 다시 시작
+        jdbcTemplate.execute("ALTER TABLE student_attendances ALTER COLUMN id RESTART WITH 1");
+        jdbcTemplate.execute("ALTER TABLE absence_requests ALTER COLUMN id RESTART WITH 1");
+        jdbcTemplate.execute("ALTER TABLE lesson_exchange_proposals ALTER COLUMN id RESTART WITH 1");
+        jdbcTemplate.execute("ALTER TABLE lesson_exchange_requests ALTER COLUMN id RESTART WITH 1");
         jdbcTemplate.execute("ALTER TABLE lessons ALTER COLUMN id RESTART WITH 1");
         jdbcTemplate.execute("ALTER TABLE subjects ALTER COLUMN id RESTART WITH 1");
 

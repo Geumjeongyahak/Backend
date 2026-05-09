@@ -3,6 +3,7 @@ package geumjeongyahak.domain.subject.v1.dto.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import geumjeongyahak.domain.subject.entity.Subject;
 
@@ -48,11 +49,8 @@ public record SubjectDetailResponse(
     @Schema(description = "교시", example = "1")
     Integer period,
 
-    @Schema(description = "담당 교사 배정 시작 일자", example = "2026-02-01", nullable = true)
-    LocalDate assignedFrom,
-
-    @Schema(description = "담당 교사 배정 종료 일자", example = "2026-06-30", nullable = true)
-    LocalDate assignedTo,
+    @Schema(description = "현재 담당 교사 배정 시각. 교사가 미배정된 과목은 null입니다.", example = "2026-06-01T10:15:30", nullable = true)
+    LocalDateTime teacherAssignedAt,
 
     @Schema(description = "과목 설명", example = "과목 설명")
     String description,
@@ -75,8 +73,7 @@ public record SubjectDetailResponse(
             subject.getStartTime(),
             subject.getEndTime(),
             subject.getPeriod(),
-            subject.getAssignedFrom(),
-            subject.getAssignedTo(),
+            subject.getTeacherAssignedAt(),
             subject.getDescription(),
             subject.getIsActive()
         );

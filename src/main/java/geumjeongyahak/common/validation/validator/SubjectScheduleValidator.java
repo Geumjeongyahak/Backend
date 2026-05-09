@@ -17,16 +17,12 @@ public class SubjectScheduleValidator implements ConstraintValidator<ValidSubjec
 
         LocalDate startAt;
         LocalDate endAt;
-        LocalDate assignedFrom;
-        LocalDate assignedTo;
         LocalTime startTime;
         LocalTime endTime;
 
         if (value instanceof CreateSubjectRequest req) {
             startAt = req.startAt();
             endAt = req.endAt();
-            assignedFrom = req.assignedFrom();
-            assignedTo = req.assignedTo();
             startTime = req.startTime();
             endTime = req.endTime();
         } else {
@@ -37,10 +33,8 @@ public class SubjectScheduleValidator implements ConstraintValidator<ValidSubjec
         boolean dateCheck = startAt != null && endAt != null && startAt.isAfter(endAt);
         // startTime < endTime
         boolean timeCheck = startTime != null && endTime != null && !startTime.isBefore(endTime);
-        // assignedFrom <= assignedTo
-        boolean assignmentDateCheck = assignedFrom != null && assignedTo != null && assignedFrom.isAfter(assignedTo);
 
-        if (!dateCheck && !timeCheck && !assignmentDateCheck) return true;
+        if (!dateCheck && !timeCheck) return true;
 
         if (dateCheck) {
             context.disableDefaultConstraintViolation();
@@ -54,14 +48,6 @@ public class SubjectScheduleValidator implements ConstraintValidator<ValidSubjec
             context.disableDefaultConstraintViolation();
             context.buildConstraintViolationWithTemplate("startTime은 endTime보다 빨라야 합니다.")
                 .addPropertyNode("startTime")
-                .addConstraintViolation();
-            return false;
-        }
-
-        if (assignmentDateCheck) {
-            context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("assignedFrom은 assignedTo보다 늦을 수 없습니다.")
-                .addPropertyNode("assignedFrom")
                 .addConstraintViolation();
             return false;
         }
