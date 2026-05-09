@@ -3,9 +3,10 @@
 <head th:fragment="head(title)">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#89ca6b">
     <title th:text="${title} + ' | 금정열린배움터 관리자'">관리자 | 금정열린배움터</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/geumjeongyahak-icon.svg}">
-    <link rel="apple-touch-icon" th:href="@{/icons/geumjeongyahak-icon.svg}">
+    <link rel="apple-touch-icon" th:href="@{/icons/apple-touch-icon.png}">
     <link rel="manifest" th:href="@{/site.webmanifest}">
     <style>
         :root {
@@ -19,6 +20,7 @@
             --green-dark: #4f9d34;
             --danger: #c0473b;
             --warning: #b77a1c;
+            --mobile-content-min: 360px;
         }
         * { box-sizing: border-box; }
         body {
@@ -122,6 +124,19 @@
         }
         .metric span { display: block; color: var(--muted); font-weight: 800; }
         .metric strong { display: block; margin-top: 10px; font-size: 34px; line-height: 1; }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        .dashboard-card-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .swipe-grid {
+            min-width: 0;
+        }
         .form-grid { display: grid; gap: 10px; }
         .filter-grid {
             display: grid;
@@ -278,6 +293,9 @@
             border: 1px solid var(--line);
             border-radius: 6px;
             color: #4f5953;
+            line-height: 1.35;
+            white-space: normal;
+            overflow-wrap: anywhere;
         }
         .status-PENDING { background: #fff6df; color: var(--warning); }
         .status-APPROVED { background: #edf8e8; color: var(--green-dark); }
@@ -317,9 +335,82 @@
         @media (max-width: 980px) {
             .shell { grid-template-columns: 1fr; }
             aside { border-right: 0; border-bottom: 1px solid var(--line); }
+            nav {
+                display: flex;
+                gap: 8px;
+                overflow-x: auto;
+                padding-bottom: 4px;
+                scrollbar-width: thin;
+            }
+            nav a { flex: 0 0 auto; }
             .content { padding: 20px 16px; }
-            .metric-grid, .grid-2 { grid-template-columns: 1fr; }
+            .metric-grid, .grid-2, .dashboard-grid { grid-template-columns: 1fr; }
             .filter-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 720px) {
+            body {
+                overflow-x: hidden;
+            }
+            .content {
+                overflow-x: auto;
+                overscroll-behavior-x: contain;
+                scrollbar-width: thin;
+            }
+            .content > .topline,
+            .content > .flash,
+            .content > main,
+            .content > form,
+            .content > section {
+                min-width: var(--mobile-content-min);
+            }
+            .page-title {
+                align-items: stretch;
+                flex-direction: column;
+            }
+            h1 { font-size: 26px; }
+            .metric-grid.dashboard-swipe {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .dashboard-card-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .swipe-grid {
+                display: grid;
+                grid-auto-columns: minmax(172px, calc((var(--mobile-content-min) - 12px) / 2));
+                grid-auto-flow: column;
+                grid-template-columns: none !important;
+                gap: 12px;
+                overflow-x: auto;
+                padding-bottom: 8px;
+                scroll-snap-type: x proximity;
+                scrollbar-width: thin;
+            }
+            .swipe-grid > .metric {
+                scroll-snap-align: start;
+                min-width: 0;
+            }
+            .metric {
+                padding: 16px;
+            }
+            .metric span {
+                line-height: 1.35;
+                white-space: normal;
+                overflow-wrap: keep-all;
+            }
+            .metric strong { font-size: 30px; }
+            .pill {
+                max-width: 100%;
+                justify-content: center;
+                line-height: 1.35;
+                white-space: normal;
+                overflow-wrap: anywhere;
+                text-align: center;
+            }
+            .detail-grid { grid-template-columns: 1fr; }
+            .inline-form {
+                align-items: stretch;
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -336,6 +427,7 @@
         <nav>
             <a th:href="@{/admin}" th:classappend="${active == 'dashboard'} ? 'active'">대시보드</a>
             <a th:href="@{/admin/user/users}" th:classappend="${active == 'users'} ? 'active'">사용자</a>
+            <a th:href="@{/admin/student/students}" th:classappend="${active == 'students'} ? 'active'">학생</a>
             <a th:href="@{/admin/channel/channels}" th:classappend="${active == 'channels'} ? 'active'">채널</a>
             <a th:href="@{/admin/post/posts}" th:classappend="${active == 'posts'} ? 'active'">게시글</a>
             <a th:href="@{/admin/department/departments}" th:classappend="${active == 'departments'} ? 'active'">부서</a>
@@ -359,6 +451,12 @@
         <th:block th:replace="${content}"></th:block>
     </div>
     <script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+}
+
 document.querySelectorAll('.permission-form').forEach((form) => {
     const permissionSelect = form.querySelector('select[name="permissionKey"]');
     const scopeSelect = form.querySelector('select[name="scopeTarget"]');

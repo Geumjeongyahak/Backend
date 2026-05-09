@@ -15,10 +15,13 @@ import geumjeongyahak.domain.channel.service.ChannelProxyService;
 import geumjeongyahak.domain.post.config.PostProperties;
 import geumjeongyahak.domain.post.entity.Post;
 import geumjeongyahak.domain.post.event.PostChangedEvent;
+import geumjeongyahak.domain.post.event.PostDeletedEvent;
 import geumjeongyahak.domain.post.exception.PostErrorCode;
 import geumjeongyahak.domain.post.enums.PostStatus;
 import geumjeongyahak.domain.post.repository.PostRepository;
 import geumjeongyahak.domain.post.repository.PostSpecs;
+import geumjeongyahak.domain.post.repository.PostAttachmentRepository;
+import geumjeongyahak.domain.post.repository.PostFileRepository;
 import geumjeongyahak.domain.post.v1.dto.request.CreatePostRequest;
 import geumjeongyahak.domain.post.v1.dto.request.PostSearchRequest;
 import geumjeongyahak.domain.post.v1.dto.request.UpdatePostRequest;
@@ -30,6 +33,10 @@ import geumjeongyahak.domain.users.service.UserProxyService;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
 import org.springframework.data.domain.Pageable;
 
 @Slf4j
@@ -43,6 +50,9 @@ public class PostCrudService {
     private final PostSearchSpecificationBuilder postSearchSpecificationBuilder;
     private final EventPublisher eventPublisher;
     private final PostProperties postProperties;
+    private final PostFileRepository postFileRepository;
+    private final PostAttachmentRepository postAttachmentRepository;
+    private final PostContentImageCleanupService postContentImageCleanupService;
 
     @Transactional
     public PostDetailResponse createPost(Long channelId, CustomUserDetails userDetails, CreatePostRequest request) {
@@ -137,6 +147,7 @@ public class PostCrudService {
         }
 
         postRepository.save(post);
+        postContentImageCleanupService.deleteUnusedImages(postId, post.getContentHtml());
         publishPostChangedEvent(channelId);
         return reloadForResponse(channelId, postId);
     }
@@ -144,9 +155,29 @@ public class PostCrudService {
     @Transactional
     public void deletePost(Long channelId, CustomUserDetails userDetails, Long postId) {
         Post post = getPostWithoutDeleted(channelId, postId);
+        Set<UUID> unreferencedFileIds = findUnreferencedFileIds(postId);
+
         post.delete();
         postRepository.save(post);
         publishPostChangedEvent(channelId);
+        eventPublisher.publish(new PostDeletedEvent(postId, unreferencedFileIds));
+    }
+
+    private Set<UUID> findUnreferencedFileIds(Long postId) {
+        Set<UUID> fileIds = new HashSet<>();
+        fileIds.addAll(postFileRepository.findFileIdsByPostId(postId));
+        fileIds.addAll(postAttachmentRepository.findFileIdsByPostId(postId));
+
+        if (fileIds.isEmpty()) {
+            return Set.of();
+        }
+
+        Set<UUID> referencedFileIds = new HashSet<>();
+        referencedFileIds.addAll(postFileRepository.findReferencedFileIdsByFileIdInAndPostIdNot(fileIds, postId));
+        referencedFileIds.addAll(postAttachmentRepository.findReferencedFileIdsByFileIdInAndPostIdNot(fileIds, postId));
+
+        fileIds.removeAll(referencedFileIds);
+        return fileIds;
     }
 
     private PostDetailResponse reloadForResponse(Long channelId, Long postId) {

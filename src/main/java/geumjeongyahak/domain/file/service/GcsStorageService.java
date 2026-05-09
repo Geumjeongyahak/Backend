@@ -66,11 +66,13 @@ public class GcsStorageService implements StorageService {
     }
 
     @Override
-    public void delete(String path) {
+    public boolean delete(String path) {
         try {
             storage.delete(bucketName, path);
+            return true;
         } catch (RuntimeException exception) {
             log.warn("GCS 파일 삭제 실패: path={}", path, exception);
+            return false;
         }
     }
 

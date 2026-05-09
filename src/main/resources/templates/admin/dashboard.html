@@ -11,10 +11,14 @@
             </div>
         </div>
 
-        <section class="metric-grid">
+        <section class="metric-grid dashboard-swipe swipe-grid">
             <a class="metric" th:href="@{/admin/user/users}">
                 <span>사용자</span>
                 <strong th:text="${summary.userCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/student/students}">
+                <span>학생</span>
+                <strong th:text="${summary.studentCount}">0</strong>
             </a>
             <a class="metric" th:href="@{/admin/department/departments}">
                 <span>부서</span>
@@ -30,15 +34,19 @@
             </a>
         </section>
 
-        <div class="grid-2" style="grid-template-columns: 1fr 1fr; gap: 24px;">
+        <div class="dashboard-grid">
             <section class="panel">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
                     <h2 style="margin: 0;">사용자 및 권한 관리</h2>
                 </div>
-                <div class="metric-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="dashboard-card-grid">
                     <a class="metric" th:href="@{/admin/user/users}">
                         <span>사용자 관리</span>
                         <p style="font-size: 13px; margin: 4px 0 0;">전체 사용자 및 권한 조회/수정</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/student/students}">
+                        <span>학생 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">학생 정보와 소속 분반 관리</p>
                     </a>
                     <a class="metric" th:href="@{/admin/department/departments}">
                         <span>부서 관리</span>
@@ -51,7 +59,7 @@
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
                     <h2 style="margin: 0;">게시판 및 교육 운영</h2>
                 </div>
-                <div class="metric-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="dashboard-card-grid">
                     <a class="metric" th:href="@{/admin/channel/channels}">
                         <span>채널 관리</span>
                         <p style="font-size: 13px; margin: 4px 0 0;">소통 채널 및 게시판 설정</p>
@@ -72,7 +80,7 @@
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
                 <h2 style="margin: 0;">결재 및 행정 지원</h2>
             </div>
-            <div class="metric-grid">
+            <div class="metric-grid dashboard-swipe swipe-grid">
                 <a class="metric" th:href="@{/admin/request/purchase/purchase-requests}">
                     <span>전체 구매 요청</span>
                     <p style="font-size: 13px; margin: 4px 0 0;">물품 구매 요청 이력 확인</p>

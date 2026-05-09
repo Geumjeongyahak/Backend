@@ -105,7 +105,7 @@ public class WebSecurityConfig {
                 // 관리자 로그인 페이지로 redirect 용
                 .requestMatchers(HttpMethod.GET, "/").permitAll()
                 // 정적 리소스 및 문서/헬스체크
-                .requestMatchers("/favicon.ico", "/icons/**", "/site.webmanifest", "/actuator/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/swagger-ui").permitAll()
+                .requestMatchers("/favicon.ico", "/sw.js", "/icons/**", "/site.webmanifest", "/actuator/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/swagger-ui").permitAll()
                 // 인증 API (로그인, 회원가입, 토큰 재발급, 로그아웃)
                 .requestMatchers("/api/v1/auth/login", "/api/v1/auth/signup", "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                 .requestMatchers("/api/v1/auth/google/**").permitAll()

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('학생 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>학생</h1>
+                <p>이름, 상태, 소속 분반 기준으로 학생 정보를 조회합니다.</p>
+            </div>
+            <a class="button" th:href="@{/admin/student/students/new}">학생 등록</a>
+        </div>
+
+        <form class="panel filter-grid" th:action="@{/admin/student/students}" method="get">
+            <label>검색어
+                <input name="name" th:value="${filter.name}" placeholder="학생 이름">
+            </label>
+            <label>상태
+                <select name="status">
+                    <option value="">전체</option>
+                    <option th:each="status : ${studentStatuses}" th:value="${status.name()}" th:text="${status.name()}" th:selected="${filter.status == status}">ENROLLED</option>
+                </select>
+            </label>
+            <label>분반
+                <select name="classroomId">
+                    <option value="">전체</option>
+                    <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}" th:selected="${filter.classroomId == classroom.id}">분반</option>
+                </select>
+            </label>
+            <label>페이지 크기
+                <select name="size">
+                    <option value="10" th:selected="${studentsPage.size == 10}">10</option>
+                    <option value="20" th:selected="${studentsPage.size == 20}">20</option>
+                    <option value="50" th:selected="${studentsPage.size == 50}">50</option>
+                    <option value="100" th:selected="${studentsPage.size == 100}">100</option>
+                </select>
+            </label>
+            <label>정렬
+                <select name="sort">
+                    <option value="name,ASC" th:selected="${filter.sort == null || filter.sort == 'name,ASC'}">이름 오름차순</option>
+                    <option value="name,DESC" th:selected="${filter.sort == 'name,DESC'}">이름 내림차순</option>
+                    <option value="classroomName,ASC" th:selected="${filter.sort == 'classroomName,ASC'}">분반 오름차순</option>
+                    <option value="status,ASC" th:selected="${filter.sort == 'status,ASC'}">상태 오름차순</option>
+                    <option value="id,DESC" th:selected="${filter.sort == 'id,DESC'}">최근 등록순</option>
+                </select>
+            </label>
+            <button class="button" type="submit">조회</button>
+            <a class="reset-link" th:href="@{/admin/student/students}">초기화</a>
+        </form>
+
+        <section class="panel table-panel">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>이름</th>
+                        <th>상태</th>
+                        <th>분반</th>
+                        <th>연락처</th>
+                        <th>설명</th>
+                        <th>운영</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="student : ${studentsPage.content}">
+                        <td th:text="${student.id}">1</td>
+                        <td><a class="link" th:href="@{/admin/student/students/{studentId}(studentId=${student.id})}" th:text="${student.name}">홍길동</a></td>
+                        <td><span class="pill" th:text="${student.status}">ENROLLED</span></td>
+                        <td><a class="link" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${student.classroomId})}" th:text="${student.classroomName}">벚꽃반</a></td>
+                        <td th:text="${student.phoneNumber ?: '-'}">010</td>
+                        <td th:text="${student.description ?: '-'}">비고</td>
+                        <td><a class="button secondary" th:href="@{/admin/student/students/{studentId}(studentId=${student.id})}">상세</a></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(studentsPage.content)}">
+                        <td colspan="7" class="empty">등록된 학생이 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pager">
+                <span th:text="|총 ${studentsPage.totalElements}명 · ${studentsPage.page + 1}/${studentsPage.totalPages == 0 ? 1 : studentsPage.totalPages} 페이지|">총 0명</span>
+                <div>
+                    <a class="reset-link" th:classappend="${!studentsPage.hasPrevious()} ? 'disabled'" th:href="@{/admin/student/students(name=${filter.name},status=${filter.status},classroomId=${filter.classroomId},size=${studentsPage.size},sort=${filter.sort},page=${studentsPage.previousPage()})}">이전</a>
+                    <a class="reset-link" th:classappend="${!studentsPage.hasNext()} ? 'disabled'" th:href="@{/admin/student/students(name=${filter.name},status=${filter.status},classroomId=${filter.classroomId},size=${studentsPage.size},sort=${filter.sort},page=${studentsPage.nextPage()})}">다음</a>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>
