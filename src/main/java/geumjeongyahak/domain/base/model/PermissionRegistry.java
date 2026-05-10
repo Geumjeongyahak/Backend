@@ -30,6 +30,8 @@ public class PermissionRegistry {
             ActionType.WRITE, ActionType.MANAGE);
         allow(ResourceType.SUBJECT, PermissionScope.GLOBAL_ONLY,
             ActionType.WRITE, ActionType.MANAGE);
+        allow(ResourceType.LESSON, PermissionScope.GLOBAL_ONLY,
+            ActionType.READ, ActionType.WRITE, ActionType.MANAGE);
         allow(ResourceType.CHANNEL, PermissionScope.BOTH,
             ActionType.READ, ActionType.WRITE, ActionType.MANAGE);
         allow(ResourceType.PURCHASE_REQUEST, PermissionScope.GLOBAL_ONLY,
@@ -39,6 +41,7 @@ public class PermissionRegistry {
         RESOURCE_LABELS.put(ResourceType.SUBJECT, "과목");
         RESOURCE_LABELS.put(ResourceType.STUDENT, "학생");
         RESOURCE_LABELS.put(ResourceType.DEPARTMENT, "부서");
+        RESOURCE_LABELS.put(ResourceType.LESSON, "수업");
         RESOURCE_LABELS.put(ResourceType.USER, "사용자");
         RESOURCE_LABELS.put(ResourceType.PURCHASE_REQUEST, "구입 요청");
 

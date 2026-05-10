@@ -12,6 +12,7 @@ public enum ResourceType {
     SUBJECT("subject"),
     STUDENT("student"),
     DEPARTMENT("department"),
+    LESSON("lesson"),
     USER("user"),
     PURCHASE_REQUEST("purchase-request");
 
