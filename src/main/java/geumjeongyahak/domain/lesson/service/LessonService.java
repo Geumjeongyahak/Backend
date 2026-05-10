@@ -15,6 +15,7 @@ import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.enums.TeacherAttendanceStatus;
 import geumjeongyahak.domain.lesson.exception.InvalidLessonScheduleException;
+import geumjeongyahak.domain.lesson.exception.InvalidLessonStatusTransitionException;
 import geumjeongyahak.domain.lesson.exception.LessonDuplicateException;
 import geumjeongyahak.domain.lesson.exception.LessonNotFoundException;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
@@ -239,6 +240,7 @@ public class LessonService {
             log.warn("수업 상태 변경 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
             return new LessonNotFoundException(lessonId);
         });
+        validateLessonStatusTransition(lesson.getStatus(), status);
         lesson.updateStatus(status);
         log.debug("수업 상태 변경 완료 (status={})", status);
         return LessonDetailResponse.from(lesson);
@@ -332,6 +334,19 @@ public class LessonService {
             && teacher.getRole() != RoleType.ADMIN) {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT, "봉사자, 매니저 또는 관리자 사용자만 교사로 배정할 수 있습니다.");
         }
+    }
+
+    private void validateLessonStatusTransition(LessonStatus currentStatus, LessonStatus nextStatus) {
+        if (currentStatus == nextStatus) {
+            return;
+        }
+
+        if (currentStatus == LessonStatus.SCHEDULED
+            && (nextStatus == LessonStatus.COMPLETED || nextStatus == LessonStatus.CANCELED)) {
+            return;
+        }
+
+        throw new InvalidLessonStatusTransitionException(currentStatus, nextStatus);
     }
 
     /**
