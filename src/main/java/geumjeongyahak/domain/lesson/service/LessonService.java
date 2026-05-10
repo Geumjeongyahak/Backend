@@ -317,8 +317,12 @@ public class LessonService {
     @Transactional
     public void applyTeacherExcused(Long lessonId) {
         log.debug("교사 출석 공결 처리 (lessonId={})", lessonId);
-        Lesson lesson = lessonRepository.findById(lessonId)
-            .orElseThrow(() -> new LessonNotFoundException(lessonId));
+        Optional<Lesson> lessonOpt = findActiveLessonForEvent(lessonId, "결석 승인");
+        if (lessonOpt.isEmpty()) {
+            return;
+        }
+
+        Lesson lesson = lessonOpt.get();
         lesson.updateTeacherAttendance(TeacherAttendanceStatus.EXCUSED);
     }
 
@@ -336,12 +340,28 @@ public class LessonService {
     @Transactional
     public void applyTeacherExchange(Long lessonId, Long newTeacherId) {
         log.debug("담당 교사 교환 처리 (lessonId={}, newTeacherId={})", lessonId, newTeacherId);
-        Lesson lesson = lessonRepository.findById(lessonId)
-            .orElseThrow(() -> new LessonNotFoundException(lessonId));
+        Optional<Lesson> lessonOpt = findActiveLessonForEvent(lessonId, "수업 교환 수락");
+        if (lessonOpt.isEmpty()) {
+            return;
+        }
+
+        Lesson lesson = lessonOpt.get();
         User newTeacher = userRepository.findById(newTeacherId)
             .orElseThrow(() -> new UserNotFoundException(newTeacherId));
 
         lesson.changeTeacher(newTeacher);
+    }
+
+    private Optional<Lesson> findActiveLessonForEvent(Long lessonId, String eventName) {
+        Lesson lesson = lessonRepository.findById(lessonId)
+            .orElseThrow(() -> new LessonNotFoundException(lessonId));
+
+        if (lesson.getIsDeleted()) {
+            log.warn("{} 이벤트 처리 스킵 - 삭제된 수업입니다. lessonId={}", eventName, lessonId);
+            return Optional.empty();
+        }
+
+        return Optional.of(lesson);
     }
 
     @Transactional
