@@ -43,10 +43,37 @@ Lesson 도메인은 다음 권한 코드를 사용합니다.
 
 - 목록 조회는 `from`, `to` 기간 필터를 사용합니다.
 - 기간은 시작일과 종료일을 모두 포함합니다.
-- 날짜 범위는 최대 31일입니다.
+- 날짜 범위는 최대 42일입니다.
 - `from`은 `to`보다 이후일 수 없습니다.
 - 목록은 수업 날짜 오름차순, 교시 오름차순으로 정렬됩니다.
 - 삭제된 수업은 목록, 상세, 내 수업 조회에서 제외됩니다.
+
+캘린더 뷰 사용 방식:
+
+- 주간 뷰는 해당 주의 시작일과 종료일을 `from`, `to`로 전달합니다.
+- 월간 뷰는 월간 캘린더 그리드에 노출되는 시작일과 종료일을 `from`, `to`로 전달합니다.
+- 월간 캘린더가 앞뒤 달 날짜를 포함해 6주 그리드로 표시되는 경우에도 최대 42일 범위 안에서 한 번에 조회할 수 있습니다.
+- 응답은 날짜별로 그룹핑하지 않고 flat list로 반환합니다. 클라이언트는 `date`를 기준으로 캘린더 셀에 배치합니다.
+
+예시:
+
+```http
+GET /api/v1/lessons?from=2026-02-01&to=2026-03-14
+```
+
+```json
+[
+  {
+    "lessonId": 1,
+    "date": "2026-02-03",
+    "period": 1,
+    "startTime": "19:20:00",
+    "endTime": "20:00:00",
+    "teacherName": "홍길동",
+    "subjectName": "한글 기초"
+  }
+]
+```
 
 ## 생성/수정 정책
 
@@ -56,6 +83,46 @@ Lesson 도메인은 다음 권한 코드를 사용합니다.
 - 시작 시간은 종료 시간보다 빨라야 합니다.
 - 동일 교사의 같은 날짜 수업 시간이 겹치면 생성/수정이 실패합니다.
 - Subject 기반 자동 Lesson 생성 중 충돌 날짜를 스킵하는 정책은 이번 Lesson API 정리 범위에서 변경하지 않습니다. 해당 정책 개선은 별도 이슈에서 다룹니다.
+
+수업 생성 요청:
+
+```http
+POST /api/v1/lessons
+Content-Type: application/json
+```
+
+```json
+{
+  "subjectId": 1,
+  "teacherId": 2,
+  "date": "2026-02-20",
+  "startTime": "19:20:00",
+  "endTime": "20:00:00",
+  "period": 1
+}
+```
+
+수업 생성 응답:
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+```
+
+```json
+{
+  "lessonId": 1,
+  "date": "2026-02-20",
+  "period": 1,
+  "startTime": "19:20:00",
+  "endTime": "20:00:00",
+  "status": "SCHEDULED",
+  "teacherAttendance": "ABSENT",
+  "teacherName": "홍길동",
+  "subjectName": "한글 기초",
+  "note": null
+}
+```
 
 ## 상태 정책
 

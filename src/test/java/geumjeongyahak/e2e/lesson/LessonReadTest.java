@@ -90,7 +90,23 @@ public class LessonReadTest extends LessonBaseTest {
     }
 
     @Test
-    @DisplayName("기간 범위 초과(예: 31일 초과) 시 400 Bad Request")
+    @DisplayName("월간 캘린더 그리드 범위(42일) 조회 성공(200 OK)")
+    void getAllLessons_MaxCalendarRange_Success() {
+        createTrackedLessonFixture("read-list-calendar-range", TEACHER_ID, "2042-05-16", "FRIDAY", 5, "2026-03-14", "19:20:00", "20:00:00", 1);
+
+        given()
+            .queryParam("from", "2026-02-01")
+            .queryParam("to", "2026-03-14")
+            .when()
+            .get()
+            .then()
+            .statusCode(200)
+            .body("$", is(notNullValue()))
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("기간 범위 초과(42일 초과) 시 400 Bad Request")
     void getAllLessons_RangeTooLarge_BadRequest() {
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -161,7 +177,7 @@ public class LessonReadTest extends LessonBaseTest {
     void getMyLessons_RangeTooLarge_BadRequest() {
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
-            // (예시) 31일 초과로 요청
+            // 42일 초과로 요청
             .queryParam("from", "2026-02-01")
             .queryParam("to", "2026-03-15")
             .when()
