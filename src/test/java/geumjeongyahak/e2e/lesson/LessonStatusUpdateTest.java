@@ -5,13 +5,14 @@ import static org.hamcrest.Matchers.is;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import geumjeongyahak.domain.auth.enums.RoleType;
 
 @DisplayName("E2E: 수업 상태 변경 테스트")
 public class LessonStatusUpdateTest extends LessonBaseTest {
 
     @Test
-    @DisplayName("수업 상태 변경 성공(200) - 교사(본인 수업) + 재조회로 반영 확인")
-    void updateLessonStatus_Success_MyLesson_ThenGet() {
+    @DisplayName("수업 상태 변경 실패(403) - 교사(본인 수업)")
+    void updateLessonStatus_Forbidden_VolunteerMyLesson() {
         long lessonId = createTrackedLessonFixture(
             "status-my-lesson",
             TEACHER_ID,
@@ -33,24 +34,13 @@ public class LessonStatusUpdateTest extends LessonBaseTest {
             .when()
             .patch("/{lessonId}/status", lessonId)
             .then()
-            .statusCode(200)
-            .body("lessonId", is((int) lessonId))
-            .body("status", is("COMPLETED"));
-
-        // 재조회 - DB 반영 확인
-        given()
-            .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
-            .when()
-            .get("/{lessonId}", lessonId)
-            .then()
-            .statusCode(200)
-            .body("status", is("COMPLETED"))
+            .statusCode(403)
             .log().all();
     }
 
     @Test
-    @DisplayName("수업 상태 변경 실패(404) - 교사(타인 수업)")
-    void updateLessonStatus_Fail_OthersLesson() {
+    @DisplayName("수업 상태 변경 실패(403) - 매니저 역할만 보유")
+    void updateLessonStatus_Forbidden_ManagerWithoutLessonManagePermission() {
         long othersLessonId = createTrackedLessonFixture(
             "status-other-lesson",
             TEACHER2_ID,
@@ -64,7 +54,7 @@ public class LessonStatusUpdateTest extends LessonBaseTest {
         );
 
         given()
-            .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
+            .header(AUTH_HEADER, getAuthHeader(managerAccessToken))
             .contentType("application/json")
             .body("""
                 { "status": "COMPLETED" }
@@ -72,7 +62,7 @@ public class LessonStatusUpdateTest extends LessonBaseTest {
             .when()
             .patch("/{lessonId}/status", othersLessonId)
             .then()
-            .statusCode(404)
+            .statusCode(403)
             .log().all();
     }
 
@@ -107,6 +97,37 @@ public class LessonStatusUpdateTest extends LessonBaseTest {
     }
 
     @Test
+    @DisplayName("수업 상태 변경 성공(200) - lesson:manage:* 권한")
+    void updateLessonStatus_Success_LessonManagePermission() {
+        long lessonId = createTrackedLessonFixture(
+            "status-manage-permission",
+            TEACHER2_ID,
+            "2042-01-10",
+            "FRIDAY",
+            5,
+            "2027-01-10",
+            "19:20:00",
+            "20:00:00",
+            1
+        );
+        String lessonManageToken = createAccessTokenWithPermission("lesson-manage-status", RoleType.VOLUNTEER, "lesson:manage:*");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(lessonManageToken))
+            .contentType("application/json")
+            .body("""
+                { "status": "CANCELED" }
+            """)
+            .when()
+            .patch("/{lessonId}/status", lessonId)
+            .then()
+            .statusCode(200)
+            .body("lessonId", is((int) lessonId))
+            .body("status", is("CANCELED"))
+            .log().all();
+    }
+
+    @Test
     @DisplayName("수업 상태 변경 실패(401) - 인증 없음")
     void updateLessonStatus_Unauthorized() {
         given()
@@ -136,7 +157,7 @@ public class LessonStatusUpdateTest extends LessonBaseTest {
         );
 
         given()
-            .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType("application/json")
             .body("""
                 { }
@@ -145,6 +166,86 @@ public class LessonStatusUpdateTest extends LessonBaseTest {
             .patch("/{lessonId}/status", lessonId)
             .then()
             .statusCode(400)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("완료된 수업을 예정 상태로 되돌릴 수 없다(400)")
+    void updateLessonStatus_InvalidTransition_CompletedToScheduled() {
+        long lessonId = createTrackedLessonFixture(
+            "status-invalid-completed",
+            TEACHER_ID,
+            "2042-01-11",
+            "MONDAY",
+            1,
+            "2027-01-11",
+            "19:20:00",
+            "20:00:00",
+            1
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body("""
+                { "status": "COMPLETED" }
+            """)
+            .when()
+            .patch("/{lessonId}/status", lessonId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body("""
+                { "status": "SCHEDULED" }
+            """)
+            .when()
+            .patch("/{lessonId}/status", lessonId)
+            .then()
+            .statusCode(400)
+            .body("code", is("VAL-06-002"))
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("취소된 수업을 예정 상태로 되돌릴 수 없다(400)")
+    void updateLessonStatus_InvalidTransition_CanceledToScheduled() {
+        long lessonId = createTrackedLessonFixture(
+            "status-invalid-canceled",
+            TEACHER_ID,
+            "2042-01-12",
+            "TUESDAY",
+            2,
+            "2027-01-12",
+            "20:10:00",
+            "20:50:00",
+            2
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body("""
+                { "status": "CANCELED" }
+            """)
+            .when()
+            .patch("/{lessonId}/status", lessonId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body("""
+                { "status": "SCHEDULED" }
+            """)
+            .when()
+            .patch("/{lessonId}/status", lessonId)
+            .then()
+            .statusCode(400)
+            .body("code", is("VAL-06-002"))
             .log().all();
     }
 }

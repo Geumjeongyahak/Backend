@@ -8,6 +8,7 @@ import static org.hamcrest.Matchers.notNullValue;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import geumjeongyahak.domain.auth.enums.RoleType;
 
 @DisplayName("E2E: 학생 출석부 조회 테스트")
 public class StudentAttendanceReadTest extends LessonBaseTest {
@@ -91,6 +92,41 @@ public class StudentAttendanceReadTest extends LessonBaseTest {
             .statusCode(200)
             .body("$", notNullValue())
             .body("size()", greaterThanOrEqualTo(0))
+            .body("studentId", everyItem(notNullValue()))
+            .body("studentName", everyItem(notNullValue()))
+            .body("status", everyItem(notNullValue()))
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("학생 출석부 조회 성공(200 OK) - lesson:read:* 권한")
+    void getStudentAttendances_Success_LessonReadPermission() {
+        long othersLessonId = createTrackedLessonFixtureWithAttendances(
+            "student-read-permission-lesson",
+            TEACHER2_ID,
+            "2042-03-06",
+            "THURSDAY",
+            4,
+            "2027-03-06",
+            "19:20:00",
+            "20:00:00",
+            1,
+            1L, 2L
+        );
+        String lessonReadToken = createAccessTokenWithPermission(
+            "lesson-read-attendance",
+            RoleType.VOLUNTEER,
+            "lesson:read:*"
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(lessonReadToken))
+            .when()
+            .get("/{lessonId}/student-attendances", othersLessonId)
+            .then()
+            .statusCode(200)
+            .body("$", notNullValue())
+            .body("size()", is(2))
             .body("studentId", everyItem(notNullValue()))
             .body("studentName", everyItem(notNullValue()))
             .body("status", everyItem(notNullValue()))

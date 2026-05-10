@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import geumjeongyahak.domain.auth.enums.RoleType;
 
 @DisplayName("E2E: Lesson 생성 테스트")
 public class LessonCreateTest extends LessonBaseTest {
@@ -19,14 +20,33 @@ public class LessonCreateTest extends LessonBaseTest {
     }
 
     @Test
-    @DisplayName("매니저 권한으로 수업 생성 성공(201)")
-    void createLesson_success_manager() {
+    @DisplayName("lesson:write:* 권한으로 수업 생성 성공(201)")
+    void createLesson_success_lessonWritePermission() {
         Long subjectId = createTrackedSubjectAndGetId("매니저 생성");
         Map<String, Object> request = createLessonRequest(
             subjectId, TEACHER2_ID, "2026-02-21", "19:20:00", "20:00:00", 1
         );
 
-        createLessonAndGetId(request, managerAccessToken);
+        String lessonWriteToken = createAccessTokenWithPermission("lesson-write", RoleType.VOLUNTEER, "lesson:write:*");
+        createLessonAndGetId(request, lessonWriteToken);
+    }
+
+    @Test
+    @DisplayName("매니저 역할만으로 수업 생성 실패(403)")
+    void createLesson_forbidden_managerWithoutLessonWritePermission() {
+        Long subjectId = createTrackedSubjectAndGetId("매니저 생성 제한");
+        Map<String, Object> request = createLessonRequest(
+            subjectId, TEACHER2_ID, "2026-02-21", "19:20:00", "20:00:00", 1
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(managerAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .post()
+            .then()
+            .statusCode(403);
     }
 
     @Test
