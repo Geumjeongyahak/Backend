@@ -11,8 +11,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
+    long countByIsDeletedFalse();
+
+    long countByIsDeletedFalseAndDate(LocalDate date);
+
+    long countByStatusAndIsDeletedFalseAndDateBetween(LessonStatus status, LocalDate startDate, LocalDate endDate);
+
     @EntityGraph(attributePaths = {"teacher", "subject"})
     List<Lesson> findAllByIsDeletedFalseAndDateBetweenOrderByDateAscPeriodAsc(LocalDate startDate, LocalDate endDate);
+
+    @EntityGraph(attributePaths = {"teacher", "subject"})
+    List<Lesson> findAllByIsDeletedFalseOrderByDateAscPeriodAsc();
 
     @EntityGraph(attributePaths = {"teacher", "subject"})
     List<Lesson> findAllByTeacherIdAndIsDeletedFalseAndDateBetweenOrderByDateAscPeriodAsc(

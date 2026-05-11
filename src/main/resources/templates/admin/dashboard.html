@@ -32,6 +32,18 @@
                 <span>대기 중 구매 요청</span>
                 <strong th:text="${summary.pendingPurchaseRequestCount}">0</strong>
             </a>
+            <a class="metric" th:href="@{/admin/lesson/lessons}">
+                <span>전체 수업</span>
+                <strong th:text="${summary.lessonCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/lesson/lessons(startDate=${summary.today},endDate=${summary.today})}">
+                <span>오늘 수업</span>
+                <strong th:text="${summary.todayLessonCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/lesson/lessons(startDate=${summary.weekStart},endDate=${summary.weekEnd},status='SCHEDULED')}">
+                <span>이번 주 예정 수업</span>
+                <strong th:text="${summary.weeklyScheduledLessonCount}">0</strong>
+            </a>
         </section>
 
         <div class="dashboard-grid">
@@ -71,6 +83,10 @@
                     <a class="metric" th:href="@{/admin/classroom/classrooms}">
                         <span>분반 관리</span>
                         <p style="font-size: 13px; margin: 4px 0 0;">분반 및 교육 과정 운영</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/lesson/lessons}">
+                        <span>수업 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">수업 일정과 운영 상태 조회</p>
                     </a>
                 </div>
             </section>
