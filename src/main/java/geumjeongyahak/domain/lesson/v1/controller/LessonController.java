@@ -7,7 +7,6 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,10 +24,9 @@ public class LessonController {
 
     private final LessonService lessonService;
 
-    @PreAuthorize("isAuthenticated()")
     @Operation(
         summary = "전체 수업 조회",
-        description = "인증된 사용자가 기간 조건에 해당하는 전체 수업 목록을 조회합니다. "
+        description = "기간 조건에 해당하는 전체 수업 목록을 조회합니다. "
             + "수업 목록은 날짜와 교시 기준으로 정렬되어 반환됩니다. "
             + "조회 API는 side effect 를 발생시키지 않습니다."
     )

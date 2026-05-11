@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.equalTo;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import geumjeongyahak.domain.auth.enums.RoleType;
 
 @DisplayName("E2E: Lesson 부분 수정(PATCH) 테스트")
 public class LessonUpdateTest extends LessonBaseTest {
@@ -36,8 +37,8 @@ public class LessonUpdateTest extends LessonBaseTest {
     }
 
     @Test
-    @DisplayName("매니저: date/startTime/endTime만 부분 수정 성공(200)")
-    void patchLesson_success_manager() {
+    @DisplayName("lesson:manage:* 권한으로 date/startTime/endTime만 부분 수정 성공(200)")
+    void patchLesson_success_lessonManagePermission() {
         Long subjectId = createTrackedSubjectAndGetId("매니저 수정");
         Long lessonId = createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-21", "19:20:00", "20:00:00", 1);
 
@@ -47,8 +48,10 @@ public class LessonUpdateTest extends LessonBaseTest {
             "endTime", "20:10:00"
         );
 
+        String lessonManageToken = createAccessTokenWithPermission("lesson-manage-update", RoleType.VOLUNTEER, "lesson:manage:*");
+
         given()
-            .header(AUTH_HEADER, getAuthHeader(managerAccessToken))
+            .header(AUTH_HEADER, getAuthHeader(lessonManageToken))
             .contentType("application/json")
             .body(patch)
             .when()
@@ -57,6 +60,24 @@ public class LessonUpdateTest extends LessonBaseTest {
             .statusCode(200)
             .body("lessonId", equalTo(lessonId.intValue()))
             .body("date", equalTo("2026-02-22"));
+    }
+
+    @Test
+    @DisplayName("매니저 역할만으로 수업 부분 수정 실패(403)")
+    void patchLesson_forbidden_managerWithoutLessonManagePermission() {
+        Long subjectId = createTrackedSubjectAndGetId("매니저 수정 제한");
+        Long lessonId = createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-21", "19:20:00", "20:00:00", 1);
+
+        Map<String, Object> patch = Map.of("period", 2);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(managerAccessToken))
+            .contentType("application/json")
+            .body(patch)
+            .when()
+            .patch("/{lessonId}", lessonId)
+            .then()
+            .statusCode(403);
     }
 
     @Test

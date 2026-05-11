@@ -9,7 +9,7 @@ import geumjeongyahak.domain.lesson.v1.dto.request.LessonRangeRequest;
 
 public class LessonRangeValidator implements ConstraintValidator<ValidLessonRange, LessonRangeRequest> {
 
-    private static final long MAX_RANGE_DAYS = 31;
+    private static final long MAX_RANGE_DAYS = 42;
 
     @Override
     public boolean isValid(LessonRangeRequest value, ConstraintValidatorContext context) {

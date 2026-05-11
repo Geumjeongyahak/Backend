@@ -15,11 +15,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import geumjeongyahak.common.security.service.CustomUserDetails;
+import geumjeongyahak.common.security.service.DomainPermissionChecker;
+import geumjeongyahak.domain.base.enums.ActionType;
+import geumjeongyahak.domain.base.enums.ResourceType;
 import geumjeongyahak.domain.lesson.service.LessonService;
 import geumjeongyahak.domain.lesson.service.StudentAttendanceService;
 import geumjeongyahak.domain.lesson.v1.dto.request.LessonRangeRequest;
 import geumjeongyahak.domain.lesson.v1.dto.request.UpdateLessonNoteRequest;
-import geumjeongyahak.domain.lesson.v1.dto.request.UpdateLessonStatusRequest;
 import geumjeongyahak.domain.lesson.v1.dto.request.UpdateStudentAttendancesRequest;
 import geumjeongyahak.domain.lesson.v1.dto.request.UpdateTeacherAttendanceRequest;
 import geumjeongyahak.domain.lesson.v1.dto.response.LessonDetailResponse;
@@ -36,10 +38,16 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/v1/lessons")
 @RequiredArgsConstructor
 public class LessonManageController {
+    private static final String TEACHER_OR_LESSON_READ_ACCESS =
+        "hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN') or hasAuthority('lesson:read:*')";
+    private static final String ASSIGNABLE_TEACHER_OR_LESSON_MANAGE_ACCESS =
+        "hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN') or hasAuthority('lesson:manage:*')";
+
     private final LessonService lessonService;
     private final StudentAttendanceService studentAttendanceService;
+    private final DomainPermissionChecker domainPermissionChecker;
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_LESSON_READ_ACCESS)
     @Operation(summary = "내 수업 목록 조회", description = "내 수업 목록을 조회합니다.")
     @GetMapping("/me")
     public ResponseEntity<List<LessonSummaryResponse>> getMyLessons(
@@ -51,7 +59,7 @@ public class LessonManageController {
         return ResponseEntity.ok(responses);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_LESSON_READ_ACCESS)
     @Operation(summary = "수업 상세 조회", description = "수업 상세 정보를 조회합니다.")
     @GetMapping("/{lessonId}")
     public ResponseEntity<LessonDetailResponse> getLessonDetail(
@@ -59,12 +67,16 @@ public class LessonManageController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("GET /api/v1/lessons/{} - 수업 상세 조회 요청", lessonId);
-        boolean isAdmin = userDetails.isAdmin();
-        LessonDetailResponse response = lessonService.getLessonDetail(userDetails.getUserId(), lessonId, isAdmin);
+        boolean canAccessAnyLesson = canReadAnyLesson(userDetails);
+        LessonDetailResponse response = lessonService.getLessonDetail(
+            userDetails.getUserId(),
+            lessonId,
+            canAccessAnyLesson
+        );
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_LESSON_READ_ACCESS)
     @Operation(summary = "학생 출석부 조회", description = "수업의 학생 출석부를 조회합니다.")
     @GetMapping("/{lessonId}/student-attendances")
     public ResponseEntity<List<StudentAttendanceResponse>> getStudentAttendances(
@@ -72,16 +84,16 @@ public class LessonManageController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("GET /api/v1/lessons/{}/student-attendances - 학생 출석부 조회 요청", lessonId);
-        boolean isAdmin = userDetails.isAdmin();
+        boolean canAccessAnyLesson = canReadAnyLesson(userDetails);
         List<StudentAttendanceResponse> response = studentAttendanceService.getStudentAttendances(
             userDetails.getUserId(),
             lessonId,
-            isAdmin
+            canAccessAnyLesson
         );
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_LESSON_READ_ACCESS)
     @Operation(summary = "수업 노트 조회", description = "수업 노트를 조회합니다.")
     @GetMapping("/{lessonId}/note")
     public ResponseEntity<LessonNoteResponse> getNote(
@@ -89,15 +101,15 @@ public class LessonManageController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("GET /api/v1/lessons/{}/note - 수업 노트 조회 요청", lessonId);
-        boolean isAdmin = userDetails.isAdmin();
+        boolean canAccessAnyLesson = canReadAnyLesson(userDetails);
 
         LessonNoteResponse response = lessonService.getNote(
-            userDetails.getUserId(), lessonId, isAdmin
+            userDetails.getUserId(), lessonId, canAccessAnyLesson
         );
         return ResponseEntity.ok(response);
     }
 
-      @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(ASSIGNABLE_TEACHER_OR_LESSON_MANAGE_ACCESS)
     @Operation(summary = "교사 출석 처리", description = "교사 출석 상태를 처리합니다.")
     @PatchMapping("/{lessonId}/teacher-attendance")
     public ResponseEntity<LessonDetailResponse> updateLessonAttendance(
@@ -107,17 +119,17 @@ public class LessonManageController {
     ) {
         log.debug("PATCH /api/v1/lessons/{}/teacher-attendance - 교사 출석 처리 요청 (status={})",
             lessonId, request.status());
-        boolean isAdmin = userDetails.isAdmin();
+        boolean canAccessAnyLesson = canManageAnyLesson(userDetails);
         LessonDetailResponse response = lessonService.updateTeacherAttendance(
             userDetails.getUserId(),
             lessonId,
             request.status(),
-            isAdmin
+            canAccessAnyLesson
         );
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(ASSIGNABLE_TEACHER_OR_LESSON_MANAGE_ACCESS)
     @Operation(summary = "학생 출석 처리", description = "학생 출석 상태를 처리합니다.")
     @PatchMapping("/{lessonId}/student-attendances")
     public ResponseEntity<List<StudentAttendanceResponse>> updateStudentAttendance(
@@ -126,36 +138,17 @@ public class LessonManageController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PATCH /api/v1/lessons/{}/student-attendances - 학생 출석 처리 요청", lessonId);
-        boolean isAdmin = userDetails.isAdmin();
+        boolean canAccessAnyLesson = canManageAnyLesson(userDetails);
         List<StudentAttendanceResponse> response = studentAttendanceService.updateStudentAttendances(
             userDetails.getUserId(),
             lessonId,
             request,
-            isAdmin
+            canAccessAnyLesson
         );
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "수업 상태 변경", description = "수업 상태를 변경합니다.")
-    @PatchMapping("/{lessonId}/status")
-    public ResponseEntity<LessonDetailResponse> updateLessonStatus(
-        @PathVariable Long lessonId,
-        @Valid @RequestBody UpdateLessonStatusRequest request,
-        @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        log.debug("PATCH /api/v1/lessons/{}/status - 수업 상태 변경 요청", lessonId);
-        boolean isAdmin = userDetails.isAdmin();
-        LessonDetailResponse response = lessonService.updateLessonStatus(
-            userDetails.getUserId(),
-            lessonId,
-            request.status(),
-            isAdmin
-        );
-        return ResponseEntity.ok(response);
-    }
-
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(ASSIGNABLE_TEACHER_OR_LESSON_MANAGE_ACCESS)
     @Operation(summary = "수업 노트 업데이트", description = "수업 노트를 업데이트합니다.")
     @PutMapping("/{lessonId}/note")
     public ResponseEntity<LessonNoteResponse> upsertNote(
@@ -164,12 +157,20 @@ public class LessonManageController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PUT /api/v1/lessons/{}/note - 수업 노트 업데이트 요청", lessonId);
-        boolean isAdmin = userDetails.isAdmin();
+        boolean canAccessAnyLesson = canManageAnyLesson(userDetails);
 
         LessonNoteResponse response = lessonService.upsertNote(
-            userDetails.getUserId(), lessonId, request.note(), isAdmin
+            userDetails.getUserId(), lessonId, request.note(), canAccessAnyLesson
         );
         return ResponseEntity.ok(response);
     }
-    
+
+    private boolean canReadAnyLesson(CustomUserDetails userDetails) {
+        return userDetails.isAdminOrManager()
+            || domainPermissionChecker.hasPermission(userDetails, ResourceType.LESSON, ActionType.READ, null);
+    }
+
+    private boolean canManageAnyLesson(CustomUserDetails userDetails) {
+        return domainPermissionChecker.hasPermission(userDetails, ResourceType.LESSON, ActionType.MANAGE, null);
+    }
 }

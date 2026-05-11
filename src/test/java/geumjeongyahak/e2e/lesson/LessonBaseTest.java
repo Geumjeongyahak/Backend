@@ -17,6 +17,9 @@ import geumjeongyahak.domain.lesson.entity.StudentAttendance;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
 import geumjeongyahak.domain.lesson.repository.StudentAttendanceRepository;
 import geumjeongyahak.domain.student.repository.StudentRepository;
+import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.users.entity.UserPermission;
+import geumjeongyahak.domain.users.repository.UserPermissionRepository;
 import geumjeongyahak.e2e.util.TestLessonHelper;
 
 @Tag("lesson")
@@ -42,6 +45,9 @@ public class LessonBaseTest extends BaseE2ETest {
 
     @Autowired
     protected StudentAttendanceRepository studentAttendanceRepository;
+
+    @Autowired
+    protected UserPermissionRepository userPermissionRepository;
 
     @BeforeEach
     @Override
@@ -227,6 +233,17 @@ public class LessonBaseTest extends BaseE2ETest {
             .forEach(studentAttendanceRepository::save);
 
         return lessonId;
+    }
+
+    protected String createAccessTokenWithPermission(
+        String nicknamePrefix,
+        RoleType role,
+        String permissionCode
+    ) {
+        String nickname = nicknamePrefix + System.nanoTime();
+        User user = userTestHelper.createTestUser(nickname, role);
+        userPermissionRepository.save(new UserPermission(user, permissionCode));
+        return userTestHelper.generateAccessTokenByNickname(nickname);
     }
 
     protected void deleteLesson(Long lessonId, String token) {

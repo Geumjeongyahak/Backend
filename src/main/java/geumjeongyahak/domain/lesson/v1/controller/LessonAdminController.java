@@ -16,6 +16,7 @@ import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.lesson.service.LessonService;
 import geumjeongyahak.domain.lesson.v1.dto.request.CreateLessonRequest;
 import geumjeongyahak.domain.lesson.v1.dto.request.UpdateLessonRequest;
+import geumjeongyahak.domain.lesson.v1.dto.request.UpdateLessonStatusRequest;
 import geumjeongyahak.domain.lesson.v1.dto.response.LessonDetailResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,9 +30,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Tag(name = "Lesson", description = "수업 관리 API")
 public class LessonAdminController {
+    private static final String LESSON_WRITE_ACCESS = "hasRole('ADMIN') or hasAuthority('lesson:write:*')";
+    private static final String LESSON_MANAGE_ACCESS = "hasRole('ADMIN') or hasAuthority('lesson:manage:*')";
+
     private final LessonService lessonService;
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('lesson:manage:*')")
+    @PreAuthorize(LESSON_WRITE_ACCESS)
     @Operation(summary = "수업 생성", description = "수업을 생성합니다.")
     @PostMapping
     public ResponseEntity<LessonDetailResponse> createLesson(
@@ -47,7 +51,7 @@ public class LessonAdminController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('lesson:manage:*')")
+    @PreAuthorize(LESSON_MANAGE_ACCESS)
     @Operation(summary = "수업 수정", description = "수업을 수정합니다.")
     @PatchMapping("/{lessonId}")
     public ResponseEntity<LessonDetailResponse> updateLesson(
@@ -58,8 +62,26 @@ public class LessonAdminController {
         LessonDetailResponse response = lessonService.updateLesson(lessonId, request);
         return ResponseEntity.ok(response);
     }
+
+    @PreAuthorize(LESSON_MANAGE_ACCESS)
+    @Operation(summary = "수업 상태 변경", description = "수업 상태를 변경합니다.")
+    @PatchMapping("/{lessonId}/status")
+    public ResponseEntity<LessonDetailResponse> updateLessonStatus(
+        @PathVariable Long lessonId,
+        @Valid @RequestBody UpdateLessonStatusRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/lessons/{}/status - 수업 상태 변경 요청", lessonId);
+        LessonDetailResponse response = lessonService.updateLessonStatus(
+            userDetails.getUserId(),
+            lessonId,
+            request.status(),
+            true
+        );
+        return ResponseEntity.ok(response);
+    }
   
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('lesson:manage:*')")
+    @PreAuthorize(LESSON_MANAGE_ACCESS)
     @Operation(summary = "수업 삭제", description = "수업을 삭제합니다.")
     @DeleteMapping("/{lessonId}")
     public ResponseEntity<Void> deleteLesson(@PathVariable Long lessonId) {

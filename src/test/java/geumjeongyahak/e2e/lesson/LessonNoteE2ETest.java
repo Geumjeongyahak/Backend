@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.notNullValue;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import geumjeongyahak.domain.auth.enums.RoleType;
 
 @DisplayName("E2E: 수업일지(메모) 테스트")
 public class LessonNoteE2ETest extends LessonBaseTest {
@@ -87,6 +88,25 @@ public class LessonNoteE2ETest extends LessonBaseTest {
             .then()
             .statusCode(200)
             .body("note", is("관리자 메모"));
+    }
+
+    @Test
+    @DisplayName("lesson:read:* 권한으로 타인 수업 메모 조회 가능(200)")
+    void getNote_LessonReadPermission_OthersLesson_Success() {
+        long othersLessonId = createIsolatedLesson(3L, "note-read-permission");
+        String lessonReadToken = createAccessTokenWithPermission(
+            "lesson-read-note",
+            RoleType.VOLUNTEER,
+            "lesson:read:*"
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(lessonReadToken))
+            .when()
+            .get("/{lessonId}/note", othersLessonId)
+            .then()
+            .statusCode(200)
+            .body("lessonId", is((int) othersLessonId));
     }
 
     @Test

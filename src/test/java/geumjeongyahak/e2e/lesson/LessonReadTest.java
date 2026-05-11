@@ -9,6 +9,7 @@ import static org.hamcrest.Matchers.notNullValue;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import geumjeongyahak.domain.auth.enums.RoleType;
 
 @DisplayName("E2E: 수업 조회 테스트")
 public class LessonReadTest extends LessonBaseTest {
@@ -56,15 +57,21 @@ public class LessonReadTest extends LessonBaseTest {
     }
 
     @Test
-    @DisplayName("인증 없이 전체 수업 목록 조회 실패(401 Unauthorized)")
-    void getAllLessons_Unauthorized() {
+    @DisplayName("인증 없이 전체 수업 목록 조회 성공(200 OK)")
+    void getAllLessons_PublicSuccess() {
+        createTrackedLessonFixture("read-list-public", TEACHER_ID, "2042-05-15", "THURSDAY", 4, "2027-05-15", "19:20:00", "20:00:00", 1);
+
         given()
-            .queryParam("from", "2026-02-01")
-            .queryParam("to", "2026-12-31")
+            .queryParam("from", "2027-05-01")
+            .queryParam("to", "2027-05-31")
             .when()
             .get()
             .then()
-            .statusCode(401)
+            .statusCode(200)
+            .body("$", is(notNullValue()))
+            .body("lessonId", everyItem(notNullValue()))
+            .body("teacherName", everyItem(notNullValue()))
+            .body("subjectName", everyItem(notNullValue()))
             .log().all();
     }
 
@@ -83,7 +90,23 @@ public class LessonReadTest extends LessonBaseTest {
     }
 
     @Test
-    @DisplayName("기간 범위 초과(예: 31일 초과) 시 400 Bad Request")
+    @DisplayName("월간 캘린더 그리드 범위(42일) 조회 성공(200 OK)")
+    void getAllLessons_MaxCalendarRange_Success() {
+        createTrackedLessonFixture("read-list-calendar-range", TEACHER_ID, "2042-05-16", "FRIDAY", 5, "2026-03-14", "19:20:00", "20:00:00", 1);
+
+        given()
+            .queryParam("from", "2026-02-01")
+            .queryParam("to", "2026-03-14")
+            .when()
+            .get()
+            .then()
+            .statusCode(200)
+            .body("$", is(notNullValue()))
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("기간 범위 초과(42일 초과) 시 400 Bad Request")
     void getAllLessons_RangeTooLarge_BadRequest() {
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -154,7 +177,7 @@ public class LessonReadTest extends LessonBaseTest {
     void getMyLessons_RangeTooLarge_BadRequest() {
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
-            // (예시) 31일 초과로 요청
+            // 42일 초과로 요청
             .queryParam("from", "2026-02-01")
             .queryParam("to", "2026-03-15")
             .when()
@@ -225,6 +248,38 @@ public class LessonReadTest extends LessonBaseTest {
             .body("period", anyOf(is(1), is(2), is(3)))
             .body("status", notNullValue())
             .body("teacherAttendance", notNullValue())
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("lesson:read:* 권한으로 타인 수업 상세 조회 가능(200 OK)")
+    void getLessonDetail_LessonReadPermission_CanAccessOthersLesson() {
+        long othersLessonId = createTrackedLessonFixture(
+            "read-detail-permission",
+            TEACHER2_ID,
+            "2042-07-10",
+            "THURSDAY",
+            4,
+            "2027-07-10",
+            "19:20:00",
+            "20:00:00",
+            1
+        );
+        String lessonReadToken = createAccessTokenWithPermission(
+            "lesson-read-detail",
+            RoleType.VOLUNTEER,
+            "lesson:read:*"
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(lessonReadToken))
+            .when()
+            .get("/{lessonId}", othersLessonId)
+            .then()
+            .statusCode(200)
+            .body("lessonId", is((int) othersLessonId))
+            .body("teacherName", notNullValue())
+            .body("subjectName", notNullValue())
             .log().all();
     }
 

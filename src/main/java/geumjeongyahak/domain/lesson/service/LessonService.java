@@ -15,6 +15,7 @@ import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.enums.TeacherAttendanceStatus;
 import geumjeongyahak.domain.lesson.exception.InvalidLessonScheduleException;
+import geumjeongyahak.domain.lesson.exception.InvalidLessonStatusTransitionException;
 import geumjeongyahak.domain.lesson.exception.LessonDuplicateException;
 import geumjeongyahak.domain.lesson.exception.LessonNotFoundException;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
@@ -239,6 +240,7 @@ public class LessonService {
             log.warn("수업 상태 변경 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
             return new LessonNotFoundException(lessonId);
         });
+        validateLessonStatusTransition(lesson.getStatus(), status);
         lesson.updateStatus(status);
         log.debug("수업 상태 변경 완료 (status={})", status);
         return LessonDetailResponse.from(lesson);
@@ -317,8 +319,12 @@ public class LessonService {
     @Transactional
     public void applyTeacherExcused(Long lessonId) {
         log.debug("교사 출석 공결 처리 (lessonId={})", lessonId);
-        Lesson lesson = lessonRepository.findById(lessonId)
-            .orElseThrow(() -> new LessonNotFoundException(lessonId));
+        Optional<Lesson> lessonOpt = findActiveLessonForEvent(lessonId, "결석 승인");
+        if (lessonOpt.isEmpty()) {
+            return;
+        }
+
+        Lesson lesson = lessonOpt.get();
         lesson.updateTeacherAttendance(TeacherAttendanceStatus.EXCUSED);
     }
 
@@ -330,18 +336,47 @@ public class LessonService {
         }
     }
 
+    private void validateLessonStatusTransition(LessonStatus currentStatus, LessonStatus nextStatus) {
+        if (currentStatus == nextStatus) {
+            return;
+        }
+
+        if (currentStatus == LessonStatus.SCHEDULED
+            && (nextStatus == LessonStatus.COMPLETED || nextStatus == LessonStatus.CANCELED)) {
+            return;
+        }
+
+        throw new InvalidLessonStatusTransitionException(currentStatus, nextStatus);
+    }
+
     /**
      * 수업 교환 제안 수락 이벤트 처리용 - 대상 수업의 담당 교사를 변경한다.
      */
     @Transactional
     public void applyTeacherExchange(Long lessonId, Long newTeacherId) {
         log.debug("담당 교사 교환 처리 (lessonId={}, newTeacherId={})", lessonId, newTeacherId);
-        Lesson lesson = lessonRepository.findById(lessonId)
-            .orElseThrow(() -> new LessonNotFoundException(lessonId));
+        Optional<Lesson> lessonOpt = findActiveLessonForEvent(lessonId, "수업 교환 수락");
+        if (lessonOpt.isEmpty()) {
+            return;
+        }
+
+        Lesson lesson = lessonOpt.get();
         User newTeacher = userRepository.findById(newTeacherId)
             .orElseThrow(() -> new UserNotFoundException(newTeacherId));
 
         lesson.changeTeacher(newTeacher);
+    }
+
+    private Optional<Lesson> findActiveLessonForEvent(Long lessonId, String eventName) {
+        Lesson lesson = lessonRepository.findById(lessonId)
+            .orElseThrow(() -> new LessonNotFoundException(lessonId));
+
+        if (lesson.getIsDeleted()) {
+            log.warn("{} 이벤트 처리 스킵 - 삭제된 수업입니다. lessonId={}", eventName, lessonId);
+            return Optional.empty();
+        }
+
+        return Optional.of(lesson);
     }
 
     @Transactional
