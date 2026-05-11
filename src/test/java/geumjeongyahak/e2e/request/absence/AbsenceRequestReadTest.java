@@ -11,7 +11,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.request.repository.AbsenceRequestRepository;
+import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.users.entity.UserPermission;
+import geumjeongyahak.domain.users.repository.UserPermissionRepository;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 
 /**
@@ -28,11 +32,15 @@ class AbsenceRequestReadTest extends RequestBaseTest {
     @Autowired
     private AbsenceRequestRepository absenceRequestRepository;
 
+    @Autowired
+    private UserPermissionRepository userPermissionRepository;
+
     private Long subjectId;
     private Long lessonIdForVolunteer1;
     private Long lessonIdForVolunteer2;
     private Long requestIdByVolunteer1;
     private Long requestIdByVolunteer2;
+    private String readPermissionToken;
 
     /** 각 테스트마다 독립 수업 2개 + 요청 2개(각 봉사자 1개씩) 생성 */
     @BeforeEach
@@ -49,6 +57,13 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             getAuthHeader(volunteerToken), lessonIdForVolunteer1, "봉사자1 결석 사유");
         requestIdByVolunteer2 = createAbsenceRequest(
             getAuthHeader(volunteer2Token), lessonIdForVolunteer2, "봉사자2 결석 사유");
+
+        User readPermissionUser = userTestHelper.createTestUser("absence-reader", RoleType.GUEST);
+        userPermissionRepository.findByUserIdAndPermissionCode(
+                readPermissionUser.getId(), "absence-request:read:*")
+            .orElseGet(() -> userPermissionRepository.save(
+                new UserPermission(readPermissionUser, "absence-request:read:*")));
+        readPermissionToken = userTestHelper.generateAccessTokenByNickname("absence-reader");
     }
 
     @AfterEach
@@ -79,11 +94,27 @@ class AbsenceRequestReadTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("매니저 전체 목록 조회 → 두 요청 모두 포함")
-    void getList_asManager_seesAllRequests() {
+    @DisplayName("매니저 목록 조회 → 본인 요청 범위만 조회")
+    void getList_asManager_seesOnlyOwnRequests() {
         List<Long> ids = given()
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(managerToken))
+            .get()
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getList("id", Long.class);
+
+        assertThat(ids).doesNotContain(requestIdByVolunteer1, requestIdByVolunteer2);
+    }
+
+    @Test
+    @DisplayName("absence-request:read:* 권한자 목록 조회 → 두 요청 모두 포함")
+    void getList_withReadPermission_seesAllRequests() {
+        List<Long> ids = given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(readPermissionToken))
             .get()
             .then()
             .statusCode(200)
@@ -172,11 +203,22 @@ class AbsenceRequestReadTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("매니저 단건 조회 → 200")
-    void getDetail_asManager_returns200() {
+    @DisplayName("매니저가 타인 요청 단건 조회 → 403")
+    void getDetail_asManagerForOthersRequest_returns403() {
         given()
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(managerToken))
+            .get("/{id}", requestIdByVolunteer1)
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("absence-request:read:* 권한자 단건 조회 → 200")
+    void getDetail_withReadPermission_returns200() {
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(readPermissionToken))
             .get("/{id}", requestIdByVolunteer1)
             .then()
             .statusCode(200)

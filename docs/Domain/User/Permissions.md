@@ -62,6 +62,7 @@ API로 사용자에게 부여할 수 있는 코드는 아래 조합으로만 제
 | `department` | `write`, `manage`, `grant` | `department:{action}:*` | 불가 |
 | `student` | `write`, `manage` | `student:{action}:*` | 불가 |
 | `channel` | `read`, `write`, `manage` | `channel:{action}:*` | `channel:{action}:{id}` |
+| `absence-request` | `read`, `manage` | `absence-request:{action}:*` | 불가 |
 | `purchase-request` | `read`, `manage`, `review` | `purchase-request:{action}:*` | 불가 |
 
 Registry는 실제 운영에서 부여할 권한만 유지합니다. 게시글/댓글 권한은 별도 `post`, `comment` 리소스로 만들지 않고 `channel` 권한과 `accessLevel` 정책으로 판정합니다.
@@ -162,12 +163,12 @@ permission code로는 표현되지 않습니다.
 
 | API | 접근 조건 |
 |-----|---------|
-| `POST /api/v1/absence-requests` | 인증만 |
-| `GET /api/v1/absence-requests` | 인증만 |
-| `GET /api/v1/absence-requests/{requestId}` | 인증만 |
-| `PATCH /api/v1/absence-requests/{requestId}/approve` | `ADMIN` \| `MANAGER` |
-| `PATCH /api/v1/absence-requests/{requestId}/reject` | `ADMIN` \| `MANAGER` |
-| `DELETE /api/v1/absence-requests/{requestId}` | 인증만 (본인 한정) |
+| `POST /api/v1/absence-requests` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` |
+| `GET /api/v1/absence-requests` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` \| `absence-request:read:*` |
+| `GET /api/v1/absence-requests/{requestId}` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` \| `absence-request:read:*` |
+| `PATCH /api/v1/absence-requests/{requestId}/approve` | `ADMIN` \| `absence-request:manage:*` |
+| `PATCH /api/v1/absence-requests/{requestId}/reject` | `ADMIN` \| `absence-request:manage:*` |
+| `DELETE /api/v1/absence-requests/{requestId}` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` (본인 한정) |
 | `POST /api/v1/lesson-exchange-requests` | 인증만 |
 | `GET /api/v1/lesson-exchange-requests` | 인증만 |
 | `GET /api/v1/lesson-exchange-requests/{requestId}` | 인증만 |
