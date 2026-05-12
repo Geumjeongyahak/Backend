@@ -295,6 +295,7 @@ CREATE TABLE files (
     file_size     BIGINT,
     ext           VARCHAR(20)  NOT NULL,
     is_deleted    BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at    TIMESTAMP,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
