@@ -18,15 +18,22 @@ import geumjeongyahak.e2e.request.RequestBaseTest;
 @DisplayName("E2E: 결석 요청 생성 테스트")
 class AbsenceRequestCreateTest extends RequestBaseTest {
 
+    private static final long ADMIN_ID = 1L;
+
     @Autowired
     private AbsenceRequestRepository absenceRequestRepository;
 
     private Long createdSubjectId;
     private Long createdLessonId;
     private Long createdRequestId;
+    private Long createdRequestId2;
 
     @AfterEach
     void cleanup() {
+        if (createdRequestId2 != null) {
+            absenceRequestRepository.deleteById(createdRequestId2);
+            createdRequestId2 = null;
+        }
         if (createdRequestId != null) {
             absenceRequestRepository.deleteById(createdRequestId);
             createdRequestId = null;
@@ -70,12 +77,12 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("관리자가 결석 요청 생성 → 201")
-    void createAbsenceRequest_asAdmin_returns201() {
+    @DisplayName("관리자가 본인 담당 수업으로 결석 요청 생성 → 201")
+    void createAbsenceRequest_asAdminTeacher_returns201() {
         createdSubjectId = lessonHelper.createSubjectAndGetId(
-            getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID);
+            getAuthHeader(adminToken), CLASSROOM_ID, ADMIN_ID);
         createdLessonId = lessonHelper.createLessonAndGetId(
-            getAuthHeader(adminToken), createdSubjectId, TEACHER_ID);
+            getAuthHeader(adminToken), createdSubjectId, ADMIN_ID);
 
         createdRequestId = given()
             .basePath("/api/v1/absence-requests")
@@ -89,6 +96,24 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .extract()
             .jsonPath()
             .getLong("id");
+    }
+
+    @Test
+    @DisplayName("관리자가 타인 담당 수업으로 결석 요청 생성 → 403")
+    void createAbsenceRequest_asAdminForOthersLesson_returns403() {
+        createdSubjectId = lessonHelper.createSubjectAndGetId(
+            getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID);
+        createdLessonId = lessonHelper.createLessonAndGetId(
+            getAuthHeader(adminToken), createdSubjectId, TEACHER_ID);
+
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("lessonId", createdLessonId, "reason", "관리자 대리 요청"))
+            .post()
+            .then()
+            .statusCode(403);
     }
 
     // ── 인증 오류 ─────────────────────────────────────────
@@ -105,6 +130,19 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .statusCode(401);
     }
 
+    @Test
+    @DisplayName("게스트가 결석 요청 생성 → 403")
+    void createAbsenceRequest_asGuest_returns403() {
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("lessonId", 1, "reason", "사유"))
+            .post()
+            .then()
+            .statusCode(403);
+    }
+
     // ── 도메인 오류 ───────────────────────────────────────
 
     @Test
@@ -118,6 +156,104 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .post()
             .then()
             .statusCode(404);
+    }
+
+    @Test
+    @DisplayName("타인 담당 수업으로 결석 요청 생성 → 403")
+    void createAbsenceRequest_forOthersLesson_returns403() {
+        createdSubjectId = lessonHelper.createSubjectAndGetId(
+            getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID);
+        createdLessonId = lessonHelper.createLessonAndGetId(
+            getAuthHeader(adminToken), createdSubjectId, TEACHER_ID);
+
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
+            .contentType(ContentType.JSON)
+            .body(Map.of("lessonId", createdLessonId, "reason", "타인 수업 결석 요청"))
+            .post()
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("동일 수업에 PENDING 결석 요청이 있으면 중복 생성 → 409")
+    void createAbsenceRequest_duplicatePending_returns409() {
+        createdSubjectId = lessonHelper.createSubjectAndGetId(
+            getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID);
+        createdLessonId = lessonHelper.createLessonAndGetId(
+            getAuthHeader(adminToken), createdSubjectId, TEACHER_ID);
+        createdRequestId = createAbsenceRequest(
+            getAuthHeader(volunteerToken), createdLessonId, "기존 결석 요청");
+
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("lessonId", createdLessonId, "reason", "중복 결석 요청"))
+            .post()
+            .then()
+            .statusCode(409);
+    }
+
+    @Test
+    @DisplayName("동일 수업에 APPROVED 결석 요청이 있으면 중복 생성 → 409")
+    void createAbsenceRequest_duplicateApproved_returns409() {
+        createdSubjectId = lessonHelper.createSubjectAndGetId(
+            getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID);
+        createdLessonId = lessonHelper.createLessonAndGetId(
+            getAuthHeader(adminToken), createdSubjectId, TEACHER_ID);
+        createdRequestId = createAbsenceRequest(
+            getAuthHeader(volunteerToken), createdLessonId, "기존 결석 요청");
+
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{id}/approve", createdRequestId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("lessonId", createdLessonId, "reason", "승인 후 중복 결석 요청"))
+            .post()
+            .then()
+            .statusCode(409);
+    }
+
+    @Test
+    @DisplayName("동일 수업에 REJECTED 결석 요청만 있으면 재요청 → 201")
+    void createAbsenceRequest_afterRejected_returns201() {
+        createdSubjectId = lessonHelper.createSubjectAndGetId(
+            getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID);
+        createdLessonId = lessonHelper.createLessonAndGetId(
+            getAuthHeader(adminToken), createdSubjectId, TEACHER_ID);
+        createdRequestId = createAbsenceRequest(
+            getAuthHeader(volunteerToken), createdLessonId, "기존 결석 요청");
+
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "반려 사유"))
+            .patch("/{id}/reject", createdRequestId)
+            .then()
+            .statusCode(200);
+
+        createdRequestId2 = given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("lessonId", createdLessonId, "reason", "반려 후 재요청"))
+            .post()
+            .then()
+            .statusCode(201)
+            .body("status", equalTo("PENDING"))
+            .extract()
+            .jsonPath()
+            .getLong("id");
     }
 
     // ── 유효성 오류 ───────────────────────────────────────

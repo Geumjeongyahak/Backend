@@ -11,6 +11,7 @@ import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.request.entity.AbsenceRequest;
 import geumjeongyahak.domain.request.enums.RequestStatus;
 import geumjeongyahak.domain.request.event.AbsenceApprovedEvent;
+import geumjeongyahak.domain.request.exception.AbsenceRequest.DuplicateActiveAbsenceRequestException;
 import geumjeongyahak.domain.request.exception.RequestAlreadyProcessedException;
 import geumjeongyahak.domain.request.exception.RequestForbiddenException;
 import geumjeongyahak.domain.request.exception.RequestNotFoundException;
@@ -38,6 +39,9 @@ public class AbsenceRequestService {
 
         Lesson lesson = lessonProxyService.getActiveById(request.lessonId());
         User requester = userProxyService.getById(requesterId);
+
+        validateRequesterIsLessonTeacher(lesson, requesterId);
+        validateNoActiveAbsenceRequest(lesson.getId(), requesterId);
 
         AbsenceRequest absenceRequest = new AbsenceRequest(lesson, requester, request.reason());
         AbsenceRequest saved = absenceRequestRepository.save(absenceRequest);
@@ -131,5 +135,22 @@ public class AbsenceRequestService {
 
         absenceRequestRepository.delete(absenceRequest);
         log.debug("결석 요청 삭제 완료 (requestId={})", requestId);
+    }
+
+    private void validateRequesterIsLessonTeacher(Lesson lesson, Long requesterId) {
+        if (!lesson.getTeacher().getId().equals(requesterId)) {
+            throw new RequestForbiddenException();
+        }
+    }
+
+    private void validateNoActiveAbsenceRequest(Long lessonId, Long requesterId) {
+        boolean exists = absenceRequestRepository.existsByLesson_IdAndRequestedBy_IdAndStatusIn(
+            lessonId,
+            requesterId,
+            List.of(RequestStatus.PENDING, RequestStatus.APPROVED)
+        );
+        if (exists) {
+            throw new DuplicateActiveAbsenceRequestException();
+        }
     }
 }

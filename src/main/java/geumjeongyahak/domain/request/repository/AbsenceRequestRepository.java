@@ -20,6 +20,12 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
 
     boolean existsByLesson_IdAndRequestedBy_Id(Long lessonId, Long requestedById);
 
+    boolean existsByLesson_IdAndRequestedBy_IdAndStatusIn(
+        Long lessonId,
+        Long requestedById,
+        List<RequestStatus> statuses
+    );
+
     boolean existsByLesson_Id(Long lessonId);
 
     boolean existsByLesson_IdIn(List<Long> lessonIds);

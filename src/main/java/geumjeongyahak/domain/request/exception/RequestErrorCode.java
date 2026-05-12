@@ -31,6 +31,11 @@ public enum RequestErrorCode implements ErrorCode {
         "REQ-07-007",
         "해당 수업에는 이미 진행 중인 교환 요청이 존재합니다."
     ),
+    DUPLICATE_ACTIVE_ABSENCE_REQUEST(
+        HttpStatus.CONFLICT,
+        "REQ-07-022",
+        "해당 수업에는 이미 진행 중인 결석 요청이 존재합니다."
+    ),
     INVALID_REQUEST_LESSON_POLICY(
         HttpStatus.BAD_REQUEST,
         "REQ-07-008",
