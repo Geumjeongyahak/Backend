@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
 import io.restassured.http.ContentType;
+import java.time.LocalDate;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -69,6 +70,9 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .body("id", notNullValue())
             .body("lessonId", equalTo(createdLessonId.intValue()))
             .body("reason", equalTo("개인 사정"))
+            .body("expiresAt", equalTo(lessonHelper.getLessonDate(
+                getAuthHeader(adminToken), createdLessonId
+            ) + "T00:00:00"))
             .body("status", equalTo("PENDING"))
             .body("requestedByName", equalTo("홍길동"))
             .extract()
@@ -156,6 +160,31 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .post()
             .then()
             .statusCode(404);
+    }
+
+    @Test
+    @DisplayName("이미 만료 시각이 지난 수업으로 결석 요청 생성 → 400")
+    void createAbsenceRequest_expiredLesson_returns400() {
+        createdSubjectId = lessonHelper.createSubjectAndGetId(
+            getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID);
+        createdLessonId = lessonHelper.createLessonAndGetId(
+            getAuthHeader(adminToken),
+            createdSubjectId,
+            TEACHER_ID,
+            LocalDate.now().toString(),
+            "09:00:00",
+            "10:00:00",
+            1
+        );
+
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("lessonId", createdLessonId, "reason", "만료된 결석 요청"))
+            .post()
+            .then()
+            .statusCode(400);
     }
 
     @Test

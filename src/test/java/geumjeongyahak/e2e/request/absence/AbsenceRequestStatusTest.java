@@ -6,13 +6,17 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
 import io.restassured.http.ContentType;
+import java.time.LocalDateTime;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.util.ReflectionTestUtils;
+import geumjeongyahak.domain.request.enums.RequestStatus;
 import geumjeongyahak.domain.request.repository.AbsenceRequestRepository;
+import geumjeongyahak.domain.request.service.AbsenceRequestService;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 
 /**
@@ -28,6 +32,9 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
 
     @Autowired
     private AbsenceRequestRepository absenceRequestRepository;
+
+    @Autowired
+    private AbsenceRequestService absenceRequestService;
 
     private Long currentSubjectId;
     private Long currentLessonId;
@@ -154,6 +161,19 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("만료된 요청 승인 시도 → 409")
+    void approve_afterExpire_returns409() {
+        currentRequestId = setupPendingRequest(TEACHER_ID);
+        setRequestExpiresAt(currentRequestId, LocalDateTime.now().minusMinutes(1));
+        absenceRequestService.expireExpiredAbsenceRequests();
+
+        given().basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{id}/approve", currentRequestId)
+            .then().statusCode(409);
+    }
+
+    @Test
     @DisplayName("봉사자가 승인 시도 → 403")
     void approve_asVolunteer_returns403() {
         currentRequestId = setupPendingRequest(TEACHER_ID);
@@ -269,6 +289,21 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .contentType(ContentType.JSON)
             .body(Map.of("note", "취소 후 반려"))
+            .patch("/{id}/reject", currentRequestId)
+            .then().statusCode(409);
+    }
+
+    @Test
+    @DisplayName("만료된 요청 반려 시도 → 409")
+    void reject_afterExpire_returns409() {
+        currentRequestId = setupPendingRequest(TEACHER_ID);
+        setRequestExpiresAt(currentRequestId, LocalDateTime.now().minusMinutes(1));
+        absenceRequestService.expireExpiredAbsenceRequests();
+
+        given().basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "만료 후 반려"))
             .patch("/{id}/reject", currentRequestId)
             .then().statusCode(409);
     }
@@ -400,6 +435,66 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("만료된 요청 취소 시도 → 409")
+    void delete_afterExpire_returns409() {
+        currentRequestId = setupPendingRequest(TEACHER_ID);
+        setRequestExpiresAt(currentRequestId, LocalDateTime.now().minusMinutes(1));
+        absenceRequestService.expireExpiredAbsenceRequests();
+
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{id}", currentRequestId)
+            .then()
+            .statusCode(409);
+    }
+
+    @Test
+    @DisplayName("자동 만료 처리 시 만료 시각이 지난 PENDING 요청은 EXPIRED 로 변경")
+    void expireExpiredAbsenceRequests_changesExpiredPendingRequestStatus() {
+        currentRequestId = setupPendingRequest(TEACHER_ID);
+        setRequestExpiresAt(currentRequestId, LocalDateTime.now().minusMinutes(1));
+
+        int expiredCount = absenceRequestService.expireExpiredAbsenceRequests();
+
+        assertThat(expiredCount).isEqualTo(1);
+        assertThat(absenceRequestRepository.findById(currentRequestId).orElseThrow().getStatus())
+            .isEqualTo(RequestStatus.EXPIRED);
+    }
+
+    @Test
+    @DisplayName("자동 만료 처리 시 아직 만료되지 않은 요청은 PENDING 유지")
+    void expireExpiredAbsenceRequests_keepsNotExpiredRequestUntouched() {
+        currentRequestId = setupPendingRequest(TEACHER_ID);
+
+        int expiredCount = absenceRequestService.expireExpiredAbsenceRequests();
+
+        assertThat(expiredCount).isZero();
+        assertThat(absenceRequestRepository.findById(currentRequestId).orElseThrow().getStatus())
+            .isEqualTo(RequestStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("자동 만료 처리 시 이미 처리된 요청은 그대로 유지")
+    void expireExpiredAbsenceRequests_keepsAlreadyProcessedRequestUntouched() {
+        currentRequestId = setupPendingRequest(TEACHER_ID);
+
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{id}/approve", currentRequestId)
+            .then()
+            .statusCode(200);
+        setRequestExpiresAt(currentRequestId, LocalDateTime.now().minusMinutes(1));
+
+        int expiredCount = absenceRequestService.expireExpiredAbsenceRequests();
+
+        assertThat(expiredCount).isZero();
+        assertThat(absenceRequestRepository.findById(currentRequestId).orElseThrow().getStatus())
+            .isEqualTo(RequestStatus.APPROVED);
+    }
+
+    @Test
     @DisplayName("존재하지 않는 요청 취소 → 404")
     void delete_notFound_returns404() {
         given()
@@ -418,5 +513,11 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
             .delete("/{id}", 1L)
             .then()
             .statusCode(401);
+    }
+
+    private void setRequestExpiresAt(Long requestId, LocalDateTime expiresAt) {
+        var request = absenceRequestRepository.findById(requestId).orElseThrow();
+        ReflectionTestUtils.setField(request, "expiresAt", expiresAt);
+        absenceRequestRepository.save(request);
     }
 }

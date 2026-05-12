@@ -1,5 +1,7 @@
 package geumjeongyahak.domain.request.repository;
 
+import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import geumjeongyahak.domain.request.entity.AbsenceRequest;
@@ -29,4 +31,9 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
     boolean existsByLesson_Id(Long lessonId);
 
     boolean existsByLesson_IdIn(List<Long> lessonIds);
+
+    List<AbsenceRequest> findAllByStatusInAndExpiresAtBefore(
+        Collection<RequestStatus> statuses,
+        LocalDateTime expiresAt
+    );
 }

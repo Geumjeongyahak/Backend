@@ -191,6 +191,7 @@ CREATE TABLE absence_requests (
     lesson_id BIGINT NOT NULL,
     requested_by BIGINT NOT NULL,
     reason TEXT NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
     status VARCHAR(20) NOT NULL,
     approval_at TIMESTAMP,
     approval_by BIGINT,

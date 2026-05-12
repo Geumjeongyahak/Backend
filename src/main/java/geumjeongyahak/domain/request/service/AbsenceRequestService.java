@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.request.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,7 @@ import geumjeongyahak.domain.request.entity.AbsenceRequest;
 import geumjeongyahak.domain.request.enums.RequestStatus;
 import geumjeongyahak.domain.request.event.AbsenceApprovedEvent;
 import geumjeongyahak.domain.request.exception.AbsenceRequest.DuplicateActiveAbsenceRequestException;
+import geumjeongyahak.domain.request.exception.AbsenceRequest.InvalidAbsenceRequestExpiresInPastException;
 import geumjeongyahak.domain.request.exception.RequestAlreadyProcessedException;
 import geumjeongyahak.domain.request.exception.RequestForbiddenException;
 import geumjeongyahak.domain.request.exception.RequestNotFoundException;
@@ -41,6 +43,7 @@ public class AbsenceRequestService {
         User requester = userProxyService.getById(requesterId);
 
         validateRequesterIsLessonTeacher(lesson, requesterId);
+        validateExpiresAtIsFuture(lesson.getDate().atStartOfDay());
         validateNoActiveAbsenceRequest(lesson.getId(), requesterId);
 
         AbsenceRequest absenceRequest = new AbsenceRequest(lesson, requester, request.reason());
@@ -137,6 +140,24 @@ public class AbsenceRequestService {
         log.debug("결석 요청 취소 완료 (requestId={})", requestId);
     }
 
+    @Transactional
+    public int expireExpiredAbsenceRequests() {
+        LocalDateTime now = LocalDateTime.now();
+        List<AbsenceRequest> expiredRequests =
+            absenceRequestRepository.findAllByStatusInAndExpiresAtBefore(
+                List.of(RequestStatus.PENDING),
+                now
+            );
+
+        expiredRequests.forEach(AbsenceRequest::expire);
+
+        if (!expiredRequests.isEmpty()) {
+            log.info("결석 요청 자동 만료 처리 완료 (count={}, expiredAt={})", expiredRequests.size(), now);
+        }
+
+        return expiredRequests.size();
+    }
+
     private void validateRequesterIsLessonTeacher(Lesson lesson, Long requesterId) {
         if (!lesson.getTeacher().getId().equals(requesterId)) {
             throw new RequestForbiddenException();
@@ -151,6 +172,12 @@ public class AbsenceRequestService {
         );
         if (exists) {
             throw new DuplicateActiveAbsenceRequestException();
+        }
+    }
+
+    private void validateExpiresAtIsFuture(LocalDateTime expiresAt) {
+        if (!expiresAt.isAfter(LocalDateTime.now())) {
+            throw new InvalidAbsenceRequestExpiresInPastException();
         }
     }
 }
