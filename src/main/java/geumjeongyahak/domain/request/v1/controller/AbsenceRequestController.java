@@ -3,7 +3,6 @@ package geumjeongyahak.domain.request.v1.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -13,6 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,8 +21,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import geumjeongyahak.common.security.service.CustomUserDetails;
+import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.request.enums.RequestStatus;
 import geumjeongyahak.domain.request.service.AbsenceRequestService;
+import geumjeongyahak.domain.request.v1.dto.request.AbsenceRequestPaginationRequest;
 import geumjeongyahak.domain.request.v1.dto.request.CreateAbsenceRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.request.RejectRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.response.AbsenceRequestResponse;
@@ -72,13 +74,14 @@ public class AbsenceRequestController {
             + "조회 API는 읽기 전용이며 side effect 를 발생시키지 않습니다."
     )
     @GetMapping
-    public ResponseEntity<List<AbsenceRequestResponse>> getAbsenceRequests(
+    public ResponseEntity<PaginationResponse<AbsenceRequestResponse>> getAbsenceRequests(
         @RequestParam(required = false) RequestStatus status,
+        @Valid @ModelAttribute AbsenceRequestPaginationRequest pageRequest,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("GET /api/v1/absence-requests - 결석 요청 목록 조회 (status={})", status);
-        List<AbsenceRequestResponse> response = absenceRequestService.getAbsenceRequests(
-            userDetails.getUserId(), canReadAllAbsenceRequests(userDetails), status
+        PaginationResponse<AbsenceRequestResponse> response = absenceRequestService.getAbsenceRequests(
+            userDetails.getUserId(), canReadAllAbsenceRequests(userDetails), status, pageRequest
         );
         return ResponseEntity.ok(response);
     }

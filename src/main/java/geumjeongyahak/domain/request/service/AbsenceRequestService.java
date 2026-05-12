@@ -4,9 +4,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import geumjeongyahak.common.event.EventPublisher;
+import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.request.entity.AbsenceRequest;
@@ -18,6 +20,7 @@ import geumjeongyahak.domain.request.exception.RequestAlreadyProcessedException;
 import geumjeongyahak.domain.request.exception.RequestForbiddenException;
 import geumjeongyahak.domain.request.exception.RequestNotFoundException;
 import geumjeongyahak.domain.request.repository.AbsenceRequestRepository;
+import geumjeongyahak.domain.request.v1.dto.request.AbsenceRequestPaginationRequest;
 import geumjeongyahak.domain.request.v1.dto.request.CreateAbsenceRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.response.AbsenceRequestResponse;
 import geumjeongyahak.domain.users.entity.User;
@@ -53,23 +56,28 @@ public class AbsenceRequestService {
         return AbsenceRequestResponse.from(saved);
     }
 
-    public List<AbsenceRequestResponse> getAbsenceRequests(Long requesterId, boolean isAdmin, RequestStatus status) {
+    public PaginationResponse<AbsenceRequestResponse> getAbsenceRequests(
+        Long requesterId,
+        boolean isAdmin,
+        RequestStatus status,
+        AbsenceRequestPaginationRequest pageRequest
+    ) {
         log.debug("결석 요청 목록 조회 (isAdmin={}, status={})", isAdmin, status);
 
-        List<AbsenceRequest> list;
+        Page<AbsenceRequest> page;
         if (status != null) {
-            list = isAdmin
-                ? absenceRequestRepository.findAllByStatusOrderByCreatedAtDesc(status)
-                : absenceRequestRepository.findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(
-                    status, requesterId
+            page = isAdmin
+                ? absenceRequestRepository.findAllByStatus(status, pageRequest.toRequest())
+                : absenceRequestRepository.findAllByStatusAndRequestedBy_Id(
+                    status, requesterId, pageRequest.toRequest()
                 );
         } else {
-            list = isAdmin
-                ? absenceRequestRepository.findAllByOrderByCreatedAtDesc()
-                : absenceRequestRepository.findAllByRequestedBy_IdOrderByCreatedAtDesc(requesterId);
+            page = isAdmin
+                ? absenceRequestRepository.findAll(pageRequest.toRequest())
+                : absenceRequestRepository.findAllByRequestedBy_Id(requesterId, pageRequest.toRequest());
         }
 
-        return list.stream().map(AbsenceRequestResponse::from).toList();
+        return PaginationResponse.from(page, AbsenceRequestResponse::from);
     }
 
     public AbsenceRequestResponse getAbsenceRequest(Long requesterId, Long requestId, boolean isAdmin) {

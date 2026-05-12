@@ -3,6 +3,7 @@ package geumjeongyahak.e2e.request.absence;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
@@ -88,9 +89,40 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(ids).contains(requestIdByVolunteer1, requestIdByVolunteer2);
+    }
+
+    @Test
+    @DisplayName("목록 조회 기본 페이지 응답 → page=0, size=10")
+    void getList_defaultPagination_returnsPageMetadata() {
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .get()
+            .then()
+            .statusCode(200)
+            .body("page", equalTo(0))
+            .body("size", equalTo(10))
+            .body("totalElements", greaterThanOrEqualTo(2))
+            .body("totalPages", greaterThanOrEqualTo(1));
+    }
+
+    @Test
+    @DisplayName("목록 조회 page/size 적용 → 요청한 페이지 크기로 반환")
+    void getList_withPageAndSize_returnsRequestedPage() {
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .queryParam("page", 0)
+            .queryParam("size", 1)
+            .get()
+            .then()
+            .statusCode(200)
+            .body("page", equalTo(0))
+            .body("size", equalTo(1))
+            .body("content.size()", equalTo(1));
     }
 
     @Test
@@ -104,7 +136,7 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(ids).doesNotContain(requestIdByVolunteer1, requestIdByVolunteer2);
     }
@@ -120,7 +152,7 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(ids).contains(requestIdByVolunteer1, requestIdByVolunteer2);
     }
@@ -136,7 +168,7 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(ids).contains(requestIdByVolunteer1);
         assertThat(ids).doesNotContain(requestIdByVolunteer2);
@@ -154,7 +186,7 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(ids).contains(requestIdByVolunteer1, requestIdByVolunteer2);
     }
@@ -171,7 +203,7 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(ids).doesNotContain(requestIdByVolunteer1, requestIdByVolunteer2);
     }

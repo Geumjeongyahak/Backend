@@ -3,21 +3,24 @@ package geumjeongyahak.domain.request.repository;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import geumjeongyahak.domain.request.entity.AbsenceRequest;
 import geumjeongyahak.domain.request.enums.RequestStatus;
 
 public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, Long> {
 
-    List<AbsenceRequest> findAllByOrderByCreatedAtDesc();
+    Page<AbsenceRequest> findAll(Pageable pageable);
 
-    List<AbsenceRequest> findAllByRequestedBy_IdOrderByCreatedAtDesc(Long requestedById);
+    Page<AbsenceRequest> findAllByRequestedBy_Id(Long requestedById, Pageable pageable);
 
-    List<AbsenceRequest> findAllByStatusOrderByCreatedAtDesc(RequestStatus status);
+    Page<AbsenceRequest> findAllByStatus(RequestStatus status, Pageable pageable);
 
-    List<AbsenceRequest> findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(
+    Page<AbsenceRequest> findAllByStatusAndRequestedBy_Id(
         RequestStatus status,
-        Long requestedById
+        Long requestedById,
+        Pageable pageable
     );
 
     boolean existsByLesson_IdAndRequestedBy_Id(Long lessonId, Long requestedById);
