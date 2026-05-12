@@ -256,6 +256,37 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .getLong("id");
     }
 
+    @Test
+    @DisplayName("동일 수업에 CANCELLED 결석 요청만 있으면 재요청 → 201")
+    void createAbsenceRequest_afterCancelled_returns201() {
+        createdSubjectId = lessonHelper.createSubjectAndGetId(
+            getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID);
+        createdLessonId = lessonHelper.createLessonAndGetId(
+            getAuthHeader(adminToken), createdSubjectId, TEACHER_ID);
+        createdRequestId = createAbsenceRequest(
+            getAuthHeader(volunteerToken), createdLessonId, "기존 결석 요청");
+
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{id}", createdRequestId)
+            .then()
+            .statusCode(204);
+
+        createdRequestId2 = given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("lessonId", createdLessonId, "reason", "취소 후 재요청"))
+            .post()
+            .then()
+            .statusCode(201)
+            .body("status", equalTo("PENDING"))
+            .extract()
+            .jsonPath()
+            .getLong("id");
+    }
+
     // ── 유효성 오류 ───────────────────────────────────────
 
     @Test

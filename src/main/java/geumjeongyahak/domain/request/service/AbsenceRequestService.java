@@ -121,20 +121,20 @@ public class AbsenceRequestService {
     }
 
     @Transactional
-    public void deleteAbsenceRequest(Long requesterId, Long requestId, boolean isAdmin) {
-        log.debug("결석 요청 삭제 (requestId={})", requestId);
+    public void deleteAbsenceRequest(Long requesterId, Long requestId) {
+        log.debug("결석 요청 취소 (requestId={})", requestId);
         AbsenceRequest absenceRequest = absenceRequestRepository.findById(requestId)
             .orElseThrow(() -> new RequestNotFoundException(requestId));
 
-        if (!isAdmin && !absenceRequest.getRequestedBy().getId().equals(requesterId)) {
+        if (!absenceRequest.getRequestedBy().getId().equals(requesterId)) {
             throw new RequestForbiddenException();
         }
         if (absenceRequest.getStatus() != RequestStatus.PENDING) {
             throw new RequestAlreadyProcessedException();
         }
 
-        absenceRequestRepository.delete(absenceRequest);
-        log.debug("결석 요청 삭제 완료 (requestId={})", requestId);
+        absenceRequest.cancel();
+        log.debug("결석 요청 취소 완료 (requestId={})", requestId);
     }
 
     private void validateRequesterIsLessonTeacher(Lesson lesson, Long requesterId) {

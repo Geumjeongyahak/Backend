@@ -138,6 +138,22 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("취소된 요청 승인 시도 → 409")
+    void approve_afterCancel_returns409() {
+        currentRequestId = setupPendingRequest(TEACHER_ID);
+
+        given().basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{id}", currentRequestId)
+            .then().statusCode(204);
+
+        given().basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{id}/approve", currentRequestId)
+            .then().statusCode(409);
+    }
+
+    @Test
     @DisplayName("봉사자가 승인 시도 → 403")
     void approve_asVolunteer_returns403() {
         currentRequestId = setupPendingRequest(TEACHER_ID);
@@ -240,6 +256,24 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("취소된 요청 반려 시도 → 409")
+    void reject_afterCancel_returns409() {
+        currentRequestId = setupPendingRequest(TEACHER_ID);
+
+        given().basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{id}", currentRequestId)
+            .then().statusCode(204);
+
+        given().basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "취소 후 반려"))
+            .patch("/{id}/reject", currentRequestId)
+            .then().statusCode(409);
+    }
+
+    @Test
     @DisplayName("봉사자가 반려 시도 → 403")
     void reject_asVolunteer_returns403() {
         currentRequestId = setupPendingRequest(TEACHER_ID);
@@ -254,11 +288,11 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
             .statusCode(403);
     }
 
-    // ── 삭제 (delete) ─────────────────────────────────────
+    // ── 취소 (delete) ─────────────────────────────────────
 
     @Test
-    @DisplayName("관리자가 임의 요청 삭제 → 204")
-    void delete_asAdmin_returns204() {
+    @DisplayName("관리자가 임의 요청 취소 → 403")
+    void delete_asAdmin_returns403() {
         currentRequestId = setupPendingRequest(TEACHER_ID);
 
         given()
@@ -266,14 +300,11 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .delete("/{id}", currentRequestId)
             .then()
-            .statusCode(204);
-
-        // 삭제 후 cleanup 에서 deleteById 가 없는 항목을 처리하므로 null 처리
-        currentRequestId = null;
+            .statusCode(403);
     }
 
     @Test
-    @DisplayName("요청 소유자(봉사자1)가 본인 요청 삭제 → 204")
+    @DisplayName("요청 소유자(봉사자1)가 본인 요청 취소 → 204, CANCELLED")
     void delete_asOwner_returns204() {
         currentRequestId = setupPendingRequest(TEACHER_ID);
         Long requestId = currentRequestId;
@@ -285,11 +316,38 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
             .then()
             .statusCode(204);
 
-        currentRequestId = null;
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get("/{id}", requestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("CANCELLED"));
     }
 
     @Test
-    @DisplayName("타인(봉사자2)이 봉사자1 요청 삭제 → 403")
+    @DisplayName("취소는 수업 teacherAttendance 를 변경하지 않음")
+    void delete_doesNotUpdateLessonTeacherAttendance() {
+        currentRequestId = setupPendingRequest(TEACHER_ID);
+
+        String before = lessonHelper.getLessonTeacherAttendance(
+            getAuthHeader(adminToken), currentLessonId);
+        assertThat(before).isEqualTo("ABSENT");
+
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{id}", currentRequestId)
+            .then()
+            .statusCode(204);
+
+        String after = lessonHelper.getLessonTeacherAttendance(
+            getAuthHeader(adminToken), currentLessonId);
+        assertThat(after).isEqualTo("ABSENT");
+    }
+
+    @Test
+    @DisplayName("타인(봉사자2)이 봉사자1 요청 취소 → 403")
     void delete_asOtherVolunteer_returns403() {
         currentRequestId = setupPendingRequest(TEACHER_ID);
 
@@ -302,7 +360,7 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("이미 처리된 요청 삭제 → 409")
+    @DisplayName("이미 처리된 요청 취소 → 409")
     void delete_processedRequest_returns409() {
         currentRequestId = setupPendingRequest(TEACHER_ID);
 
@@ -315,14 +373,34 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
 
         given()
             .basePath("/api/v1/absence-requests")
-            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .delete("/{id}", currentRequestId)
             .then()
             .statusCode(409);
     }
 
     @Test
-    @DisplayName("존재하지 않는 요청 삭제 → 404")
+    @DisplayName("이미 취소된 요청 재취소 → 409")
+    void delete_alreadyCancelled_returns409() {
+        currentRequestId = setupPendingRequest(TEACHER_ID);
+
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{id}", currentRequestId)
+            .then()
+            .statusCode(204);
+
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{id}", currentRequestId)
+            .then()
+            .statusCode(409);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 요청 취소 → 404")
     void delete_notFound_returns404() {
         given()
             .basePath("/api/v1/absence-requests")
@@ -333,7 +411,7 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("인증 없이 삭제 → 401")
+    @DisplayName("인증 없이 취소 → 401")
     void delete_unauthenticated_returns401() {
         given()
             .basePath("/api/v1/absence-requests")

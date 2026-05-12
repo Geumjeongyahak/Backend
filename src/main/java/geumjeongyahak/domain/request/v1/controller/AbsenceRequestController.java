@@ -146,21 +146,21 @@ public class AbsenceRequestController {
 
     @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
-        summary = "결석 요청 삭제",
-        description = "VOLUNTEER, MANAGER, ADMIN 권한 사용자가 결석 요청을 삭제합니다. "
-            + "서비스 정책상 요청자 본인만 삭제할 수 있습니다. "
-            + "삭제는 아직 처리되지 않은 PENDING 요청에만 허용되며, 이미 APPROVED 또는 REJECTED 상태인 요청은 "
-            + "이력 보존을 위해 삭제할 수 없습니다. "
-            + "삭제는 요청 데이터만 제거하며 추가적인 side effect 는 발생하지 않습니다."
+        summary = "결석 요청 취소",
+        description = "VOLUNTEER, MANAGER, ADMIN 권한 사용자가 결석 요청을 취소합니다. "
+            + "서비스 정책상 요청자 본인만 취소할 수 있습니다. "
+            + "취소는 아직 처리되지 않은 PENDING 요청에만 허용되며, 이미 APPROVED 또는 REJECTED 상태인 요청은 "
+            + "이력 보존을 위해 취소할 수 없습니다. "
+            + "취소 시 요청 상태는 CANCELLED 로 변경되며 추가적인 side effect 는 발생하지 않습니다."
     )
     @DeleteMapping("/{requestId}")
     public ResponseEntity<Void> deleteAbsenceRequest(
         @PathVariable Long requestId,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.debug("DELETE /api/v1/absence-requests/{} - 결석 요청 삭제", requestId);
+        log.debug("DELETE /api/v1/absence-requests/{} - 결석 요청 취소", requestId);
         absenceRequestService.deleteAbsenceRequest(
-            userDetails.getUserId(), requestId, userDetails.isAdminOrManager()
+            userDetails.getUserId(), requestId
         );
         return ResponseEntity.noContent().build();
     }

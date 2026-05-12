@@ -75,5 +75,8 @@ public class AbsenceRequest extends BaseEntity {
         this.approvalAt = LocalDateTime.now();
         this.note = note;
     }
-}
 
+    public void cancel() {
+        this.status = RequestStatus.CANCELLED;
+    }
+}
