@@ -187,6 +187,8 @@ permission code로는 표현되지 않습니다.
 | `PATCH /api/v1/subject-exchange-requests/{requestId}/approve` | `ADMIN` \| `MANAGER` |
 | `PATCH /api/v1/subject-exchange-requests/{requestId}/reject` | `ADMIN` \| `MANAGER` |
 
+결석 요청 목록/상세 조회에서 `ADMIN` 또는 `absence-request:read:*` 권한 사용자는 전체 요청을 조회할 수 있습니다. 그 외 `VOLUNTEER`, `MANAGER` 사용자는 본인이 요청한 결석 요청만 조회할 수 있습니다.
+
 ### 5.8 Channel
 
 채널은 역할/코드 외에도 채널 자체의 `accessLevel` 정책에 따라 접근이 결정됩니다.

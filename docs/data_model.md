@@ -150,7 +150,12 @@ erDiagram
         bigint id PK
         bigint lesson_id FK
         bigint requested_by FK
+        text reason
+        timestamp expires_at
         varchar status
+        timestamp approval_at
+        bigint approval_by FK
+        text note
     }
 
     lesson_exchange_requests {
@@ -345,12 +350,25 @@ erDiagram
 | lesson_id | BIGINT | FOREIGN KEY | 수업 ID |
 | requested_by | BIGINT | FOREIGN KEY | 결석 요청자 ID |
 | reason | TEXT | NOT NULL | 결석 이유 |
+| expires_at | TIMESTAMP | NOT NULL | 결석 요청 만료 시각. 대상 수업일의 00:00으로 자동 설정 |
 | status | VARCHAR(20) | NOT NULL | 결석 요청 상태 |
 | approval_at | TIMESTAMP | NULL | 결석 요청 승인일시 |
 | approval_by | BIGINT | FOREIGN KEY | 결석 요청 승인자 ID |
 | note | TEXT | NULL | 추가 정보(관리자가 기입) |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
+
+**상태 규칙:**
+- `PENDING` → `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED`
+- `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED` 상태는 재처리할 수 없음
+
+**정책:**
+- 요청자는 대상 수업의 담당 교사여야 함. 관리자/매니저도 담당 교사가 아니면 대리 생성할 수 없음
+- 같은 수업과 같은 요청자 기준으로 `PENDING`, `APPROVED` 요청이 있으면 중복 생성 불가
+- `REJECTED`, `CANCELLED` 요청은 재요청 가능
+- 취소는 물리 삭제가 아니라 `CANCELLED` 상태 변경이며 요청자 본인만 가능
+- 승인 시 `AbsenceApprovedEvent`가 발행되어 대상 수업의 교사 출석 상태가 `EXCUSED`로 변경됨
+- 만료 시각이 지난 `PENDING` 요청은 스케줄러가 `EXPIRED`로 변경함
 
 ### 3.12 수업 교환 요청 (lesson_exchange_requests)
 
