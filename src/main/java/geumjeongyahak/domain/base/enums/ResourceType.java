@@ -14,7 +14,8 @@ public enum ResourceType {
     DEPARTMENT("department"),
     LESSON("lesson"),
     USER("user"),
-    PURCHASE_REQUEST("purchase-request");
+    PURCHASE_REQUEST("purchase-request"),
+    LESSON_EXCHANGE_REQUEST("lesson-exchange-request");
 
     private final String code;
 

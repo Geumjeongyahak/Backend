@@ -1,6 +1,9 @@
 package geumjeongyahak.e2e.request;
 
 import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.users.entity.UserPermission;
+import geumjeongyahak.domain.users.repository.UserPermissionRepository;
 import geumjeongyahak.e2e.BaseE2ETest;
 import geumjeongyahak.e2e.util.TestLessonHelper;
 import io.restassured.http.ContentType;
@@ -45,6 +48,9 @@ public abstract class RequestBaseTest extends BaseE2ETest {
 
     @Autowired
     protected TestLessonHelper lessonHelper;
+
+    @Autowired
+    protected UserPermissionRepository userPermissionRepository;
 
     protected String adminToken;
     protected String managerToken;
@@ -143,6 +149,17 @@ public abstract class RequestBaseTest extends BaseE2ETest {
             .extract()
             .jsonPath()
             .getLong("id");
+    }
+
+    protected String createAccessTokenWithPermission(
+        String nicknamePrefix,
+        RoleType role,
+        String permissionCode
+    ) {
+        String nickname = nicknamePrefix + System.nanoTime();
+        User user = userTestHelper.createTestUser(nickname, role);
+        userPermissionRepository.save(new UserPermission(user, permissionCode));
+        return userTestHelper.generateAccessTokenByNickname(nickname);
     }
 
 }

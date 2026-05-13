@@ -30,8 +30,8 @@ public class LessonExchangeRequestController {
 
     private static final String TEACHER_OR_HIGHER_ACCESS =
         "hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN')";
-    private static final String MANAGER_OR_HIGHER_ACCESS =
-        "hasRole('MANAGER') or hasRole('ADMIN')";
+    private static final String LESSON_EXCHANGE_REQUEST_MANAGE_ACCESS =
+        "hasRole('ADMIN') or hasAuthority('lesson-exchange-request:manage:*')";
 
     private final LessonExchangeRequestService lessonExchangeRequestService;
 
@@ -142,10 +142,10 @@ public class LessonExchangeRequestController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize(MANAGER_OR_HIGHER_ACCESS)
+    @PreAuthorize(LESSON_EXCHANGE_REQUEST_MANAGE_ACCESS)
     @Operation(
         summary = "수업 교환 요청 승인",
-        description = "ADMIN 또는 MANAGER 가 PENDING 상태의 수업 교환 요청을 승인합니다. "
+        description = "ADMIN 또는 lesson-exchange-request:manage:* 권한을 가진 사용자가 PENDING 상태의 수업 교환 요청을 승인합니다. "
             + "요청 상태는 APPROVED 로 변경되고 처리자 및 처리 시각이 기록됩니다. "
             + "이 단계에서는 실제 수업 교환 side effect 는 발생하지 않으며, "
             + "이후 다른 교원이 해당 요청에 대해 교환 제안을 작성할 수 있게 됩니다."
@@ -162,10 +162,10 @@ public class LessonExchangeRequestController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize(MANAGER_OR_HIGHER_ACCESS)
+    @PreAuthorize(LESSON_EXCHANGE_REQUEST_MANAGE_ACCESS)
     @Operation(
         summary = "수업 교환 요청 반려",
-        description = "ADMIN 또는 MANAGER 가 PENDING 상태의 수업 교환 요청을 반려합니다. "
+        description = "ADMIN 또는 lesson-exchange-request:manage:* 권한을 가진 사용자가 PENDING 상태의 수업 교환 요청을 반려합니다. "
             + "반려 시 요청 상태는 REJECTED 로 변경되고 처리자, 처리 시각, 반려 사유(note)가 저장됩니다. "
             + "이 단계에서는 실제 수업 교환 side effect 는 발생하지 않으며, "
             + "이미 처리된 요청은 다시 반려할 수 없습니다."

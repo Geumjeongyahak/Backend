@@ -77,7 +77,7 @@
 |---|---|
 | 요청 생성/수정/취소 | 교사 이상 권한 + 요청자 본인 조건 |
 | 요청 목록/상세 조회 | 교사 이상 권한 |
-| 요청 승인/반려 | `ADMIN`, `MANAGER` |
+| 요청 승인/반려 | `ADMIN` 또는 `lesson-exchange-request:manage:*` |
 | 제안 생성/수정/철회 | 교사 이상 권한 + 제안자 본인 조건 |
 | 제안 목록 조회 | 교사 이상 권한 |
 | 제안 수락 | 교사 이상 권한 + 요청자 본인 조건 |
@@ -161,7 +161,7 @@
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/approve`
 - **Method**: `PATCH`
-- **Description**: 관리자/매니저가 `PENDING` 요청을 승인합니다.
+- **Description**: 관리자 또는 `lesson-exchange-request:manage:*` 권한 사용자가 `PENDING` 요청을 승인합니다.
 
 ### Side Effects
 
@@ -172,7 +172,7 @@
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/reject`
 - **Method**: `PATCH`
-- **Description**: 관리자/매니저가 `PENDING` 요청을 반려합니다.
+- **Description**: 관리자 또는 `lesson-exchange-request:manage:*` 권한 사용자가 `PENDING` 요청을 반려합니다.
 
 ### Request Body 예시
 
