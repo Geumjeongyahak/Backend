@@ -26,6 +26,9 @@ public record AbsenceRequestResponse(
     @Schema(description = "결석 사유")
     String reason,
 
+    @Schema(description = "만료 시각")
+    LocalDateTime expiresAt,
+
     @Schema(description = "요청 상태", example = "PENDING")
     RequestStatus status,
 
@@ -49,6 +52,7 @@ public record AbsenceRequestResponse(
             r.getRequestedBy().getId(),
             r.getRequestedBy().getName(),
             r.getReason(),
+            r.getExpiresAt(),
             r.getStatus(),
             r.getApprovalAt(),
             r.getApprovalBy() != null ? r.getApprovalBy().getName() : null,

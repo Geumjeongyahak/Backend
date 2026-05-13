@@ -1,20 +1,26 @@
 package geumjeongyahak.domain.request.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import geumjeongyahak.common.event.EventPublisher;
+import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.request.entity.AbsenceRequest;
 import geumjeongyahak.domain.request.enums.RequestStatus;
 import geumjeongyahak.domain.request.event.AbsenceApprovedEvent;
+import geumjeongyahak.domain.request.exception.AbsenceRequest.DuplicateActiveAbsenceRequestException;
+import geumjeongyahak.domain.request.exception.AbsenceRequest.InvalidAbsenceRequestExpiresInPastException;
 import geumjeongyahak.domain.request.exception.RequestAlreadyProcessedException;
 import geumjeongyahak.domain.request.exception.RequestForbiddenException;
 import geumjeongyahak.domain.request.exception.RequestNotFoundException;
 import geumjeongyahak.domain.request.repository.AbsenceRequestRepository;
+import geumjeongyahak.domain.request.v1.dto.request.AbsenceRequestPaginationRequest;
 import geumjeongyahak.domain.request.v1.dto.request.CreateAbsenceRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.response.AbsenceRequestResponse;
 import geumjeongyahak.domain.users.entity.User;
@@ -39,6 +45,10 @@ public class AbsenceRequestService {
         Lesson lesson = lessonProxyService.getActiveById(request.lessonId());
         User requester = userProxyService.getById(requesterId);
 
+        validateRequesterIsLessonTeacher(lesson, requesterId);
+        validateExpiresAtIsFuture(lesson.getDate().atStartOfDay());
+        validateNoActiveAbsenceRequest(lesson.getId(), requesterId);
+
         AbsenceRequest absenceRequest = new AbsenceRequest(lesson, requester, request.reason());
         AbsenceRequest saved = absenceRequestRepository.save(absenceRequest);
 
@@ -46,23 +56,28 @@ public class AbsenceRequestService {
         return AbsenceRequestResponse.from(saved);
     }
 
-    public List<AbsenceRequestResponse> getAbsenceRequests(Long requesterId, boolean isAdmin, RequestStatus status) {
+    public PaginationResponse<AbsenceRequestResponse> getAbsenceRequests(
+        Long requesterId,
+        boolean isAdmin,
+        RequestStatus status,
+        AbsenceRequestPaginationRequest pageRequest
+    ) {
         log.debug("결석 요청 목록 조회 (isAdmin={}, status={})", isAdmin, status);
 
-        List<AbsenceRequest> list;
+        Page<AbsenceRequest> page;
         if (status != null) {
-            list = isAdmin
-                ? absenceRequestRepository.findAllByStatusOrderByCreatedAtDesc(status)
-                : absenceRequestRepository.findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(
-                    status, requesterId
+            page = isAdmin
+                ? absenceRequestRepository.findAllByStatus(status, pageRequest.toRequest())
+                : absenceRequestRepository.findAllByStatusAndRequestedBy_Id(
+                    status, requesterId, pageRequest.toRequest()
                 );
         } else {
-            list = isAdmin
-                ? absenceRequestRepository.findAllByOrderByCreatedAtDesc()
-                : absenceRequestRepository.findAllByRequestedBy_IdOrderByCreatedAtDesc(requesterId);
+            page = isAdmin
+                ? absenceRequestRepository.findAll(pageRequest.toRequest())
+                : absenceRequestRepository.findAllByRequestedBy_Id(requesterId, pageRequest.toRequest());
         }
 
-        return list.stream().map(AbsenceRequestResponse::from).toList();
+        return PaginationResponse.from(page, AbsenceRequestResponse::from);
     }
 
     public AbsenceRequestResponse getAbsenceRequest(Long requesterId, Long requestId, boolean isAdmin) {
@@ -117,19 +132,60 @@ public class AbsenceRequestService {
     }
 
     @Transactional
-    public void deleteAbsenceRequest(Long requesterId, Long requestId, boolean isAdmin) {
-        log.debug("결석 요청 삭제 (requestId={})", requestId);
+    public void deleteAbsenceRequest(Long requesterId, Long requestId) {
+        log.debug("결석 요청 취소 (requestId={})", requestId);
         AbsenceRequest absenceRequest = absenceRequestRepository.findById(requestId)
             .orElseThrow(() -> new RequestNotFoundException(requestId));
 
-        if (!isAdmin && !absenceRequest.getRequestedBy().getId().equals(requesterId)) {
+        if (!absenceRequest.getRequestedBy().getId().equals(requesterId)) {
             throw new RequestForbiddenException();
         }
         if (absenceRequest.getStatus() != RequestStatus.PENDING) {
             throw new RequestAlreadyProcessedException();
         }
 
-        absenceRequestRepository.delete(absenceRequest);
-        log.debug("결석 요청 삭제 완료 (requestId={})", requestId);
+        absenceRequest.cancel();
+        log.debug("결석 요청 취소 완료 (requestId={})", requestId);
+    }
+
+    @Transactional
+    public int expireExpiredAbsenceRequests() {
+        LocalDateTime now = LocalDateTime.now();
+        List<AbsenceRequest> expiredRequests =
+            absenceRequestRepository.findAllByStatusInAndExpiresAtBefore(
+                List.of(RequestStatus.PENDING),
+                now
+            );
+
+        expiredRequests.forEach(AbsenceRequest::expire);
+
+        if (!expiredRequests.isEmpty()) {
+            log.info("결석 요청 자동 만료 처리 완료 (count={}, expiredAt={})", expiredRequests.size(), now);
+        }
+
+        return expiredRequests.size();
+    }
+
+    private void validateRequesterIsLessonTeacher(Lesson lesson, Long requesterId) {
+        if (!lesson.getTeacher().getId().equals(requesterId)) {
+            throw new RequestForbiddenException();
+        }
+    }
+
+    private void validateNoActiveAbsenceRequest(Long lessonId, Long requesterId) {
+        boolean exists = absenceRequestRepository.existsByLesson_IdAndRequestedBy_IdAndStatusIn(
+            lessonId,
+            requesterId,
+            List.of(RequestStatus.PENDING, RequestStatus.APPROVED)
+        );
+        if (exists) {
+            throw new DuplicateActiveAbsenceRequestException();
+        }
+    }
+
+    private void validateExpiresAtIsFuture(LocalDateTime expiresAt) {
+        if (!expiresAt.isAfter(LocalDateTime.now())) {
+            throw new InvalidAbsenceRequestExpiresInPastException();
+        }
     }
 }

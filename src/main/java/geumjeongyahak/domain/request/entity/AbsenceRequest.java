@@ -43,6 +43,9 @@ public class AbsenceRequest extends BaseEntity {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String reason;
 
+    @Column(nullable = false)
+    private LocalDateTime expiresAt;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private RequestStatus status;
@@ -60,6 +63,7 @@ public class AbsenceRequest extends BaseEntity {
         this.lesson = lesson;
         this.requestedBy = requestedBy;
         this.reason = reason;
+        this.expiresAt = lesson.getDate().atStartOfDay();
         this.status = RequestStatus.PENDING;
     }
 
@@ -75,5 +79,12 @@ public class AbsenceRequest extends BaseEntity {
         this.approvalAt = LocalDateTime.now();
         this.note = note;
     }
-}
 
+    public void cancel() {
+        this.status = RequestStatus.CANCELLED;
+    }
+
+    public void expire() {
+        this.status = RequestStatus.EXPIRED;
+    }
+}

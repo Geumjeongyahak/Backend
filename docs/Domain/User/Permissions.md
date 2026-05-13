@@ -62,6 +62,7 @@ API로 사용자에게 부여할 수 있는 코드는 아래 조합으로만 제
 | `department` | `write`, `manage`, `grant` | `department:{action}:*` | 불가 |
 | `student` | `write`, `manage` | `student:{action}:*` | 불가 |
 | `channel` | `read`, `write`, `manage` | `channel:{action}:*` | `channel:{action}:{id}` |
+| `absence-request` | `read`, `manage` | `absence-request:{action}:*` | 불가 |
 | `purchase-request` | `read`, `manage`, `review` | `purchase-request:{action}:*` | 불가 |
 | `lesson-exchange-request` | `manage` | `lesson-exchange-request:manage:*` | 불가 |
 
@@ -163,12 +164,12 @@ permission code로는 표현되지 않습니다.
 
 | API | 접근 조건 |
 |-----|---------|
-| `POST /api/v1/absence-requests` | 인증만 |
-| `GET /api/v1/absence-requests` | 인증만 |
-| `GET /api/v1/absence-requests/{requestId}` | 인증만 |
-| `PATCH /api/v1/absence-requests/{requestId}/approve` | `ADMIN` \| `MANAGER` |
-| `PATCH /api/v1/absence-requests/{requestId}/reject` | `ADMIN` \| `MANAGER` |
-| `DELETE /api/v1/absence-requests/{requestId}` | 인증만 (본인 한정) |
+| `POST /api/v1/absence-requests` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` |
+| `GET /api/v1/absence-requests` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` \| `absence-request:read:*` |
+| `GET /api/v1/absence-requests/{requestId}` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` \| `absence-request:read:*` |
+| `PATCH /api/v1/absence-requests/{requestId}/approve` | `ADMIN` \| `absence-request:manage:*` |
+| `PATCH /api/v1/absence-requests/{requestId}/reject` | `ADMIN` \| `absence-request:manage:*` |
+| `DELETE /api/v1/absence-requests/{requestId}` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` (본인 한정) |
 | `POST /api/v1/lesson-exchange-requests` | 인증만 |
 | `GET /api/v1/lesson-exchange-requests` | 인증만 |
 | `GET /api/v1/lesson-exchange-requests/{requestId}` | 인증만 |
@@ -186,6 +187,8 @@ permission code로는 표현되지 않습니다.
 | `GET /api/v1/subject-exchange-requests/{requestId}` | 인증만 |
 | `PATCH /api/v1/subject-exchange-requests/{requestId}/approve` | `ADMIN` \| `MANAGER` |
 | `PATCH /api/v1/subject-exchange-requests/{requestId}/reject` | `ADMIN` \| `MANAGER` |
+
+결석 요청 목록/상세 조회에서 `ADMIN` 또는 `absence-request:read:*` 권한 사용자는 전체 요청을 조회할 수 있습니다. 그 외 `VOLUNTEER`, `MANAGER` 사용자는 본인이 요청한 결석 요청만 조회할 수 있습니다.
 
 ### 5.8 Channel
 
