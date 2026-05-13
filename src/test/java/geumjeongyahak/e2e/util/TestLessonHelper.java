@@ -252,6 +252,19 @@ public class TestLessonHelper {
             .getString("teacherAttendance");
     }
 
+    /** 수업 날짜(date) 문자열을 반환한다. */
+    public String getLessonDate(String authHeader, Long lessonId) {
+        return given()
+            .basePath("/api/v1/lessons")
+            .header("Authorization", authHeader)
+            .get("/{id}", lessonId)
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getString("date");
+    }
+
     /** 수업의 담당 교사 이름(teacherName)을 반환한다. */
     public String getLessonTeacherName(String authHeader, Long lessonId) {
         return given()

@@ -41,6 +41,9 @@
 | Users | 각종 요청들 | requested_by | 요청자 |
 | Users | 각종 요청들 | approval_by | 승인자 |
 | Students | Student Attendances | student_id | 학생별 출석 기록 |
+| Files | Post Files | file_id | 게시글 이미지 파일 |
+| Files | Post Attachments | file_id | 게시글 첨부 파일 |
+| Files | Purchase Request Receipts | file_id | 기자재 구입 영수증 파일 |
 
 #### N:M 관계
 
@@ -79,6 +82,9 @@ erDiagram
     users ||--o{ lesson_exchange_proposals : "proposes"
     subjects ||--o{ purchase_requests : "has"
     purchase_requests ||--o{ purchase_receipts : "has"
+    files ||--o{ post_files : "used as image"
+    files ||--o{ post_attachments : "used as attachment"
+    files ||--o{ purchase_request_receipts : "used as receipt"
 
     %% 엔티티 정의
     users {
@@ -150,7 +156,12 @@ erDiagram
         bigint id PK
         bigint lesson_id FK
         bigint requested_by FK
+        text reason
+        timestamp expires_at
         varchar status
+        timestamp approval_at
+        bigint approval_by FK
+        text note
     }
 
     lesson_exchange_requests {
@@ -182,6 +193,19 @@ erDiagram
         bigint id PK
         bigint purchase_request_id FK
         varchar image_url
+    }
+
+    files {
+        uuid id PK
+        varchar storage_key
+        varchar bucket
+        varchar public_url UK
+        varchar original_name
+        varchar content_type
+        bigint file_size
+        varchar ext
+        boolean is_deleted
+        timestamp deleted_at
     }
 ```
 
@@ -345,12 +369,25 @@ erDiagram
 | lesson_id | BIGINT | FOREIGN KEY | 수업 ID |
 | requested_by | BIGINT | FOREIGN KEY | 결석 요청자 ID |
 | reason | TEXT | NOT NULL | 결석 이유 |
+| expires_at | TIMESTAMP | NOT NULL | 결석 요청 만료 시각. 대상 수업일의 00:00으로 자동 설정 |
 | status | VARCHAR(20) | NOT NULL | 결석 요청 상태 |
 | approval_at | TIMESTAMP | NULL | 결석 요청 승인일시 |
 | approval_by | BIGINT | FOREIGN KEY | 결석 요청 승인자 ID |
 | note | TEXT | NULL | 추가 정보(관리자가 기입) |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
+
+**상태 규칙:**
+- `PENDING` → `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED`
+- `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED` 상태는 재처리할 수 없음
+
+**정책:**
+- 요청자는 대상 수업의 담당 교사여야 함. 관리자/매니저도 담당 교사가 아니면 대리 생성할 수 없음
+- 같은 수업과 같은 요청자 기준으로 `PENDING`, `APPROVED` 요청이 있으면 중복 생성 불가
+- `REJECTED`, `CANCELLED` 요청은 재요청 가능
+- 취소는 물리 삭제가 아니라 `CANCELLED` 상태 변경이며 요청자 본인만 가능
+- 승인 시 `AbsenceApprovedEvent`가 발행되어 대상 수업의 교사 출석 상태가 `EXCUSED`로 변경됨
+- 만료 시각이 지난 `PENDING` 요청은 스케줄러가 `EXPIRED`로 변경함
 
 ### 3.12 수업 교환 요청 (lesson_exchange_requests)
 
@@ -437,3 +474,26 @@ erDiagram
 | image_url | VARCHAR(255) | NOT NULL | 영수증 이미지 URL |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
+
+### 3.15 파일 메타데이터 (files)
+
+업로드된 이미지와 첨부파일의 저장소 위치 및 메타데이터를 관리하는 엔티티입니다.
+
+| 필드명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | UUID | PRIMARY KEY | 파일 고유 ID |
+| storage_key | VARCHAR(500) | NOT NULL | 스토리지 내부 객체 경로 |
+| bucket | VARCHAR(100) | NOT NULL | 스토리지 버킷 이름 |
+| public_url | VARCHAR(1000) | UNIQUE, NOT NULL | 공개 접근 URL |
+| original_name | VARCHAR(255) | NULL | 원본 파일명 |
+| content_type | VARCHAR(100) | NOT NULL | MIME 타입 |
+| file_size | BIGINT | NULL | 파일 크기 |
+| ext | VARCHAR(20) | NOT NULL | 파일 확장자 |
+| is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | Soft delete 여부 |
+| deleted_at | TIMESTAMP | NULL | Soft delete 처리 시각 |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
+| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
+
+**정책:**
+- 파일 삭제 요청 시 즉시 DB 레코드를 제거하지 않고 `is_deleted = true`, `deleted_at = now()`로 표시합니다.
+- 파일 정리 스케줄러는 보관 기간이 지난 soft deleted 파일을 스토리지와 DB에서 최종 삭제합니다.

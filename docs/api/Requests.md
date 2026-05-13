@@ -1,14 +1,16 @@
 # Request API
 
-요청 도메인 중 수업 교환 요청/제안 API를 정리한 문서입니다.
+요청 도메인의 결석 요청, 수업 교환 요청/제안 API를 정리한 문서입니다.
 
-이 문서는 `LessonExchangeRequestController`, `LessonExchangeProposalController`, 각 서비스 구현, 그리고 요청/제안 E2E 테스트 기준으로 작성했습니다.
+이 문서는 `AbsenceRequestController`, `LessonExchangeRequestController`, `LessonExchangeProposalController`, 각 서비스 구현, 그리고 요청/제안 E2E 테스트 기준으로 작성했습니다.
 
 ## 1. 역할과 범위
 
-- 교사 이상 권한(`VOLUNTEER`, `MANAGER`, `ADMIN`) 사용자가 수업 교환 요청/제안 기능에 접근할 수 있습니다.
+- 교사 이상 권한(`VOLUNTEER`, `MANAGER`, `ADMIN`) 사용자가 요청 기능에 접근할 수 있습니다.
+- 결석 요청은 대상 수업의 담당 교사만 생성할 수 있습니다. 관리자/매니저도 담당 교사가 아니면 대리 생성할 수 없습니다.
 - 봉사자가 자신의 수업에 대해 교환 요청을 생성, 수정, 취소합니다.
-- 관리자/매니저가 요청을 승인/반려합니다.
+- 결석 요청은 관리자 또는 `absence-request:manage:*` 권한자가 승인/반려합니다.
+- 수업 교환 요청은 관리자/매니저가 승인/반려합니다.
 - 다른 봉사자가 승인된 요청에 교환 제안을 생성, 수정, 철회합니다.
 - 요청자가 제안 하나를 수락하면 실제 lesson의 teacher가 변경됩니다.
 - 만료 시각이 지난 요청은 스케줄러가 자동으로 `EXPIRED` 처리합니다.
@@ -20,7 +22,7 @@
 | 값 | 의미 |
 |---|---|
 | `PENDING` | 승인 대기 |
-| `APPROVED` | 관리자/매니저 승인 완료 |
+| `APPROVED` | 승인 완료 |
 | `REJECTED` | 반려 완료 |
 | `COMPLETED` | 제안 수락 후 교환 완료 |
 | `EXPIRED` | 만료 시각 경과로 자동 종료 |
@@ -60,14 +62,14 @@
 - 제안 수락 후 실제 lesson의 teacher가 변경되더라도 요청/제안 화면에 보이는 반 이름은 유지됩니다.
 - `SUBSTITUTION` 제안은 제안 자체에 대응하는 교환 수업이 없으므로 `classroomName`을 저장/반환하지 않습니다.
 
-### 2.6 기본 목록 조회 정책
+### 2.6 수업 교환 기본 목록 조회 정책
 
 - `GET /lesson-exchange-requests`
   - `status` 미지정 시 `CANCELLED` 제외
 - `GET /lesson-exchange-requests/{requestId}/proposals`
   - `WITHDRAWN` 제외
 
-### 2.7 자동 만료 정책
+### 2.7 수업 교환 자동 만료 정책
 
 - `PENDING`, `APPROVED` 요청 중 `expiresAt`이 지난 요청은 스케줄러가 자동으로 `EXPIRED` 처리합니다.
 - 만료된 요청에 달린 `ACTIVE` 제안은 함께 `CLOSED` 처리합니다.
@@ -77,16 +79,181 @@
 
 | API | 권한 |
 |---|---|
-| 요청 생성/수정/취소 | 교사 이상 권한 + 요청자 본인 조건 |
-| 요청 목록/상세 조회 | 교사 이상 권한 |
-| 요청 승인/반려 | `ADMIN`, `MANAGER` |
+| 결석 요청 생성 | `VOLUNTEER`, `MANAGER`, `ADMIN` + 대상 수업 담당 교사 조건 |
+| 결석 요청 목록/상세 조회 | `VOLUNTEER`, `MANAGER`, `ADMIN`, `absence-request:read:*` |
+| 결석 요청 전체 조회 | `ADMIN`, `absence-request:read:*` |
+| 결석 요청 승인/반려 | `ADMIN`, `absence-request:manage:*` |
+| 결석 요청 취소 | `VOLUNTEER`, `MANAGER`, `ADMIN` + 요청자 본인 조건 |
+| 수업 교환 요청 생성/수정/취소 | 교사 이상 권한 + 요청자 본인 조건 |
+| 수업 교환 요청 목록/상세 조회 | 교사 이상 권한 |
+| 수업 교환 요청 승인/반려 | `ADMIN`, `MANAGER` |
 | 제안 생성/수정/철회 | 교사 이상 권한 + 제안자 본인 조건 |
 | 제안 목록 조회 | 교사 이상 권한 |
 | 제안 수락 | 교사 이상 권한 + 요청자 본인 조건 |
 
-## 4. 수업 교환 요청 API
+## 4. 결석 요청 API
 
-## 4.1 요청 생성
+## 4.1 결석 요청 생성
+
+- **URL**: `/api/v1/absence-requests`
+- **Method**: `POST`
+- **Description**: 대상 수업의 담당 교사가 결석 요청을 생성합니다. `ADMIN`, `MANAGER` 권한이 있어도 담당 교사가 아니면 대리 생성할 수 없습니다.
+
+### Request Body 예시
+
+```json
+{
+  "lessonId": 1,
+  "reason": "개인 사정으로 인한 결석"
+}
+```
+
+### Response Body 예시
+
+```json
+{
+  "id": 10,
+  "lessonId": 1,
+  "lessonDate": "2026-05-12",
+  "requestedById": 3,
+  "requestedByName": "홍길동",
+  "reason": "개인 사정으로 인한 결석",
+  "expiresAt": "2026-05-12T00:00:00",
+  "status": "PENDING",
+  "approvalAt": null,
+  "approvalByName": null,
+  "note": null,
+  "createdAt": "2026-05-08T12:00:00"
+}
+```
+
+### 구현 기준 동작
+
+- 요청은 `PENDING` 상태로 생성됩니다.
+- `expiresAt`은 입력받지 않고 대상 수업일의 00:00으로 자동 설정합니다.
+- 같은 수업에 같은 요청자의 `PENDING` 또는 `APPROVED` 결석 요청이 있으면 중복 생성할 수 없습니다.
+- `REJECTED`, `CANCELLED` 요청은 재요청을 막지 않습니다.
+- 생성 시점에 이미 만료된 수업 당일 또는 과거 수업은 요청할 수 없습니다.
+
+### 주요 실패 케이스
+
+| 상황 | HTTP |
+|---|---|
+| 대상 수업 담당 교사가 아님 | 403 |
+| 같은 수업에 진행 중인 결석 요청 존재 | 409 |
+| 이미 만료된 수업에 대한 요청 | 400 |
+
+## 4.2 결석 요청 목록 조회
+
+- **URL**: `/api/v1/absence-requests`
+- **Method**: `GET`
+- **Description**: 결석 요청 목록을 페이지로 조회합니다.
+
+### Query Parameters
+
+| 파라미터 | 설명 |
+|---|---|
+| `status` | 특정 상태만 조회 |
+| `page` | 페이지 번호, 기본값 0 |
+| `size` | 페이지 크기, 기본값 10 |
+
+### 조회 범위
+
+- `ADMIN` 또는 `absence-request:read:*` 권한 사용자는 전체 결석 요청을 조회합니다.
+- 그 외 `VOLUNTEER`, `MANAGER` 사용자는 본인이 요청한 결석 요청만 조회합니다.
+
+### Response Body 예시
+
+```json
+{
+  "content": [
+    {
+      "id": 10,
+      "lessonId": 1,
+      "lessonDate": "2026-05-12",
+      "requestedById": 3,
+      "requestedByName": "홍길동",
+      "reason": "개인 사정으로 인한 결석",
+      "expiresAt": "2026-05-12T00:00:00",
+      "status": "PENDING",
+      "approvalAt": null,
+      "approvalByName": null,
+      "note": null,
+      "createdAt": "2026-05-08T12:00:00"
+    }
+  ],
+  "page": 0,
+  "size": 10,
+  "totalElements": 1,
+  "totalPages": 1
+}
+```
+
+## 4.3 결석 요청 상세 조회
+
+- **URL**: `/api/v1/absence-requests/{requestId}`
+- **Method**: `GET`
+- **Description**: 결석 요청 단건 상세를 조회합니다.
+
+### 조회 범위
+
+- `ADMIN` 또는 `absence-request:read:*` 권한 사용자는 모든 요청을 조회할 수 있습니다.
+- 그 외 `VOLUNTEER`, `MANAGER` 사용자는 본인이 요청한 결석 요청만 조회할 수 있습니다.
+
+## 4.4 결석 요청 승인
+
+- **URL**: `/api/v1/absence-requests/{requestId}/approve`
+- **Method**: `PATCH`
+- **Description**: `ADMIN` 또는 `absence-request:manage:*` 권한 사용자가 `PENDING` 상태의 결석 요청을 승인합니다.
+
+### Side Effects
+
+- 요청 상태가 `APPROVED`로 변경됩니다.
+- `approvalAt`, `approvalBy`가 기록됩니다.
+- `AbsenceApprovedEvent`가 발행되고, 대상 수업의 `teacherAttendance`가 `EXCUSED`로 변경됩니다.
+- 이미 `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED` 상태인 요청은 재처리할 수 없습니다.
+
+## 4.5 결석 요청 반려
+
+- **URL**: `/api/v1/absence-requests/{requestId}/reject`
+- **Method**: `PATCH`
+- **Description**: `ADMIN` 또는 `absence-request:manage:*` 권한 사용자가 `PENDING` 상태의 결석 요청을 반려합니다.
+
+### Request Body 예시
+
+```json
+{
+  "note": "운영 일정과 충돌합니다."
+}
+```
+
+### Side Effects
+
+- 요청 상태가 `REJECTED`로 변경됩니다.
+- `approvalAt`, `approvalBy`, `note`가 기록됩니다.
+- 이미 `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED` 상태인 요청은 재처리할 수 없습니다.
+
+## 4.6 결석 요청 취소
+
+- **URL**: `/api/v1/absence-requests/{requestId}`
+- **Method**: `DELETE`
+- **Description**: 요청자 본인이 `PENDING` 상태의 결석 요청을 취소합니다.
+
+### Side Effects
+
+- 요청을 물리 삭제하지 않고 상태를 `CANCELLED`로 변경합니다.
+- 수업 출석 상태를 변경하지 않습니다.
+- 본인 요청이 아니거나 이미 처리된 요청이면 취소할 수 없습니다.
+
+## 4.7 결석 요청 자동 만료
+
+- `PENDING` 상태의 결석 요청 중 `expiresAt`이 지난 요청은 스케줄러가 자동으로 `EXPIRED` 처리합니다.
+- `expiresAt`은 수업 하루 전까지 처리를 유도하기 위해 대상 수업일의 00:00으로 자동 설정됩니다.
+- 만료된 요청은 승인, 반려, 취소할 수 없습니다.
+
+## 5. 수업 교환 요청 API
+
+## 5.1 요청 생성
 
 - **URL**: `/api/v1/lesson-exchange-requests`
 - **Method**: `POST`
@@ -119,7 +286,7 @@
 | 교환 요청 가능 기간(현재+4일) 이전 수업 | 400 |
 | 만료 시각 정책 위반 | 400 |
 
-## 4.2 요청 목록 조회
+## 5.2 요청 목록 조회
 
 - **URL**: `/api/v1/lesson-exchange-requests`
 - **Method**: `GET`
@@ -132,13 +299,13 @@
 | `status` | 특정 상태만 조회 |
 | `mine` | `true`면 본인 요청만 조회 |
 
-## 4.3 요청 상세 조회
+## 5.3 요청 상세 조회
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}`
 - **Method**: `GET`
 - **Description**: 교사 이상 권한 사용자가 수업 교환 요청 단건 상세를 조회합니다.
 
-## 4.4 요청 수정
+## 5.4 요청 수정
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}`
 - **Method**: `PATCH`
@@ -150,7 +317,7 @@
 - 수정 후 반 이름 snapshot도 함께 갱신됩니다.
 - `FULL -> PARTIAL`, `PARTIAL -> FULL`, `PARTIAL -> 다른 PARTIAL` 수정이 가능합니다.
 
-## 4.5 요청 취소
+## 5.5 요청 취소
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/cancel`
 - **Method**: `PATCH`
@@ -161,7 +328,7 @@
 - 요청 상태가 `CANCELLED`로 변경됩니다.
 - `cancelledAt`이 기록됩니다.
 
-## 4.6 요청 승인
+## 5.6 요청 승인
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/approve`
 - **Method**: `PATCH`
@@ -172,7 +339,7 @@
 - 요청 상태가 `APPROVED`로 변경됩니다.
 - `processedAt`, `processedBy`가 기록됩니다.
 
-## 4.7 요청 반려
+## 5.7 요청 반려
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/reject`
 - **Method**: `PATCH`
@@ -191,9 +358,9 @@
 - 요청 상태가 `REJECTED`로 변경됩니다.
 - `processedAt`, `processedBy`, `rejectionNote`가 기록됩니다.
 
-## 5. 수업 교환 제안 API
+## 6. 수업 교환 제안 API
 
-## 5.1 제안 생성
+## 6.1 제안 생성
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/proposals`
 - **Method**: `POST`
@@ -224,13 +391,13 @@
 - `EXCHANGE` 제안은 요청 수업과 시간대가 겹치면 생성할 수 없습니다.
 - `SUBSTITUTION` 제안은 제안자의 기존 수업과 충돌하면 생성할 수 없습니다.
 
-## 5.2 제안 목록 조회
+## 6.2 제안 목록 조회
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/proposals`
 - **Method**: `GET`
 - **Description**: 교사 이상 권한 사용자가 특정 요청에 등록된 제안 목록을 최신순으로 조회합니다.
 
-## 5.3 제안 수정
+## 6.3 제안 수정
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/proposals/{proposalId}`
 - **Method**: `PATCH`
@@ -242,7 +409,7 @@
 - `EXCHANGE <-> SUBSTITUTION` 전환이 가능합니다.
 - 교환형으로 수정될 때만 반 이름 snapshot을 다시 계산합니다.
 
-## 5.4 제안 철회
+## 6.4 제안 철회
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/proposals/{proposalId}/withdraw`
 - **Method**: `PATCH`
@@ -253,7 +420,7 @@
 - 제안 상태가 `WITHDRAWN`으로 변경됩니다.
 - `withdrawnAt`이 기록됩니다.
 
-## 5.5 제안 수락
+## 6.5 제안 수락
 
 - **URL**: `/api/v1/lesson-exchange-requests/{requestId}/proposals/{proposalId}/accept`
 - **Method**: `PATCH`
@@ -274,9 +441,9 @@
 - `SUBSTITUTION`
   - 요청 수업들의 teacher를 제안자로 변경
 
-## 6. 대표 시퀀스
+## 7. 대표 시퀀스
 
-### 6.1 요청 생성 → 승인 → 제안 생성 → 수락
+### 7.1 요청 생성 → 승인 → 제안 생성 → 수락
 
 ```mermaid
 sequenceDiagram
@@ -309,7 +476,7 @@ sequenceDiagram
     ProposalService-->>Requester: 요청 COMPLETED, 제안 ACCEPTED
 ```
 
-### 6.2 자동 만료
+### 7.2 자동 만료
 
 ```mermaid
 sequenceDiagram
