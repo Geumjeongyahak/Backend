@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.request.service;
 
 import geumjeongyahak.domain.lesson.entity.Lesson;
+import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.request.entity.LessonExchangeProposal;
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
@@ -13,6 +14,7 @@ import geumjeongyahak.domain.request.exception.RequestForbiddenException;
 import geumjeongyahak.domain.request.exception.RequestNotFoundException;
 import geumjeongyahak.domain.request.repository.LessonExchangeRequestRepository;
 import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeRequestRequest;
+import geumjeongyahak.domain.request.v1.dto.request.LessonExchangeRequestListRequest;
 import geumjeongyahak.domain.request.v1.dto.request.UpdateLessonExchangeRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestDetailResponse;
 import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestSummaryResponse;
@@ -20,6 +22,8 @@ import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -93,32 +97,30 @@ public class LessonExchangeRequestService {
         return LessonExchangeRequestDetailResponse.from(saved);
     }
 
-    public List<LessonExchangeRequestSummaryResponse> getLessonExchangeRequests(
-        Long requesterId, LessonExchangeRequestStatus status, boolean mine
+    public PaginationResponse<LessonExchangeRequestSummaryResponse> getLessonExchangeRequests(
+        Long requesterId, LessonExchangeRequestListRequest request
     ) {
-        log.debug("수업 교환 요청 목록 조회 (status={}, mine={})", status, mine);
+        log.debug("수업 교환 요청 목록 조회 (status={}, mine={})", request.getStatus(), request.isMine());
 
-        List<LessonExchangeRequest> requests;
-        if (status != null) {
-            requests = mine
-                ? lessonExchangeRequestRepository.findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(
-                    status, requesterId
+        PageRequest pageRequest = request.toRequest();
+        Page<LessonExchangeRequest> requests = request.getStatus() != null
+            ? request.isMine()
+                ? lessonExchangeRequestRepository.findAllByStatusAndRequestedBy_Id(
+                    request.getStatus(), requesterId, pageRequest
                 )
-                : lessonExchangeRequestRepository.findAllByStatusOrderByCreatedAtDesc(status);
-        } else {
-            requests = mine
-                ? lessonExchangeRequestRepository.findAllByRequestedBy_IdAndStatusNotOrderByCreatedAtDesc(
+                : lessonExchangeRequestRepository.findAllByStatus(request.getStatus(), pageRequest)
+            : request.isMine()
+                ? lessonExchangeRequestRepository.findAllByRequestedBy_IdAndStatusNot(
                     requesterId,
-                    LessonExchangeRequestStatus.CANCELLED
+                    LessonExchangeRequestStatus.CANCELLED,
+                    pageRequest
                 )
-                : lessonExchangeRequestRepository.findAllByStatusNotOrderByCreatedAtDesc(
-                    LessonExchangeRequestStatus.CANCELLED
+                : lessonExchangeRequestRepository.findAllByStatusNot(
+                    LessonExchangeRequestStatus.CANCELLED,
+                    pageRequest
                 );
-        }
 
-        return requests.stream()
-            .map(LessonExchangeRequestSummaryResponse::from)
-            .toList();
+        return PaginationResponse.from(requests, LessonExchangeRequestSummaryResponse::from);
     }
 
     public LessonExchangeRequestDetailResponse getLessonExchangeRequest(

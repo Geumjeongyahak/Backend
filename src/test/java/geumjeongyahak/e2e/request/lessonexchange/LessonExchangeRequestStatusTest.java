@@ -320,9 +320,13 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .get()
             .then()
             .statusCode(200)
+            .body("page", equalTo(0))
+            .body("size", equalTo(10))
+            .body("totalElements", notNullValue())
+            .body("totalPages", notNullValue())
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(volunteerView).contains(volunteer1RequestId, volunteer2RequestId);
     }
@@ -365,7 +369,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(requestIds).contains(visibleRequestId);
         assertThat(requestIds).doesNotContain(cancelledRequestId);
@@ -390,7 +394,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(ownView).contains(volunteer1RequestId);
         assertThat(ownView).doesNotContain(volunteer2RequestId);
@@ -422,7 +426,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(ownView).contains(visibleOwnRequestId);
         assertThat(ownView).doesNotContain(cancelledOwnRequestId);
@@ -454,7 +458,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(approvedIds).contains(approvedRequestId);
         assertThat(approvedIds).doesNotContain(pendingRequestId);
@@ -490,7 +494,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(approvedOwnIds).contains(approvedOwnRequestId);
         assertThat(approvedOwnIds).doesNotContain(pendingOwnRequestId);
@@ -521,7 +525,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(rejectedIds).contains(rejectedRequestId);
     }
@@ -550,7 +554,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(cancelledIds).contains(cancelledRequestId);
     }

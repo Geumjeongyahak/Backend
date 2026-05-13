@@ -2,6 +2,8 @@ package geumjeongyahak.domain.request.repository;
 
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
@@ -11,22 +13,26 @@ import java.util.List;
 
 public interface LessonExchangeRequestRepository extends JpaRepository<LessonExchangeRequest, Long> {
 
-    List<LessonExchangeRequest> findAllByStatusNotOrderByCreatedAtDesc(
-        LessonExchangeRequestStatus status
-    );
-
-    List<LessonExchangeRequest> findAllByRequestedBy_IdAndStatusNotOrderByCreatedAtDesc(
-        Long requestedById,
-        LessonExchangeRequestStatus status
-    );
-
-    List<LessonExchangeRequest> findAllByStatusOrderByCreatedAtDesc(
-        LessonExchangeRequestStatus status
-    );
-
-    List<LessonExchangeRequest> findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(
+    Page<LessonExchangeRequest> findAllByStatusNot(
         LessonExchangeRequestStatus status,
-        Long requestedById
+        Pageable pageable
+    );
+
+    Page<LessonExchangeRequest> findAllByRequestedBy_IdAndStatusNot(
+        Long requestedById,
+        LessonExchangeRequestStatus status,
+        Pageable pageable
+    );
+
+    Page<LessonExchangeRequest> findAllByStatus(
+        LessonExchangeRequestStatus status,
+        Pageable pageable
+    );
+
+    Page<LessonExchangeRequest> findAllByStatusAndRequestedBy_Id(
+        LessonExchangeRequestStatus status,
+        Long requestedById,
+        Pageable pageable
     );
 
     List<LessonExchangeRequest> findAllByRequestedBy_IdAndLessonDateAndStatusIn(

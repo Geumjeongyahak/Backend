@@ -1,9 +1,10 @@
 package geumjeongyahak.domain.request.v1.controller;
 
 import geumjeongyahak.common.security.service.CustomUserDetails;
-import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
+import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.request.service.LessonExchangeRequestService;
 import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeRequestRequest;
+import geumjeongyahak.domain.request.v1.dto.request.LessonExchangeRequestListRequest;
 import geumjeongyahak.domain.request.v1.dto.request.RejectRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.request.UpdateLessonExchangeRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.response.LessonExchangeRequestDetailResponse;
@@ -13,13 +14,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @Slf4j
 @RestController
@@ -70,14 +70,14 @@ public class LessonExchangeRequestController {
             + "조회 API는 side effect 를 발생시키지 않습니다."
     )
     @GetMapping
-    public ResponseEntity<List<LessonExchangeRequestSummaryResponse>> getLessonExchangeRequests(
-        @RequestParam(required = false) LessonExchangeRequestStatus status,
-        @RequestParam(defaultValue = "false") boolean mine,
+    public ResponseEntity<PaginationResponse<LessonExchangeRequestSummaryResponse>> getLessonExchangeRequests(
+        @ParameterObject @Valid LessonExchangeRequestListRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.debug("GET /api/v1/lesson-exchange-requests - 수업 교환 요청 목록 조회 (status={}, mine={})", status, mine);
-        List<LessonExchangeRequestSummaryResponse> response = lessonExchangeRequestService.getLessonExchangeRequests(
-            userDetails.getUserId(), status, mine
+        log.debug("GET /api/v1/lesson-exchange-requests - 수업 교환 요청 목록 조회 (status={}, mine={})",
+            request.getStatus(), request.isMine());
+        PaginationResponse<LessonExchangeRequestSummaryResponse> response = lessonExchangeRequestService.getLessonExchangeRequests(
+            userDetails.getUserId(), request
         );
         return ResponseEntity.ok(response);
     }
