@@ -28,7 +28,7 @@ public record LessonExchangeProposalResponse(
     @Schema(description = "제안 유형", example = "EXCHANGE")
     LessonExchangeProposalType proposalType,
 
-    @Schema(description = "제안 수업 날짜", example = "2026-06-17")
+    @Schema(description = "제안 수업 날짜. 교환형(EXCHANGE)이면 값이 있고, 대체형(SUBSTITUTION)이면 null 입니다.", example = "2026-06-17")
     LocalDate lessonDate,
 
     @Schema(description = "제안 내용")

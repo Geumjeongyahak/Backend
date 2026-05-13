@@ -34,8 +34,9 @@ public class LessonExchangeProposalController {
     @Operation(
         summary = "수업 교환 제안 생성",
         description = "교사 이상 권한(VOLUNTEER, MANAGER, ADMIN)을 가진 사용자가 APPROVED 상태의 수업 교환 요청에 대해 교환 제안을 생성합니다. "
-            + "lessonDate를 입력하면 교환형 제안으로 처리됩니다. "
+            + "제안은 교시 범위를 받지 않으며, lessonDate를 입력하면 해당 날짜의 제안자 수업 전체를 내놓는 교환형 제안으로 처리됩니다. "
             + "lessonDate를 입력하지 않으면 대체형 제안으로 처리됩니다. "
+            + "교환형 제안은 요청 날짜와 같은 날짜로 생성할 수 없습니다. "
             + "교환형 제안의 반 이름은 생성 시점의 표시값을 snapshot 으로 함께 저장하며, 이후 실제 수업 교사가 변경되더라도 제안 화면에는 기존 값이 유지됩니다. "
             + "대체형 제안은 제안 자체에 대응하는 교환 수업이 없으므로 반 이름을 별도로 저장하거나 반환하지 않습니다."
     )
@@ -78,7 +79,8 @@ public class LessonExchangeProposalController {
     @Operation(
         summary = "수업 교환 제안 수정",
         description = "교사 이상 권한(VOLUNTEER, MANAGER, ADMIN)을 가진 사용자가 본인이 작성한 ACTIVE 상태의 수업 교환 제안을 수정합니다. "
-            + "입력 규칙은 제안 생성 API와 동일하며, 요청이 여전히 제안 가능 상태인지와 제안자가 실제 수업 조건을 만족하는지도 다시 검증합니다. "
+            + "입력 규칙은 제안 생성 API와 동일하며, 교시 범위 없이 lessonDate 유무로 교환형/대체형을 결정합니다. "
+            + "요청이 여전히 제안 가능 상태인지와 제안자가 실제 수업 조건을 만족하는지도 다시 검증합니다. "
             + "교환형 제안의 반 이름 snapshot 도 함께 갱신되며, 대체형 제안은 반 이름 없이 유지됩니다. "
             + "이후 조회 시에는 최신 수정 기준의 표시값이 유지됩니다."
     )
@@ -104,6 +106,8 @@ public class LessonExchangeProposalController {
         summary = "수업 교환 제안 수락",
         description = "요청자가 APPROVED 상태의 수업 교환 요청에 등록된 ACTIVE 제안 하나를 수락합니다. "
             + "수락 시 요청은 COMPLETED, 선택된 제안은 ACCEPTED, 나머지 ACTIVE 제안은 CLOSED 상태로 변경되며 실제 수업 교환/대체가 반영됩니다. "
+            + "교환형 제안은 요청 날짜의 요청자 수업 전체와 제안 날짜의 제안자 수업 전체를 서로 교환합니다. "
+            + "대체형 제안은 요청 날짜의 요청자 수업 전체를 제안자가 맡도록 변경합니다. "
             + "이때 실제 lesson 의 담당 교사는 변경되지만, 요청/제안 응답에 보이는 반 이름은 생성/수정 당시 저장한 snapshot 값을 그대로 유지합니다. "
             + "즉 수락 이후 화면에서는 상태만 변경되고 기존 요청/제안의 표시 내용은 유지됩니다."
     )

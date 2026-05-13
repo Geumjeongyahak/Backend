@@ -326,7 +326,7 @@ public class LessonExchangeProposalService {
         }
     }
 
-    // 교환형 제안일 때, 요청 수업과 제안 수업의 교시가 겹치지 않는지 검증
+    // 하루 단위 교환형 제안은 요청 날짜와 같은 날짜로 생성/수정할 수 없음
     private void validateNoTimeOverlapWithRequest(
         LessonExchangeRequest exchangeRequest,
         LocalDate lessonDate
@@ -350,7 +350,7 @@ public class LessonExchangeProposalService {
         return lessons;
     }
 
-    // 수업 교환 제안의 수업들을 조회
+    // 교환형 제안 날짜의 제안자 수업 전체를 조회
     private List<Lesson> getProposalLessons(
         Long proposerId,
         LocalDate lessonDate

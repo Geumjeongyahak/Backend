@@ -39,6 +39,7 @@ public class LessonExchangeRequestController {
     @Operation(
         summary = "수업 교환 요청 생성",
         description = "교사 이상 권한(VOLUNTEER, MANAGER, ADMIN)을 가진 사용자가 자신이 담당 중인 수업에 대해서만 수업 교환 요청을 생성합니다. "
+            + "요청은 교시 범위를 받지 않으며, 대상 날짜의 요청자 수업 전체를 하루 단위로 처리합니다. "
             + "요청 생성 시 PENDING 상태(승인 대기 상태)로 저장되며 대상 날짜, 요청자, 제목, 내용, 만료 시각이 함께 저장됩니다. "
             + "반 이름은 생성 시점의 표시값을 snapshot 으로 함께 저장하며, 이후 실제 수업 교사가 변경되더라도 요청 화면에는 기존 값이 유지됩니다. "
             + "이 단계에서는 실제 담당 교사 변경이 일어나지 않으며, side effect(승인/제안/수락)는 승인 API에서만 발생합니다. "
@@ -105,7 +106,7 @@ public class LessonExchangeRequestController {
     @Operation(
         summary = "수업 교환 요청 수정",
         description = "교사 이상 권한(VOLUNTEER, MANAGER, ADMIN)을 가진 사용자가 본인이 생성한 PENDING 상태의 수업 교환 요청을 수정합니다. "
-            + "생성 API와 동일한 입력 구조를 사용하며, 수정 후에도 대상 날짜 수업 존재 여부와 만료 시각 정책 검증을 동일하게 수행합니다. "
+            + "생성 API와 동일하게 교시 범위 없이 하루 단위 입력 구조를 사용하며, 수정 후에도 대상 날짜 수업 존재 여부와 만료 시각 정책 검증을 동일하게 수행합니다. "
             + "반 이름 snapshot 도 함께 갱신되며, 이후 조회 시에는 최신 수정 기준의 표시값이 유지됩니다. "
             + "승인 이후 상태의 요청은 수정할 수 없으며, 실제 수업 교환 side effect 는 발생하지 않습니다."
     )

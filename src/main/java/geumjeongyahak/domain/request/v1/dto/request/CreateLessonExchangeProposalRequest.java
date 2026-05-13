@@ -7,7 +7,7 @@ import java.time.LocalDate;
 
 public record CreateLessonExchangeProposalRequest(
 
-    @Schema(description = "제안 수업 날짜", example = "2026-06-17")
+    @Schema(description = "제안 수업 날짜. 입력하면 교환형(EXCHANGE), 생략하면 대체형(SUBSTITUTION)으로 처리됩니다.", example = "2026-06-17")
     LocalDate lessonDate,
 
     @NotBlank
