@@ -389,9 +389,6 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
             request.getTitle(),
             request.getClassroomNameSnapshot(),
             request.getContent(),
-            request.getScope(),
-            request.getStartPeriod(),
-            request.getEndPeriod(),
             LocalDateTime.now().minusMinutes(1)
         );
         lessonExchangeRequestRepository.save(request);

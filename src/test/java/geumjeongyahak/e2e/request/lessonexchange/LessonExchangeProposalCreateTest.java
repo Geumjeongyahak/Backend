@@ -117,15 +117,15 @@ class LessonExchangeProposalCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("승인된 부분 요청에 대해 같은 날짜의 비겹침 PARTIAL 제안 생성 -> 201")
-    void createExchangeProposal_partialNonOverlapping_returns201() {
+    @DisplayName("하루 단위 요청에 대해 같은 날짜의 PARTIAL 제안 생성 -> 400")
+    void createExchangeProposal_sameDatePartial_returns400() {
         LocalDate requestDate = LocalDate.now().plusDays(8);
         Long requestId = createApprovedPartialRequest(requestDate, 1, 2);
 
         Long proposerSubjectId = registerSubject(CLASSROOM_ID, TEACHER2_ID);
         registerLesson(proposerSubjectId, TEACHER2_ID, requestDate, "11:00:00", "11:50:00", 3);
 
-        Long proposalId = given()
+        given()
             .basePath("/api/v1/lesson-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
@@ -137,16 +137,7 @@ class LessonExchangeProposalCreateTest extends RequestBaseTest {
             ))
             .post("/{requestId}/proposals", requestId)
             .then()
-            .statusCode(201)
-            .body("proposalType", equalTo("EXCHANGE"))
-            .body("proposalScope", equalTo("PARTIAL"))
-            .body("startPeriod", equalTo(3))
-            .body("endPeriod", equalTo(3))
-            .extract()
-            .jsonPath()
-            .getLong("id");
-
-        proposalIds.add(proposalId);
+            .statusCode(400);
     }
 
     @Test

@@ -18,6 +18,8 @@ import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
 @Tag("lesson-exchange-request")
@@ -43,8 +45,8 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("봉사자가 전체 교환 요청 생성 -> 201, 필드 검증")
-    void createFullRequest_asVolunteer_returns201() {
+    @DisplayName("봉사자가 하루 단위 교환 요청 생성 -> 201, 필드 검증")
+    void createDailyRequest_asVolunteer_returns201() {
         LocalDate lessonDate = LocalDate.now().plusDays(5);
         Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
         registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "10:00:00", 1);
@@ -55,8 +57,8 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .contentType(ContentType.JSON)
             .body(Map.of(
                 "lessonDate", lessonDate.toString(),
-                "title", "전체 교환 요청",
-                "content", "해당 날짜 전체 수업 교환을 요청합니다.",
+                "title", "하루 단위 교환 요청",
+                "content", "해당 날짜 수업 교환을 요청합니다.",
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
             ))
             .post()
@@ -66,44 +68,11 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .body("classroomName", equalTo("벚꽃반"))
             .body("lessonDate", equalTo(lessonDate.toString()))
             .body("requestedByName", equalTo("홍길동"))
-            .body("title", equalTo("전체 교환 요청"))
+            .body("title", equalTo("하루 단위 교환 요청"))
             .body("status", equalTo("PENDING"))
-            .body("scope", equalTo("FULL"))
-            .body("startPeriod", equalTo(null))
-            .body("endPeriod", equalTo(null))
-            .extract()
-            .jsonPath()
-            .getLong("id");
-
-        requestIds.add(requestId);
-    }
-
-    @Test
-    @DisplayName("봉사자가 부분 교환 요청 생성 -> 201, 교시 범위 저장")
-    void createPartialRequest_asVolunteer_returns201() {
-        LocalDate lessonDate = LocalDate.now().plusDays(6);
-        Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
-        registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "09:50:00", 1);
-        registerLesson(subjectId, TEACHER_ID, lessonDate, "10:00:00", "10:50:00", 2);
-
-        Long requestId = given()
-            .basePath("/api/v1/lesson-exchange-requests")
-            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
-            .contentType(ContentType.JSON)
-            .body(Map.of(
-                "lessonDate", lessonDate.toString(),
-                "title", "부분 교환 요청",
-                "content", "1~2교시만 교환을 요청합니다.",
-                "startPeriod", 1,
-                "endPeriod", 2,
-                "expiresAt", lessonDate.minusDays(3).atTime(22, 0).toString()
-            ))
-            .post()
-            .then()
-            .statusCode(201)
-            .body("scope", equalTo("PARTIAL"))
-            .body("startPeriod", equalTo(1))
-            .body("endPeriod", equalTo(2))
+            .body("$", not(hasKey("scope")))
+            .body("$", not(hasKey("startPeriod")))
+            .body("$", not(hasKey("endPeriod")))
             .extract()
             .jsonPath()
             .getLong("id");
@@ -173,8 +142,8 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("같은 날짜와 범위에 진행 중 요청이 있으면 중복 생성 -> 409")
-    void createRequest_duplicateActiveRequest_returns409() {
+    @DisplayName("같은 날짜에 진행 중 요청이 있으면 중복 생성 -> 409")
+    void createRequest_duplicateActiveRequestOnSameDate_returns409() {
         LocalDate lessonDate = LocalDate.now().plusDays(7);
         Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
         registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "09:50:00", 1);
@@ -185,8 +154,8 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             lessonDate,
             "첫 요청",
             "중복 체크용",
-            1,
-            2,
+            null,
+            null,
             lessonDate.minusDays(3).atTime(22, 0)
         ));
 
@@ -198,201 +167,11 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "두 번째 요청",
                 "content", "중복 생성 시도",
-                "startPeriod", 2,
-                "endPeriod", 2,
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
             ))
             .post()
             .then()
             .statusCode(409);
-    }
-
-    @Test
-    @DisplayName("같은 날짜에 FULL 요청이 있으면 PARTIAL 요청 추가 생성 -> 409")
-    void createRequest_partialAfterFull_returns409() {
-        LocalDate lessonDate = LocalDate.now().plusDays(8);
-        Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
-        registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "09:50:00", 1);
-        registerLesson(subjectId, TEACHER_ID, lessonDate, "10:00:00", "10:50:00", 2);
-
-        requestIds.add(createLessonExchangeRequest(
-            getAuthHeader(volunteerToken),
-            lessonDate,
-            "전체 요청",
-            "먼저 전체 요청을 생성합니다.",
-            null,
-            null,
-            lessonDate.minusDays(3).atTime(22, 0)
-        ));
-
-        given()
-            .basePath("/api/v1/lesson-exchange-requests")
-            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
-            .contentType(ContentType.JSON)
-            .body(Map.of(
-                "lessonDate", lessonDate.toString(),
-                "title", "부분 요청",
-                "content", "전체 요청과 같은 날짜에 부분 요청 추가",
-                "startPeriod", 1,
-                "endPeriod", 1,
-                "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
-            ))
-            .post()
-            .then()
-            .statusCode(409);
-    }
-
-    @Test
-    @DisplayName("같은 날짜에 PARTIAL 요청이 있으면 FULL 요청 추가 생성 -> 409")
-    void createRequest_fullAfterPartial_returns409() {
-        LocalDate lessonDate = LocalDate.now().plusDays(9);
-        Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
-        registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "09:50:00", 1);
-        registerLesson(subjectId, TEACHER_ID, lessonDate, "10:00:00", "10:50:00", 2);
-
-        requestIds.add(createLessonExchangeRequest(
-            getAuthHeader(volunteerToken),
-            lessonDate,
-            "부분 요청",
-            "먼저 부분 요청을 생성합니다.",
-            1,
-            1,
-            lessonDate.minusDays(3).atTime(22, 0)
-        ));
-
-        given()
-            .basePath("/api/v1/lesson-exchange-requests")
-            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
-            .contentType(ContentType.JSON)
-            .body(Map.of(
-                "lessonDate", lessonDate.toString(),
-                "title", "전체 요청",
-                "content", "부분 요청과 같은 날짜에 전체 요청 추가",
-                "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
-            ))
-            .post()
-            .then()
-            .statusCode(409);
-    }
-
-    @Test
-    @DisplayName("같은 날짜라도 교시가 겹치지 않는 PARTIAL 요청은 추가 생성 가능 -> 201")
-    void createRequest_nonOverlappingPartial_returns201() {
-        LocalDate lessonDate = LocalDate.now().plusDays(10);
-        Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
-        registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "09:50:00", 1);
-        registerLesson(subjectId, TEACHER_ID, lessonDate, "10:00:00", "10:50:00", 2);
-
-        requestIds.add(createLessonExchangeRequest(
-            getAuthHeader(volunteerToken),
-            lessonDate,
-            "1교시 요청",
-            "1교시만 요청합니다.",
-            1,
-            1,
-            lessonDate.minusDays(3).atTime(22, 0)
-        ));
-
-        Long requestId = given()
-            .basePath("/api/v1/lesson-exchange-requests")
-            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
-            .contentType(ContentType.JSON)
-            .body(Map.of(
-                "lessonDate", lessonDate.toString(),
-                "title", "2교시 요청",
-                "content", "겹치지 않는 2교시 요청",
-                "startPeriod", 2,
-                "endPeriod", 2,
-                "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
-            ))
-            .post()
-            .then()
-            .statusCode(201)
-            .body("scope", equalTo("PARTIAL"))
-            .body("startPeriod", equalTo(2))
-            .body("endPeriod", equalTo(2))
-            .extract()
-            .jsonPath()
-            .getLong("id");
-
-        requestIds.add(requestId);
-    }
-
-    @Test
-    @DisplayName("교시 범위를 입력하면 PARTIAL 요청으로 해석되어 생성된다 -> 201")
-    void createRequest_withPeriods_resolvesPartialRequest() {
-        LocalDate lessonDate = LocalDate.now().plusDays(11);
-        Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
-        registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "09:50:00", 1);
-        registerLesson(subjectId, TEACHER_ID, lessonDate, "10:00:00", "10:50:00", 2);
-
-        Long requestId = given()
-            .basePath("/api/v1/lesson-exchange-requests")
-            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
-            .contentType(ContentType.JSON)
-            .body(Map.of(
-                "lessonDate", lessonDate.toString(),
-                "title", "교시 포함 요청",
-                "content", "교시를 입력하면 부분 교환으로 저장됩니다.",
-                "startPeriod", 1,
-                "endPeriod", 2,
-                "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
-            ))
-            .post()
-            .then()
-            .statusCode(201)
-            .body("scope", equalTo("PARTIAL"))
-            .body("startPeriod", equalTo(1))
-            .body("endPeriod", equalTo(2))
-            .extract()
-            .jsonPath()
-            .getLong("id");
-
-        requestIds.add(requestId);
-    }
-
-    @Test
-    @DisplayName("시작 교시가 종료 교시보다 크면 -> 400")
-    void createRequest_withInvalidPeriodOrder_returns400() {
-        LocalDate lessonDate = LocalDate.now().plusDays(12);
-
-        given()
-            .basePath("/api/v1/lesson-exchange-requests")
-            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
-            .contentType(ContentType.JSON)
-            .body(Map.of(
-                "lessonDate", lessonDate.toString(),
-                "title", "잘못된 교시 순서",
-                "content", "startPeriod > endPeriod",
-                "startPeriod", 3,
-                "endPeriod", 2,
-                "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
-            ))
-            .post()
-            .then()
-            .statusCode(400);
-    }
-
-    @Test
-    @DisplayName("교시 범위가 정책 밖이면 -> 400")
-    void createRequest_withOutOfRangePeriods_returns400() {
-        LocalDate lessonDate = LocalDate.now().plusDays(13);
-
-        given()
-            .basePath("/api/v1/lesson-exchange-requests")
-            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
-            .contentType(ContentType.JSON)
-            .body(Map.of(
-                "lessonDate", lessonDate.toString(),
-                "title", "교시 범위 초과",
-                "content", "0교시부터 4교시까지는 허용되지 않습니다.",
-                "startPeriod", 0,
-                "endPeriod", 4,
-                "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
-            ))
-            .post()
-            .then()
-            .statusCode(400);
     }
 
     @Test
@@ -408,27 +187,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "",
                 "content", "내용",
-                "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
-            ))
-            .post()
-            .then()
-            .statusCode(400);
-    }
-
-    @Test
-    @DisplayName("교시를 하나만 입력하면 -> 400")
-    void createRequest_withOnlyOnePeriod_returns400() {
-        LocalDate lessonDate = LocalDate.now().plusDays(5);
-
-        given()
-            .basePath("/api/v1/lesson-exchange-requests")
-            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
-            .contentType(ContentType.JSON)
-            .body(Map.of(
-                "lessonDate", lessonDate.toString(),
-                "title", "교시 하나만 입력",
-                "content", "시작 교시만 입력",
-                "startPeriod", 1,
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
             ))
             .post()
@@ -562,15 +320,14 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
         LocalDate lessonDate = LocalDate.now().plusDays(14);
         Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
         registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "09:50:00", 1);
-        registerLesson(subjectId, TEACHER_ID, lessonDate, "10:00:00", "10:50:00", 2);
 
         Long rejectedRequestId = createLessonExchangeRequest(
             getAuthHeader(volunteerToken),
             lessonDate,
             "반려될 요청",
             "먼저 요청을 생성합니다.",
-            1,
-            1,
+            null,
+            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(rejectedRequestId);
@@ -584,8 +341,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "재요청",
                 "content", "반려 후 같은 날짜 재요청",
-                "startPeriod", 1,
-                "endPeriod", 1,
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
             ))
             .post()

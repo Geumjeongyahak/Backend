@@ -626,9 +626,6 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             request.getTitle(),
             request.getClassroomNameSnapshot(),
             request.getContent(),
-            request.getScope(),
-            request.getStartPeriod(),
-            request.getEndPeriod(),
             expiresAt
         );
         lessonExchangeRequestRepository.save(request);

@@ -7,7 +7,6 @@ import geumjeongyahak.domain.request.entity.LessonExchangeProposal;
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
 import geumjeongyahak.domain.request.enums.LessonExchangeProposalStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
-import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import geumjeongyahak.domain.request.exception.LessonExchangeRequest.*;
 import geumjeongyahak.domain.request.exception.RequestAlreadyProcessedException;
 import geumjeongyahak.domain.request.exception.RequestForbiddenException;
@@ -54,22 +53,14 @@ public class LessonExchangeRequestService {
     ) {
         log.debug("수업 교환 요청 생성 (requesterId={}, lessonDate={})", requesterId, request.lessonDate());
 
-        LessonExchangeScope scope = resolveRequestScope(request.startPeriod(), request.endPeriod());
-
         List<Lesson> targetLessons = getTargetLessons(
             requesterId,
-            request.lessonDate(),
-            scope,
-            request.startPeriod(),
-            request.endPeriod()
+            request.lessonDate()
         );
 
         validateNoActiveExchangeRequestExists(
             requesterId,
-            request.lessonDate(),
-            scope,
-            request.startPeriod(),
-            request.endPeriod()
+            request.lessonDate()
         );
         validateLessonWithPolicy(request.lessonDate());
         validateExpiresAtIsFuture(request.expiresAt());
@@ -86,9 +77,6 @@ public class LessonExchangeRequestService {
             request.title(),
             classroomName,
             request.content(),
-            scope,
-            request.startPeriod(),
-            request.endPeriod(),
             request.expiresAt()
         );
         LessonExchangeRequest saved = lessonExchangeRequestRepository.save(exchangeRequest);
@@ -163,8 +151,6 @@ public class LessonExchangeRequestService {
         LessonExchangeRequest exchangeRequest = lessonExchangeRequestRepository.findById(requestId)
             .orElseThrow(() -> new RequestNotFoundException(requestId));
 
-        LessonExchangeScope scope = resolveRequestScope(request.startPeriod(), request.endPeriod());
-
         if (!exchangeRequest.getRequestedBy().getId().equals(requesterId)) {
             throw new RequestForbiddenException();
         }
@@ -175,18 +161,12 @@ public class LessonExchangeRequestService {
 
         List<Lesson> targetLessons = getTargetLessons(
             requesterId,
-            request.lessonDate(),
-            scope,
-            request.startPeriod(),
-            request.endPeriod()
+            request.lessonDate()
         );
 
         validateNoActiveExchangeRequestExists(
             requesterId,
             request.lessonDate(),
-            scope,
-            request.startPeriod(),
-            request.endPeriod(),
             exchangeRequest.getId()
         );
         validateLessonWithPolicy(request.lessonDate());
@@ -200,9 +180,6 @@ public class LessonExchangeRequestService {
             request.title(),
             resolveClassroomName(targetLessons),
             request.content(),
-            scope,
-            request.startPeriod(),
-            request.endPeriod(),
             request.expiresAt()
         );
 
@@ -311,21 +288,15 @@ public class LessonExchangeRequestService {
     // 생성 시에는 제외할 요청이 없으므로, 전체 수업 교환 요청을 그대로 중복 검사 (excludeRequestId = null)
     private void validateNoActiveExchangeRequestExists(
         Long requesterId,
-        LocalDate lessonDate,
-        LessonExchangeScope scope,
-        Integer startPeriod,
-        Integer endPeriod
+        LocalDate lessonDate
     ) {
-        validateNoActiveExchangeRequestExists(requesterId, lessonDate, scope, startPeriod, endPeriod, null);
+        validateNoActiveExchangeRequestExists(requesterId, lessonDate, null);
     }
 
     // 수정 시에는 현재 수정 중인 자기 자신 요청은 중복 검사 대상에서 제외해야 하기 때문에 excludedRequestId 파라미터를 따로 받음
     private void validateNoActiveExchangeRequestExists(
         Long requesterId,
         LocalDate lessonDate,
-        LessonExchangeScope scope,
-        Integer startPeriod,
-        Integer endPeriod,
         Long excludedRequestId
     ) {
         List<LessonExchangeRequestStatus> activeStatuses = List.of(
@@ -340,36 +311,14 @@ public class LessonExchangeRequestService {
                 activeStatuses
             );
 
-        // 기존 요청이 없으면 isOverlapping 메서드가 호출되지 않고 false 값이 됨
-        boolean hasOverlap = existingRequests.stream()
+        boolean hasDuplicate = existingRequests.stream()
             .filter(existing -> excludedRequestId == null || !existing.getId().equals(excludedRequestId))
-            .anyMatch(existing
-                -> isOverlapping(existing, scope, startPeriod, endPeriod));
+            .findAny()
+            .isPresent();
 
-        if (hasOverlap) {
+        if (hasDuplicate) {
             throw new DuplicateActiveRequestException();
         }
-    }
-
-    private boolean isOverlapping(
-        LessonExchangeRequest existing,
-        LessonExchangeScope newScope,
-        Integer newStartPeriod,
-        Integer newEndPeriod
-    ) {
-        // 해당 날짜에 이미 전체 교환 요청이 있는 경우
-        if (existing.getScope() == LessonExchangeScope.FULL) {
-            return true;
-        }
-
-        // 해당 날짜에 이미 부분 교환 요청이 있지만 새 교환 요청의 범위가 전체인 경우
-        if (newScope == LessonExchangeScope.FULL) {
-            return true;
-        }
-
-        // 기존의 부분 교환 요청과 새 교환 요청의 범위가 겹치는 경우
-        return existing.getStartPeriod() <= newEndPeriod
-            && existing.getEndPeriod() >= newStartPeriod;
     }
 
     private void expireRequest(LessonExchangeRequest request) {
@@ -385,44 +334,18 @@ public class LessonExchangeRequestService {
 
     private List<Lesson> getTargetLessons(
         Long requesterId,
-        LocalDate lessonDate,
-        LessonExchangeScope scope,
-        Integer startPeriod,
-        Integer endPeriod
+        LocalDate lessonDate
     ) {
-        if (scope == LessonExchangeScope.FULL) {
-            List<Lesson> lessons = lessonProxyService.getActiveLessonsByTeacherAndDate(
-                requesterId,
-                lessonDate
-            );
-
-            if (lessons.isEmpty()) {
-                throw new RequestForbiddenException();
-            }
-            return lessons;
-        }
-
-        List<Lesson> lessons = lessonProxyService.getActiveLessonsByTeacherAndDateAndPeriodBetween(
+        List<Lesson> lessons = lessonProxyService.getActiveLessonsByTeacherAndDate(
             requesterId,
-            lessonDate,
-            startPeriod,
-            endPeriod
+            lessonDate
         );
 
-        int expectedCount = endPeriod - startPeriod + 1;
-        if (lessons.size() != expectedCount) {
+        if (lessons.isEmpty()) {
             throw new RequestForbiddenException();
         }
 
         return lessons;
-    }
-
-    private LessonExchangeScope resolveRequestScope(Integer startPeriod, Integer endPeriod) {
-        if (startPeriod == null && endPeriod == null) {
-            return LessonExchangeScope.FULL;
-        }
-
-        return LessonExchangeScope.PARTIAL;
     }
 
     private String resolveClassroomName(List<Lesson> lessons) {

@@ -1,6 +1,5 @@
 package geumjeongyahak.domain.request.v1.dto.request;
 
-import geumjeongyahak.common.validation.annotation.ValidLessonExchangeScope;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
@@ -9,7 +8,6 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@ValidLessonExchangeScope
 public record CreateLessonExchangeRequestRequest(
 
     @NotNull
@@ -23,12 +21,6 @@ public record CreateLessonExchangeRequestRequest(
     @NotBlank
     @Schema(description = "요청 내용", example = "사정으로 인해 교환을 요청합니다.")
     String content,
-
-    @Schema(description = "교환 시작 교시. 전체 교환이면 입력하지 않습니다.", example = "1")
-    Integer startPeriod,
-
-    @Schema(description = "교환 종료 교시. 전체 교환이면 입력하지 않습니다.", example = "3")
-    Integer endPeriod,
 
     @NotNull
     @Future

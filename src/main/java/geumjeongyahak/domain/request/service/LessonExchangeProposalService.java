@@ -372,20 +372,11 @@ public class LessonExchangeProposalService {
             return;
         }
 
-        int requestStartPeriod = resolveStartPeriod(
-            exchangeRequest.getScope(),
-            exchangeRequest.getStartPeriod()
-        );
-        int requestEndPeriod = resolveEndPeriod(
-            exchangeRequest.getScope(),
-            exchangeRequest.getEndPeriod()
-        );
-
         int proposalStartPeriod = resolveStartPeriod(proposalScope, startPeriod);
         int proposalEndPeriod = resolveEndPeriod(proposalScope, endPeriod);
 
-        boolean overlaps = requestStartPeriod <= proposalEndPeriod
-            && requestEndPeriod >= proposalStartPeriod;
+        boolean overlaps = FULL_DAY_START_PERIOD <= proposalEndPeriod
+            && FULL_DAY_END_PERIOD >= proposalStartPeriod;
 
         if (overlaps) {
             throw new ProposalTimeOverlapWithRequestException();
@@ -410,21 +401,10 @@ public class LessonExchangeProposalService {
 
     // 수업 교환 요청의 수업들을 조회
     private List<Lesson> getRequestLessons(LessonExchangeRequest request) {
-        List<Lesson> lessons;
-
-        if (request.getScope() == LessonExchangeScope.FULL) {
-            lessons = lessonProxyService.getActiveLessonsByTeacherAndDate(
-                request.getRequestedBy().getId(),
-                request.getLessonDate()
-            );
-        } else {
-            lessons = lessonProxyService.getActiveLessonsByTeacherAndDateAndPeriodBetween(
-                    request.getRequestedBy().getId(),
-                    request.getLessonDate(),
-                    request.getStartPeriod(),
-                    request.getEndPeriod()
-            );
-        }
+        List<Lesson> lessons = lessonProxyService.getActiveLessonsByTeacherAndDate(
+            request.getRequestedBy().getId(),
+            request.getLessonDate()
+        );
 
         if (lessons.isEmpty()) {
             throw new RequestLessonsNotFoundException();
