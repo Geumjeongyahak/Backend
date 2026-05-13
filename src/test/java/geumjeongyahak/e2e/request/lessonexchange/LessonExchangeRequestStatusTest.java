@@ -611,8 +611,6 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             lessonDate,
             "수업 교환 요청",
             "해당 일정 조정이 필요합니다.",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(23, 0)
         );
         requestIds.add(requestId);

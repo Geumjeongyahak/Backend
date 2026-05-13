@@ -52,8 +52,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
             lessonDate,
             "기존 요청",
             "기존 내용",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -66,8 +64,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
                 lessonDate,
                 "수정된 요청",
                 "수정된 내용",
-                null,
-                null,
                 lessonDate.minusDays(3).atTime(21, 0)
             ))
             .patch("/{id}", requestId)
@@ -91,8 +87,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
             lessonDate,
             "기존 요청",
             "내용",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -105,8 +99,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
                 lessonDate,
                 "제목만 수정",
                 "같은 날짜 유지",
-                null,
-                null,
                 lessonDate.minusDays(3).atTime(21, 0)
             ))
             .patch("/{id}", requestId)
@@ -128,8 +120,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
             originalDate,
             "첫 번째 요청",
             "원본 날짜 요청",
-            null,
-            null,
             originalDate.minusDays(3).atTime(22, 0)
         );
         Long secondRequestId = createLessonExchangeRequest(
@@ -137,8 +127,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
             conflictingDate,
             "두 번째 요청",
             "충돌 날짜 요청",
-            null,
-            null,
             conflictingDate.minusDays(3).atTime(21, 30)
         );
         requestIds.add(firstRequestId);
@@ -152,8 +140,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
                 conflictingDate,
                 "충돌하는 날짜로 수정",
                 "이미 요청이 있는 날짜로 변경",
-                null,
-                null,
                 conflictingDate.minusDays(3).atTime(21, 0)
             ))
             .patch("/{id}", firstRequestId)
@@ -173,8 +159,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
             lessonDate,
             "원본 요청",
             "수업이 있는 날짜",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -187,8 +171,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
                 emptyDate,
                 "수업 없는 날짜로 수정",
                 "수업이 없는 날짜",
-                null,
-                null,
                 emptyDate.minusDays(3).atTime(21, 0)
             ))
             .patch("/{id}", requestId)
@@ -207,8 +189,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
             lessonDate,
             "원본 요청",
             "만료 시각 수정 테스트",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -221,8 +201,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
                 lessonDate,
                 "원본 요청",
                 "만료 시각 수정 테스트",
-                null,
-                null,
                 lessonDate.minusDays(3).atTime(20, 30)
             ))
             .patch("/{id}", requestId)
@@ -242,8 +220,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
             lessonDate,
             "원본 요청",
             "만료 시각 정책 검증",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -256,8 +232,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
                 lessonDate,
                 "정책 위반 수정",
                 "너무 늦은 만료 시각",
-                null,
-                null,
                 lessonDate.minusDays(2).atTime(12, 0)
             ))
             .patch("/{id}", requestId)
@@ -278,8 +252,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
             originalDate,
             "원본 요청",
             "날짜 수정 전",
-            null,
-            null,
             originalDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -292,8 +264,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
                 newDate,
                 "날짜 수정 요청",
                 "새 날짜로 변경",
-                null,
-                null,
                 newDate.minusDays(3).atTime(21, 0)
             ))
             .patch("/{id}", requestId)
@@ -316,8 +286,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
             lessonDate,
             "원본 요청",
             "요청자 본인만 수정 가능",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -330,8 +298,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
                 lessonDate,
                 "타인 수정 시도",
                 "수정 불가",
-                null,
-                null,
                 lessonDate.minusDays(3).atTime(21, 0)
             ))
             .patch("/{id}", requestId)
@@ -350,8 +316,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
             lessonDate,
             "게스트 수정 방지 요청",
             "게스트는 수정할 수 없습니다.",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -364,8 +328,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
                 lessonDate,
                 "게스트 수정 시도",
                 "수정 불가",
-                null,
-                null,
                 lessonDate.minusDays(3).atTime(21, 0)
             ))
             .patch("/{id}", requestId)
@@ -384,8 +346,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
             lessonDate,
             "승인 전 요청",
             "승인 후 수정 불가 확인",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -405,8 +365,6 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
                 lessonDate,
                 "승인 후 수정 시도",
                 "수정되면 안 됩니다.",
-                null,
-                null,
                 lessonDate.minusDays(3).atTime(21, 0)
             ))
             .patch("/{id}", requestId)

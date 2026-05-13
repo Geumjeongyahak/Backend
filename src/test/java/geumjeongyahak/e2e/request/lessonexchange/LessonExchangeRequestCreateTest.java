@@ -154,8 +154,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             lessonDate,
             "첫 요청",
             "중복 체크용",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         ));
 
@@ -326,8 +324,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             lessonDate,
             "반려될 요청",
             "먼저 요청을 생성합니다.",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(rejectedRequestId);
@@ -365,8 +361,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             lessonDate,
             "완료된 요청",
             "먼저 요청을 생성합니다.",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(completedRequestId);
@@ -404,8 +398,6 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             lessonDate,
             "취소된 요청",
             "먼저 요청을 생성합니다.",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(cancelledRequestId);

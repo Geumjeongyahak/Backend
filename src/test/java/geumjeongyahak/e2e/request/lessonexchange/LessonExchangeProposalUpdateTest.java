@@ -340,8 +340,6 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
             lessonDate,
             "수업 교환 요청",
             "제안 수정 테스트용 요청",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(23, 0)
         );
         requestIds.add(requestId);

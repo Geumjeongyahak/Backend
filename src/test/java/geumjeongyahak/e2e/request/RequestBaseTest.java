@@ -87,8 +87,6 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         LocalDate lessonDate,
         String title,
         String content,
-        Integer startPeriod,
-        Integer endPeriod,
         LocalDateTime expiresAt
     ) {
         return given()
@@ -99,8 +97,6 @@ public abstract class RequestBaseTest extends BaseE2ETest {
                 lessonDate,
                 title,
                 content,
-                startPeriod,
-                endPeriod,
                 expiresAt
             ))
             .post()
@@ -115,8 +111,6 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         LocalDate lessonDate,
         String title,
         String content,
-        Integer startPeriod,
-        Integer endPeriod,
         LocalDateTime expiresAt
     ) {
         Map<String, Object> body = new LinkedHashMap<>();
@@ -124,12 +118,6 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         body.put("title", title);
         body.put("content", content);
         body.put("expiresAt", expiresAt.toString());
-        if (startPeriod != null) {
-            body.put("startPeriod", startPeriod);
-        }
-        if (endPeriod != null) {
-            body.put("endPeriod", endPeriod);
-        }
         return body;
     }
 
