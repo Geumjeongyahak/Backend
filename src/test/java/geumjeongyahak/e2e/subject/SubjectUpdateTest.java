@@ -86,9 +86,9 @@ public class SubjectUpdateTest extends SubjectBaseTest {
         jdbcTemplate.update(
             """
             INSERT INTO lesson_exchange_requests (
-                id, lesson_date, requested_by, title, classroom_name_snapshot, content, status, scope, expires_at
+                id, lesson_date, requested_by, title, classroom_name_snapshot, content, status, expires_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             1L,
             lessonDate,
@@ -97,7 +97,6 @@ public class SubjectUpdateTest extends SubjectBaseTest {
             "벚꽃반",
             "교환 요청 내용",
             status,
-            "FULL",
             "2099-02-28 23:59:59"
         );
     }
@@ -107,16 +106,15 @@ public class SubjectUpdateTest extends SubjectBaseTest {
         jdbcTemplate.update(
             """
             INSERT INTO lesson_exchange_proposals (
-                id, request_id, proposed_by, proposal_type, proposal_scope, lesson_date, content,
+                id, request_id, proposed_by, proposal_type, lesson_date, content,
                 classroom_name_snapshot, status
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             1L,
             1L,
             teacherId,
             "EXCHANGE",
-            "FULL",
             lessonDate,
             "교환 제안 내용",
             "벚꽃반",

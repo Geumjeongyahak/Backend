@@ -37,8 +37,7 @@ public class LessonExchangeProposalController {
             + "lessonDate를 입력하면 교환형 제안으로 처리됩니다. "
             + "lessonDate를 입력하지 않으면 대체형 제안으로 처리됩니다. "
             + "교환형 제안의 반 이름은 생성 시점의 표시값을 snapshot 으로 함께 저장하며, 이후 실제 수업 교사가 변경되더라도 제안 화면에는 기존 값이 유지됩니다. "
-            + "대체형 제안은 제안 자체에 대응하는 교환 수업이 없으므로 반 이름을 별도로 저장하거나 반환하지 않습니다. "
-            + "교환형 제안에서 startPeriod/endPeriod를 입력하지 않으면 하루 전체 수업 제안으로 처리됩니다."
+            + "대체형 제안은 제안 자체에 대응하는 교환 수업이 없으므로 반 이름을 별도로 저장하거나 반환하지 않습니다."
     )
     @PostMapping("/{requestId}/proposals")
     public ResponseEntity<LessonExchangeProposalResponse> createLessonExchangeProposal(
