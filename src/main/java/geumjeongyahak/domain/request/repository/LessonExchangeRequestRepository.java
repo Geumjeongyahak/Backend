@@ -51,4 +51,10 @@ public interface LessonExchangeRequestRepository extends JpaRepository<LessonExc
         Collection<LessonExchangeRequestStatus> statuses,
         LocalDateTime expiresAt
     );
+
+    long countByStatus(LessonExchangeRequestStatus status);
+
+    List<LessonExchangeRequest> findTop10ByStatusOrderByCreatedAtAsc(
+        LessonExchangeRequestStatus status
+    );
 }
