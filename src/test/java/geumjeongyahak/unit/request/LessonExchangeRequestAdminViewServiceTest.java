@@ -2,6 +2,7 @@ package geumjeongyahak.unit.request;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
@@ -10,6 +11,7 @@ import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import geumjeongyahak.domain.request.repository.LessonExchangeProposalRepository;
 import geumjeongyahak.domain.request.repository.LessonExchangeRequestRepository;
 import geumjeongyahak.domain.request.service.LessonExchangeRequestAdminViewService;
+import geumjeongyahak.domain.request.service.LessonExchangeRequestService;
 import geumjeongyahak.domain.request.service.LessonExchangeRequestAdminViewService.LessonExchangeDashboard;
 import geumjeongyahak.domain.request.service.LessonExchangeRequestAdminViewService.ReviewRequiredRequestRow;
 import geumjeongyahak.domain.request.service.LessonExchangeRequestAdminViewService.StatusCount;
@@ -32,6 +34,9 @@ class LessonExchangeRequestAdminViewServiceTest {
 
     @Mock
     private LessonExchangeProposalRepository lessonExchangeProposalRepository;
+
+    @Mock
+    private LessonExchangeRequestService lessonExchangeRequestService;
 
     @InjectMocks
     private LessonExchangeRequestAdminViewService lessonExchangeRequestAdminViewService;
@@ -93,6 +98,22 @@ class LessonExchangeRequestAdminViewServiceTest {
         assertThat(row.statusLabel()).isEqualTo("승인 대기");
         assertThat(row.proposalCount()).isEqualTo(4L);
         assertThat(row.activeProposalCount()).isEqualTo(2L);
+    }
+
+    @Test
+    void approve_delegatesToLessonExchangeRequestService() {
+        lessonExchangeRequestAdminViewService.approve(1L, 10L);
+
+        then(lessonExchangeRequestService).should()
+            .approveLessonExchangeRequest(1L, 10L);
+    }
+
+    @Test
+    void reject_delegatesToLessonExchangeRequestService() {
+        lessonExchangeRequestAdminViewService.reject(1L, 10L, "일정 확인이 필요합니다.");
+
+        then(lessonExchangeRequestService).should()
+            .rejectLessonExchangeRequest(1L, 10L, "일정 확인이 필요합니다.");
     }
 
     private StatusCount<LessonExchangeRequestStatus> findRequestStatusCount(

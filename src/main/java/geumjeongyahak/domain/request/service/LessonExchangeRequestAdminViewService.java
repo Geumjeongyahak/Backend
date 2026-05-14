@@ -20,6 +20,7 @@ public class LessonExchangeRequestAdminViewService {
 
     private final LessonExchangeRequestRepository lessonExchangeRequestRepository;
     private final LessonExchangeProposalRepository lessonExchangeProposalRepository;
+    private final LessonExchangeRequestService lessonExchangeRequestService;
 
     public LessonExchangeDashboard getDashboard() {
         List<StatusCount<LessonExchangeRequestStatus>> requestStatusCounts = Arrays.stream(LessonExchangeRequestStatus.values())
@@ -116,6 +117,16 @@ public class LessonExchangeRequestAdminViewService {
             case ACCEPTED -> "수락";
             case CLOSED -> "종료";
         };
+    }
+
+    @Transactional
+    public void approve(Long approverId, Long requestId) {
+        lessonExchangeRequestService.approveLessonExchangeRequest(approverId, requestId);
+    }
+
+    @Transactional
+    public void reject(Long approverId, Long requestId, String note) {
+        lessonExchangeRequestService.rejectLessonExchangeRequest(approverId, requestId, note);
     }
 
     public record LessonExchangeDashboard(

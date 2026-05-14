@@ -62,6 +62,7 @@
                         <th>제안</th>
                         <th>상태</th>
                         <th>생성일</th>
+                        <th>처리</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -75,9 +76,18 @@
                         <td th:text="|전체 ${request.proposalCount}건 / 진행 ${request.activeProposalCount}건|">전체 0건 / 진행 0건</td>
                         <td><span class="pill status-PENDING" th:text="${request.statusLabel}">승인 대기</span></td>
                         <td th:text="${#temporals.format(request.createdAt, 'yyyy.MM.dd')}">2026.05.20</td>
+                        <td>
+                            <form class="inline-form" th:action="@{/admin/request/lesson-exchange/{requestId}/approve(requestId=${request.id})}" method="post">
+                                <button class="button" type="submit">승인</button>
+                            </form>
+                            <form class="inline-form" th:action="@{/admin/request/lesson-exchange/{requestId}/reject(requestId=${request.id})}" method="post">
+                                <input name="note" placeholder="반려 사유" required>
+                                <button class="button danger" type="submit">반려</button>
+                            </form>
+                        </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(dashboard.reviewRequiredRequests)}">
-                        <td colspan="9" class="empty">검토가 필요한 수업 교환 요청이 없습니다.</td>
+                        <td colspan="10" class="empty">검토가 필요한 수업 교환 요청이 없습니다.</td>
                     </tr>
                     </tbody>
                 </table>
