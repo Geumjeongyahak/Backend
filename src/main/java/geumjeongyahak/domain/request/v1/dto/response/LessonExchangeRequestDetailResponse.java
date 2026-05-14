@@ -2,7 +2,6 @@ package geumjeongyahak.domain.request.v1.dto.response;
 
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
-import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
@@ -33,15 +32,6 @@ public record LessonExchangeRequestDetailResponse(
 
     @Schema(description = "요청 상태", example = "PENDING")
     LessonExchangeRequestStatus status,
-
-    @Schema(description = "교환 범위", example = "FULL")
-    LessonExchangeScope scope,
-
-    @Schema(description = "교환 시작 교시", example = "1")
-    Integer startPeriod,
-
-    @Schema(description = "교환 종료 교시", example = "3")
-    Integer endPeriod,
 
     @Schema(description = "요청 만료 시각", example = "2026-06-07T22:00:00")
     LocalDateTime expiresAt,
@@ -74,9 +64,6 @@ public record LessonExchangeRequestDetailResponse(
             r.getTitle(),
             r.getContent(),
             r.getStatus(),
-            r.getScope(),
-            r.getStartPeriod(),
-            r.getEndPeriod(),
             r.getExpiresAt(),
             r.getProcessedAt(),
             r.getProcessedBy() != null ? r.getProcessedBy().getName() : null,

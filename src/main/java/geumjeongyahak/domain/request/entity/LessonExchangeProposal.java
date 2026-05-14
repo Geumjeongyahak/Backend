@@ -3,7 +3,6 @@ package geumjeongyahak.domain.request.entity;
 import geumjeongyahak.domain.base.entity.BaseEntity;
 import geumjeongyahak.domain.request.enums.LessonExchangeProposalStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeProposalType;
-import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import geumjeongyahak.domain.request.exception.LessonExchangeProposal.InvalidProposalStatusException;
 import geumjeongyahak.domain.users.entity.User;
 import jakarta.persistence.*;
@@ -32,17 +31,7 @@ public class LessonExchangeProposal extends BaseEntity {
     @Column(name = "proposal_type", nullable = false, length = 20)
     private LessonExchangeProposalType proposalType;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "proposal_scope", length = 20)
-    private LessonExchangeScope proposalScope;
-
     private LocalDate lessonDate;
-
-    @Column(name = "start_period")
-    private Integer startPeriod;
-
-    @Column(name = "end_period")
-    private Integer endPeriod;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
@@ -65,20 +54,14 @@ public class LessonExchangeProposal extends BaseEntity {
         LessonExchangeRequest request,
         User proposedBy,
         LessonExchangeProposalType proposalType,
-        LessonExchangeScope proposalScope,
         LocalDate lessonDate,
-        Integer startPeriod,
-        Integer endPeriod,
         String content,
         String classroomNameSnapshot
     ) {
         this.request = request;
         this.proposedBy = proposedBy;
         this.proposalType = proposalType;
-        this.proposalScope = proposalScope;
         this.lessonDate = lessonDate;
-        this.startPeriod = startPeriod;
-        this.endPeriod = endPeriod;
         this.content = content;
         this.classroomNameSnapshot = classroomNameSnapshot;
         this.status = LessonExchangeProposalStatus.ACTIVE;
@@ -104,18 +87,12 @@ public class LessonExchangeProposal extends BaseEntity {
 
     public void update(
         LessonExchangeProposalType proposalType,
-        LessonExchangeScope proposalScope,
         LocalDate lessonDate,
-        Integer startPeriod,
-        Integer endPeriod,
         String content,
         String classroomNameSnapshot
     ) {
         this.proposalType = proposalType;
-        this.proposalScope = proposalScope;
         this.lessonDate = lessonDate;
-        this.startPeriod = startPeriod;
-        this.endPeriod = endPeriod;
         this.content = content;
         this.classroomNameSnapshot = classroomNameSnapshot;
     }

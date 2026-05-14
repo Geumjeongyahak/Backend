@@ -170,7 +170,6 @@ erDiagram
         bigint requested_by FK
         varchar title
         varchar status
-        varchar scope
     }
 
     lesson_exchange_proposals {
@@ -391,7 +390,7 @@ erDiagram
 
 ### 3.12 수업 교환 요청 (lesson_exchange_requests)
 
-교사(봉사자)는 특정 날짜의 자신의 수업 범위에 대해 수업 교환을 요청할 때 사용하는 엔티티입니다.
+교사(봉사자)는 특정 날짜의 자신의 수업 전체에 대해 하루 단위 수업 교환을 요청할 때 사용하는 엔티티입니다.
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
@@ -402,9 +401,6 @@ erDiagram
 | classroom_name_snapshot | VARCHAR(255) | NOT NULL | 생성/수정 시점 반 이름 snapshot |
 | content | TEXT | NOT NULL | 수업 교환 요청 내용 |
 | status | VARCHAR(20) | NOT NULL | 수업 교환 요청 상태 |
-| scope | VARCHAR(20) | NOT NULL | 교환 범위 (`FULL`, `PARTIAL`) |
-| start_period | INTEGER | NULL | 부분 교환 시작 교시 |
-| end_period | INTEGER | NULL | 부분 교환 종료 교시 |
 | expires_at | TIMESTAMP | NOT NULL | 제안 가능 만료 시각 |
 | processed_at | TIMESTAMP | NULL | 승인/반려 처리 시각 |
 | processed_by | BIGINT | FOREIGN KEY | 승인/반려 처리자 ID |
@@ -428,10 +424,7 @@ erDiagram
 | request_id | BIGINT | FOREIGN KEY, NOT NULL | 대상 수업 교환 요청 ID |
 | proposed_by | BIGINT | FOREIGN KEY, NOT NULL | 제안자 ID |
 | proposal_type | VARCHAR(20) | NOT NULL | 제안 타입 (`EXCHANGE`, `SUBSTITUTION`) |
-| proposal_scope | VARCHAR(20) | NULL | 교환형 제안 범위 (`FULL`, `PARTIAL`) |
-| lesson_date | DATE | NULL | 교환형 제안 수업 날짜 |
-| start_period | INTEGER | NULL | 교환형 제안 시작 교시 |
-| end_period | INTEGER | NULL | 교환형 제안 종료 교시 |
+| lesson_date | DATE | NULL | 교환형 제안 수업 날짜 (`SUBSTITUTION`이면 NULL) |
 | content | TEXT | NOT NULL | 제안 내용 |
 | classroom_name_snapshot | VARCHAR(255) | NULL | 교환형 제안의 반 이름 snapshot |
 | status | VARCHAR(20) | NOT NULL | 제안 상태 |

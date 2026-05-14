@@ -4,6 +4,7 @@ import geumjeongyahak.domain.request.repository.LessonExchangeProposalRepository
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import geumjeongyahak.domain.request.repository.LessonExchangeRequestRepository;
 import geumjeongyahak.domain.request.service.LessonExchangeRequestService;
+import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.AfterEach;
@@ -40,6 +41,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     private final List<Long> lessonIds = new ArrayList<>();
     private final List<Long> requestIds = new ArrayList<>();
     private final List<Long> proposalIds = new ArrayList<>();
+    private static final String LESSON_EXCHANGE_REQUEST_MANAGE_PERMISSION = "lesson-exchange-request:manage:*";
 
     @AfterEach
     void cleanup() {
@@ -74,13 +76,31 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("매니저가 수업 교환 요청 승인 -> 200")
-    void approve_asManager_returns200() {
+    @DisplayName("매니저가 수업 교환 요청 승인 시도 -> 403")
+    void approve_asManager_returns403() {
         Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(6));
 
         given()
             .basePath("/api/v1/lesson-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(managerToken))
+            .patch("/{id}/approve", requestId)
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("lesson-exchange-request:manage:* 권한 사용자가 수업 교환 요청 승인 -> 200")
+    void approve_asLessonExchangeRequestManager_returns200() {
+        Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(6));
+        String manageToken = createAccessTokenWithPermission(
+            "lex-approve",
+            RoleType.VOLUNTEER,
+            LESSON_EXCHANGE_REQUEST_MANAGE_PERMISSION
+        );
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(manageToken))
             .patch("/{id}/approve", requestId)
             .then()
             .statusCode(200)
@@ -121,13 +141,33 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("매니저가 수업 교환 요청 반려 -> 200, REJECTED, note 저장")
-    void reject_asManager_returns200() {
+    @DisplayName("매니저가 수업 교환 요청 반려 시도 -> 403")
+    void reject_asManager_returns403() {
         Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(9));
 
         given()
             .basePath("/api/v1/lesson-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(managerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "다른 운영 일정과 충돌합니다."))
+            .patch("/{id}/reject", requestId)
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("lesson-exchange-request:manage:* 권한 사용자가 수업 교환 요청 반려 -> 200, REJECTED, note 저장")
+    void reject_asLessonExchangeRequestManager_returns200() {
+        Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(9));
+        String manageToken = createAccessTokenWithPermission(
+            "lex-reject",
+            RoleType.VOLUNTEER,
+            LESSON_EXCHANGE_REQUEST_MANAGE_PERMISSION
+        );
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(manageToken))
             .contentType(ContentType.JSON)
             .body(Map.of("note", "다른 운영 일정과 충돌합니다."))
             .patch("/{id}/reject", requestId)
@@ -320,9 +360,13 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .get()
             .then()
             .statusCode(200)
+            .body("page", equalTo(0))
+            .body("size", equalTo(10))
+            .body("totalElements", notNullValue())
+            .body("totalPages", notNullValue())
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(volunteerView).contains(volunteer1RequestId, volunteer2RequestId);
     }
@@ -365,7 +409,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(requestIds).contains(visibleRequestId);
         assertThat(requestIds).doesNotContain(cancelledRequestId);
@@ -390,7 +434,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(ownView).contains(volunteer1RequestId);
         assertThat(ownView).doesNotContain(volunteer2RequestId);
@@ -422,7 +466,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(ownView).contains(visibleOwnRequestId);
         assertThat(ownView).doesNotContain(cancelledOwnRequestId);
@@ -454,7 +498,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(approvedIds).contains(approvedRequestId);
         assertThat(approvedIds).doesNotContain(pendingRequestId);
@@ -490,7 +534,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(approvedOwnIds).contains(approvedOwnRequestId);
         assertThat(approvedOwnIds).doesNotContain(pendingOwnRequestId);
@@ -505,7 +549,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
 
         given()
             .basePath("/api/v1/lesson-exchange-requests")
-            .header(AUTH_HEADER, getAuthHeader(managerToken))
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
             .contentType(ContentType.JSON)
             .body(Map.of("note", "반려 후 목록 조회 테스트"))
             .patch("/{id}/reject", rejectedRequestId)
@@ -521,7 +565,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(rejectedIds).contains(rejectedRequestId);
     }
@@ -550,7 +594,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .extract()
             .jsonPath()
-            .getList("id", Long.class);
+            .getList("content.id", Long.class);
 
         assertThat(cancelledIds).contains(cancelledRequestId);
     }
@@ -607,8 +651,6 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             lessonDate,
             "수업 교환 요청",
             "해당 일정 조정이 필요합니다.",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(23, 0)
         );
         requestIds.add(requestId);
@@ -622,9 +664,6 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
             request.getTitle(),
             request.getClassroomNameSnapshot(),
             request.getContent(),
-            request.getScope(),
-            request.getStartPeriod(),
-            request.getEndPeriod(),
             expiresAt
         );
         lessonExchangeRequestRepository.save(request);

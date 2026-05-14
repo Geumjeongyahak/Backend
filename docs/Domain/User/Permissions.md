@@ -64,6 +64,7 @@ API로 사용자에게 부여할 수 있는 코드는 아래 조합으로만 제
 | `channel` | `read`, `write`, `manage` | `channel:{action}:*` | `channel:{action}:{id}` |
 | `absence-request` | `read`, `manage` | `absence-request:{action}:*` | 불가 |
 | `purchase-request` | `read`, `manage`, `review` | `purchase-request:{action}:*` | 불가 |
+| `lesson-exchange-request` | `manage` | `lesson-exchange-request:manage:*` | 불가 |
 
 Registry는 실제 운영에서 부여할 권한만 유지합니다. 게시글/댓글 권한은 별도 `post`, `comment` 리소스로 만들지 않고 `channel` 권한과 `accessLevel` 정책으로 판정합니다.
 
@@ -79,7 +80,7 @@ permission code로는 표현되지 않습니다.
 | 역할 | authority 문자열 | 기본 접근 범위 |
 |------|----------------|--------------|
 | `ADMIN` | `ROLE_ADMIN` | 모든 API 우선 통과 |
-| `MANAGER` | `ROLE_MANAGER` | 요청 승인/반려, 과목 CUD |
+| `MANAGER` | `ROLE_MANAGER` | 일부 요청 승인/반려, 과목 CUD |
 | `VOLUNTEER` | `ROLE_VOLUNTEER` | 일반 조회, 요청 제출, 수업 운영 |
 | `GUEST` | `ROLE_GUEST` | 최소 읽기 |
 
@@ -172,8 +173,8 @@ permission code로는 표현되지 않습니다.
 | `POST /api/v1/lesson-exchange-requests` | 인증만 |
 | `GET /api/v1/lesson-exchange-requests` | 인증만 |
 | `GET /api/v1/lesson-exchange-requests/{requestId}` | 인증만 |
-| `PATCH /api/v1/lesson-exchange-requests/{requestId}/approve` | `ADMIN` \| `MANAGER` |
-| `PATCH /api/v1/lesson-exchange-requests/{requestId}/reject` | `ADMIN` \| `MANAGER` |
+| `PATCH /api/v1/lesson-exchange-requests/{requestId}/approve` | `ADMIN` \| `lesson-exchange-request:manage:*` |
+| `PATCH /api/v1/lesson-exchange-requests/{requestId}/reject` | `ADMIN` \| `lesson-exchange-request:manage:*` |
 | `POST /api/v1/lesson-exchange-requests/{requestId}/proposals` | 인증만 |
 | `POST /api/v1/purchase-requests` | 인증만 |
 | `GET /api/v1/admin/purchase-requests` | `ADMIN` \| `purchase-request:read:*` |

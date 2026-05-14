@@ -3,7 +3,6 @@ package geumjeongyahak.domain.request.v1.dto.response;
 import geumjeongyahak.domain.request.entity.LessonExchangeProposal;
 import geumjeongyahak.domain.request.enums.LessonExchangeProposalStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeProposalType;
-import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
@@ -29,17 +28,8 @@ public record LessonExchangeProposalResponse(
     @Schema(description = "제안 유형", example = "EXCHANGE")
     LessonExchangeProposalType proposalType,
 
-    @Schema(description = "제안 범위", example = "FULL")
-    LessonExchangeScope proposalScope,
-
-    @Schema(description = "제안 수업 날짜", example = "2026-06-17")
+    @Schema(description = "제안 수업 날짜. 교환형(EXCHANGE)이면 값이 있고, 대체형(SUBSTITUTION)이면 null 입니다.", example = "2026-06-17")
     LocalDate lessonDate,
-
-    @Schema(description = "제안 시작 교시", example = "1")
-    Integer startPeriod,
-
-    @Schema(description = "제안 종료 교시", example = "3")
-    Integer endPeriod,
 
     @Schema(description = "제안 내용")
     String content,
@@ -67,10 +57,7 @@ public record LessonExchangeProposalResponse(
             proposal.getProposedBy().getId(),
             proposal.getProposedBy().getName(),
             proposal.getProposalType(),
-            proposal.getProposalScope(),
             proposal.getLessonDate(),
-            proposal.getStartPeriod(),
-            proposal.getEndPeriod(),
             proposal.getContent(),
             proposal.getStatus(),
             proposal.getAcceptedAt(),

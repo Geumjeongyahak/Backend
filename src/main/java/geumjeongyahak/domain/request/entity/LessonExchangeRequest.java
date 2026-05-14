@@ -2,7 +2,6 @@ package geumjeongyahak.domain.request.entity;
 
 import geumjeongyahak.domain.base.entity.BaseEntity;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
-import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import geumjeongyahak.domain.users.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -41,16 +40,6 @@ public class LessonExchangeRequest extends BaseEntity {
     @Column(nullable = false, length = 20)
     private LessonExchangeRequestStatus status;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private LessonExchangeScope scope;
-
-    @Column(name = "start_period")
-    private Integer startPeriod;
-
-    @Column(name = "end_period")
-    private Integer endPeriod;
-
     @Column(nullable = false)
     private LocalDateTime expiresAt;
 
@@ -76,21 +65,14 @@ public class LessonExchangeRequest extends BaseEntity {
         String title,
         String classroomNameSnapshot,
         String content,
-        LessonExchangeScope scope,
-        Integer startPeriod,
-        Integer endPeriod,
         LocalDateTime expiresAt
     ) {
-        validateScope(scope, startPeriod, endPeriod);
         this.requestedBy = requestedBy;
         this.lessonDate = lessonDate;
         this.title = title;
         this.classroomNameSnapshot = classroomNameSnapshot;
         this.content = content;
         this.status = LessonExchangeRequestStatus.PENDING;
-        this.scope = scope;
-        this.startPeriod = startPeriod;
-        this.endPeriod = endPeriod;
         this.expiresAt = expiresAt;
     }
 
@@ -112,19 +94,12 @@ public class LessonExchangeRequest extends BaseEntity {
         String title,
         String classroomNameSnapshot,
         String content,
-        LessonExchangeScope scope,
-        Integer startPeriod,
-        Integer endPeriod,
         LocalDateTime expiresAt
     ) {
-        validateScope(scope, startPeriod, endPeriod);
         this.lessonDate = lessonDate;
         this.title = title;
         this.classroomNameSnapshot = classroomNameSnapshot;
         this.content = content;
-        this.scope = scope;
-        this.startPeriod = startPeriod;
-        this.endPeriod = endPeriod;
         this.expiresAt = expiresAt;
     }
 
@@ -140,27 +115,6 @@ public class LessonExchangeRequest extends BaseEntity {
 
     public void expire() {
         this.status = LessonExchangeRequestStatus.EXPIRED;
-    }
-
-    private static void validateScope(
-        LessonExchangeScope scope,
-        Integer startPeriod,
-        Integer endPeriod
-    ) {
-        if (scope == LessonExchangeScope.FULL) {
-            if (startPeriod != null || endPeriod != null) {
-                throw new IllegalArgumentException("전체 교환은 교시 범위를 가질 수 없습니다.");
-            }
-            return;
-        }
-
-        if (startPeriod == null || endPeriod == null) {
-            throw new IllegalArgumentException("부분 교환은 시작/종료 교시가 필요합니다.");
-        }
-
-        if (startPeriod < 1 || endPeriod > 3 || startPeriod > endPeriod) {
-            throw new IllegalArgumentException("유효하지 않은 교시 범위입니다.");
-        }
     }
 }
 

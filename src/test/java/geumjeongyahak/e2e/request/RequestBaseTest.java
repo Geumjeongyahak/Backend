@@ -1,6 +1,9 @@
 package geumjeongyahak.e2e.request;
 
 import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.users.entity.UserPermission;
+import geumjeongyahak.domain.users.repository.UserPermissionRepository;
 import geumjeongyahak.e2e.BaseE2ETest;
 import geumjeongyahak.e2e.util.TestLessonHelper;
 import io.restassured.http.ContentType;
@@ -46,6 +49,9 @@ public abstract class RequestBaseTest extends BaseE2ETest {
     @Autowired
     protected TestLessonHelper lessonHelper;
 
+    @Autowired
+    protected UserPermissionRepository userPermissionRepository;
+
     protected String adminToken;
     protected String managerToken;
     protected String guestToken;
@@ -87,8 +93,6 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         LocalDate lessonDate,
         String title,
         String content,
-        Integer startPeriod,
-        Integer endPeriod,
         LocalDateTime expiresAt
     ) {
         return given()
@@ -99,8 +103,6 @@ public abstract class RequestBaseTest extends BaseE2ETest {
                 lessonDate,
                 title,
                 content,
-                startPeriod,
-                endPeriod,
                 expiresAt
             ))
             .post()
@@ -115,8 +117,6 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         LocalDate lessonDate,
         String title,
         String content,
-        Integer startPeriod,
-        Integer endPeriod,
         LocalDateTime expiresAt
     ) {
         Map<String, Object> body = new LinkedHashMap<>();
@@ -124,12 +124,6 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         body.put("title", title);
         body.put("content", content);
         body.put("expiresAt", expiresAt.toString());
-        if (startPeriod != null) {
-            body.put("startPeriod", startPeriod);
-        }
-        if (endPeriod != null) {
-            body.put("endPeriod", endPeriod);
-        }
         return body;
     }
 
@@ -155,6 +149,17 @@ public abstract class RequestBaseTest extends BaseE2ETest {
             .extract()
             .jsonPath()
             .getLong("id");
+    }
+
+    protected String createAccessTokenWithPermission(
+        String nicknamePrefix,
+        RoleType role,
+        String permissionCode
+    ) {
+        String nickname = nicknamePrefix + System.nanoTime();
+        User user = userTestHelper.createTestUser(nickname, role);
+        userPermissionRepository.save(new UserPermission(user, permissionCode));
+        return userTestHelper.generateAccessTokenByNickname(nickname);
     }
 
 }

@@ -50,8 +50,6 @@ class LessonExchangeRequestCancelTest extends RequestBaseTest {
             lessonDate,
             "취소 전 요청",
             "요청자 본인이 취소합니다.",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -77,8 +75,6 @@ class LessonExchangeRequestCancelTest extends RequestBaseTest {
             lessonDate,
             "이미 취소될 요청",
             "한 번 취소한 뒤 다시 취소 시도",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -109,8 +105,6 @@ class LessonExchangeRequestCancelTest extends RequestBaseTest {
             lessonDate,
             "상세 조회용 요청",
             "취소 후 상세 조회 확인",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -138,7 +132,7 @@ class LessonExchangeRequestCancelTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("취소 후 같은 날짜와 범위로 새 요청 생성 가능 -> 201")
+    @DisplayName("취소 후 같은 날짜로 새 요청 생성 가능 -> 201")
     void createNewRequest_afterCancel_returns201() {
         LocalDate lessonDate = LocalDate.now().plusDays(9);
         createFullDayLessons(TEACHER_ID, lessonDate);
@@ -148,8 +142,6 @@ class LessonExchangeRequestCancelTest extends RequestBaseTest {
             lessonDate,
             "취소될 요청",
             "취소 후 재요청 테스트",
-            1,
-            1,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(cancelledRequestId);
@@ -165,9 +157,7 @@ class LessonExchangeRequestCancelTest extends RequestBaseTest {
             getAuthHeader(volunteerToken),
             lessonDate,
             "재요청",
-            "취소 이후 같은 범위 재요청",
-            1,
-            1,
+            "취소 이후 같은 날짜 재요청",
             lessonDate.minusDays(3).atTime(21, 0)
         );
         requestIds.add(newRequestId);
@@ -184,8 +174,6 @@ class LessonExchangeRequestCancelTest extends RequestBaseTest {
             lessonDate,
             "타인 취소 방지 요청",
             "다른 사용자는 취소할 수 없습니다.",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -209,8 +197,6 @@ class LessonExchangeRequestCancelTest extends RequestBaseTest {
             lessonDate,
             "게스트 취소 방지 요청",
             "게스트는 취소할 수 없습니다.",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -234,8 +220,6 @@ class LessonExchangeRequestCancelTest extends RequestBaseTest {
             lessonDate,
             "승인될 요청",
             "승인 후에는 취소할 수 없습니다.",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -266,8 +250,6 @@ class LessonExchangeRequestCancelTest extends RequestBaseTest {
             lessonDate,
             "인증 테스트 요청",
             "인증 없이는 취소할 수 없습니다.",
-            null,
-            null,
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);

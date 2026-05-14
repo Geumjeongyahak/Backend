@@ -64,7 +64,7 @@ class LessonExchangeProposalAcceptTest extends RequestBaseTest {
 
         Long requestSubjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
         Long requestLessonId = registerLesson(requestSubjectId, TEACHER_ID, requestDate, "09:00:00", "09:50:00", 1);
-        Long requestId = createApprovedRequest(requestDate, null, null);
+        Long requestId = createApprovedRequest(requestDate);
 
         Long proposalSubjectId = registerSubject(CLASSROOM_ID, TEACHER2_ID);
         Long proposalLessonId = registerLesson(proposalSubjectId, TEACHER2_ID, proposalDate, "10:00:00", "10:50:00", 2);
@@ -74,8 +74,6 @@ class LessonExchangeProposalAcceptTest extends RequestBaseTest {
             getAuthHeader(volunteer2Token),
             Map.of(
                 "lessonDate", proposalDate.toString(),
-                "startPeriod", 2,
-                "endPeriod", 2,
                 "content", "교환 제안"
             )
         );
@@ -121,7 +119,7 @@ class LessonExchangeProposalAcceptTest extends RequestBaseTest {
 
         Long requestSubjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
         Long requestLessonId = registerLesson(requestSubjectId, TEACHER_ID, requestDate, "09:00:00", "09:50:00", 1);
-        Long requestId = createApprovedRequest(requestDate, null, null);
+        Long requestId = createApprovedRequest(requestDate);
 
         Long proposalId = createProposal(
             requestId,
@@ -158,7 +156,7 @@ class LessonExchangeProposalAcceptTest extends RequestBaseTest {
     void acceptProposal_asOtherUser_returns403() {
         LocalDate requestDate = LocalDate.now().plusDays(10);
         registerLesson(registerSubject(CLASSROOM_ID, TEACHER_ID), TEACHER_ID, requestDate, "09:00:00", "09:50:00", 1);
-        Long requestId = createApprovedRequest(requestDate, null, null);
+        Long requestId = createApprovedRequest(requestDate);
 
         Long proposalId = createProposal(
             requestId,
@@ -180,7 +178,7 @@ class LessonExchangeProposalAcceptTest extends RequestBaseTest {
     void acceptProposal_asGuest_returns403() {
         LocalDate requestDate = LocalDate.now().plusDays(11);
         registerLesson(registerSubject(CLASSROOM_ID, TEACHER_ID), TEACHER_ID, requestDate, "09:00:00", "09:50:00", 1);
-        Long requestId = createApprovedRequest(requestDate, null, null);
+        Long requestId = createApprovedRequest(requestDate);
 
         Long proposalId = createProposal(
             requestId,
@@ -202,7 +200,7 @@ class LessonExchangeProposalAcceptTest extends RequestBaseTest {
     void acceptWithdrawnProposal_returns409() {
         LocalDate requestDate = LocalDate.now().plusDays(11);
         registerLesson(registerSubject(CLASSROOM_ID, TEACHER_ID), TEACHER_ID, requestDate, "09:00:00", "09:50:00", 1);
-        Long requestId = createApprovedRequest(requestDate, null, null);
+        Long requestId = createApprovedRequest(requestDate);
 
         Long proposalId = createProposal(
             requestId,
@@ -235,7 +233,7 @@ class LessonExchangeProposalAcceptTest extends RequestBaseTest {
         Long requestSubjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
         Long requestLessonId1 = registerLesson(requestSubjectId, TEACHER_ID, requestDate, "09:00:00", "09:50:00", 1);
         Long requestLessonId2 = registerLesson(requestSubjectId, TEACHER_ID, requestDate, "10:00:00", "10:50:00", 2);
-        Long requestId = createApprovedRequest(requestDate, null, null);
+        Long requestId = createApprovedRequest(requestDate);
 
         Long proposalSubjectId = registerSubject(CLASSROOM_ID, TEACHER2_ID);
         Long proposalLessonId = registerLesson(proposalSubjectId, TEACHER2_ID, proposalDate, "09:00:00", "09:50:00", 1);
@@ -245,8 +243,6 @@ class LessonExchangeProposalAcceptTest extends RequestBaseTest {
             getAuthHeader(volunteer2Token),
             Map.of(
                 "lessonDate", proposalDate.toString(),
-                "startPeriod", 1,
-                "endPeriod", 1,
                 "content", "교시 수가 다른 교환 제안"
             )
         );
@@ -268,14 +264,12 @@ class LessonExchangeProposalAcceptTest extends RequestBaseTest {
             .isEqualTo(TEACHER_ID);
     }
 
-    private Long createApprovedRequest(LocalDate lessonDate, Integer startPeriod, Integer endPeriod) {
+    private Long createApprovedRequest(LocalDate lessonDate) {
         Long requestId = createLessonExchangeRequest(
             getAuthHeader(volunteerToken),
             lessonDate,
             "수업 교환 요청",
             "제안 수락 테스트용 요청",
-            startPeriod,
-            endPeriod,
             lessonDate.minusDays(3).atTime(23, 0)
         );
         requestIds.add(requestId);

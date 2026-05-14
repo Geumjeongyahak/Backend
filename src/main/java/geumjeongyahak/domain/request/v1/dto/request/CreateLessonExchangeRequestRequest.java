@@ -1,6 +1,5 @@
 package geumjeongyahak.domain.request.v1.dto.request;
 
-import geumjeongyahak.common.validation.annotation.ValidLessonExchangeScope;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
@@ -9,11 +8,10 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@ValidLessonExchangeScope
 public record CreateLessonExchangeRequestRequest(
 
     @NotNull
-    @Schema(description = "교환 대상 수업 날짜", example = "2026-06-10")
+    @Schema(description = "교환 대상 수업 날짜. 해당 날짜의 요청자 수업 전체를 하루 단위로 교환 요청합니다.", example = "2026-06-10")
     LocalDate lessonDate,
 
     @NotBlank
@@ -24,14 +22,8 @@ public record CreateLessonExchangeRequestRequest(
     @Schema(description = "요청 내용", example = "사정으로 인해 교환을 요청합니다.")
     String content,
 
-    @Schema(description = "교환 시작 교시. 전체 교환이면 입력하지 않습니다.", example = "1")
-    Integer startPeriod,
-
-    @Schema(description = "교환 종료 교시. 전체 교환이면 입력하지 않습니다.", example = "3")
-    Integer endPeriod,
-
     @NotNull
     @Future
-    @Schema(description = "요청 만료 시각", example = "2026-06-07T22:00:00")
+    @Schema(description = "요청 만료 시각. 교환 대상 수업일 3일 전 23:59:59까지 설정할 수 있습니다.", example = "2026-06-07T22:00:00")
     LocalDateTime expiresAt
 ) {}
