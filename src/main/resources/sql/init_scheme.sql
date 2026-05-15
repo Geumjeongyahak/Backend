@@ -192,6 +192,8 @@ CREATE TABLE daily_schedules (
     activity_start_time TIME,
     activity_end_time TIME,
     status VARCHAR(20) NOT NULL DEFAULT 'SCHEDULED',
+    resident_registration_number_prefix VARCHAR(6),
+    personal_info_consent BOOLEAN NOT NULL DEFAULT FALSE,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

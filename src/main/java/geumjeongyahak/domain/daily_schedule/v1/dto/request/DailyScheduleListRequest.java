@@ -13,12 +13,12 @@ import static org.springframework.format.annotation.DateTimeFormat.ISO.DATE;
 public record DailyScheduleListRequest(
     @NotNull
     @DateTimeFormat(iso = DATE)
-    @Schema(description = "시작 일자", example = "2026-05-01")
+    @Schema(description = "시작 일자", example = "2026-06-01")
     LocalDate from,
 
     @NotNull
     @DateTimeFormat(iso = DATE)
-    @Schema(description = "종료 일자", example = "2026-05-31")
+    @Schema(description = "종료 일자", example = "2026-06-30")
     LocalDate to,
 
     @Schema(description = "분반 ID", example = "1")

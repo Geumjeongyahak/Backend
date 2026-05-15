@@ -12,7 +12,7 @@ public record DailyTeacherAttendanceResponse(
     @Schema(description = "교사 출석 상태", example = "ABSENT")
     DailyTeacherAttendanceStatus status,
 
-    @Schema(description = "출석 처리 시각", example = "2026-05-20T14:00:00")
+    @Schema(description = "출석 처리 시각", example = "2026-06-20T14:00:00")
     LocalDateTime attendedAt,
 
     @Schema(description = "봉사 인정 시간(분)", example = "120")

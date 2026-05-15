@@ -45,6 +45,12 @@ public class DailySchedule extends BaseEntity {
     @Column(nullable = false, length = 20)
     private DailyScheduleStatus status;
 
+    @Column(name = "resident_registration_number_prefix", length = 6)
+    private String residentRegistrationNumberPrefix;
+
+    @Column(name = "personal_info_consent", nullable = false)
+    private boolean personalInfoConsent = false;
+
     @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;
 
@@ -75,6 +81,11 @@ public class DailySchedule extends BaseEntity {
 
     public void updateStatus(DailyScheduleStatus status) {
         this.status = status;
+    }
+
+    public void updateJournalPersonalInfo(String residentRegistrationNumberPrefix, boolean personalInfoConsent) {
+        this.residentRegistrationNumberPrefix = residentRegistrationNumberPrefix;
+        this.personalInfoConsent = personalInfoConsent;
     }
 
     public void restore() {

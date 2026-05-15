@@ -4,11 +4,17 @@ import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.entity.DailyStudentAttendance;
 import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
+import geumjeongyahak.domain.daily_schedule.enums.DailyScheduleStatus;
+import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleForbiddenException;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleNotFoundException;
+import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleJournalStateException;
+import geumjeongyahak.domain.daily_schedule.exception.InvalidDailySchedulePersonalInfoException;
+import geumjeongyahak.domain.daily_schedule.exception.LessonNotInDailyScheduleException;
 import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyStudentAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyTeacherAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
 import geumjeongyahak.domain.lesson.entity.Lesson;
@@ -21,10 +27,14 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import static java.util.stream.Collectors.toMap;
 
 @Slf4j
 @Service
@@ -110,7 +120,11 @@ public class DailyScheduleService {
         return responses;
     }
 
-    public DailyScheduleDetailResponse getDailySchedule(Long dailyScheduleId) {
+    public DailyScheduleDetailResponse getDailySchedule(
+        Long dailyScheduleId,
+        Long viewerId,
+        boolean canViewSensitiveInfo
+    ) {
         log.debug("DailySchedule 상세 조회 요청 (dailyScheduleId={})", dailyScheduleId);
         DailySchedule dailySchedule = dailyScheduleRepository.findByIdAndIsDeletedFalse(dailyScheduleId)
             .orElseThrow(() -> {
@@ -134,7 +148,8 @@ public class DailyScheduleService {
             dailySchedule,
             teacherAttendance,
             lessons,
-            studentAttendances
+            studentAttendances,
+            canViewDailyScheduleSensitiveInfo(dailySchedule, viewerId, canViewSensitiveInfo)
         );
         log.debug(
             "DailySchedule 상세 조회 완료 (dailyScheduleId={}, lessonCount={}, studentAttendanceCount={})",
@@ -143,6 +158,115 @@ public class DailyScheduleService {
             studentAttendances.size()
         );
         return response;
+    }
+
+    @Transactional
+    public DailyScheduleDetailResponse updateJournal(
+        Long dailyScheduleId,
+        Long authorId,
+        boolean canWriteAnyDailySchedule,
+        UpdateDailyScheduleJournalRequest request
+    ) {
+        log.debug(
+            "DailySchedule 수업 일지 저장 요청 (dailyScheduleId={}, authorId={}, lessonJournalCount={})",
+            dailyScheduleId,
+            authorId,
+            request.lessonJournals().size()
+        );
+        DailySchedule dailySchedule = dailyScheduleRepository.findByIdAndIsDeletedFalse(dailyScheduleId)
+            .orElseThrow(() -> {
+                log.info("DailySchedule 수업 일지 저장 실패 - 하루 일정을 찾을 수 없습니다. ID: {}", dailyScheduleId);
+                return new DailyScheduleNotFoundException(dailyScheduleId);
+            });
+        validateJournalWritable(dailySchedule, authorId, canWriteAnyDailySchedule);
+        validateJournalState(dailySchedule);
+        validateJournalPersonalInfo(dailySchedule.getId(), request);
+        Map<Long, Lesson> lessonsById = lessonProxyService.getActiveLessonsByClassroomAndDate(
+                dailySchedule.getClassroom().getId(),
+                dailySchedule.getLessonDate()
+            )
+            .stream()
+            .collect(toMap(Lesson::getId, Function.identity()));
+
+        for (UpdateDailyScheduleJournalRequest.LessonJournalRequest lessonJournal : request.lessonJournals()) {
+            Lesson lesson = lessonsById.get(lessonJournal.lessonId());
+            if (lesson == null) {
+                log.info(
+                    "DailySchedule 수업 일지 저장 실패 - 하루 일정에 연결되지 않은 수업입니다. dailyScheduleId={}, lessonId={}",
+                    dailyScheduleId,
+                    lessonJournal.lessonId()
+                );
+                throw new LessonNotInDailyScheduleException(dailyScheduleId, lessonJournal.lessonId());
+            }
+            lesson.updateNote(lessonJournal.note());
+        }
+
+        dailySchedule.updateJournalPersonalInfo(
+            request.residentRegistrationNumberPrefix(),
+            request.personalInfoConsent()
+        );
+        log.debug("DailySchedule 수업 일지 저장 완료 (dailyScheduleId={})", dailyScheduleId);
+        return getDailySchedule(dailyScheduleId, authorId, canWriteAnyDailySchedule);
+    }
+
+    private boolean canViewDailyScheduleSensitiveInfo(
+        DailySchedule dailySchedule,
+        Long viewerId,
+        boolean canViewSensitiveInfo
+    ) {
+        return canViewSensitiveInfo || dailySchedule.getTeacher().getId().equals(viewerId);
+    }
+
+    private void validateJournalState(DailySchedule dailySchedule) {
+        if (dailySchedule.getStatus() != DailyScheduleStatus.CANCELLED) {
+            return;
+        }
+
+        log.info(
+            "DailySchedule 수업 일지 저장 실패 - 휴강 상태에서는 저장할 수 없습니다. dailyScheduleId={}, status={}",
+            dailySchedule.getId(),
+            dailySchedule.getStatus()
+        );
+        throw new InvalidDailyScheduleJournalStateException(dailySchedule.getId(), dailySchedule.getStatus());
+    }
+
+    private void validateJournalPersonalInfo(
+        Long dailyScheduleId,
+        UpdateDailyScheduleJournalRequest request
+    ) {
+        if (request.personalInfoConsent()
+            && request.residentRegistrationNumberPrefix() != null
+            && !request.residentRegistrationNumberPrefix().isBlank()) {
+            return;
+        }
+
+        if (!request.personalInfoConsent()
+            && (request.residentRegistrationNumberPrefix() == null
+            || request.residentRegistrationNumberPrefix().isBlank())) {
+            return;
+        }
+
+        log.info(
+            "DailySchedule 수업 일지 저장 실패 - 개인정보 입력값이 유효하지 않습니다. dailyScheduleId={}, personalInfoConsent={}, hasResidentPrefix={}",
+            dailyScheduleId,
+            request.personalInfoConsent(),
+            request.residentRegistrationNumberPrefix() != null && !request.residentRegistrationNumberPrefix().isBlank()
+        );
+        throw new InvalidDailySchedulePersonalInfoException(dailyScheduleId);
+    }
+
+    private void validateJournalWritable(DailySchedule dailySchedule, Long authorId, boolean canWriteAnyDailySchedule) {
+        if (canWriteAnyDailySchedule || dailySchedule.getTeacher().getId().equals(authorId)) {
+            return;
+        }
+
+        log.info(
+            "DailySchedule 수업 일지 저장 실패 - 담당 교사 또는 관리 권한자가 아닙니다. dailyScheduleId={}, teacherId={}, authorId={}",
+            dailySchedule.getId(),
+            dailySchedule.getTeacher().getId(),
+            authorId
+        );
+        throw new DailyScheduleForbiddenException(dailySchedule.getId(), authorId);
     }
 
     private Integer calculateVolunteerServiceMinutes(LocalTime activityStartTime, LocalTime activityEndTime) {

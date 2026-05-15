@@ -12,7 +12,7 @@ public record DailyScheduleSummaryResponse(
     @Schema(description = "하루 일정 식별자", example = "1")
     Long dailyScheduleId,
 
-    @Schema(description = "수업 날짜", example = "2026-05-20")
+    @Schema(description = "수업 날짜", example = "2026-06-20")
     LocalDate lessonDate,
 
     @Schema(description = "분반 ID", example = "1")
