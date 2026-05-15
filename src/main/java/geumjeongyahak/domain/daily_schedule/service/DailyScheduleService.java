@@ -4,9 +4,13 @@ import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.entity.DailyStudentAttendance;
 import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
+import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleNotFoundException;
 import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyStudentAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyTeacherAttendanceRepository;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.student.entity.Student;
@@ -15,6 +19,7 @@ import geumjeongyahak.domain.users.entity.User;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -81,6 +86,65 @@ public class DailyScheduleService {
         initializeStudentAttendances(dailySchedule, classroomId);
     }
 
+    public List<DailyScheduleSummaryResponse> getDailySchedules(DailyScheduleListRequest request) {
+        log.debug(
+            "DailySchedule 목록 조회 요청 (from={}, to={}, classroomId={}, teacherId={}, status={})",
+            request.from(),
+            request.to(),
+            request.classroomId(),
+            request.teacherId(),
+            request.status()
+        );
+
+        List<DailyScheduleSummaryResponse> responses = dailyScheduleRepository
+            .findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(request.from(), request.to())
+            .stream()
+            .filter(dailySchedule -> request.classroomId() == null
+                || dailySchedule.getClassroom().getId().equals(request.classroomId()))
+            .filter(dailySchedule -> request.teacherId() == null
+                || dailySchedule.getTeacher().getId().equals(request.teacherId()))
+            .filter(dailySchedule -> request.status() == null || dailySchedule.getStatus() == request.status())
+            .map(this::toSummaryResponse)
+            .toList();
+        log.debug("DailySchedule 목록 조회 완료 - 총 {}건", responses.size());
+        return responses;
+    }
+
+    public DailyScheduleDetailResponse getDailySchedule(Long dailyScheduleId) {
+        log.debug("DailySchedule 상세 조회 요청 (dailyScheduleId={})", dailyScheduleId);
+        DailySchedule dailySchedule = dailyScheduleRepository.findByIdAndIsDeletedFalse(dailyScheduleId)
+            .orElseThrow(() -> {
+                log.info("DailySchedule 상세 조회 실패 - 하루 일정을 찾을 수 없습니다. ID: {}", dailyScheduleId);
+                return new DailyScheduleNotFoundException(dailyScheduleId);
+            });
+        List<Lesson> lessons = lessonProxyService.getActiveLessonsByClassroomAndDate(
+            dailySchedule.getClassroom().getId(),
+            dailySchedule.getLessonDate()
+        );
+        DailyTeacherAttendance teacherAttendance = dailyTeacherAttendanceRepository
+            .findByDailyScheduleIdAndIsDeletedFalse(dailyScheduleId)
+            .orElse(null);
+        List<DailyStudentAttendance> studentAttendances = dailyStudentAttendanceRepository
+            .findAllByDailyScheduleIdAndIsDeletedFalse(dailyScheduleId)
+            .stream()
+            .sorted(Comparator.comparing(attendance -> attendance.getStudent().getName()))
+            .toList();
+
+        DailyScheduleDetailResponse response = DailyScheduleDetailResponse.of(
+            dailySchedule,
+            teacherAttendance,
+            lessons,
+            studentAttendances
+        );
+        log.debug(
+            "DailySchedule 상세 조회 완료 (dailyScheduleId={}, lessonCount={}, studentAttendanceCount={})",
+            dailyScheduleId,
+            lessons.size(),
+            studentAttendances.size()
+        );
+        return response;
+    }
+
     private Integer calculateVolunteerServiceMinutes(LocalTime activityStartTime, LocalTime activityEndTime) {
         if (activityStartTime == null || activityEndTime == null) {
             return null;
@@ -118,5 +182,16 @@ public class DailyScheduleService {
                     .forEach(DailyStudentAttendance::softDelete);
                 dailySchedule.softDelete();
             });
+    }
+
+    private DailyScheduleSummaryResponse toSummaryResponse(DailySchedule dailySchedule) {
+        DailyTeacherAttendance teacherAttendance = dailyTeacherAttendanceRepository
+            .findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId())
+            .orElse(null);
+        int lessonCount = lessonProxyService.getActiveLessonsByClassroomAndDate(
+            dailySchedule.getClassroom().getId(),
+            dailySchedule.getLessonDate()
+        ).size();
+        return DailyScheduleSummaryResponse.of(dailySchedule, teacherAttendance, lessonCount);
     }
 }

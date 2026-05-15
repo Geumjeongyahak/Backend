@@ -9,5 +9,7 @@ public interface DailyTeacherAttendanceRepository extends JpaRepository<DailyTea
 
     Optional<DailyTeacherAttendance> findByDailyScheduleId(Long dailyScheduleId);
 
+    Optional<DailyTeacherAttendance> findByDailyScheduleIdAndIsDeletedFalse(Long dailyScheduleId);
+
     List<DailyTeacherAttendance> findAllByDailyScheduleIdAndIsDeletedFalse(Long dailyScheduleId);
 }
