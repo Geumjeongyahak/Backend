@@ -3,6 +3,7 @@ package geumjeongyahak.domain.daily_schedule.v1.controller;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleService;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendancesRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
 import geumjeongyahak.common.security.service.CustomUserDetails;
@@ -19,6 +20,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -91,6 +93,28 @@ public class DailyScheduleController {
             dailyScheduleId,
             userDetails.getUserId(),
             canManageAnyDailySchedule(userDetails),
+            request
+        ));
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
+    @Operation(summary = "하루 일정 학생 출석 처리", description = "하루 일정에 연결된 학생들의 출석 상태를 처리합니다.")
+    @PatchMapping("/{dailyScheduleId}/student-attendances")
+    public ResponseEntity<DailyScheduleDetailResponse> updateStudentAttendances(
+        @PathVariable Long dailyScheduleId,
+        @Valid @RequestBody UpdateDailyStudentAttendancesRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug(
+            "PATCH /api/v1/daily-schedules/{}/student-attendances - 학생 출석 처리 요청 (attendanceCount={})",
+            dailyScheduleId,
+            request.attendances().size()
+        );
+        return ResponseEntity.ok(dailyScheduleService.updateStudentAttendances(
+            dailyScheduleId,
+            userDetails.getUserId(),
+            canManageAnyDailySchedule(userDetails),
+            canViewSensitiveInfo(userDetails),
             request
         ));
     }

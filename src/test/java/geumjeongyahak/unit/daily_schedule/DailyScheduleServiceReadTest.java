@@ -11,15 +11,21 @@ import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.entity.DailyStudentAttendance;
 import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
 import geumjeongyahak.domain.daily_schedule.enums.DailyScheduleStatus;
+import geumjeongyahak.domain.daily_schedule.enums.DailyStudentAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleForbiddenException;
+import geumjeongyahak.domain.daily_schedule.exception.DuplicateDailyStudentAttendanceException;
+import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleAttendanceStateException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleJournalStateException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailySchedulePersonalInfoException;
+import geumjeongyahak.domain.daily_schedule.exception.StudentNotInDailyScheduleException;
 import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyStudentAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyTeacherAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleService;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendanceItemRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendancesRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
 import geumjeongyahak.domain.lesson.entity.Lesson;
@@ -282,6 +288,131 @@ class DailyScheduleServiceReadTest {
                 List.of(new UpdateDailyScheduleJournalRequest.LessonJournalRequest(11L, "수업 내용"))
             )
         )).isInstanceOf(InvalidDailySchedulePersonalInfoException.class);
+    }
+
+    @Test
+    void updateStudentAttendances_updatesStatuses() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Student student = student(10L, classroom);
+        DailyStudentAttendance studentAttendance = new DailyStudentAttendance(dailySchedule, student);
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyStudentAttendanceRepository.findAllByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(List.of(studentAttendance));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of());
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.empty());
+
+        DailyScheduleDetailResponse response = dailyScheduleService.updateStudentAttendances(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            false,
+            new UpdateDailyStudentAttendancesRequest(List.of(
+                new UpdateDailyStudentAttendanceItemRequest(student.getId(), DailyStudentAttendanceStatus.PRESENT)
+            ))
+        );
+
+        assertThat(studentAttendance.getStatus()).isEqualTo(DailyStudentAttendanceStatus.PRESENT);
+        assertThat(response.studentAttendances()).hasSize(1);
+        assertThat(response.studentAttendances().get(0).status()).isEqualTo(DailyStudentAttendanceStatus.PRESENT);
+    }
+
+    @Test
+    void updateStudentAttendances_throwsWhenVolunteerIsNotTeacher() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+
+        assertThatThrownBy(() -> dailyScheduleService.updateStudentAttendances(
+            dailySchedule.getId(),
+            99L,
+            false,
+            false,
+            new UpdateDailyStudentAttendancesRequest(List.of(
+                new UpdateDailyStudentAttendanceItemRequest(10L, DailyStudentAttendanceStatus.PRESENT)
+            ))
+        )).isInstanceOf(DailyScheduleForbiddenException.class);
+    }
+
+    @Test
+    void updateStudentAttendances_throwsWhenDailyScheduleIsCancelled() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        dailySchedule.updateStatus(DailyScheduleStatus.CANCELLED);
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+
+        assertThatThrownBy(() -> dailyScheduleService.updateStudentAttendances(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            false,
+            new UpdateDailyStudentAttendancesRequest(List.of(
+                new UpdateDailyStudentAttendanceItemRequest(10L, DailyStudentAttendanceStatus.PRESENT)
+            ))
+        )).isInstanceOf(InvalidDailyScheduleAttendanceStateException.class);
+    }
+
+    @Test
+    void updateStudentAttendances_throwsWhenStudentIsNotInDailySchedule() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyStudentAttendanceRepository.findAllByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(List.of());
+
+        assertThatThrownBy(() -> dailyScheduleService.updateStudentAttendances(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            false,
+            new UpdateDailyStudentAttendancesRequest(List.of(
+                new UpdateDailyStudentAttendanceItemRequest(10L, DailyStudentAttendanceStatus.PRESENT)
+            ))
+        )).isInstanceOf(StudentNotInDailyScheduleException.class);
+    }
+
+    @Test
+    void updateStudentAttendances_throwsWhenRequestHasDuplicateStudent() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Student student = student(10L, classroom);
+        DailyStudentAttendance studentAttendance = new DailyStudentAttendance(dailySchedule, student);
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyStudentAttendanceRepository.findAllByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(List.of(studentAttendance));
+
+        assertThatThrownBy(() -> dailyScheduleService.updateStudentAttendances(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            false,
+            new UpdateDailyStudentAttendancesRequest(List.of(
+                new UpdateDailyStudentAttendanceItemRequest(student.getId(), DailyStudentAttendanceStatus.PRESENT),
+                new UpdateDailyStudentAttendanceItemRequest(student.getId(), DailyStudentAttendanceStatus.ABSENT)
+            ))
+        )).isInstanceOf(DuplicateDailyStudentAttendanceException.class);
     }
 
     private DailySchedule dailySchedule(Long id, Classroom classroom, User teacher, LocalDate lessonDate) {
