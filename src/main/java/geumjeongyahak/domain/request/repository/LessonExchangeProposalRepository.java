@@ -29,4 +29,10 @@ public interface LessonExchangeProposalRepository
         Long requestId,
         LessonExchangeProposalStatus status
     );
+
+    long countByStatus(LessonExchangeProposalStatus status);
+
+    long countByRequest_Id(Long requestId);
+
+    long countByRequest_IdAndStatus(Long requestId, LessonExchangeProposalStatus status);
 }

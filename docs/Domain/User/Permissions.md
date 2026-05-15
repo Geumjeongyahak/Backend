@@ -176,6 +176,9 @@ permission code로는 표현되지 않습니다.
 | `PATCH /api/v1/lesson-exchange-requests/{requestId}/approve` | `ADMIN` \| `lesson-exchange-request:manage:*` |
 | `PATCH /api/v1/lesson-exchange-requests/{requestId}/reject` | `ADMIN` \| `lesson-exchange-request:manage:*` |
 | `POST /api/v1/lesson-exchange-requests/{requestId}/proposals` | 인증만 |
+| `GET /admin/request/lesson-exchange` | 관리자 콘솔 접근 가능 사용자 |
+| `POST /admin/request/lesson-exchange/{requestId}/approve` | `ADMIN` \| `lesson-exchange-request:manage:*` |
+| `POST /admin/request/lesson-exchange/{requestId}/reject` | `ADMIN` \| `lesson-exchange-request:manage:*` |
 | `POST /api/v1/purchase-requests` | 인증만 |
 | `GET /api/v1/admin/purchase-requests` | `ADMIN` \| `purchase-request:read:*` |
 | `GET /api/v1/admin/purchase-requests/{requestId}` | `ADMIN` \| `MANAGER` \| `purchase-request:read:*` |
