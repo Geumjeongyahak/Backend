@@ -40,6 +40,14 @@ public class LessonProxyService {
     }
 
     @Transactional(readOnly = true)
+    public List<Lesson> getActiveLessonsByClassroomAndDate(Long classroomId, LocalDate date) {
+        return lessonRepository.findAllBySubjectClassroomIdAndDateAndIsDeletedFalseOrderByPeriodAscStartTimeAsc(
+            classroomId,
+            date
+        );
+    }
+
+    @Transactional(readOnly = true)
     public List<Lesson> getActiveLessonsByTeacherAndDateAndPeriodBetween(
         Long teacherId,
         LocalDate date,

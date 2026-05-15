@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DailyScheduleRepository extends JpaRepository<DailySchedule, Long> {
 
-    Optional<DailySchedule> findByClassroomIdAndLessonDate(Long classroomId, LocalDate lessonDate);
+    Optional<DailySchedule> findByClassroomIdAndLessonDateAndIsDeletedFalse(Long classroomId, LocalDate lessonDate);
 
-    boolean existsByClassroomIdAndLessonDate(Long classroomId, LocalDate lessonDate);
+    Optional<DailySchedule> findByClassroomIdAndLessonDate(Long classroomId, LocalDate lessonDate);
 }

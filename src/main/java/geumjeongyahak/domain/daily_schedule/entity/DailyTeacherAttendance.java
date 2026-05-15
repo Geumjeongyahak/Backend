@@ -42,10 +42,14 @@ public class DailyTeacherAttendance extends BaseEntity {
     @Column(precision = 10, scale = 7)
     private BigDecimal longitude;
 
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted = false;
+
     public DailyTeacherAttendance(DailySchedule dailySchedule, Integer volunteerServiceMinutes) {
         this.dailySchedule = dailySchedule;
         this.volunteerServiceMinutes = volunteerServiceMinutes;
         this.status = DailyTeacherAttendanceStatus.ABSENT;
+        this.isDeleted = false;
     }
 
     public void updateVolunteerServiceMinutes(Integer volunteerServiceMinutes) {
@@ -62,5 +66,13 @@ public class DailyTeacherAttendance extends BaseEntity {
         this.attendedAt = attendedAt;
         this.latitude = latitude;
         this.longitude = longitude;
+    }
+
+    public void restore() {
+        this.isDeleted = false;
+    }
+
+    public void softDelete() {
+        this.isDeleted = true;
     }
 }

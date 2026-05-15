@@ -9,10 +9,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
+import geumjeongyahak.domain.lesson.event.LessonDailyScheduleSyncRequestedEvent;
 import geumjeongyahak.domain.lesson.enums.TeacherAttendanceStatus;
 import geumjeongyahak.domain.lesson.exception.InvalidLessonScheduleException;
 import geumjeongyahak.domain.lesson.exception.InvalidLessonStatusTransitionException;
@@ -42,6 +44,7 @@ public class LessonService {
     private final LessonRepository lessonRepository;
     private final SubjectRepository subjectRepository;
     private final UserRepository userRepository;
+    private final EventPublisher eventPublisher;
 
 
     @Transactional
@@ -85,6 +88,7 @@ public class LessonService {
         );
 
         Lesson saved = lessonRepository.save(lesson);
+        publishDailyScheduleSync(saved);
         log.debug("수업 생성 완료 (lessonId={})", saved.getId());
 
         return LessonDetailResponse.from(saved);
@@ -149,6 +153,8 @@ public class LessonService {
                 log.info("수업 수정 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
                 return new LessonNotFoundException(lessonId);
             });
+        Long previousClassroomId = lesson.getSubject().getClassroom().getId();
+        LocalDate previousDate = lesson.getDate();
 
         // 최종 값
         Long newSubjectId = request.subjectId() != null ? request.subjectId() : lesson.getSubject().getId();
@@ -201,6 +207,10 @@ public class LessonService {
 
         // 변경 반영
         lesson.update(subject, teacher, newDate, newStart, newEnd, newPeriod);
+        publishDailyScheduleSync(lesson);
+        if (!previousClassroomId.equals(subject.getClassroom().getId()) || !previousDate.equals(newDate)) {
+            publishDailyScheduleSync(previousClassroomId, previousDate);
+        }
         log.debug("수업 수정 완료 (lessonId={})", lessonId);
         return LessonDetailResponse.from(lesson);
     }
@@ -306,7 +316,8 @@ public class LessonService {
                 log.warn("수업 자동 생성 스킵 - 교사 시간 충돌 (date={}, teacherId={})", date, teacherId);
                 continue;
             }
-            lessonRepository.save(new Lesson(subject, teacher, date, startTime, endTime, period));
+            Lesson lesson = lessonRepository.save(new Lesson(subject, teacher, date, startTime, endTime, period));
+            publishDailyScheduleSync(lesson);
             created++;
         }
 
@@ -365,6 +376,7 @@ public class LessonService {
             .orElseThrow(() -> new UserNotFoundException(newTeacherId));
 
         lesson.changeTeacher(newTeacher);
+        publishDailyScheduleSync(lesson);
     }
 
     private Optional<Lesson> findActiveLessonForEvent(Long lessonId, String eventName) {
@@ -397,7 +409,10 @@ public class LessonService {
                 from
             );
 
-        lessons.forEach(lesson -> lesson.changeTeacher(newTeacher));
+        lessons.forEach(lesson -> {
+            lesson.changeTeacher(newTeacher);
+            publishDailyScheduleSync(lesson);
+        });
     }
 
     @Transactional
@@ -410,7 +425,12 @@ public class LessonService {
                 from
             );
 
-        lessons.forEach(Lesson::softDelete);
+        lessons.forEach(lesson -> {
+            Long classroomId = lesson.getSubject().getClassroom().getId();
+            LocalDate date = lesson.getDate();
+            lesson.softDelete();
+            publishDailyScheduleSync(classroomId, date);
+        });
     }
 
     @Transactional
@@ -429,7 +449,10 @@ public class LessonService {
                 from
             );
 
-        lessons.forEach(lesson -> lesson.changeSchedule(startTime, endTime, period));
+        lessons.forEach(lesson -> {
+            lesson.changeSchedule(startTime, endTime, period);
+            publishDailyScheduleSync(lesson);
+        });
     }
 
     @Transactional
@@ -470,8 +493,19 @@ public class LessonService {
                 return new LessonNotFoundException(lessonId);
             });
         if (!lesson.getIsDeleted()) {
+            Long classroomId = lesson.getSubject().getClassroom().getId();
+            LocalDate date = lesson.getDate();
             lesson.softDelete();
+            publishDailyScheduleSync(classroomId, date);
         }
         log.debug("수업 삭제 완료 (lessonId={})", lessonId);
+    }
+
+    private void publishDailyScheduleSync(Lesson lesson) {
+        publishDailyScheduleSync(lesson.getSubject().getClassroom().getId(), lesson.getDate());
+    }
+
+    private void publishDailyScheduleSync(Long classroomId, LocalDate lessonDate) {
+        eventPublisher.publish(new LessonDailyScheduleSyncRequestedEvent(classroomId, lessonDate));
     }
 }

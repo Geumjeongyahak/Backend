@@ -33,13 +33,25 @@ public class DailyStudentAttendance extends BaseEntity {
     @Column(nullable = false, length = 20)
     private DailyStudentAttendanceStatus status;
 
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted = false;
+
     public DailyStudentAttendance(DailySchedule dailySchedule, Student student) {
         this.dailySchedule = dailySchedule;
         this.student = student;
         this.status = DailyStudentAttendanceStatus.ABSENT;
+        this.isDeleted = false;
     }
 
     public void updateStatus(DailyStudentAttendanceStatus status) {
         this.status = status;
+    }
+
+    public void restore() {
+        this.isDeleted = false;
+    }
+
+    public void softDelete() {
+        this.isDeleted = true;
     }
 }

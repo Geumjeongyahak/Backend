@@ -45,6 +45,9 @@ public class DailySchedule extends BaseEntity {
     @Column(nullable = false, length = 20)
     private DailyScheduleStatus status;
 
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted = false;
+
     public DailySchedule(
         Classroom classroom,
         User teacher,
@@ -58,6 +61,7 @@ public class DailySchedule extends BaseEntity {
         this.activityStartTime = activityStartTime;
         this.activityEndTime = activityEndTime;
         this.status = DailyScheduleStatus.SCHEDULED;
+        this.isDeleted = false;
     }
 
     public void updateTeacher(User teacher) {
@@ -71,5 +75,14 @@ public class DailySchedule extends BaseEntity {
 
     public void updateStatus(DailyScheduleStatus status) {
         this.status = status;
+    }
+
+    public void restore() {
+        this.isDeleted = false;
+        this.status = DailyScheduleStatus.SCHEDULED;
+    }
+
+    public void softDelete() {
+        this.isDeleted = true;
     }
 }
