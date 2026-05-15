@@ -4,6 +4,7 @@ import geumjeongyahak.domain.daily_schedule.service.DailyScheduleService;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendancesRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyTeacherAttendanceRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
 import geumjeongyahak.common.security.service.CustomUserDetails;
@@ -111,6 +112,28 @@ public class DailyScheduleController {
             request.attendances().size()
         );
         return ResponseEntity.ok(dailyScheduleService.updateStudentAttendances(
+            dailyScheduleId,
+            userDetails.getUserId(),
+            canManageAnyDailySchedule(userDetails),
+            canViewSensitiveInfo(userDetails),
+            request
+        ));
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
+    @Operation(summary = "하루 일정 교사 출석 처리", description = "하루 일정의 교사 출석 상태를 처리합니다.")
+    @PatchMapping("/{dailyScheduleId}/teacher-attendance")
+    public ResponseEntity<DailyScheduleDetailResponse> updateTeacherAttendance(
+        @PathVariable Long dailyScheduleId,
+        @Valid @RequestBody UpdateDailyTeacherAttendanceRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug(
+            "PATCH /api/v1/daily-schedules/{}/teacher-attendance - 교사 출석 처리 요청 (status={})",
+            dailyScheduleId,
+            request.status()
+        );
+        return ResponseEntity.ok(dailyScheduleService.updateTeacherAttendance(
             dailyScheduleId,
             userDetails.getUserId(),
             canManageAnyDailySchedule(userDetails),

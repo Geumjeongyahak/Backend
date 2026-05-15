@@ -8,7 +8,7 @@ public class InvalidDailyScheduleAttendanceStateException extends BusinessExcept
     public InvalidDailyScheduleAttendanceStateException(Long dailyScheduleId, DailyScheduleStatus status) {
         super(
             DailyScheduleErrorCode.INVALID_DAILY_SCHEDULE_ATTENDANCE_STATE,
-            "학생 출석을 처리할 수 없는 하루 일정 상태입니다. (dailyScheduleId: " + dailyScheduleId
+            "출석을 처리할 수 없는 하루 일정 상태입니다. (dailyScheduleId: " + dailyScheduleId
                 + ", status: " + status + ")"
         );
     }

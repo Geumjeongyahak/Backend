@@ -12,6 +12,7 @@ import geumjeongyahak.domain.daily_schedule.entity.DailyStudentAttendance;
 import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
 import geumjeongyahak.domain.daily_schedule.enums.DailyScheduleStatus;
 import geumjeongyahak.domain.daily_schedule.enums.DailyStudentAttendanceStatus;
+import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleForbiddenException;
 import geumjeongyahak.domain.daily_schedule.exception.DuplicateDailyStudentAttendanceException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleAttendanceStateException;
@@ -26,6 +27,7 @@ import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequ
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendanceItemRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendancesRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyTeacherAttendanceRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
 import geumjeongyahak.domain.lesson.entity.Lesson;
@@ -33,6 +35,7 @@ import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.student.entity.Student;
 import geumjeongyahak.domain.subject.entity.Subject;
 import geumjeongyahak.domain.users.entity.User;
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -413,6 +416,82 @@ class DailyScheduleServiceReadTest {
                 new UpdateDailyStudentAttendanceItemRequest(student.getId(), DailyStudentAttendanceStatus.ABSENT)
             ))
         )).isInstanceOf(DuplicateDailyStudentAttendanceException.class);
+    }
+
+    @Test
+    void updateTeacherAttendance_updatesStatusAndLocation() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(teacherAttendance));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of());
+        given(dailyStudentAttendanceRepository.findAllByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(List.of());
+
+        DailyScheduleDetailResponse response = dailyScheduleService.updateTeacherAttendance(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            false,
+            new UpdateDailyTeacherAttendanceRequest(
+                DailyTeacherAttendanceStatus.PRESENT,
+                new BigDecimal("35.1795543"),
+                new BigDecimal("129.0756416")
+            )
+        );
+
+        assertThat(teacherAttendance.getStatus()).isEqualTo(DailyTeacherAttendanceStatus.PRESENT);
+        assertThat(teacherAttendance.getAttendedAt()).isNotNull();
+        assertThat(teacherAttendance.getLatitude()).isEqualByComparingTo("35.1795543");
+        assertThat(teacherAttendance.getLongitude()).isEqualByComparingTo("129.0756416");
+        assertThat(response.teacherAttendance().status()).isEqualTo(DailyTeacherAttendanceStatus.PRESENT);
+        assertThat(response.teacherAttendance().latitude()).isEqualByComparingTo("35.1795543");
+    }
+
+    @Test
+    void updateTeacherAttendance_throwsWhenVolunteerIsNotTeacher() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+
+        assertThatThrownBy(() -> dailyScheduleService.updateTeacherAttendance(
+            dailySchedule.getId(),
+            99L,
+            false,
+            false,
+            new UpdateDailyTeacherAttendanceRequest(DailyTeacherAttendanceStatus.PRESENT, null, null)
+        )).isInstanceOf(DailyScheduleForbiddenException.class);
+    }
+
+    @Test
+    void updateTeacherAttendance_throwsWhenDailyScheduleIsCancelled() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        dailySchedule.updateStatus(DailyScheduleStatus.CANCELLED);
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+
+        assertThatThrownBy(() -> dailyScheduleService.updateTeacherAttendance(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            false,
+            new UpdateDailyTeacherAttendanceRequest(DailyTeacherAttendanceStatus.PRESENT, null, null)
+        )).isInstanceOf(InvalidDailyScheduleAttendanceStateException.class);
     }
 
     private DailySchedule dailySchedule(Long id, Classroom classroom, User teacher, LocalDate lessonDate) {

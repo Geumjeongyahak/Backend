@@ -3,6 +3,7 @@ package geumjeongyahak.domain.daily_schedule.v1.dto.response;
 import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
 import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record DailyTeacherAttendanceResponse(
@@ -14,6 +15,12 @@ public record DailyTeacherAttendanceResponse(
 
     @Schema(description = "출석 처리 시각", example = "2026-06-20T14:00:00")
     LocalDateTime attendedAt,
+
+    @Schema(description = "출석 처리 위치 위도", example = "35.1795543")
+    BigDecimal latitude,
+
+    @Schema(description = "출석 처리 위치 경도", example = "129.0756416")
+    BigDecimal longitude,
 
     @Schema(description = "봉사 인정 시간(분)", example = "120")
     Integer volunteerServiceMinutes
@@ -27,6 +34,8 @@ public record DailyTeacherAttendanceResponse(
             attendance.getId(),
             attendance.getStatus(),
             attendance.getAttendedAt(),
+            attendance.getLatitude(),
+            attendance.getLongitude(),
             attendance.getVolunteerServiceMinutes()
         );
     }

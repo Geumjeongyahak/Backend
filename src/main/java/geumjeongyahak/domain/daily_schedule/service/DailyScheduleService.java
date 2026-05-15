@@ -5,6 +5,7 @@ import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.entity.DailyStudentAttendance;
 import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
 import geumjeongyahak.domain.daily_schedule.enums.DailyScheduleStatus;
+import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.exception.DuplicateDailyStudentAttendanceException;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleForbiddenException;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleNotFoundException;
@@ -20,6 +21,7 @@ import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequ
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendanceItemRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendancesRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyTeacherAttendanceRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
 import geumjeongyahak.domain.lesson.entity.Lesson;
@@ -29,6 +31,7 @@ import geumjeongyahak.domain.student.service.StudentProxyService;
 import geumjeongyahak.domain.users.entity.User;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -236,7 +239,7 @@ public class DailyScheduleService {
                 return new DailyScheduleNotFoundException(dailyScheduleId);
             });
         validateDailyScheduleWritable(dailySchedule, authorId, canWriteAnyDailySchedule, "학생 출석 처리");
-        validateAttendanceState(dailySchedule);
+        validateAttendanceState(dailySchedule, "학생 출석 처리");
 
         List<DailyStudentAttendance> attendances = dailyStudentAttendanceRepository
             .findAllByDailyScheduleIdAndIsDeletedFalse(dailyScheduleId);
@@ -270,6 +273,49 @@ public class DailyScheduleService {
         return getDailySchedule(dailyScheduleId, authorId, canViewSensitiveInfo);
     }
 
+    @Transactional
+    public DailyScheduleDetailResponse updateTeacherAttendance(
+        Long dailyScheduleId,
+        Long authorId,
+        boolean canWriteAnyDailySchedule,
+        boolean canViewSensitiveInfo,
+        UpdateDailyTeacherAttendanceRequest request
+    ) {
+        log.debug(
+            "DailySchedule 교사 출석 처리 요청 (dailyScheduleId={}, authorId={}, status={})",
+            dailyScheduleId,
+            authorId,
+            request.status()
+        );
+        DailySchedule dailySchedule = dailyScheduleRepository.findByIdAndIsDeletedFalse(dailyScheduleId)
+            .orElseThrow(() -> {
+                log.info("DailySchedule 교사 출석 처리 실패 - 하루 일정을 찾을 수 없습니다. ID: {}", dailyScheduleId);
+                return new DailyScheduleNotFoundException(dailyScheduleId);
+            });
+        validateDailyScheduleWritable(dailySchedule, authorId, canWriteAnyDailySchedule, "교사 출석 처리");
+        validateAttendanceState(dailySchedule, "교사 출석 처리");
+
+        DailyTeacherAttendance teacherAttendance = dailyTeacherAttendanceRepository
+            .findByDailyScheduleIdAndIsDeletedFalse(dailyScheduleId)
+            .orElseGet(() -> dailyTeacherAttendanceRepository.save(new DailyTeacherAttendance(
+                dailySchedule,
+                calculateVolunteerServiceMinutes(dailySchedule.getActivityStartTime(), dailySchedule.getActivityEndTime())
+            )));
+        LocalDateTime attendedAt = request.status() == DailyTeacherAttendanceStatus.ABSENT
+            ? null
+            : LocalDateTime.now();
+
+        teacherAttendance.updateAttendance(
+            request.status(),
+            attendedAt,
+            attendedAt != null ? request.latitude() : null,
+            attendedAt != null ? request.longitude() : null
+        );
+
+        log.debug("DailySchedule 교사 출석 처리 완료 (dailyScheduleId={})", dailyScheduleId);
+        return getDailySchedule(dailyScheduleId, authorId, canViewSensitiveInfo);
+    }
+
     private boolean canViewDailyScheduleSensitiveInfo(
         DailySchedule dailySchedule,
         Long viewerId,
@@ -291,13 +337,14 @@ public class DailyScheduleService {
         throw new InvalidDailyScheduleJournalStateException(dailySchedule.getId(), dailySchedule.getStatus());
     }
 
-    private void validateAttendanceState(DailySchedule dailySchedule) {
+    private void validateAttendanceState(DailySchedule dailySchedule, String operation) {
         if (dailySchedule.getStatus() != DailyScheduleStatus.CANCELLED) {
             return;
         }
 
         log.info(
-            "DailySchedule 학생 출석 처리 실패 - 휴강 상태에서는 처리할 수 없습니다. dailyScheduleId={}, status={}",
+            "DailySchedule {} 실패 - 휴강 상태에서는 처리할 수 없습니다. dailyScheduleId={}, status={}",
+            operation,
             dailySchedule.getId(),
             dailySchedule.getStatus()
         );
