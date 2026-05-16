@@ -11,6 +11,8 @@ import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
+import geumjeongyahak.domain.notification.enums.PushRequestType;
+import geumjeongyahak.domain.notification.event.RequestReviewedPushEvent;
 import geumjeongyahak.domain.request.entity.AbsenceRequest;
 import geumjeongyahak.domain.request.enums.RequestStatus;
 import geumjeongyahak.domain.request.event.AbsenceApprovedEvent;
@@ -109,6 +111,15 @@ public class AbsenceRequestService {
             absenceRequest.getLesson().getId(),
             approverId
         ));
+        eventPublisher.publish(RequestReviewedPushEvent.approved(
+            absenceRequest.getRequestedBy().getId(),
+            absenceRequest.getId(),
+            PushRequestType.ABSENCE,
+            approverId,
+            "결석 요청이 승인되었습니다.",
+            "결석 요청이 승인되어 해당 수업 출석이 공결 처리되었습니다.",
+            null
+        ));
 
         log.debug("결석 요청 승인 완료 (requestId={})", requestId);
         return AbsenceRequestResponse.from(absenceRequest);
@@ -126,6 +137,15 @@ public class AbsenceRequestService {
 
         User approver = userProxyService.getById(approverId);
         absenceRequest.reject(approver, note);
+        eventPublisher.publish(RequestReviewedPushEvent.rejected(
+            absenceRequest.getRequestedBy().getId(),
+            absenceRequest.getId(),
+            PushRequestType.ABSENCE,
+            approverId,
+            "결석 요청이 반려되었습니다.",
+            "결석 요청이 반려되었습니다. 반려 사유를 확인해주세요.",
+            note
+        ));
 
         log.debug("결석 요청 반려 완료 (requestId={})", requestId);
         return AbsenceRequestResponse.from(absenceRequest);

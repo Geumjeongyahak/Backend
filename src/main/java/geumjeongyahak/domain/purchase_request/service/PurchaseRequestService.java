@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.common.exception.BadRequestException;
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.CommonErrorCode;
@@ -17,6 +18,8 @@ import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
 import geumjeongyahak.domain.file.service.FileProxyService;
+import geumjeongyahak.domain.notification.enums.PushRequestType;
+import geumjeongyahak.domain.notification.event.RequestReviewedPushEvent;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestReceipt;
@@ -40,6 +43,7 @@ public class PurchaseRequestService {
     private final FileProxyService fileProxyService;
     private final ClassroomProxyService classroomProxyService;
     private final UserProxyService userProxyService;
+    private final EventPublisher eventPublisher;
 
     @Transactional
     public PurchaseRequestDetailResponse createPurchaseRequest(
@@ -117,6 +121,15 @@ public class PurchaseRequestService {
         }
 
         purchaseRequest.approve(userProxyService.getById(approverId), processedNote, advancePaymentApprovedAmount);
+        eventPublisher.publish(RequestReviewedPushEvent.approved(
+            purchaseRequest.getRequestedBy().getId(),
+            purchaseRequest.getId(),
+            PushRequestType.PURCHASE,
+            approverId,
+            "구입 요청이 승인되었습니다.",
+            "구입 요청이 승인되었습니다. 구매 완료 보고를 진행해주세요.",
+            processedNote
+        ));
 
         log.debug("구입 요청 승인 완료 (requestId={})", requestId);
         return PurchaseRequestDetailResponse.from(purchaseRequest);
@@ -133,6 +146,15 @@ public class PurchaseRequestService {
         }
 
         purchaseRequest.reject(userProxyService.getById(approverId), processedNote);
+        eventPublisher.publish(RequestReviewedPushEvent.rejected(
+            purchaseRequest.getRequestedBy().getId(),
+            purchaseRequest.getId(),
+            PushRequestType.PURCHASE,
+            approverId,
+            "구입 요청이 반려되었습니다.",
+            "구입 요청이 반려되었습니다. 반려 사유를 확인해주세요.",
+            processedNote
+        ));
 
         log.debug("구입 요청 반려 완료 (requestId={})", requestId);
         return PurchaseRequestDetailResponse.from(purchaseRequest);
