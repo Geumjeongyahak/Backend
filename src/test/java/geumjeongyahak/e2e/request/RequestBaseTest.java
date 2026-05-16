@@ -145,7 +145,8 @@ public abstract class RequestBaseTest extends BaseE2ETest {
                     entry("name", title + " 품목"),
                     entry("reason", content),
                     entry("expectedPrice", price)
-                )))
+                ))),
+                entry("receiptFileIds", java.util.List.of())
             ))
             .post()
             .then()

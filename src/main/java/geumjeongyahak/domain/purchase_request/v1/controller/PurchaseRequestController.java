@@ -42,6 +42,7 @@ public class PurchaseRequestController {
         summary = "구입 요청 생성",
         description = "classroomId 로 지정한 분반에 대한 기자재 구입 요청을 생성합니다. "
             + "품목은 품명, 사유, 예상 가격을 입력하며 실제 가격은 승인 후 구매 완료 보고 시점에 입력합니다. "
+            + "receiptFileIds 로 업로드된 영수증 파일을 구입 요청에 연결할 수 있습니다. "
             + "상태는 PENDING 으로 시작합니다."
     )
     @PostMapping

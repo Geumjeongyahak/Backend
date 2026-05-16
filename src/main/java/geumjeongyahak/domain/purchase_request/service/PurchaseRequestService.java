@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,8 +55,18 @@ public class PurchaseRequestService {
             .map(item -> new PurchaseRequestItem(item.name(), item.reason(), item.expectedPrice()))
             .toList();
 
+        List<PurchaseRequestReceipt> receipts = toReceipts(request.receiptFileIds());
+
         PurchaseRequest saved = purchaseRequestRepository.save(
-            new PurchaseRequest(classroom, requester, request.title(), request.content(), request.advancePaymentRequestedAmount(), items)
+            new PurchaseRequest(
+                classroom,
+                requester,
+                request.title(),
+                request.content(),
+                request.advancePaymentRequestedAmount(),
+                items,
+                receipts
+            )
         );
 
         log.debug("구입 요청 생성 완료 (id={})", saved.getId());
@@ -167,10 +178,7 @@ public class PurchaseRequestService {
             totalPrice += itemReport.price();
         }
 
-        List<PurchaseRequestReceipt> receipts = (request.receiptFileIds() == null ? Collections.<java.util.UUID>emptyList() : request.receiptFileIds()).stream()
-            .map(fileProxyService::getReferenceById)
-            .map(PurchaseRequestReceipt::new)
-            .toList();
+        List<PurchaseRequestReceipt> receipts = toReceipts(request.receiptFileIds());
 
         purchaseRequest.reportPurchase(totalPrice, receipts);
 
@@ -210,6 +218,13 @@ public class PurchaseRequestService {
     private PurchaseRequest findById(Long requestId) {
         return purchaseRequestRepository.findById(requestId)
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));
+    }
+
+    private List<PurchaseRequestReceipt> toReceipts(List<UUID> receiptFileIds) {
+        return (receiptFileIds == null ? Collections.<UUID>emptyList() : receiptFileIds).stream()
+            .map(fileProxyService::getReferenceById)
+            .map(PurchaseRequestReceipt::new)
+            .toList();
     }
 
     private void checkAccess(PurchaseRequest purchaseRequest, Long requesterId, boolean isAdmin) {
