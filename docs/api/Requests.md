@@ -133,6 +133,7 @@
 ```json
 {
   "lessonId": 1,
+  "title": "개인 사정으로 결석합니다",
   "reason": "개인 사정으로 인한 결석"
 }
 ```
@@ -146,6 +147,7 @@
   "lessonDate": "2026-05-12",
   "requestedById": 3,
   "requestedByName": "홍길동",
+  "title": "개인 사정으로 결석합니다",
   "reason": "개인 사정으로 인한 결석",
   "expiresAt": "2026-05-12T00:00:00",
   "status": "PENDING",
@@ -202,6 +204,7 @@
       "lessonDate": "2026-05-12",
       "requestedById": 3,
       "requestedByName": "홍길동",
+      "title": "개인 사정으로 결석합니다",
       "reason": "개인 사정으로 인한 결석",
       "expiresAt": "2026-05-12T00:00:00",
       "status": "PENDING",

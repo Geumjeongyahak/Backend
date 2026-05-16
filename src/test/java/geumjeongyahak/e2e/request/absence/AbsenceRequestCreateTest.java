@@ -63,12 +63,13 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonId", createdLessonId, "reason", "개인 사정"))
+            .body(Map.of("lessonId", createdLessonId, "title", "개인 사정 결석", "reason", "개인 사정"))
             .post()
             .then()
             .statusCode(201)
             .body("id", notNullValue())
             .body("lessonId", equalTo(createdLessonId.intValue()))
+            .body("title", equalTo("개인 사정 결석"))
             .body("reason", equalTo("개인 사정"))
             .body("expiresAt", equalTo(lessonHelper.getLessonDate(
                 getAuthHeader(adminToken), createdLessonId
@@ -92,10 +93,11 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonId", createdLessonId, "reason", "관리자 결석 사유"))
+            .body(Map.of("lessonId", createdLessonId, "title", "관리자 결석", "reason", "관리자 결석 사유"))
             .post()
             .then()
             .statusCode(201)
+            .body("title", equalTo("관리자 결석"))
             .body("status", equalTo("PENDING"))
             .extract()
             .jsonPath()
@@ -114,7 +116,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonId", createdLessonId, "reason", "관리자 대리 요청"))
+            .body(Map.of("lessonId", createdLessonId, "title", "관리자 대리 결석", "reason", "관리자 대리 요청"))
             .post()
             .then()
             .statusCode(403);
@@ -128,7 +130,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
         given()
             .basePath("/api/v1/absence-requests")
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonId", 1, "reason", "사유"))
+            .body(Map.of("lessonId", 1, "title", "결석 요청", "reason", "사유"))
             .post()
             .then()
             .statusCode(401);
@@ -141,7 +143,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(guestToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonId", 1, "reason", "사유"))
+            .body(Map.of("lessonId", 1, "title", "결석 요청", "reason", "사유"))
             .post()
             .then()
             .statusCode(403);
@@ -156,7 +158,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonId", 99999L, "reason", "사유"))
+            .body(Map.of("lessonId", 99999L, "title", "결석 요청", "reason", "사유"))
             .post()
             .then()
             .statusCode(404);
@@ -181,7 +183,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonId", createdLessonId, "reason", "만료된 결석 요청"))
+            .body(Map.of("lessonId", createdLessonId, "title", "만료된 결석", "reason", "만료된 결석 요청"))
             .post()
             .then()
             .statusCode(400);
@@ -199,7 +201,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonId", createdLessonId, "reason", "타인 수업 결석 요청"))
+            .body(Map.of("lessonId", createdLessonId, "title", "타인 수업 결석", "reason", "타인 수업 결석 요청"))
             .post()
             .then()
             .statusCode(403);
@@ -219,7 +221,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonId", createdLessonId, "reason", "중복 결석 요청"))
+            .body(Map.of("lessonId", createdLessonId, "title", "중복 결석", "reason", "중복 결석 요청"))
             .post()
             .then()
             .statusCode(409);
@@ -246,7 +248,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonId", createdLessonId, "reason", "승인 후 중복 결석 요청"))
+            .body(Map.of("lessonId", createdLessonId, "title", "승인 후 중복 결석", "reason", "승인 후 중복 결석 요청"))
             .post()
             .then()
             .statusCode(409);
@@ -275,7 +277,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonId", createdLessonId, "reason", "반려 후 재요청"))
+            .body(Map.of("lessonId", createdLessonId, "title", "반려 후 재요청", "reason", "반려 후 재요청"))
             .post()
             .then()
             .statusCode(201)
@@ -306,7 +308,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonId", createdLessonId, "reason", "취소 후 재요청"))
+            .body(Map.of("lessonId", createdLessonId, "title", "취소 후 재요청", "reason", "취소 후 재요청"))
             .post()
             .then()
             .statusCode(201)
@@ -325,7 +327,20 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonId", 1, "reason", ""))
+            .body(Map.of("lessonId", 1, "title", "결석 요청", "reason", ""))
+            .post()
+            .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("title 이 빈 문자열 → 400")
+    void createAbsenceRequest_blankTitle_returns400() {
+        given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("lessonId", 1, "title", "", "reason", "사유"))
             .post()
             .then()
             .statusCode(400);
@@ -338,7 +353,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("reason", "사유"))
+            .body(Map.of("title", "결석 요청", "reason", "사유"))
             .post()
             .then()
             .statusCode(400);

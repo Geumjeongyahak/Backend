@@ -40,6 +40,9 @@ public class AbsenceRequest extends BaseEntity {
     @JoinColumn(name = "requested_by", nullable = false)
     private User requestedBy;
 
+    @Column(nullable = false)
+    private String title;
+
     @Column(columnDefinition = "TEXT", nullable = false)
     private String reason;
 
@@ -59,9 +62,10 @@ public class AbsenceRequest extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String note;
 
-    public AbsenceRequest(Lesson lesson, User requestedBy, String reason) {
+    public AbsenceRequest(Lesson lesson, User requestedBy, String title, String reason) {
         this.lesson = lesson;
         this.requestedBy = requestedBy;
+        this.title = title;
         this.reason = reason;
         this.expiresAt = lesson.getDate().atStartOfDay();
         this.status = RequestStatus.PENDING;

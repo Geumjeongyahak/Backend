@@ -75,11 +75,15 @@ public abstract class RequestBaseTest extends BaseE2ETest {
     // ──────────────────────────────────────────────────────
 
     protected Long createAbsenceRequest(String authHeader, Long lessonId, String reason) {
+        return createAbsenceRequest(authHeader, lessonId, "결석 요청", reason);
+    }
+
+    protected Long createAbsenceRequest(String authHeader, Long lessonId, String title, String reason) {
         return given()
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, authHeader)
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonId", lessonId, "reason", reason))
+            .body(Map.of("lessonId", lessonId, "title", title, "reason", reason))
             .post()
             .then()
             .statusCode(201)

@@ -55,9 +55,9 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             getAuthHeader(adminToken), subjectId, TEACHER2_ID);
 
         requestIdByVolunteer1 = createAbsenceRequest(
-            getAuthHeader(volunteerToken), lessonIdForVolunteer1, "봉사자1 결석 사유");
+            getAuthHeader(volunteerToken), lessonIdForVolunteer1, "봉사자1 결석 요청", "봉사자1 결석 사유");
         requestIdByVolunteer2 = createAbsenceRequest(
-            getAuthHeader(volunteer2Token), lessonIdForVolunteer2, "봉사자2 결석 사유");
+            getAuthHeader(volunteer2Token), lessonIdForVolunteer2, "봉사자2 결석 요청", "봉사자2 결석 사유");
 
         User readPermissionUser = userTestHelper.createTestUser("absence-reader", RoleType.GUEST);
         userPermissionRepository.findByUserIdAndPermissionCode(
@@ -97,7 +97,7 @@ class AbsenceRequestReadTest extends RequestBaseTest {
     @Test
     @DisplayName("목록 조회 기본 페이지 응답 → page=0, size=10")
     void getList_defaultPagination_returnsPageMetadata() {
-        given()
+        List<String> titles = given()
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .get()
@@ -106,7 +106,12 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             .body("page", equalTo(0))
             .body("size", equalTo(10))
             .body("totalElements", greaterThanOrEqualTo(2))
-            .body("totalPages", greaterThanOrEqualTo(1));
+            .body("totalPages", greaterThanOrEqualTo(1))
+            .extract()
+            .jsonPath()
+            .getList("content.title", String.class);
+
+        assertThat(titles).contains("봉사자1 결석 요청", "봉사자2 결석 요청");
     }
 
     @Test
@@ -231,6 +236,7 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             .statusCode(200)
             .body("id", equalTo(requestIdByVolunteer1.intValue()))
             .body("status", equalTo("PENDING"))
+            .body("title", equalTo("봉사자1 결석 요청"))
             .body("reason", equalTo("봉사자1 결석 사유"));
     }
 

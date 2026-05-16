@@ -23,6 +23,9 @@ public record AbsenceRequestResponse(
     @Schema(description = "요청자 이름", example = "홍길동")
     String requestedByName,
 
+    @Schema(description = "결석 요청 제목")
+    String title,
+
     @Schema(description = "결석 사유")
     String reason,
 
@@ -51,6 +54,7 @@ public record AbsenceRequestResponse(
             r.getLesson().getDate(),
             r.getRequestedBy().getId(),
             r.getRequestedBy().getName(),
+            r.getTitle(),
             r.getReason(),
             r.getExpiresAt(),
             r.getStatus(),

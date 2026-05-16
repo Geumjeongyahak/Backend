@@ -49,7 +49,7 @@ public class AbsenceRequestService {
         validateExpiresAtIsFuture(lesson.getDate().atStartOfDay());
         validateNoActiveAbsenceRequest(lesson.getId(), requesterId);
 
-        AbsenceRequest absenceRequest = new AbsenceRequest(lesson, requester, request.reason());
+        AbsenceRequest absenceRequest = new AbsenceRequest(lesson, requester, request.title(), request.reason());
         AbsenceRequest saved = absenceRequestRepository.save(absenceRequest);
 
         log.debug("결석 요청 생성 완료 (id={})", saved.getId());

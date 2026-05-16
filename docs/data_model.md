@@ -156,6 +156,7 @@ erDiagram
         bigint id PK
         bigint lesson_id FK
         bigint requested_by FK
+        varchar title
         text reason
         timestamp expires_at
         varchar status
@@ -367,6 +368,7 @@ erDiagram
 | id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
 | lesson_id | BIGINT | FOREIGN KEY | 수업 ID |
 | requested_by | BIGINT | FOREIGN KEY | 결석 요청자 ID |
+| title | VARCHAR(255) | NOT NULL | 결석 요청 제목 |
 | reason | TEXT | NOT NULL | 결석 이유 |
 | expires_at | TIMESTAMP | NOT NULL | 결석 요청 만료 시각. 대상 수업일의 00:00으로 자동 설정 |
 | status | VARCHAR(20) | NOT NULL | 결석 요청 상태 |
