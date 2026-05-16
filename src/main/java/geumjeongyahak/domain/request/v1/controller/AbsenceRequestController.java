@@ -28,6 +28,7 @@ import geumjeongyahak.domain.request.service.AbsenceRequestService;
 import geumjeongyahak.domain.request.v1.dto.request.AbsenceRequestPaginationRequest;
 import geumjeongyahak.domain.request.v1.dto.request.CreateAbsenceRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.request.RejectRequestRequest;
+import geumjeongyahak.domain.request.v1.dto.request.UpdateAbsenceRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.response.AbsenceRequestResponse;
 
 @Slf4j
@@ -113,6 +114,25 @@ public class AbsenceRequestController {
         log.debug("GET /api/v1/absence-requests/{} - 결석 요청 상세 조회", requestId);
         AbsenceRequestResponse response = absenceRequestService.getAbsenceRequest(
             userDetails.getUserId(), requestId, canReadAllAbsenceRequests(userDetails)
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
+    @Operation(
+        summary = "결석 요청 수정",
+        description = "요청자 본인이 PENDING 상태의 결석 요청 제목과 사유를 수정합니다. "
+            + "대리 수정은 허용하지 않으며, 이미 처리된 요청은 수정할 수 없습니다."
+    )
+    @PatchMapping("/{requestId}")
+    public ResponseEntity<AbsenceRequestResponse> updateAbsenceRequest(
+        @PathVariable Long requestId,
+        @Valid @RequestBody UpdateAbsenceRequestRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/absence-requests/{} - 결석 요청 수정", requestId);
+        AbsenceRequestResponse response = absenceRequestService.updateAbsenceRequest(
+            userDetails.getUserId(), requestId, request
         );
         return ResponseEntity.ok(response);
     }

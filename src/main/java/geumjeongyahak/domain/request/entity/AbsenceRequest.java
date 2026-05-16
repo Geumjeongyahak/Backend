@@ -91,4 +91,9 @@ public class AbsenceRequest extends BaseEntity {
     public void expire() {
         this.status = RequestStatus.EXPIRED;
     }
+
+    public void update(String title, String reason) {
+        this.title = title;
+        this.reason = reason;
+    }
 }

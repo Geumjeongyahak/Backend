@@ -24,6 +24,7 @@ import geumjeongyahak.domain.request.exception.RequestNotFoundException;
 import geumjeongyahak.domain.request.repository.AbsenceRequestRepository;
 import geumjeongyahak.domain.request.v1.dto.request.AbsenceRequestPaginationRequest;
 import geumjeongyahak.domain.request.v1.dto.request.CreateAbsenceRequestRequest;
+import geumjeongyahak.domain.request.v1.dto.request.UpdateAbsenceRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.response.AbsenceRequestResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
@@ -83,6 +84,29 @@ public class AbsenceRequestService {
             throw new RequestForbiddenException();
         }
 
+        return AbsenceRequestResponse.from(absenceRequest);
+    }
+
+    @Transactional
+    public AbsenceRequestResponse updateAbsenceRequest(
+        Long requesterId,
+        Long requestId,
+        UpdateAbsenceRequestRequest request
+    ) {
+        log.debug("결석 요청 수정 (requesterId={}, requestId={})", requesterId, requestId);
+        AbsenceRequest absenceRequest = absenceRequestRepository.findById(requestId)
+            .orElseThrow(() -> new RequestNotFoundException(requestId));
+
+        if (!absenceRequest.getRequestedBy().getId().equals(requesterId)) {
+            throw new RequestForbiddenException();
+        }
+        if (absenceRequest.getStatus() != RequestStatus.PENDING) {
+            throw new RequestAlreadyProcessedException();
+        }
+
+        absenceRequest.update(request.title(), request.reason());
+
+        log.debug("결석 요청 수정 완료 (requestId={})", requestId);
         return AbsenceRequestResponse.from(absenceRequest);
     }
 

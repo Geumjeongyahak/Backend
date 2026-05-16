@@ -238,7 +238,30 @@
 - `ADMIN` 또는 `absence-request:read:*` 권한 사용자는 모든 요청을 조회할 수 있습니다.
 - 그 외 `VOLUNTEER`, `MANAGER` 사용자는 본인이 요청한 결석 요청만 조회할 수 있습니다.
 
-## 5.4 결석 요청 승인
+## 5.4 결석 요청 수정
+
+- **URL**: `/api/v1/absence-requests/{requestId}`
+- **Method**: `PATCH`
+- **Description**: 요청자 본인이 `PENDING` 상태의 결석 요청 제목과 사유를 수정합니다.
+
+### Request Body 예시
+
+```json
+{
+  "title": "수정된 결석 요청",
+  "reason": "수정된 결석 사유"
+}
+```
+
+### 주요 실패 케이스
+
+| 상황 | HTTP |
+|---|---|
+| 요청 작성자가 아님 | 403 |
+| 이미 처리된 요청 | 409 |
+| 제목 또는 사유가 비어 있음 | 400 |
+
+## 5.5 결석 요청 승인
 
 - **URL**: `/api/v1/absence-requests/{requestId}/approve`
 - **Method**: `PATCH`
@@ -251,7 +274,7 @@
 - `AbsenceApprovedEvent`가 발행되고, 대상 수업의 `teacherAttendance`가 `EXCUSED`로 변경됩니다.
 - 이미 `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED` 상태인 요청은 재처리할 수 없습니다.
 
-## 5.5 결석 요청 반려
+## 5.6 결석 요청 반려
 
 - **URL**: `/api/v1/absence-requests/{requestId}/reject`
 - **Method**: `PATCH`
@@ -271,7 +294,7 @@
 - `approvalAt`, `approvalBy`, `note`가 기록됩니다.
 - 이미 `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED` 상태인 요청은 재처리할 수 없습니다.
 
-## 5.6 결석 요청 취소
+## 5.7 결석 요청 취소
 
 - **URL**: `/api/v1/absence-requests/{requestId}`
 - **Method**: `DELETE`
@@ -283,7 +306,7 @@
 - 수업 출석 상태를 변경하지 않습니다.
 - 본인 요청이 아니거나 이미 처리된 요청이면 취소할 수 없습니다.
 
-## 5.7 결석 요청 자동 만료
+## 5.8 결석 요청 자동 만료
 
 - `PENDING` 상태의 결석 요청 중 `expiresAt`이 지난 요청은 스케줄러가 자동으로 `EXPIRED` 처리합니다.
 - `expiresAt`은 수업 하루 전까지 처리를 유도하기 위해 대상 수업일의 00:00으로 자동 설정됩니다.
