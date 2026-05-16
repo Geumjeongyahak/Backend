@@ -58,6 +58,20 @@ public class PushSubscriptionViewController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/diagnostics")
+    public ResponseEntity<Void> diagnostics(
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        @RequestBody AdminPushDiagnosticRequest request
+    ) {
+        log.info(
+            "관리자 웹 Push 구독 단계 (userId={}, step={}, message={})",
+            userDetails.getUserId(),
+            request.step(),
+            request.message()
+        );
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/subscriptions/{subscriptionId}")
     public ResponseEntity<Void> unsubscribe(
         @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -86,6 +100,12 @@ public class PushSubscriptionViewController {
         String messagingSenderId,
         String appId,
         String vapidKey
+    ) {
+    }
+
+    public record AdminPushDiagnosticRequest(
+        String step,
+        String message
     ) {
     }
 }

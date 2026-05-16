@@ -560,6 +560,14 @@ const setPushStatus = (message = '') => {
     }
 };
 
+const reportPushStep = (step, message = '') => {
+    return fetch('/admin/push/diagnostics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ step, message })
+    }).catch(() => {});
+};
+
 const closePushPrompt = () => {
     if (!pushPrompt) {
         return;
@@ -631,8 +639,11 @@ const subscribeAdminPush = async () => {
     setPushToggle('처리 중', false, true);
     setPushStatus('');
     try {
+        await reportPushStep('subscribe-clicked');
         await loadFirebaseMessaging();
+        await reportPushStep('firebase-loaded');
         const permission = await Notification.requestPermission();
+        await reportPushStep('permission-result', permission);
         if (permission !== 'granted') {
             localStorage.removeItem(pushState.subscriptionIdKey);
             setPushToggle('알림 켜기');
@@ -640,6 +651,7 @@ const subscribeAdminPush = async () => {
             return;
         }
         const registration = await navigator.serviceWorker.ready;
+        await reportPushStep('service-worker-ready');
         const messaging = firebase.messaging();
         const token = await messaging.getToken({
             vapidKey: pushState.config.vapidKey,
@@ -648,6 +660,7 @@ const subscribeAdminPush = async () => {
         if (!token) {
             throw new Error('FCM token is empty');
         }
+        await reportPushStep('fcm-token-issued');
         const response = await fetch('/admin/push/subscriptions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -663,6 +676,7 @@ const subscribeAdminPush = async () => {
         closePushPrompt();
     } catch (error) {
         console.error(error);
+        await reportPushStep('subscribe-failed', error?.message || String(error));
         localStorage.removeItem(pushState.subscriptionIdKey);
         setPushToggle('알림 켜기');
         setPushStatus('알림 구독 저장에 실패했습니다. Firebase 설정과 브라우저 권한을 확인해주세요.');
