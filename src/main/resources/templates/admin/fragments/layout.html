@@ -122,7 +122,7 @@
             background: rgba(21, 26, 24, .38);
         }
         .push-toggle[hidden], .push-modal-backdrop[hidden] {
-            display: none;
+            display: none !important;
         }
         .push-modal {
             width: min(420px, 100%);
@@ -545,6 +545,29 @@ const setPushToggle = (label, active = false, disabled = false) => {
     pushToggle.disabled = disabled;
 };
 
+const closePushPrompt = () => {
+    if (!pushPrompt) {
+        return;
+    }
+    pushPrompt.hidden = true;
+    pushPrompt.style.display = 'none';
+};
+
+const openPushPrompt = () => {
+    if (!pushPrompt) {
+        return;
+    }
+    pushPrompt.hidden = false;
+    pushPrompt.style.display = 'flex';
+};
+
+document.addEventListener('click', (event) => {
+    if (event.target.closest('[data-push-prompt-later]')) {
+        localStorage.setItem(pushState.promptDismissedKey, 'true');
+        closePushPrompt();
+    }
+});
+
 const loadScriptOnce = (src) => new Promise((resolve, reject) => {
     if (document.querySelector(`script[src="${src}"]`)) {
         resolve();
@@ -615,9 +638,7 @@ const subscribeAdminPush = async () => {
     localStorage.setItem(pushState.subscriptionIdKey, subscription.id);
     localStorage.removeItem(pushState.promptDismissedKey);
     setPushToggle('알림 켜짐', true);
-    if (pushPrompt) {
-        pushPrompt.hidden = true;
-    }
+    closePushPrompt();
 };
 
 const unsubscribeAdminPush = async () => {
@@ -651,12 +672,6 @@ const initAdminPush = async () => {
     if (!pushToggle || !('Notification' in window) || !('serviceWorker' in navigator)) {
         return;
     }
-    pushPromptLater?.addEventListener('click', () => {
-        localStorage.setItem(pushState.promptDismissedKey, 'true');
-        if (pushPrompt) {
-            pushPrompt.hidden = true;
-        }
-    });
     const configResponse = await fetch('/admin/push/config').catch(() => null);
     if (!configResponse?.ok) {
         return;
@@ -674,7 +689,7 @@ const initAdminPush = async () => {
         });
     });
     if (pushPrompt && shouldShowPushPrompt()) {
-        pushPrompt.hidden = false;
+        openPushPrompt();
     }
     pushPromptEnable?.addEventListener('click', () => {
         subscribeAdminPush().catch(() => setPushToggle('알림 켜기'));
