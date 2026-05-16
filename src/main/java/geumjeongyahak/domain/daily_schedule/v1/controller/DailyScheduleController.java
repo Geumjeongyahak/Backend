@@ -1,13 +1,15 @@
 package geumjeongyahak.domain.daily_schedule.v1.controller;
 
+import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleService;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleVolunteerHoursRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendancesRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyTeacherAttendanceRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
-import geumjeongyahak.common.security.service.CustomUserDetails;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleVolunteerHoursResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -74,6 +76,29 @@ public class DailyScheduleController {
             dailyScheduleId,
             userDetails.getUserId(),
             canViewSensitiveInfo(userDetails)
+        ));
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_READ_ACCESS)
+    @Operation(
+        summary = "봉사 시간 조회",
+        description = "완료된 하루 일정과 교사 출석을 기준으로 봉사 인정 시간을 조회합니다. 날짜를 입력하지 않으면 전체 누적 봉사시간을 조회합니다."
+    )
+    @GetMapping("/volunteer-hours")
+    public ResponseEntity<DailyScheduleVolunteerHoursResponse> getVolunteerHours(
+        @ParameterObject @Valid @ModelAttribute DailyScheduleVolunteerHoursRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug(
+            "GET /api/v1/daily-schedules/volunteer-hours - 봉사 시간 조회 요청 (teacherId={}, from={}, to={})",
+            request.teacherId(),
+            request.from(),
+            request.to()
+        );
+        return ResponseEntity.ok(dailyScheduleService.getVolunteerHours(
+            userDetails.getUserId(),
+            canViewSensitiveInfo(userDetails),
+            request
         ));
     }
 

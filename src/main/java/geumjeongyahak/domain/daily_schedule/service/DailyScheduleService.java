@@ -9,6 +9,7 @@ import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.exception.DuplicateDailyStudentAttendanceException;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleForbiddenException;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleNotFoundException;
+import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleVolunteerHoursForbiddenException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleAttendanceStateException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleJournalStateException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailySchedulePersonalInfoException;
@@ -18,12 +19,14 @@ import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyStudentAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyTeacherAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleVolunteerHoursRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendanceItemRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendancesRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyTeacherAttendanceRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleVolunteerHoursResponse;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
@@ -169,6 +172,48 @@ public class DailyScheduleService {
             studentAttendances.size()
         );
         return response;
+    }
+
+    public DailyScheduleVolunteerHoursResponse getVolunteerHours(
+        Long requesterId,
+        boolean canReadAnyDailySchedule,
+        DailyScheduleVolunteerHoursRequest request
+    ) {
+        Long targetTeacherId = request.teacherId() != null ? request.teacherId() : requesterId;
+        log.debug(
+            "DailySchedule 봉사 시간 조회 요청 (requesterId={}, targetTeacherId={}, from={}, to={})",
+            requesterId,
+            targetTeacherId,
+            request.from(),
+            request.to()
+        );
+        if (!targetTeacherId.equals(requesterId) && !canReadAnyDailySchedule) {
+            log.info(
+                "DailySchedule 봉사 시간 조회 실패 - 다른 교사의 봉사 시간을 조회할 권한이 없습니다. requesterId={}, targetTeacherId={}",
+                requesterId,
+                targetTeacherId
+            );
+            throw new DailyScheduleVolunteerHoursForbiddenException(requesterId, targetTeacherId);
+        }
+
+        Long totalMinutes = dailyTeacherAttendanceRepository.sumVolunteerServiceMinutes(
+            targetTeacherId,
+            request.from(),
+            request.to(),
+            DailyScheduleStatus.COMPLETED,
+            DailyTeacherAttendanceStatus.ABSENT
+        );
+        log.debug(
+            "DailySchedule 봉사 시간 조회 완료 (targetTeacherId={}, totalMinutes={})",
+            targetTeacherId,
+            totalMinutes
+        );
+        return DailyScheduleVolunteerHoursResponse.of(
+            targetTeacherId,
+            request.from(),
+            request.to(),
+            totalMinutes
+        );
     }
 
     @Transactional
