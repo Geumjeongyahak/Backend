@@ -129,6 +129,66 @@ class FileDeleteFlowTest extends BasePostTest {
     }
 
     @Test
+    @DisplayName("다른 게시글 첨부파일로 참조 중인 이미지 File은 soft delete되지 않는다")
+    void deletePost_doesNotSoftDelete_imageReferencedByAttachment() {
+        Long post1Id = testPostHelper.createDraftAndRegister(noticeChannelId, adminAccessToken);
+        Long post2Id = testPostHelper.createDraftAndRegister(noticeChannelId, adminAccessToken);
+
+        String fileIdStr = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .multiPart(testFileHelper.multipartImageRequest("file", "shared-image.png"))
+        .when()
+            .post("/api/v1/channels/{channelId}/posts/{postId}/images", noticeChannelId, post1Id)
+        .then()
+            .statusCode(200)
+            .extract().jsonPath().getString("fileId");
+        UUID fileId = UUID.fromString(fileIdStr);
+
+        testFileHelper.linkAttachmentToPost(post2Id, fileId);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/api/v1/channels/{channelId}/posts/{postId}", noticeChannelId, post1Id)
+        .then()
+            .statusCode(204);
+
+        File file = fileRepository.findById(fileId).orElseThrow();
+        assertThat(file.isDeleted()).isFalse();
+        assertThat(file.getDeletedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("다른 게시글 이미지로 참조 중인 첨부파일 File은 soft delete되지 않는다")
+    void deletePost_doesNotSoftDelete_attachmentReferencedByImage() {
+        Long post1Id = testPostHelper.createDraftAndRegister(noticeChannelId, adminAccessToken);
+        Long post2Id = testPostHelper.createDraftAndRegister(noticeChannelId, adminAccessToken);
+
+        String fileIdStr = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .multiPart(testFileHelper.multipartAttachmentRequest("file", "shared-attachment.pdf"))
+        .when()
+            .post("/api/v1/channels/{channelId}/posts/{postId}/attachments", noticeChannelId, post1Id)
+        .then()
+            .statusCode(200)
+            .extract().jsonPath().getString("fileId");
+        UUID fileId = UUID.fromString(fileIdStr);
+
+        testFileHelper.linkFileToPost(post2Id, fileId);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/api/v1/channels/{channelId}/posts/{postId}", noticeChannelId, post1Id)
+        .then()
+            .statusCode(204);
+
+        File file = fileRepository.findById(fileId).orElseThrow();
+        assertThat(file.isDeleted()).isFalse();
+        assertThat(file.getDeletedAt()).isNull();
+    }
+
+    @Test
     @DisplayName("스케줄러 실행 시 storage 삭제 성공 파일의 PostFile/PostAttachment/File 레코드가 hard delete된다")
     void cleanupScheduler_hardDeletesRecordsOnStorageSuccess() {
         Long postId = testPostHelper.createDraftAndRegister(noticeChannelId, adminAccessToken);
