@@ -83,10 +83,33 @@
         }
         .topline {
             display: flex;
-            justify-content: flex-end;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
             margin-bottom: 20px;
             color: var(--muted);
             font-size: 14px;
+        }
+        .push-toggle {
+            min-height: 34px;
+            padding: 7px 11px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: #4f5953;
+            font-size: 13px;
+            font-weight: 900;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .push-toggle.active {
+            border-color: #cfe8c4;
+            background: #edf8e8;
+            color: var(--green-dark);
+        }
+        .push-toggle:disabled {
+            cursor: default;
+            opacity: .55;
         }
         .page-title {
             display: flex;
@@ -446,6 +469,7 @@
     </aside>
     <div class="content">
         <div class="topline">
+            <button class="push-toggle" type="button" data-push-toggle hidden>알림 켜기</button>
             <span th:text="${adminName}">admin@example.com</span>
         </div>
         <div class="flash" th:if="${message}" th:text="${message}">완료되었습니다.</div>
@@ -457,6 +481,138 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     });
 }
+
+const pushToggle = document.querySelector('[data-push-toggle]');
+const pushState = {
+    config: null,
+    firebaseLoaded: false,
+    subscriptionIdKey: 'sonmoum.admin.push.subscriptionId'
+};
+
+const setPushToggle = (label, active = false, disabled = false) => {
+    if (!pushToggle) {
+        return;
+    }
+    pushToggle.textContent = label;
+    pushToggle.classList.toggle('active', active);
+    pushToggle.disabled = disabled;
+};
+
+const loadScriptOnce = (src) => new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+        resolve();
+        return;
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+});
+
+const loadFirebaseMessaging = async () => {
+    if (pushState.firebaseLoaded) {
+        return;
+    }
+    await loadScriptOnce('https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js');
+    await loadScriptOnce('https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js');
+    if (!firebase.apps.length) {
+        firebase.initializeApp({
+            apiKey: pushState.config.apiKey,
+            authDomain: pushState.config.authDomain,
+            projectId: pushState.config.projectId,
+            storageBucket: pushState.config.storageBucket,
+            messagingSenderId: pushState.config.messagingSenderId,
+            appId: pushState.config.appId
+        });
+    }
+    pushState.firebaseLoaded = true;
+};
+
+const resolveDeviceType = () => {
+    const ua = navigator.userAgent || '';
+    if (/iPad|iPhone|iPod/.test(ua)) {
+        return 'IOS';
+    }
+    if (/Android/.test(ua)) {
+        return 'ANDROID';
+    }
+    return 'WEB';
+};
+
+const subscribeAdminPush = async () => {
+    setPushToggle('처리 중', false, true);
+    await loadFirebaseMessaging();
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+        localStorage.removeItem(pushState.subscriptionIdKey);
+        setPushToggle('알림 켜기');
+        return;
+    }
+    const registration = await navigator.serviceWorker.ready;
+    const messaging = firebase.messaging();
+    const token = await messaging.getToken({
+        vapidKey: pushState.config.vapidKey,
+        serviceWorkerRegistration: registration
+    });
+    const response = await fetch('/admin/push/subscriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, deviceType: resolveDeviceType() })
+    });
+    if (!response.ok) {
+        throw new Error(`Push subscribe failed: ${response.status}`);
+    }
+    const subscription = await response.json();
+    localStorage.setItem(pushState.subscriptionIdKey, subscription.id);
+    setPushToggle('알림 켜짐', true);
+};
+
+const unsubscribeAdminPush = async () => {
+    setPushToggle('처리 중', true, true);
+    await loadFirebaseMessaging();
+    const messaging = firebase.messaging();
+    const currentToken = await messaging.getToken({
+        vapidKey: pushState.config.vapidKey,
+        serviceWorkerRegistration: await navigator.serviceWorker.ready
+    }).catch(() => null);
+    if (currentToken) {
+        await messaging.deleteToken(currentToken).catch(() => {});
+    }
+    const subscriptionId = localStorage.getItem(pushState.subscriptionIdKey);
+    if (subscriptionId) {
+        await fetch(`/admin/push/subscriptions/${subscriptionId}`, { method: 'DELETE' }).catch(() => {});
+    }
+    localStorage.removeItem(pushState.subscriptionIdKey);
+    setPushToggle('알림 켜기');
+};
+
+const initAdminPush = async () => {
+    if (!pushToggle || !('Notification' in window) || !('serviceWorker' in navigator)) {
+        return;
+    }
+    const configResponse = await fetch('/admin/push/config').catch(() => null);
+    if (!configResponse?.ok) {
+        return;
+    }
+    pushState.config = await configResponse.json();
+    if (!pushState.config.enabled) {
+        return;
+    }
+    pushToggle.hidden = false;
+    setPushToggle(localStorage.getItem(pushState.subscriptionIdKey) ? '알림 켜짐' : '알림 켜기', Boolean(localStorage.getItem(pushState.subscriptionIdKey)));
+    pushToggle.addEventListener('click', () => {
+        const enabled = Boolean(localStorage.getItem(pushState.subscriptionIdKey));
+        (enabled ? unsubscribeAdminPush() : subscribeAdminPush()).catch(() => {
+            setPushToggle(enabled ? '알림 켜짐' : '알림 켜기', enabled);
+        });
+    });
+};
+
+window.addEventListener('load', () => {
+    initAdminPush().catch(() => {});
+});
 
 document.querySelectorAll('.permission-form').forEach((form) => {
     const permissionSelect = form.querySelector('select[name="permissionKey"]');

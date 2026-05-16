@@ -6,6 +6,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record FirebaseProperties(
     boolean enabled,
     String projectId,
-    String credentialsBase64
+    String credentialsBase64,
+    String webApiKey,
+    String webAuthDomain,
+    String webProjectId,
+    String webStorageBucket,
+    String webMessagingSenderId,
+    String webAppId,
+    String webVapidKey
 ) {
 }
