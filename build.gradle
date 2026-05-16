@@ -31,6 +31,7 @@ ext {
 	JJWT_VERSION = '0.13.0'
 	REST_ASSURED_VERSION = '6.0.0'
 	GCP_SDK_VERSION = '7.4.5'
+	FIREBASE_ADMIN_VERSION = '9.8.0'
 }
 
 dependencies {
@@ -55,6 +56,8 @@ dependencies {
 	// google cloud storage
 	implementation platform("com.google.cloud:spring-cloud-gcp-dependencies:${GCP_SDK_VERSION}")
 	implementation 'com.google.cloud:spring-cloud-gcp-starter-storage'
+	implementation "com.google.firebase:firebase-admin:${FIREBASE_ADMIN_VERSION}"
+	implementation 'com.google.cloud:google-cloud-firestore'
 	
 	// AOP
 	implementation 'org.springframework.boot:spring-boot-starter-aop'
