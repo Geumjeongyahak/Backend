@@ -10,5 +10,7 @@ public interface PushSubscriptionRepository extends JpaRepository<PushSubscripti
 
     Optional<PushSubscription> findByToken(String token);
 
+    Optional<PushSubscription> findByIdAndUserId(Long id, Long userId);
+
     List<PushSubscription> findAllByUserIdAndActiveTrue(Long userId);
 }
