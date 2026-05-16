@@ -69,6 +69,8 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .statusCode(201)
             .body("id", notNullValue())
             .body("lessonId", equalTo(createdLessonId.intValue()))
+            .body("classroomId", equalTo((int) CLASSROOM_ID))
+            .body("classroomName", equalTo("벚꽃반"))
             .body("title", equalTo("개인 사정 결석"))
             .body("reason", equalTo("개인 사정"))
             .body("expiresAt", equalTo(lessonHelper.getLessonDate(

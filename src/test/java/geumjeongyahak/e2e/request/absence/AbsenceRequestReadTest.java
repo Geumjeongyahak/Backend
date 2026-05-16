@@ -235,6 +235,8 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             .then()
             .statusCode(200)
             .body("id", equalTo(requestIdByVolunteer1.intValue()))
+            .body("classroomId", equalTo((int) CLASSROOM_ID))
+            .body("classroomName", equalTo("벚꽃반"))
             .body("status", equalTo("PENDING"))
             .body("title", equalTo("봉사자1 결석 요청"))
             .body("reason", equalTo("봉사자1 결석 사유"));
