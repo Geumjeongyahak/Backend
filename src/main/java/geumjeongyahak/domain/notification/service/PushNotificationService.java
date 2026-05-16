@@ -3,6 +3,7 @@ package geumjeongyahak.domain.notification.service;
 import geumjeongyahak.domain.notification.dto.PushNotificationMessage;
 import geumjeongyahak.domain.notification.dto.PushSendResult;
 import geumjeongyahak.domain.notification.entity.PushSubscription;
+import geumjeongyahak.domain.notification.event.PurchaseStatusChangedPushEvent;
 import geumjeongyahak.domain.notification.event.RequestReviewedPushEvent;
 import geumjeongyahak.domain.notification.repository.PushSubscriptionRepository;
 import geumjeongyahak.domain.notification.service.sender.PushNotificationSender;
@@ -23,6 +24,20 @@ public class PushNotificationService {
 
     @Transactional
     public void sendRequestReviewedPush(RequestReviewedPushEvent event) {
+        List<PushSubscription> subscriptions =
+            pushSubscriptionRepository.findAllByUserIdAndActiveTrue(event.getUserId());
+
+        if (subscriptions.isEmpty()) {
+            log.info("활성 Push 구독이 없어 알림을 발송하지 않습니다. (userId={})", event.getUserId());
+            return;
+        }
+
+        PushNotificationMessage message = PushNotificationMessage.from(event);
+        subscriptions.forEach(subscription -> send(subscription, message));
+    }
+
+    @Transactional
+    public void sendPurchaseStatusChangedPush(PurchaseStatusChangedPushEvent event) {
         List<PushSubscription> subscriptions =
             pushSubscriptionRepository.findAllByUserIdAndActiveTrue(event.getUserId());
 

@@ -19,6 +19,7 @@ import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
 import geumjeongyahak.domain.file.service.FileProxyService;
 import geumjeongyahak.domain.notification.enums.PushRequestType;
+import geumjeongyahak.domain.notification.event.PurchaseStatusChangedPushEvent;
 import geumjeongyahak.domain.notification.event.RequestReviewedPushEvent;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
@@ -210,6 +211,14 @@ public class PurchaseRequestService {
         }
 
         purchaseRequest.confirm();
+
+        eventPublisher.publish(new PurchaseStatusChangedPushEvent(
+            purchaseRequest.getRequestedBy().getId(),
+            purchaseRequest.getId(),
+            "CONFIRMED",
+            "구입 요청 결재 확인 완료",
+            "구입 요청에 대한 최종 결재가 확인되었습니다."
+        ));
 
         log.debug("구매 결재 확인 완료 (requestId={})", requestId);
         return PurchaseRequestDetailResponse.from(purchaseRequest);

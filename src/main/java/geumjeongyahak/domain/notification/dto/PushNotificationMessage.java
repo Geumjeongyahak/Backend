@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.notification.dto;
 
+import geumjeongyahak.domain.notification.event.PurchaseStatusChangedPushEvent;
 import geumjeongyahak.domain.notification.event.RequestReviewedPushEvent;
 
 import java.util.HashMap;
@@ -21,6 +22,14 @@ public record PushNotificationMessage(
             data.put("note", event.getNote());
         }
 
+        return new PushNotificationMessage(event.getTitle(), event.getBody(), data);
+    }
+
+    public static PushNotificationMessage from(PurchaseStatusChangedPushEvent event) {
+        Map<String, String> data = new HashMap<>();
+        data.put("eventType", "PURCHASE_STATUS_CHANGED");
+        data.put("requestId", String.valueOf(event.getRequestId()));
+        data.put("newStatus", event.getNewStatus());
         return new PushNotificationMessage(event.getTitle(), event.getBody(), data);
     }
 }
