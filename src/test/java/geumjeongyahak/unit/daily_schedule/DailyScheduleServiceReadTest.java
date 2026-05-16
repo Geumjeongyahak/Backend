@@ -227,6 +227,42 @@ class DailyScheduleServiceReadTest {
     }
 
     @Test
+    void updateJournal_completesDailyScheduleWhenTeacherAttendanceIsCompleted() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Subject subject = subject(classroom, teacher, lessonDate);
+        Lesson lesson = lesson(subject, teacher, lessonDate, 1);
+        ReflectionTestUtils.setField(lesson, "id", 11L);
+        DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
+        teacherAttendance.updateAttendance(DailyTeacherAttendanceStatus.PRESENT, LocalDateTime.now(), null, null);
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of(lesson));
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(teacherAttendance));
+        given(dailyStudentAttendanceRepository.findAllByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(List.of());
+
+        DailyScheduleDetailResponse response = dailyScheduleService.updateJournal(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            new UpdateDailyScheduleJournalRequest(
+                true,
+                "900101",
+                List.of(new UpdateDailyScheduleJournalRequest.LessonJournalRequest(11L, "수업 내용"))
+            )
+        );
+
+        assertThat(dailySchedule.getStatus()).isEqualTo(DailyScheduleStatus.COMPLETED);
+        assertThat(response.status()).isEqualTo(DailyScheduleStatus.COMPLETED);
+    }
+
+    @Test
     void updateJournal_throwsWhenVolunteerIsNotTeacher() {
         LocalDate lessonDate = LocalDate.of(2026, 5, 20);
         Classroom classroom = classroom(1L);
@@ -453,6 +489,38 @@ class DailyScheduleServiceReadTest {
         assertThat(teacherAttendance.getLongitude()).isEqualByComparingTo("129.0756416");
         assertThat(response.teacherAttendance().status()).isEqualTo(DailyTeacherAttendanceStatus.PRESENT);
         assertThat(response.teacherAttendance().latitude()).isEqualByComparingTo("35.1795543");
+    }
+
+    @Test
+    void updateTeacherAttendance_completesDailyScheduleWhenJournalIsCompleted() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Subject subject = subject(classroom, teacher, lessonDate);
+        Lesson lesson = lesson(subject, teacher, lessonDate, 1);
+        lesson.updateNote("수업 내용");
+        DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(teacherAttendance));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of(lesson));
+        given(dailyStudentAttendanceRepository.findAllByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(List.of());
+
+        DailyScheduleDetailResponse response = dailyScheduleService.updateTeacherAttendance(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            false,
+            new UpdateDailyTeacherAttendanceRequest(DailyTeacherAttendanceStatus.PRESENT, null, null)
+        );
+
+        assertThat(dailySchedule.getStatus()).isEqualTo(DailyScheduleStatus.COMPLETED);
+        assertThat(response.status()).isEqualTo(DailyScheduleStatus.COMPLETED);
     }
 
     @Test

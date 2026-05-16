@@ -191,10 +191,11 @@ public class DailyScheduleService {
         validateDailyScheduleWritable(dailySchedule, authorId, canWriteAnyDailySchedule, "수업 일지 저장");
         validateJournalState(dailySchedule);
         validateJournalPersonalInfo(dailySchedule.getId(), request);
-        Map<Long, Lesson> lessonsById = lessonProxyService.getActiveLessonsByClassroomAndDate(
-                dailySchedule.getClassroom().getId(),
-                dailySchedule.getLessonDate()
-            )
+        List<Lesson> lessons = lessonProxyService.getActiveLessonsByClassroomAndDate(
+            dailySchedule.getClassroom().getId(),
+            dailySchedule.getLessonDate()
+        );
+        Map<Long, Lesson> lessonsById = lessons
             .stream()
             .collect(toMap(Lesson::getId, Function.identity()));
 
@@ -215,6 +216,7 @@ public class DailyScheduleService {
             request.residentRegistrationNumberPrefix(),
             request.personalInfoConsent()
         );
+        completeIfReady(dailySchedule, lessons);
         log.debug("DailySchedule 수업 일지 저장 완료 (dailyScheduleId={})", dailyScheduleId);
         return getDailySchedule(dailyScheduleId, authorId, canWriteAnyDailySchedule);
     }
@@ -311,6 +313,10 @@ public class DailyScheduleService {
             attendedAt != null ? request.latitude() : null,
             attendedAt != null ? request.longitude() : null
         );
+        completeIfReady(dailySchedule, lessonProxyService.getActiveLessonsByClassroomAndDate(
+            dailySchedule.getClassroom().getId(),
+            dailySchedule.getLessonDate()
+        ));
 
         log.debug("DailySchedule 교사 출석 처리 완료 (dailyScheduleId={})", dailyScheduleId);
         return getDailySchedule(dailyScheduleId, authorId, canViewSensitiveInfo);
@@ -322,6 +328,23 @@ public class DailyScheduleService {
         boolean canViewSensitiveInfo
     ) {
         return canViewSensitiveInfo || dailySchedule.getTeacher().getId().equals(viewerId);
+    }
+
+    private void completeIfReady(DailySchedule dailySchedule, List<Lesson> lessons) {
+        if (dailySchedule.getStatus() == DailyScheduleStatus.CANCELLED) {
+            return;
+        }
+
+        boolean teacherAttendanceCompleted = dailyTeacherAttendanceRepository
+            .findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId())
+            .map(attendance -> attendance.getStatus() != DailyTeacherAttendanceStatus.ABSENT)
+            .orElse(false);
+        boolean journalCompleted = !lessons.isEmpty()
+            && lessons.stream().allMatch(lesson -> lesson.getNote() != null && !lesson.getNote().isBlank());
+
+        if (teacherAttendanceCompleted && journalCompleted) {
+            dailySchedule.updateStatus(DailyScheduleStatus.COMPLETED);
+        }
     }
 
     private void validateJournalState(DailySchedule dailySchedule) {
