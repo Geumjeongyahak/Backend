@@ -4,6 +4,7 @@ import geumjeongyahak.domain.notification.entity.PushSubscription;
 import geumjeongyahak.domain.notification.enums.PushDeviceType;
 import geumjeongyahak.domain.users.entity.User;
 import io.restassured.http.ContentType;
+import io.restassured.http.Cookies;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -121,6 +122,33 @@ class PushSubscriptionE2ETest extends BaseNotificationTest {
             .statusCode(401);
     }
 
+    @Test
+    @DisplayName("관리자 웹 세션에서 Push 구독을 등록하면 활성 구독 레코드가 생성된다")
+    void subscribe_adminWebSession_createsActiveSubscription() {
+        Cookies cookies = loginAdmin();
+
+        Long subscriptionId = given()
+            .basePath("")
+            .cookies(cookies)
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "token", "admin-web-fcm-token",
+                "deviceType", "WEB"
+            ))
+        .when()
+            .post("/admin/push/subscriptions")
+        .then()
+            .statusCode(200)
+            .extract().jsonPath().getLong("id");
+
+        User admin = userTestHelper.getUser(TEST_NOTIFICATION_ADMIN);
+        PushSubscription subscription = pushSubscriptionRepository.findById(subscriptionId).orElseThrow();
+        assertThat(subscription.getUser().getId()).isEqualTo(admin.getId());
+        assertThat(subscription.getToken()).isEqualTo("admin-web-fcm-token");
+        assertThat(subscription.getDeviceType()).isEqualTo(PushDeviceType.WEB);
+        assertThat(subscription.isActive()).isTrue();
+    }
+
     private Long subscribe(String token, String fcmToken, String deviceType) {
         return given()
             .contentType(ContentType.JSON)
@@ -134,5 +162,19 @@ class PushSubscriptionE2ETest extends BaseNotificationTest {
         .then()
             .statusCode(201)
             .extract().jsonPath().getLong("id");
+    }
+
+    private Cookies loginAdmin() {
+        return given()
+            .basePath("")
+            .contentType("application/x-www-form-urlencoded")
+            .formParam("username", adminEmail)
+            .formParam("password", adminPassword)
+            .redirects().follow(false)
+        .when()
+            .post("/admin/auth/login")
+        .then()
+            .statusCode(302)
+            .extract().response().detailedCookies();
     }
 }

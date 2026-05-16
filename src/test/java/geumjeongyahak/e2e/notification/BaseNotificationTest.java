@@ -16,9 +16,12 @@ public abstract class BaseNotificationTest extends BaseE2ETest {
 
     protected static final String TEST_NOTIFICATION_USER = "notificationUser1234";
     protected static final String TEST_NOTIFICATION_OTHER_USER = "notificationOtherUser1234";
+    protected static final String TEST_NOTIFICATION_ADMIN = "notificationAdmin1234";
 
     protected String accessToken;
     protected String otherAccessToken;
+    protected String adminEmail;
+    protected String adminPassword;
 
     @Autowired
     protected PushSubscriptionRepository pushSubscriptionRepository;
@@ -34,9 +37,12 @@ public abstract class BaseNotificationTest extends BaseE2ETest {
 
         userTestHelper.createTestUser(TEST_NOTIFICATION_USER, RoleType.VOLUNTEER);
         userTestHelper.createTestUser(TEST_NOTIFICATION_OTHER_USER, RoleType.VOLUNTEER);
+        userTestHelper.createTestUser(TEST_NOTIFICATION_ADMIN, RoleType.ADMIN);
 
         accessToken = userTestHelper.generateAccessTokenByNickname(TEST_NOTIFICATION_USER);
         otherAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_NOTIFICATION_OTHER_USER);
+        adminEmail = TEST_NOTIFICATION_ADMIN + "@test.com";
+        adminPassword = userTestHelper.getDefaultPassword(TEST_NOTIFICATION_ADMIN);
         controlledPushNotificationSender.reset();
     }
 

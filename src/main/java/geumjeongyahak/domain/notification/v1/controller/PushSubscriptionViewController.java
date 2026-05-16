@@ -7,6 +7,7 @@ import geumjeongyahak.domain.notification.v1.dto.request.SubscribePushRequest;
 import geumjeongyahak.domain.notification.v1.dto.response.PushSubscriptionResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StringUtils;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/admin/push")
+@Slf4j
 public class PushSubscriptionViewController {
 
     private final PushSubscriptionService pushSubscriptionService;
@@ -45,7 +47,15 @@ public class PushSubscriptionViewController {
         @AuthenticationPrincipal CustomUserDetails userDetails,
         @Valid @RequestBody SubscribePushRequest request
     ) {
-        return ResponseEntity.ok(pushSubscriptionService.subscribe(userDetails.getUserId(), request));
+        PushSubscriptionResponse response = pushSubscriptionService.subscribe(userDetails.getUserId(), request);
+        log.info(
+            "관리자 웹 Push 구독 저장 완료 (userId={}, subscriptionId={}, deviceType={}, active={})",
+            userDetails.getUserId(),
+            response.id(),
+            response.deviceType(),
+            response.active()
+        );
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/subscriptions/{subscriptionId}")
@@ -54,6 +64,7 @@ public class PushSubscriptionViewController {
         @PathVariable Long subscriptionId
     ) {
         pushSubscriptionService.unsubscribe(userDetails.getUserId(), subscriptionId);
+        log.info("관리자 웹 Push 구독 해지 완료 (userId={}, subscriptionId={})", userDetails.getUserId(), subscriptionId);
         return ResponseEntity.noContent().build();
     }
 

@@ -138,6 +138,13 @@
         .push-modal p {
             line-height: 1.55;
         }
+        .push-modal-status {
+            min-height: 20px;
+            margin-top: 10px;
+            color: var(--danger);
+            font-size: 13px;
+            font-weight: 800;
+        }
         .push-modal-actions {
             display: flex;
             justify-content: flex-end;
@@ -512,6 +519,7 @@
         <section class="push-modal" role="dialog" aria-modal="true" aria-labelledby="pushPromptTitle">
             <h2 id="pushPromptTitle">알림 구독</h2>
             <p>요청 처리 결과와 운영 알림을 이 브라우저에서 받을 수 있습니다.</p>
+            <p class="push-modal-status" data-push-status></p>
             <div class="push-modal-actions">
                 <button class="button secondary" type="button" data-push-prompt-later>나중에</button>
                 <button class="button" type="button" data-push-prompt-enable>알림 켜기</button>
@@ -529,6 +537,7 @@ const pushToggle = document.querySelector('[data-push-toggle]');
 const pushPrompt = document.querySelector('[data-push-prompt]');
 const pushPromptEnable = document.querySelector('[data-push-prompt-enable]');
 const pushPromptLater = document.querySelector('[data-push-prompt-later]');
+const pushStatus = document.querySelector('[data-push-status]');
 const pushState = {
     config: null,
     firebaseLoaded: false,
@@ -545,6 +554,12 @@ const setPushToggle = (label, active = false, disabled = false) => {
     pushToggle.disabled = disabled;
 };
 
+const setPushStatus = (message = '') => {
+    if (pushStatus) {
+        pushStatus.textContent = message;
+    }
+};
+
 const closePushPrompt = () => {
     if (!pushPrompt) {
         return;
@@ -559,6 +574,7 @@ const openPushPrompt = () => {
     }
     pushPrompt.hidden = false;
     pushPrompt.style.display = 'flex';
+    setPushStatus('');
 };
 
 document.addEventListener('click', (event) => {
@@ -613,32 +629,45 @@ const resolveDeviceType = () => {
 
 const subscribeAdminPush = async () => {
     setPushToggle('처리 중', false, true);
-    await loadFirebaseMessaging();
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
+    setPushStatus('');
+    try {
+        await loadFirebaseMessaging();
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            localStorage.removeItem(pushState.subscriptionIdKey);
+            setPushToggle('알림 켜기');
+            setPushStatus('브라우저 알림 권한이 허용되지 않았습니다.');
+            return;
+        }
+        const registration = await navigator.serviceWorker.ready;
+        const messaging = firebase.messaging();
+        const token = await messaging.getToken({
+            vapidKey: pushState.config.vapidKey,
+            serviceWorkerRegistration: registration
+        });
+        if (!token) {
+            throw new Error('FCM token is empty');
+        }
+        const response = await fetch('/admin/push/subscriptions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, deviceType: resolveDeviceType() })
+        });
+        if (!response.ok) {
+            throw new Error(`Push subscribe failed: ${response.status}`);
+        }
+        const subscription = await response.json();
+        localStorage.setItem(pushState.subscriptionIdKey, subscription.id);
+        localStorage.removeItem(pushState.promptDismissedKey);
+        setPushToggle('알림 켜짐', true);
+        closePushPrompt();
+    } catch (error) {
+        console.error(error);
         localStorage.removeItem(pushState.subscriptionIdKey);
         setPushToggle('알림 켜기');
-        return;
+        setPushStatus('알림 구독 저장에 실패했습니다. Firebase 설정과 브라우저 권한을 확인해주세요.');
+        throw error;
     }
-    const registration = await navigator.serviceWorker.ready;
-    const messaging = firebase.messaging();
-    const token = await messaging.getToken({
-        vapidKey: pushState.config.vapidKey,
-        serviceWorkerRegistration: registration
-    });
-    const response = await fetch('/admin/push/subscriptions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, deviceType: resolveDeviceType() })
-    });
-    if (!response.ok) {
-        throw new Error(`Push subscribe failed: ${response.status}`);
-    }
-    const subscription = await response.json();
-    localStorage.setItem(pushState.subscriptionIdKey, subscription.id);
-    localStorage.removeItem(pushState.promptDismissedKey);
-    setPushToggle('알림 켜짐', true);
-    closePushPrompt();
 };
 
 const unsubscribeAdminPush = async () => {
@@ -692,7 +721,7 @@ const initAdminPush = async () => {
         openPushPrompt();
     }
     pushPromptEnable?.addEventListener('click', () => {
-        subscribeAdminPush().catch(() => setPushToggle('알림 켜기'));
+        subscribeAdminPush().catch(() => {});
     });
 };
 
