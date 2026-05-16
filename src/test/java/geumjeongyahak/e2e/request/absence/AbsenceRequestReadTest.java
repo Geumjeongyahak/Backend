@@ -214,6 +214,41 @@ class AbsenceRequestReadTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("keyword 로 제목 검색 → 일치하는 요청만 포함")
+    void getList_filteredByKeywordTitle_containsMatchedRequestOnly() {
+        List<Long> ids = given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .queryParam("keyword", "봉사자1 결석 요청")
+            .get()
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getList("content.id", Long.class);
+
+        assertThat(ids).contains(requestIdByVolunteer1);
+        assertThat(ids).doesNotContain(requestIdByVolunteer2);
+    }
+
+    @Test
+    @DisplayName("keyword 로 반 이름 검색 → 해당 반 요청 포함")
+    void getList_filteredByKeywordClassroomName_containsClassroomRequests() {
+        List<Long> ids = given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .queryParam("keyword", "벚꽃반")
+            .get()
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getList("content.id", Long.class);
+
+        assertThat(ids).contains(requestIdByVolunteer1, requestIdByVolunteer2);
+    }
+
+    @Test
     @DisplayName("인증 없이 목록 조회 → 401")
     void getList_unauthenticated_returns401() {
         given()

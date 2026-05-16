@@ -6,10 +6,11 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import geumjeongyahak.domain.request.entity.AbsenceRequest;
 import geumjeongyahak.domain.request.enums.RequestStatus;
 
-public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, Long> {
+public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, Long>, JpaSpecificationExecutor<AbsenceRequest> {
 
     Page<AbsenceRequest> findAll(Pageable pageable);
 
