@@ -27,7 +27,11 @@ public record DailyScheduleListRequest(
     @Schema(description = "담당 교사 ID", example = "2")
     Long teacherId,
 
-    @Schema(description = "하루 일정 상태", example = "SCHEDULED")
+    @Schema(
+        description = "하루 일정 상태",
+        example = "SCHEDULED",
+        allowableValues = {"SCHEDULED", "COMPLETED", "CANCELLED"}
+    )
     DailyScheduleStatus status
 ) {
 }

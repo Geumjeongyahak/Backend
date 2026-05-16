@@ -36,10 +36,18 @@ public record DailyScheduleSummaryResponse(
     @Schema(description = "봉사 인정 시간(분)", example = "120")
     Integer volunteerServiceMinutes,
 
-    @Schema(description = "하루 일정 상태", example = "SCHEDULED")
+    @Schema(
+        description = "하루 일정 상태",
+        example = "SCHEDULED",
+        allowableValues = {"SCHEDULED", "COMPLETED", "CANCELLED"}
+    )
     DailyScheduleStatus status,
 
-    @Schema(description = "교사 출석 상태", example = "ABSENT")
+    @Schema(
+        description = "교사 출석 상태",
+        example = "ABSENT",
+        allowableValues = {"PRESENT", "ABSENT", "LATE", "EXCUSED"}
+    )
     DailyTeacherAttendanceStatus teacherAttendanceStatus,
 
     @Schema(description = "연결된 수업 수", example = "3")

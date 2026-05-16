@@ -32,7 +32,10 @@ public class DailyScheduleAdminController {
     private final DailyScheduleAdminService dailyScheduleAdminService;
 
     @PreAuthorize(DAILY_SCHEDULE_MANAGE_ACCESS)
-    @Operation(summary = "하루 일정 상태 변경", description = "하루 일정의 상태를 변경합니다. Lesson 상태 연동은 별도 정책으로 처리합니다.")
+    @Operation(
+        summary = "하루 일정 상태 변경",
+        description = "관리자가 하루 일정 상태를 수동으로 변경합니다. 상태 변경 시 같은 날짜/분반의 활성 Lesson 상태도 함께 연동됩니다."
+    )
     @PatchMapping("/{dailyScheduleId}/status")
     public ResponseEntity<DailyScheduleDetailResponse> updateStatus(
         @PathVariable Long dailyScheduleId,

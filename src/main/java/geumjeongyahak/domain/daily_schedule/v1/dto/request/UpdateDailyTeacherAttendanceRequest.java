@@ -20,11 +20,11 @@ public record UpdateDailyTeacherAttendanceRequest(
 
     @DecimalMin(value = "-90.0")
     @DecimalMax(value = "90.0")
-    @Schema(description = "출석 처리 위치 위도", example = "35.1795543")
+    @Schema(description = "출석 처리 위치 위도. status가 ABSENT이면 저장하지 않습니다.", example = "35.1795543")
     BigDecimal latitude,
 
     @DecimalMin(value = "-180.0")
     @DecimalMax(value = "180.0")
-    @Schema(description = "출석 처리 위치 경도", example = "129.0756416")
+    @Schema(description = "출석 처리 위치 경도. status가 ABSENT이면 저장하지 않습니다.", example = "129.0756416")
     BigDecimal longitude
 ) {}

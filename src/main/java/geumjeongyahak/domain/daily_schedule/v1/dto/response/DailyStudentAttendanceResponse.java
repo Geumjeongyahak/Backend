@@ -14,7 +14,11 @@ public record DailyStudentAttendanceResponse(
     @Schema(description = "학생 이름", example = "최양지")
     String studentName,
 
-    @Schema(description = "학생 출석 상태", example = "ABSENT")
+    @Schema(
+        description = "학생 출석 상태",
+        example = "ABSENT",
+        allowableValues = {"PRESENT", "ABSENT", "LATE"}
+    )
     DailyStudentAttendanceStatus status
 ) {
 

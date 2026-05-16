@@ -1,8 +1,8 @@
 # Lesson API
 
-수업 일정, 교사 출석, 학생 출석, 수업 노트를 관리합니다.
+수업 일정과 캘린더 조회를 관리합니다.
 
-Lesson은 Subject에서 생성되는 개별 수업 단위입니다. DailySchedule 도입 전까지 학생 출석, 교사 출석, 수업 노트는 현행 Lesson 단위 구조를 유지합니다.
+Lesson은 Subject에서 생성되는 개별 교시 수업 단위입니다. 하루 단위의 교사 출석, 학생 출석, 수업 일지, 봉사 시간 집계는 [DailySchedule API](./DailySchedules.md)를 사용합니다.
 
 ## 권한 정책
 
@@ -11,22 +11,16 @@ Lesson은 Subject에서 생성되는 개별 수업 단위입니다. DailySchedul
 | `GET /api/v1/lessons` | 전체 공개 |
 | `GET /api/v1/lessons/me` | `VOLUNTEER`, `MANAGER`, `ADMIN`, `lesson:read:*` |
 | `GET /api/v1/lessons/{lessonId}` | 담당 교사, `MANAGER`, `ADMIN`, `lesson:read:*` |
-| `GET /api/v1/lessons/{lessonId}/student-attendances` | 담당 교사, `MANAGER`, `ADMIN`, `lesson:read:*` |
-| `GET /api/v1/lessons/{lessonId}/note` | 담당 교사, `MANAGER`, `ADMIN`, `lesson:read:*` |
 | `POST /api/v1/lessons` | `ADMIN`, `lesson:write:*` |
 | `PATCH /api/v1/lessons/{lessonId}` | `ADMIN`, `lesson:manage:*` |
-| `PATCH /api/v1/lessons/{lessonId}/teacher-attendance` | 담당 교사, `ADMIN`, `lesson:manage:*` |
-| `PATCH /api/v1/lessons/{lessonId}/student-attendances` | 담당 교사, `ADMIN`, `lesson:manage:*` |
 | `PATCH /api/v1/lessons/{lessonId}/status` | `ADMIN`, `lesson:manage:*` |
-| `PUT /api/v1/lessons/{lessonId}/note` | 담당 교사, `ADMIN`, `lesson:manage:*` |
 | `DELETE /api/v1/lessons/{lessonId}` | `ADMIN`, `lesson:manage:*` |
 
 접근 범위:
 
 - `GET /api/v1/lessons`는 인증 없이 조회할 수 있으며, 응답에는 `teacherName`, `subjectName`이 포함됩니다.
-- `VOLUNTEER`와 `MANAGER`는 본인이 담당 교사인 수업의 출석/노트 변경만 수행할 수 있습니다.
-- `MANAGER`, `ADMIN`, `lesson:read:*` 권한 보유자는 모든 수업의 상세, 출석부, 노트를 조회할 수 있습니다.
-- `ADMIN`, `lesson:manage:*` 권한 보유자는 모든 수업의 수정, 삭제, 출석/노트 변경, 상태 변경을 수행할 수 있습니다.
+- `MANAGER`, `ADMIN`, `lesson:read:*` 권한 보유자는 모든 수업의 상세를 조회할 수 있습니다.
+- `ADMIN`, `lesson:manage:*` 권한 보유자는 모든 수업의 수정, 삭제, 상태 변경을 수행할 수 있습니다.
 - `MANAGER` 역할만으로는 수업 생성/수정/삭제/상태 변경 권한을 갖지 않습니다. 필요한 경우 `lesson:write:*` 또는 `lesson:manage:*` 권한을 별도로 부여합니다.
 
 ## 권한 코드
@@ -35,9 +29,9 @@ Lesson 도메인은 다음 권한 코드를 사용합니다.
 
 | 권한 코드 | 설명 |
 |-----------|------|
-| `lesson:read:*` | 모든 수업 상세, 출석부, 노트 조회 |
+| `lesson:read:*` | 모든 수업 상세 조회 |
 | `lesson:write:*` | 수업 직접 생성 |
-| `lesson:manage:*` | 수업 수정, 삭제, 상태 변경, 출석/노트 변경 |
+| `lesson:manage:*` | 수업 수정, 삭제, 상태 변경 |
 
 ## 조회 정책
 
@@ -147,7 +141,7 @@ Lesson 상태는 다음 값을 사용합니다.
 
 같은 상태로 다시 변경하는 요청은 멱등하게 성공 처리합니다.
 
-시간이 지났다는 이유만으로 수업을 자동 완료 처리하지 않습니다. 출석, 노트, 일일 운영 마감 기준의 자동 상태 전이는 향후 DailySchedule 도메인에서 별도로 설계합니다.
+시간이 지났다는 이유만으로 수업을 자동 완료 처리하지 않습니다. DailySchedule에서 교사 출석과 수업 일지 작성이 완료되면 연결된 활성 Lesson 상태가 `COMPLETED`로 함께 변경됩니다.
 
 ## 삭제 정책
 
@@ -157,14 +151,13 @@ Lesson 상태는 다음 값을 사용합니다.
 - 삭제된 수업은 상태, 출석, 노트 변경 대상에서 제외됩니다.
 - 삭제된 수업을 대상으로 내부 이벤트가 들어오면 변경하지 않고 로그를 남긴 뒤 무시합니다.
 
-## 출석/노트 정책
+## DailySchedule 연동 정책
 
-- 학생 출석부와 수업 노트는 DailySchedule 도입 전까지 Lesson 단위로 유지합니다.
-- 교사는 본인이 담당하는 수업의 교사 출석, 학생 출석, 수업 노트를 처리할 수 있습니다.
-- `ADMIN` 또는 `lesson:manage:*` 권한 보유자는 모든 수업의 출석과 노트를 처리할 수 있습니다.
-- `lesson:read:*` 권한은 출석부와 노트 조회에는 사용할 수 있지만, 변경에는 사용할 수 없습니다.
-- 수업 노트는 공백일 수 없습니다.
-- 출석/수업일지의 DailySchedule 이전은 별도 이슈에서 처리합니다.
+- Lesson 생성, 수정, 삭제 시 DailySchedule 동기화 이벤트를 발행합니다.
+- 같은 분반과 같은 날짜의 활성 Lesson들은 하나의 DailySchedule로 묶입니다.
+- 교사 출석, 학생 출석, 수업 일지 작성은 DailySchedule API에서 처리합니다.
+- DailySchedule 수업 일지 저장 시 연결된 Lesson의 note가 함께 갱신됩니다.
+- DailySchedule 상태가 `COMPLETED`, `CANCELLED`, `SCHEDULED`로 변경되면 연결된 활성 Lesson 상태도 각각 `COMPLETED`, `CANCELED`, `SCHEDULED`로 연동됩니다.
 
 ## 대표 실패 케이스
 
@@ -172,7 +165,7 @@ Lesson 상태는 다음 값을 사용합니다.
 |------|-------------|
 | 인증 없이 보호 API 접근 | `401 Unauthorized` |
 | 권한 없는 사용자가 생성/수정/삭제/상태 변경 시도 | `403 Forbidden` |
-| 담당자가 아닌 교사가 타인 수업 출석/노트 변경 시도 | `404 Not Found` |
+| 권한 없는 사용자가 타인 수업 상세 조회 시도 | `404 Not Found` |
 | 존재하지 않거나 삭제된 수업 접근 | `404 Not Found` |
 | 수업 시간이 유효하지 않음 | `400 Bad Request` |
 | 수업 상태 전이가 유효하지 않음 | `400 Bad Request` |

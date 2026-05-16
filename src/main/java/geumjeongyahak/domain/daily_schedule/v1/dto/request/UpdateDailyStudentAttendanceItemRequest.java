@@ -10,6 +10,10 @@ public record UpdateDailyStudentAttendanceItemRequest(
     Long studentId,
 
     @NotNull
-    @Schema(description = "학생 출석 상태", example = "PRESENT")
+    @Schema(
+        description = "학생 출석 상태",
+        example = "PRESENT",
+        allowableValues = {"PRESENT", "ABSENT", "LATE"}
+    )
     DailyStudentAttendanceStatus status
 ) {}

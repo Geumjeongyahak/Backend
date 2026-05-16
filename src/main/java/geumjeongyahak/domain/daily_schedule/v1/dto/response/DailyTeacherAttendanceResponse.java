@@ -10,16 +10,20 @@ public record DailyTeacherAttendanceResponse(
     @Schema(description = "교사 출석 식별자", example = "1")
     Long attendanceId,
 
-    @Schema(description = "교사 출석 상태", example = "ABSENT")
+    @Schema(
+        description = "교사 출석 상태",
+        example = "ABSENT",
+        allowableValues = {"PRESENT", "ABSENT", "LATE", "EXCUSED"}
+    )
     DailyTeacherAttendanceStatus status,
 
-    @Schema(description = "출석 처리 시각", example = "2026-06-20T14:00:00")
+    @Schema(description = "출석 처리 시각. 출석 상태가 ABSENT이면 null입니다.", example = "2026-06-20T14:00:00")
     LocalDateTime attendedAt,
 
-    @Schema(description = "출석 처리 위치 위도", example = "35.1795543")
+    @Schema(description = "출석 처리 위치 위도. 출석 상태가 ABSENT이면 null입니다.", example = "35.1795543")
     BigDecimal latitude,
 
-    @Schema(description = "출석 처리 위치 경도", example = "129.0756416")
+    @Schema(description = "출석 처리 위치 경도. 출석 상태가 ABSENT이면 null입니다.", example = "129.0756416")
     BigDecimal longitude,
 
     @Schema(description = "봉사 인정 시간(분)", example = "120")

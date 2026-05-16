@@ -29,10 +29,10 @@ public record DailyScheduleDetailResponse(
     @Schema(description = "담당 교사명", example = "홍길동")
     String teacherName,
 
-    @Schema(description = "담당 교사 연락처", example = "010-0000-0000")
+    @Schema(description = "담당 교사 연락처. 민감 정보 조회 권한이 없으면 null입니다.", example = "010-0000-0000")
     String teacherPhoneNumber,
 
-    @Schema(description = "주민번호 앞자리", example = "900101")
+    @Schema(description = "주민번호 앞자리. 민감 정보 조회 권한이 없으면 null입니다.", example = "900101")
     String residentRegistrationNumberPrefix,
 
     @Schema(description = "개인정보 활용 동의 여부", example = "true")
@@ -44,10 +44,14 @@ public record DailyScheduleDetailResponse(
     @Schema(description = "활동 종료 시간", example = "16:00:00")
     LocalTime activityEndTime,
 
-    @Schema(description = "하루 일정 상태", example = "SCHEDULED")
+    @Schema(
+        description = "하루 일정 상태",
+        example = "SCHEDULED",
+        allowableValues = {"SCHEDULED", "COMPLETED", "CANCELLED"}
+    )
     DailyScheduleStatus status,
 
-    @Schema(description = "교사 출석 정보")
+    @Schema(description = "교사 출석 정보. 아직 출석 정보가 생성되지 않은 경우 null입니다.")
     DailyTeacherAttendanceResponse teacherAttendance,
 
     @Schema(description = "하루 일정에 연결된 교시별 수업 목록")
