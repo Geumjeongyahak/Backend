@@ -18,6 +18,9 @@ public class LessonExchangeRequestListRequest extends BasePaginationRequest {
     @Schema(description = "본인 요청만 조회할지 여부", example = "false")
     private boolean mine = false;
 
+    @Schema(description = "제목, 내용, 작성자 이름, 반 이름 검색어", example = "일정 조정")
+    private String keyword;
+
     @Override
     public PageRequest toRequest() {
         return PageRequest.of(

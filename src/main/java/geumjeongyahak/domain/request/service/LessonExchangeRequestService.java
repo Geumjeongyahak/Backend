@@ -23,8 +23,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -88,25 +90,14 @@ public class LessonExchangeRequestService {
     public PaginationResponse<LessonExchangeRequestSummaryResponse> getLessonExchangeRequests(
         Long requesterId, LessonExchangeRequestListRequest request
     ) {
-        log.debug("수업 교환 요청 목록 조회 (status={}, mine={})", request.getStatus(), request.isMine());
+        log.debug("수업 교환 요청 목록 조회 (status={}, mine={}, keyword={})",
+            request.getStatus(), request.isMine(), request.getKeyword());
 
         PageRequest pageRequest = request.toRequest();
-        Page<LessonExchangeRequest> requests = request.getStatus() != null
-            ? request.isMine()
-                ? lessonExchangeRequestRepository.findAllByStatusAndRequestedBy_Id(
-                    request.getStatus(), requesterId, pageRequest
-                )
-                : lessonExchangeRequestRepository.findAllByStatus(request.getStatus(), pageRequest)
-            : request.isMine()
-                ? lessonExchangeRequestRepository.findAllByRequestedBy_IdAndStatusNot(
-                    requesterId,
-                    LessonExchangeRequestStatus.CANCELLED,
-                    pageRequest
-                )
-                : lessonExchangeRequestRepository.findAllByStatusNot(
-                    LessonExchangeRequestStatus.CANCELLED,
-                    pageRequest
-                );
+        Page<LessonExchangeRequest> requests = lessonExchangeRequestRepository.findAll(
+            buildListSpecification(requesterId, request),
+            pageRequest
+        );
 
         return PaginationResponse.from(requests, LessonExchangeRequestSummaryResponse::from);
     }
@@ -363,6 +354,45 @@ public class LessonExchangeRequestService {
         }
 
         return classroomNames.get(0);
+    }
+
+    private Specification<LessonExchangeRequest> buildListSpecification(
+        Long requesterId,
+        LessonExchangeRequestListRequest request
+    ) {
+        return Specification.allOf(
+            hasStatusOrExcludeCancelled(request.getStatus()),
+            matchesRequesterIfMine(requesterId, request.isMine()),
+            containsKeyword(request.getKeyword())
+        );
+    }
+
+    private Specification<LessonExchangeRequest> hasStatusOrExcludeCancelled(LessonExchangeRequestStatus status) {
+        return (root, query, criteriaBuilder) -> status != null
+            ? criteriaBuilder.equal(root.get("status"), status)
+            : criteriaBuilder.notEqual(root.get("status"), LessonExchangeRequestStatus.CANCELLED);
+    }
+
+    private Specification<LessonExchangeRequest> matchesRequesterIfMine(Long requesterId, boolean mine) {
+        return (root, query, criteriaBuilder) -> mine
+            ? criteriaBuilder.equal(root.get("requestedBy").get("id"), requesterId)
+            : null;
+    }
+
+    private Specification<LessonExchangeRequest> containsKeyword(String keyword) {
+        return (root, query, criteriaBuilder) -> {
+            if (!StringUtils.hasText(keyword)) {
+                return null;
+            }
+
+            String likeKeyword = "%" + keyword.trim().toLowerCase() + "%";
+            return criteriaBuilder.or(
+                criteriaBuilder.like(criteriaBuilder.lower(root.get("title")), likeKeyword),
+                criteriaBuilder.like(criteriaBuilder.lower(root.get("content")), likeKeyword),
+                criteriaBuilder.like(criteriaBuilder.lower(root.get("requestedBy").get("name")), likeKeyword),
+                criteriaBuilder.like(criteriaBuilder.lower(root.get("classroomNameSnapshot")), likeKeyword)
+            );
+        };
     }
 
 }
