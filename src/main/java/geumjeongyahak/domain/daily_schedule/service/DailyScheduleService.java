@@ -25,6 +25,7 @@ import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyTeacherAtt
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
 import geumjeongyahak.domain.lesson.entity.Lesson;
+import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.student.entity.Student;
 import geumjeongyahak.domain.student.service.StudentProxyService;
@@ -344,6 +345,11 @@ public class DailyScheduleService {
 
         if (teacherAttendanceCompleted && journalCompleted) {
             dailySchedule.updateStatus(DailyScheduleStatus.COMPLETED);
+            lessonProxyService.updateActiveLessonsStatusByClassroomAndDate(
+                dailySchedule.getClassroom().getId(),
+                dailySchedule.getLessonDate(),
+                LessonStatus.COMPLETED
+            );
         }
     }
 

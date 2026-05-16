@@ -47,6 +47,14 @@ public class LessonProxyService {
         );
     }
 
+    @Transactional
+    public void updateActiveLessonsStatusByClassroomAndDate(Long classroomId, LocalDate date, LessonStatus status) {
+        lessonRepository.findAllBySubjectClassroomIdAndDateAndIsDeletedFalseOrderByPeriodAscStartTimeAsc(
+            classroomId,
+            date
+        ).forEach(lesson -> lesson.updateStatus(status));
+    }
+
     @Transactional(readOnly = true)
     public List<Lesson> getActiveLessonsByTeacherAndDateAndPeriodBetween(
         Long teacherId,

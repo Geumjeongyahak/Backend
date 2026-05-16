@@ -2,6 +2,7 @@ package geumjeongyahak.unit.daily_schedule;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.classroom.entity.Classroom;
@@ -15,6 +16,7 @@ import geumjeongyahak.domain.daily_schedule.service.DailyScheduleAdminService;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleService;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleStatusRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
+import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.student.service.StudentProxyService;
 import geumjeongyahak.domain.users.entity.User;
@@ -58,7 +60,11 @@ class DailyScheduleAdminServiceTest {
             lessonProxyService,
             studentProxyService
         );
-        dailyScheduleAdminService = new DailyScheduleAdminService(dailyScheduleRepository, dailyScheduleService);
+        dailyScheduleAdminService = new DailyScheduleAdminService(
+            dailyScheduleRepository,
+            dailyScheduleService,
+            lessonProxyService
+        );
     }
 
     @Test
@@ -86,6 +92,11 @@ class DailyScheduleAdminServiceTest {
 
         assertThat(dailySchedule.getStatus()).isEqualTo(DailyScheduleStatus.COMPLETED);
         assertThat(response.status()).isEqualTo(DailyScheduleStatus.COMPLETED);
+        verify(lessonProxyService).updateActiveLessonsStatusByClassroomAndDate(
+            classroom.getId(),
+            lessonDate,
+            LessonStatus.COMPLETED
+        );
     }
 
     private DailySchedule dailySchedule(Long id, Classroom classroom, User teacher, LocalDate lessonDate) {
