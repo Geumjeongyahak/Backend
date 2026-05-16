@@ -5,7 +5,6 @@ import static java.util.Map.entry;
 
 import io.restassured.RestAssured;
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,10 +12,7 @@ import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.e2e.BaseE2ETest;
 import geumjeongyahak.domain.auth.enums.RoleType;
-import geumjeongyahak.domain.lesson.entity.StudentAttendance;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
-import geumjeongyahak.domain.lesson.repository.StudentAttendanceRepository;
-import geumjeongyahak.domain.student.repository.StudentRepository;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.entity.UserPermission;
 import geumjeongyahak.domain.users.repository.UserPermissionRepository;
@@ -39,12 +35,6 @@ public class LessonBaseTest extends BaseE2ETest {
 
     @Autowired
     protected LessonRepository lessonRepository;
-
-    @Autowired
-    protected StudentRepository studentRepository;
-
-    @Autowired
-    protected StudentAttendanceRepository studentAttendanceRepository;
 
     @Autowired
     protected UserPermissionRepository userPermissionRepository;
@@ -198,41 +188,6 @@ public class LessonBaseTest extends BaseE2ETest {
     ) {
         Long subjectId = createTrackedSubjectAndGetId(subjectName, teacherId, subjectDate, subjectDayOfWeek, subjectPeriod);
         return createTrackedLessonAndGetId(subjectId, teacherId, lessonDate, startTime, endTime, lessonPeriod);
-    }
-
-    protected Long createTrackedLessonFixtureWithAttendances(
-        String subjectName,
-        Long teacherId,
-        String subjectDate,
-        String subjectDayOfWeek,
-        int subjectPeriod,
-        String lessonDate,
-        String startTime,
-        String endTime,
-        int lessonPeriod,
-        Long... studentIds
-    ) {
-        Long lessonId = createTrackedLessonFixture(
-            subjectName,
-            teacherId,
-            subjectDate,
-            subjectDayOfWeek,
-            subjectPeriod,
-            lessonDate,
-            startTime,
-            endTime,
-            lessonPeriod
-        );
-
-        var lesson = lessonRepository.findById(lessonId)
-            .orElseThrow(() -> new IllegalStateException("lesson not found: " + lessonId));
-
-        Arrays.stream(studentIds)
-            .map(studentRepository::getReferenceById)
-            .map(student -> new StudentAttendance(lesson, student))
-            .forEach(studentAttendanceRepository::save);
-
-        return lessonId;
     }
 
     protected String createAccessTokenWithPermission(

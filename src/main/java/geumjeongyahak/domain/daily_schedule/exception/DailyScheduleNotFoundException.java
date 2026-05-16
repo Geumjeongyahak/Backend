@@ -7,4 +7,8 @@ public class DailyScheduleNotFoundException extends ResourceNotFoundException {
     public DailyScheduleNotFoundException(Long dailyScheduleId) {
         super(DailyScheduleErrorCode.DAILY_SCHEDULE_NOT_FOUND, dailyScheduleId);
     }
+
+    public DailyScheduleNotFoundException(String customMessage) {
+        super(DailyScheduleErrorCode.DAILY_SCHEDULE_NOT_FOUND, customMessage);
+    }
 }

@@ -15,7 +15,6 @@ import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.event.LessonDailyScheduleSyncRequestedEvent;
-import geumjeongyahak.domain.lesson.enums.TeacherAttendanceStatus;
 import geumjeongyahak.domain.lesson.exception.InvalidLessonScheduleException;
 import geumjeongyahak.domain.lesson.exception.InvalidLessonStatusTransitionException;
 import geumjeongyahak.domain.lesson.exception.LessonDuplicateException;
@@ -25,7 +24,6 @@ import geumjeongyahak.domain.lesson.v1.dto.request.CreateLessonRequest;
 import geumjeongyahak.domain.lesson.v1.dto.request.LessonRangeRequest;
 import geumjeongyahak.domain.lesson.v1.dto.request.UpdateLessonRequest;
 import geumjeongyahak.domain.lesson.v1.dto.response.LessonDetailResponse;
-import geumjeongyahak.domain.lesson.v1.dto.response.LessonNoteResponse;
 import geumjeongyahak.domain.lesson.v1.dto.response.LessonSummaryResponse;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.subject.entity.Subject;
@@ -133,18 +131,6 @@ public class LessonService {
             });
     }
 
-    @Transactional(readOnly = true)
-    public LessonNoteResponse getNote(Long teacherId, Long lessonId, boolean canAccessAnyLesson) {
-        log.debug("수업 노트 조회 요청 (lessonId={})", lessonId);
-        Lesson lesson = (canAccessAnyLesson
-            ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
-            : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
-        ).orElseThrow(() -> new LessonNotFoundException(lessonId));
-
-        log.debug("수업 노트 조회 완료 (lessonId={})", lessonId);
-        return LessonNoteResponse.from(lesson);
-    }
-
     @Transactional
     public LessonDetailResponse updateLesson(Long lessonId, UpdateLessonRequest request) {
         log.debug("수업 수정 요청 (lessonId={})", lessonId);
@@ -216,26 +202,6 @@ public class LessonService {
     }
 
     @Transactional
-    public LessonDetailResponse updateTeacherAttendance(
-        Long teacherId,
-        Long lessonId,
-        TeacherAttendanceStatus status,
-        boolean canAccessAnyLesson
-    ) {
-        log.debug("교사 출석 처리 요청 (status={})", status);
-        Lesson lesson = (canAccessAnyLesson
-            ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
-            : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
-        ).orElseThrow(() -> {
-            log.warn("교사 출석 처리 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
-            return new LessonNotFoundException(lessonId);
-        });
-        lesson.updateTeacherAttendance(status);
-        log.debug("교사 출석 처리 완료");
-        return LessonDetailResponse.from(lesson);
-    }
-
-    @Transactional
     public LessonDetailResponse updateLessonStatus(
         Long teacherId,
         Long lessonId,
@@ -254,27 +220,6 @@ public class LessonService {
         lesson.updateStatus(status);
         log.debug("수업 상태 변경 완료 (status={})", status);
         return LessonDetailResponse.from(lesson);
-    }
-
-    @Transactional
-    public LessonNoteResponse upsertNote(
-        Long teacherId,
-        Long lessonId,
-        String note,
-        boolean canAccessAnyLesson
-    ) {
-        log.debug("수업 노트 업데이트 요청 (lessonId={})", lessonId);
-        Lesson lesson = (canAccessAnyLesson
-            ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
-            : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
-        ).orElseThrow(() -> {
-            log.warn("수업 노트 업데이트 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
-            return new LessonNotFoundException(lessonId);
-        });
-
-        lesson.updateNote(note);
-        log.debug("수업 노트 업데이트 완료 (lessonId={})", lessonId);
-        return LessonNoteResponse.from(lesson);
     }
 
     // ── 이벤트 핸들러 전용 내부 메서드 ─────────────────────────────────────────
@@ -322,21 +267,6 @@ public class LessonService {
         }
 
         log.debug("수업 자동 생성 완료 (subjectId={}, 생성={}건, 스킵={}건)", subjectId, created, dates.size() - created);
-    }
-
-    /**
-     * 결석 승인 이벤트 처리용 - 수업 교사 출석 상태를 공결(EXCUSED)로 변경한다.
-     */
-    @Transactional
-    public void applyTeacherExcused(Long lessonId) {
-        log.debug("교사 출석 공결 처리 (lessonId={})", lessonId);
-        Optional<Lesson> lessonOpt = findActiveLessonForEvent(lessonId, "결석 승인");
-        if (lessonOpt.isEmpty()) {
-            return;
-        }
-
-        Lesson lesson = lessonOpt.get();
-        lesson.updateTeacherAttendance(TeacherAttendanceStatus.EXCUSED);
     }
 
     private void validateTeacherAssignable(User teacher) {

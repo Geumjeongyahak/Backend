@@ -368,6 +368,34 @@ public class DailyScheduleService {
         return getDailySchedule(dailyScheduleId, authorId, canViewSensitiveInfo);
     }
 
+    @Transactional
+    public void applyApprovedAbsence(Long dailyScheduleId) {
+        log.debug(
+            "승인된 결석 요청 반영 - DailySchedule 교사 출석 공결 처리 (dailyScheduleId={})",
+            dailyScheduleId
+        );
+        DailySchedule dailySchedule = dailyScheduleRepository.findByIdAndIsDeletedFalse(dailyScheduleId)
+            .orElseThrow(() -> {
+                log.info(
+                    "승인된 결석 요청 반영 실패 - 하루 일정을 찾을 수 없습니다. dailyScheduleId={}",
+                    dailyScheduleId
+                );
+                return new DailyScheduleNotFoundException(dailyScheduleId);
+            });
+        DailyTeacherAttendance teacherAttendance = dailyTeacherAttendanceRepository
+            .findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId())
+            .orElseGet(() -> dailyTeacherAttendanceRepository.save(new DailyTeacherAttendance(
+                dailySchedule,
+                calculateVolunteerServiceMinutes(dailySchedule.getActivityStartTime(), dailySchedule.getActivityEndTime())
+            )));
+
+        teacherAttendance.updateAttendance(DailyTeacherAttendanceStatus.EXCUSED, null, null, null);
+        log.debug(
+            "승인된 결석 요청 반영 완료 - DailySchedule 교사 출석 공결 처리 (dailyScheduleId={})",
+            dailySchedule.getId()
+        );
+    }
+
     private boolean canViewDailyScheduleSensitiveInfo(
         DailySchedule dailySchedule,
         Long viewerId,

@@ -12,7 +12,6 @@ import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.exception.LessonNotFoundException;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
-import geumjeongyahak.domain.lesson.repository.StudentAttendanceRepository;
 
 /**
  * Lesson 도메인의 Proxy Service.
@@ -23,7 +22,6 @@ import geumjeongyahak.domain.lesson.repository.StudentAttendanceRepository;
 public class LessonProxyService {
 
     private final LessonRepository lessonRepository;
-    private final StudentAttendanceRepository studentAttendanceRepository;
 
     /**
      * 삭제되지 않은 수업 조회. 없으면 예외 발생.
@@ -119,7 +117,6 @@ public class LessonProxyService {
             .anyMatch(lesson ->
                 lesson.getStatus() != LessonStatus.SCHEDULED
                     || (lesson.getNote() != null && !lesson.getNote().isBlank())
-                    || studentAttendanceRepository.existsByLessonId(lesson.getId())
             );
     }
 

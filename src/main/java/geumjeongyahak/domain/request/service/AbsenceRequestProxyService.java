@@ -17,6 +17,6 @@ public class AbsenceRequestProxyService {
         if (lessonIds == null || lessonIds.isEmpty()) {
             return false;
         }
-        return absenceRequestRepository.existsByLesson_IdIn(lessonIds);
+        return absenceRequestRepository.existsByDailyScheduleMatchingLessonIds(lessonIds);
     }
 }

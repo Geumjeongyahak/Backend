@@ -111,7 +111,6 @@ Content-Type: application/json
   "startTime": "19:20:00",
   "endTime": "20:00:00",
   "status": "SCHEDULED",
-  "teacherAttendance": "ABSENT",
   "teacherName": "홍길동",
   "subjectName": "한글 기초",
   "note": null
@@ -143,6 +142,8 @@ Lesson 상태는 다음 값을 사용합니다.
 
 시간이 지났다는 이유만으로 수업을 자동 완료 처리하지 않습니다. DailySchedule에서 교사 출석과 수업 일지 작성이 완료되면 연결된 활성 Lesson 상태가 `COMPLETED`로 함께 변경됩니다.
 
+`PATCH /api/v1/lessons/{lessonId}/status`는 교시 단위 수동 예외 조정용 API입니다. 하루 일정 전체를 휴강, 완료, 예정 상태로 보정해야 할 때는 DailySchedule 상태 변경 API를 우선 사용합니다.
+
 ## 삭제 정책
 
 - 수업 삭제는 soft delete 방식으로 처리합니다.
@@ -158,6 +159,7 @@ Lesson 상태는 다음 값을 사용합니다.
 - 교사 출석, 학생 출석, 수업 일지 작성은 DailySchedule API에서 처리합니다.
 - DailySchedule 수업 일지 저장 시 연결된 Lesson의 note가 함께 갱신됩니다.
 - DailySchedule 상태가 `COMPLETED`, `CANCELLED`, `SCHEDULED`로 변경되면 연결된 활성 Lesson 상태도 각각 `COMPLETED`, `CANCELED`, `SCHEDULED`로 연동됩니다.
+- Lesson 상태 변경 API는 남겨두지만 일반 운영 흐름의 기준은 DailySchedule 상태입니다. Lesson 상태 API는 특정 교시만 수동으로 보정해야 하는 예외 상황에 사용합니다.
 
 ## 대표 실패 케이스
 

@@ -97,14 +97,14 @@ VALUES
 ALTER SEQUENCE subjects_id_seq RESTART WITH 4;
 
 -- 9. Lessons
-INSERT INTO lessons (id, subject_id, teacher_id, period, date, start_time, end_time, status, teacher_attendance)
+INSERT INTO lessons (id, subject_id, teacher_id, period, date, start_time, end_time, status)
 VALUES
-    (1, 1, 2, 1, '2026-06-10', '19:20:00', '20:00:00', 'SCHEDULED', 'ABSENT'),
-    (2, 1, 2, 2, '2026-06-10', '20:10:00', '20:50:00', 'SCHEDULED', 'ABSENT'),
-    (3, 1, 2, 3, '2026-06-10', '21:00:00', '21:40:00', 'SCHEDULED', 'ABSENT'),
-    (4, 2, 3, 1, '2026-06-17', '19:20:00', '20:00:00', 'SCHEDULED', 'ABSENT'),
-    (5, 2, 3, 2, '2026-06-17', '20:10:00', '20:50:00', 'SCHEDULED', 'ABSENT'),
-    (6, 2, 3, 3, '2026-06-17', '21:00:00', '21:40:00', 'SCHEDULED', 'ABSENT');
+    (1, 1, 2, 1, '2026-06-10', '19:20:00', '20:00:00', 'SCHEDULED'),
+    (2, 1, 2, 2, '2026-06-10', '20:10:00', '20:50:00', 'SCHEDULED'),
+    (3, 1, 2, 3, '2026-06-10', '21:00:00', '21:40:00', 'SCHEDULED'),
+    (4, 2, 3, 1, '2026-06-17', '19:20:00', '20:00:00', 'SCHEDULED'),
+    (5, 2, 3, 2, '2026-06-17', '20:10:00', '20:50:00', 'SCHEDULED'),
+    (6, 2, 3, 3, '2026-06-17', '21:00:00', '21:40:00', 'SCHEDULED');
 ALTER SEQUENCE lessons_id_seq RESTART WITH 7;
 
 -- 10. Lesson Exchange Requests
@@ -155,8 +155,3 @@ VALUES
     (2, 1, '박민수', '010-4444-4444', '기초반', 'ENROLLED');
 ALTER SEQUENCE students_id_seq RESTART WITH 3;
 
--- 13. Student Attendances
-INSERT INTO student_attendances (lesson_id, student_id, status, memo)
-VALUES
-    (1, 1, 'ABSENT', NULL),
-    (1, 2, 'ABSENT', NULL);

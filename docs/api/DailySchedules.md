@@ -4,6 +4,8 @@
 
 DailySchedule은 같은 분반과 같은 날짜의 Lesson들을 하루 단위로 묶은 운영 기록입니다. 캘린더에서 교시 단위 일정을 보여줄 때는 Lesson API를 사용하고, 수업 일지 작성 화면처럼 하루 운영 기록이 필요한 경우 DailySchedule API를 사용합니다.
 
+수업 결강 페이지도 DailySchedule을 기준으로 동작합니다. 결석 요청 생성 API는 `lessonId`가 아니라 `dailyScheduleId`를 입력받습니다.
+
 ## 권한 정책
 
 | API | 권한 |
@@ -145,9 +147,11 @@ DailySchedule 상태는 다음 값을 사용합니다.
 관리자 상태 변경:
 
 - `PATCH /api/v1/daily-schedules/{dailyScheduleId}/status`는 관리자 보정용 API입니다.
+- 하루 일정 전체 상태를 수동으로 보정할 때 사용하는 기준 API입니다.
 - `SCHEDULED`로 변경하면 연결된 활성 Lesson은 `SCHEDULED`로 변경됩니다.
 - `COMPLETED`로 변경하면 연결된 활성 Lesson은 `COMPLETED`로 변경됩니다.
 - `CANCELLED`로 변경하면 연결된 활성 Lesson은 `CANCELED`로 변경됩니다.
+- 특정 교시만 예외적으로 보정해야 하는 경우에는 Lesson 상태 변경 API를 사용할 수 있습니다.
 
 ## 봉사 시간 정책
 

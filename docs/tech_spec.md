@@ -271,8 +271,6 @@ public class LessonEventHandler {
 | 이벤트 | 발행 도메인 | 수신 도메인 | 설명 |
 |--------|-------------|-------------|------|
 | SubjectCreatedEvent | Subject | Lesson | 과목 생성 시 수업 자동 생성 |
-| LessonCreatedEvent | Lesson | Student (Attendance) | 수업 생성 시 출석 레코드 생성 |
-| AbsenceApprovedEvent | Request | Lesson | 결석 승인 시 출석 상태 변경 |
 | ExchangeApprovedEvent | Request | Lesson/Subject | 교환 승인 시 담당자 변경 |
 
 ---

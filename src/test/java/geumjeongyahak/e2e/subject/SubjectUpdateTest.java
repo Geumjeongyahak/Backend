@@ -541,9 +541,9 @@ public class SubjectUpdateTest extends SubjectBaseTest {
         jdbcTemplate.update(
             """
             INSERT INTO lessons (
-                id, subject_id, teacher_id, date, start_time, end_time, period, status, teacher_attendance, is_deleted
+                id, subject_id, teacher_id, date, start_time, end_time, period, status, is_deleted
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             100L,
             100L,
@@ -553,7 +553,6 @@ public class SubjectUpdateTest extends SubjectBaseTest {
             "20:50:00",
             3,
             "SCHEDULED",
-            "ABSENT",
             false
         );
 

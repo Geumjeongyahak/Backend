@@ -150,12 +150,7 @@ permission code로는 표현되지 않습니다.
 | `GET /api/v1/lessons` | 인증만 |
 | `GET /api/v1/lessons/me` | 인증만 |
 | `GET /api/v1/lessons/{lessonId}` | 인증만 |
-| `GET /api/v1/lessons/{lessonId}/student-attendances` | 인증만 |
-| `GET /api/v1/lessons/{lessonId}/note` | 인증만 |
-| `PATCH /api/v1/lessons/{lessonId}/teacher-attendance` | 인증만 |
-| `PATCH /api/v1/lessons/{lessonId}/student-attendances` | 인증만 |
 | `PATCH /api/v1/lessons/{lessonId}/status` | 인증만 |
-| `PUT /api/v1/lessons/{lessonId}/note` | 인증만 |
 | `POST /api/v1/lessons` | `ADMIN` |
 | `PATCH /api/v1/lessons/{lessonId}` (admin) | `ADMIN` |
 | `DELETE /api/v1/lessons/{lessonId}` | `ADMIN` |
