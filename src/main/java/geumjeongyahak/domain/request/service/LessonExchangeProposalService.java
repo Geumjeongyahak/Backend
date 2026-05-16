@@ -1,11 +1,13 @@
 package geumjeongyahak.domain.request.service;
 
 import geumjeongyahak.common.event.EventPublisher;
+import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
+import geumjeongyahak.domain.daily_schedule.service.DailyScheduleProxyService;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.request.entity.LessonExchangeProposal;
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
-import geumjeongyahak.domain.request.event.LessonExchangeAcceptedEvent;
+import geumjeongyahak.domain.request.event.DailyScheduleExchangeAcceptedEvent;
 import geumjeongyahak.domain.request.enums.LessonExchangeProposalStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeProposalType;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
@@ -25,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
 
 @Slf4j
@@ -34,10 +35,9 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class LessonExchangeProposalService {
 
-    private static final int SINGLE_CLASSROOM_COUNT = 1;
-
     private final LessonExchangeProposalRepository lessonExchangeProposalRepository;
     private final LessonExchangeRequestProxyService lessonExchangeRequestProxyService;
+    private final DailyScheduleProxyService dailyScheduleProxyService;
     private final LessonProxyService lessonProxyService;
     private final UserProxyService userProxyService;
     private final EventPublisher eventPublisher;
@@ -56,23 +56,19 @@ public class LessonExchangeProposalService {
         validateNotOwnRequest(exchangeRequest, proposerId);
         validateNoDuplicateActiveProposal(requestId, proposerId);
 
-        LessonExchangeProposalType proposalType = resolveProposalType(request.lessonDate());
+        LessonExchangeProposalType proposalType = resolveProposalType(request.dailyScheduleId());
 
         String classroomName = null;
+        DailySchedule proposalDailySchedule = null;
 
         // 교환형 제안과 대체형 제안을 구분
         if (proposalType == LessonExchangeProposalType.EXCHANGE) {
-            List<Lesson> proposalLessons = getProposalLessons(
-                proposerId,
-                request.lessonDate()
-            );
-
+            proposalDailySchedule = getProposalDailySchedule(proposerId, request.dailyScheduleId());
             validateNoTimeOverlapWithRequest(
                 exchangeRequest,
-                request.lessonDate()
+                proposalDailySchedule
             );
-            validateLessonsBelongToSingleClassroom(proposalLessons);
-            classroomName = resolveClassroomName(proposalLessons);
+            classroomName = proposalDailySchedule.getClassroom().getName();
         } else {
             List<Lesson> requestLessons = getRequestLessons(exchangeRequest);
 
@@ -81,8 +77,6 @@ public class LessonExchangeProposalService {
                 exchangeRequest.getLessonDate(),
                 requestLessons
             );
-
-            validateLessonsBelongToSingleClassroom(requestLessons);
         }
 
         User proposer = userProxyService.getById(proposerId);
@@ -92,7 +86,7 @@ public class LessonExchangeProposalService {
             exchangeRequest,
             proposer,
             proposalType,
-            request.lessonDate(),
+            proposalDailySchedule,
             request.content(),
             classroomName
         );
@@ -138,34 +132,27 @@ public class LessonExchangeProposalService {
         // 생성 시 적용한 "요청당 제안자별 ACTIVE 제안 1건만 허용" 정책을 그대로 유지
         // 즉 여기서는 새 ACTIVE 제안을 추가하지 않으므로 중복 ACTIVE 제안 검증을 다시 수행하지 않음
 
-        LessonExchangeProposalType proposalType = resolveProposalType(request.lessonDate());
+        LessonExchangeProposalType proposalType = resolveProposalType(request.dailyScheduleId());
 
         String classroomName = null;
+        DailySchedule proposalDailySchedule = null;
 
         if (proposalType == LessonExchangeProposalType.EXCHANGE) {
-            List<Lesson> proposalLessons = getProposalLessons(
-                proposerId,
-                request.lessonDate()
-            );
-
+            proposalDailySchedule = getProposalDailySchedule(proposerId, request.dailyScheduleId());
             validateNoTimeOverlapWithRequest(
                 exchangeRequest,
-                request.lessonDate()
+                proposalDailySchedule
             );
-            // 교환형 제안은 실제 제안 수업 집합이 존재하므로, 수정 후에도 단일 반 구성 여부를 다시 확인함
-            validateLessonsBelongToSingleClassroom(proposalLessons);
-            classroomName = resolveClassroomName(proposalLessons);
+            classroomName = proposalDailySchedule.getClassroom().getName();
         } else {
             List<Lesson> requestLessons = getRequestLessons(exchangeRequest);
-            // 대체형 제안은 제안 자체에 대응하는 수업/반이 없으므로 classroom 단일성 검증은 다시 하지 않음
-            // 대신 요청 수업 시간대에 제안자의 기존 일정이 충돌하지 않는지만 확인함
             validateNoScheduleConflict(proposerId, exchangeRequest.getLessonDate(), requestLessons);
         }
 
         // 수정 이후에도 제안 화면에는 최신 수정 기준의 반 이름이 유지되도록 snapshot을 함께 갱신
         proposal.update(
             proposalType,
-            request.lessonDate(),
+            proposalDailySchedule,
             request.content(),
             classroomName
         );
@@ -194,22 +181,15 @@ public class LessonExchangeProposalService {
         exchangeRequest.complete();
         closeOtherActiveProposals(exchangeRequest, proposalId);
 
-        List<Lesson> requestLessons = getRequestLessons(exchangeRequest);
-
         if (proposal.getProposalType() == LessonExchangeProposalType.EXCHANGE) {
-            List<Lesson> proposalLessons = getProposalLessons(
-                proposal.getProposedBy().getId(),
-                proposal.getLessonDate()
-            );
-
             publishExchangeAcceptedEvents(
-                requestLessons,
-                proposalLessons,
+                exchangeRequest.getDailySchedule(),
+                proposal.getDailySchedule(),
                 requesterId,
                 proposal.getProposedBy().getId()
             );
         } else {
-            publishSubstitutionAcceptedEvents(requestLessons, proposal.getProposedBy().getId());
+            publishSubstitutionAcceptedEvents(exchangeRequest.getDailySchedule(), proposal.getProposedBy().getId());
         }
 
         log.debug("수업 교환 제안 수락 완료 (requestId={}, proposalId={}, requesterId={})", requestId, proposalId, requesterId);
@@ -264,37 +244,30 @@ public class LessonExchangeProposalService {
 
     // 수업 교환 시에 교사를 변경하는 이벤트 발행 (교체형 제안)
     private void publishExchangeAcceptedEvents(
-        List<Lesson> requestLessons,
-        List<Lesson> proposalLessons,
+        DailySchedule requestDailySchedule,
+        DailySchedule proposalDailySchedule,
         Long requesterId,
         Long newTeacherId
     ) {
-        for (Lesson requestLesson : sortLessonsBySchedule(requestLessons)) {
-            eventPublisher.publish(new LessonExchangeAcceptedEvent(
-                requestLesson.getId(),
-                newTeacherId
-            ));
-        }
-
-        for (Lesson proposalLesson : sortLessonsBySchedule(proposalLessons)) {
-            eventPublisher.publish(new LessonExchangeAcceptedEvent(
-                proposalLesson.getId(),
-                requesterId
-            ));
-        }
+        eventPublisher.publish(new DailyScheduleExchangeAcceptedEvent(
+            requestDailySchedule.getId(),
+            newTeacherId
+        ));
+        eventPublisher.publish(new DailyScheduleExchangeAcceptedEvent(
+            proposalDailySchedule.getId(),
+            requesterId
+        ));
     }
 
     // 수업 교환 시에 교사를 변경하는 이벤트 발행 (대체형 제안)
     private void publishSubstitutionAcceptedEvents(
-        List<Lesson> requestLessons,
+        DailySchedule requestDailySchedule,
         Long newTeacherId
     ) {
-        for (Lesson requestLesson : requestLessons) {
-            eventPublisher.publish(new LessonExchangeAcceptedEvent(
-                requestLesson.getId(),
-                newTeacherId
-            ));
-        }
+        eventPublisher.publish(new DailyScheduleExchangeAcceptedEvent(
+            requestDailySchedule.getId(),
+            newTeacherId
+        ));
     }
 
     // 수업 교환 요청이 제안 가능 상태인지 확인 (APPROVED / 만료 기간 전)
@@ -329,18 +302,18 @@ public class LessonExchangeProposalService {
     // 하루 단위 교환형 제안은 요청 날짜와 같은 날짜로 생성/수정할 수 없음
     private void validateNoTimeOverlapWithRequest(
         LessonExchangeRequest exchangeRequest,
-        LocalDate lessonDate
+        DailySchedule proposalDailySchedule
     ) {
-        if (exchangeRequest.getLessonDate().equals(lessonDate)) {
+        if (exchangeRequest.getDailySchedule().getId().equals(proposalDailySchedule.getId())) {
             throw new ProposalTimeOverlapWithRequestException();
         }
     }
 
     // 수업 교환 요청의 수업들을 조회
     private List<Lesson> getRequestLessons(LessonExchangeRequest request) {
-        List<Lesson> lessons = lessonProxyService.getActiveLessonsByTeacherAndDate(
-            request.getRequestedBy().getId(),
-            request.getLessonDate()
+        List<Lesson> lessons = lessonProxyService.getActiveLessonsByClassroomAndDate(
+            request.getDailySchedule().getClassroom().getId(),
+            request.getDailySchedule().getLessonDate()
         );
 
         if (lessons.isEmpty()) {
@@ -350,21 +323,13 @@ public class LessonExchangeProposalService {
         return lessons;
     }
 
-    // 교환형 제안 날짜의 제안자 수업 전체를 조회
-    private List<Lesson> getProposalLessons(
-        Long proposerId,
-        LocalDate lessonDate
-    ) {
-        List<Lesson> lessons = lessonProxyService.getActiveLessonsByTeacherAndDate(
-            proposerId,
-            lessonDate
-        );
-
-        if (lessons.isEmpty()) {
+    // 교환형 제안 대상 DailySchedule을 조회하고 제안자 담당 일정인지 확인
+    private DailySchedule getProposalDailySchedule(Long proposerId, Long dailyScheduleId) {
+        DailySchedule dailySchedule = dailyScheduleProxyService.getActiveById(dailyScheduleId);
+        if (!dailySchedule.getTeacher().getId().equals(proposerId)) {
             throw new ProposalLessonsNotFoundException();
         }
-
-        return lessons;
+        return dailySchedule;
     }
 
     // 제안자가 수업 교환 요청의 기존 수업과 충돌하는 수업이 있는지 검증
@@ -387,26 +352,6 @@ public class LessonExchangeProposalService {
         }
     }
 
-    // 수업들이 하나의 반으로 구성되어 있는지 검증
-    private void validateLessonsBelongToSingleClassroom(List<Lesson> lessons) {
-        long classroomCount = lessons.stream()
-                .map(lesson -> lesson.getSubject().getClassroom().getId())
-                .distinct()
-                .count();
-
-        if (classroomCount > SINGLE_CLASSROOM_COUNT) {
-            throw new MultipleClassroomsInLessonExchangeProposalException();
-        }
-    }
-
-    // 수업의 반 이름을 가져오는 메서드
-    private String resolveClassroomName(List<Lesson> lessons) {
-        return lessons.stream()
-            .map(lesson -> lesson.getSubject().getClassroom().getName())
-            .findFirst()
-            .orElse(null);
-    }
-
     private void validateProposalOwnership(LessonExchangeProposal proposal, Long proposerId) {
         if (!proposal.getProposedBy().getId().equals(proposerId)) {
             throw new RequestForbiddenException();
@@ -419,20 +364,9 @@ public class LessonExchangeProposalService {
         }
     }
 
-    // 이벤트 발행 순서를 일정하게 유지하기 위해 수업을 날짜/교시/시작 시각 순으로 정렬
-    private List<Lesson> sortLessonsBySchedule(List<Lesson> lessons) {
-        return lessons.stream()
-            .sorted(
-                Comparator.comparing(Lesson::getDate)
-                    .thenComparing(Lesson::getPeriod)
-                    .thenComparing(Lesson::getStartTime)
-            )
-            .toList();
-    }
-
     // 제안 수업 유형을 판단하는 메서드(대체형/교환형)
-    private LessonExchangeProposalType resolveProposalType(LocalDate lessonDate) {
-        if (lessonDate == null) {
+    private LessonExchangeProposalType resolveProposalType(Long dailyScheduleId) {
+        if (dailyScheduleId == null) {
             return LessonExchangeProposalType.SUBSTITUTION;
         }
 

@@ -35,9 +35,9 @@ public interface LessonExchangeRequestRepository extends JpaRepository<LessonExc
         Pageable pageable
     );
 
-    List<LessonExchangeRequest> findAllByRequestedBy_IdAndLessonDateAndStatusIn(
+    List<LessonExchangeRequest> findAllByRequestedBy_IdAndDailySchedule_IdAndStatusIn(
         Long requesterId,
-        LocalDate lessonDate,
+        Long dailyScheduleId,
         Collection<LessonExchangeRequestStatus> activeStatuses
     );
 

@@ -95,8 +95,16 @@ public abstract class RequestBaseTest extends BaseE2ETest {
 
     protected Long getDailyScheduleIdByLessonId(Long lessonId) {
         LocalDate lessonDate = LocalDate.parse(lessonHelper.getLessonDate(getAuthHeader(adminToken), lessonId));
+        return getDailyScheduleIdByLessonDate(lessonDate);
+    }
+
+    protected Long getDailyScheduleIdByLessonDate(LocalDate lessonDate) {
+        return getDailyScheduleIdByClassroomAndLessonDate(CLASSROOM_ID, lessonDate);
+    }
+
+    protected Long getDailyScheduleIdByClassroomAndLessonDate(Long classroomId, LocalDate lessonDate) {
         return dailyScheduleRepository
-            .findByClassroomIdAndLessonDateAndIsDeletedFalse(CLASSROOM_ID, lessonDate)
+            .findByClassroomIdAndLessonDateAndIsDeletedFalse(classroomId, lessonDate)
             .orElseThrow()
             .getId();
     }
@@ -132,8 +140,12 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         String content,
         LocalDateTime expiresAt
     ) {
+        Long dailyScheduleId = dailyScheduleRepository
+            .findByClassroomIdAndLessonDateAndIsDeletedFalse(CLASSROOM_ID, lessonDate)
+            .orElseThrow()
+            .getId();
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("lessonDate", lessonDate.toString());
+        body.put("dailyScheduleId", dailyScheduleId);
         body.put("title", title);
         body.put("content", content);
         body.put("expiresAt", expiresAt.toString());

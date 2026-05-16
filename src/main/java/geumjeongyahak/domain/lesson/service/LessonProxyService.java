@@ -12,6 +12,7 @@ import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.exception.LessonNotFoundException;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
+import geumjeongyahak.domain.users.entity.User;
 
 /**
  * Lesson 도메인의 Proxy Service.
@@ -51,6 +52,14 @@ public class LessonProxyService {
             classroomId,
             date
         ).forEach(lesson -> lesson.updateStatus(status));
+    }
+
+    @Transactional
+    public void updateActiveLessonsTeacherByClassroomAndDate(Long classroomId, LocalDate date, User teacher) {
+        lessonRepository.findAllBySubjectClassroomIdAndDateAndIsDeletedFalseOrderByPeriodAscStartTimeAsc(
+            classroomId,
+            date
+        ).forEach(lesson -> lesson.updateTeacher(teacher));
     }
 
     @Transactional(readOnly = true)

@@ -16,6 +16,9 @@ public record LessonExchangeProposalResponse(
     @Schema(description = "요청 ID", example = "3")
     Long requestId,
 
+    @Schema(description = "제안 하루 일정 ID. 대체형(SUBSTITUTION)이면 null 입니다.", example = "2")
+    Long dailyScheduleId,
+
     @Schema(description = "반 이름", example = "장미반")
     String classroomName,
 
@@ -53,6 +56,7 @@ public record LessonExchangeProposalResponse(
         return new LessonExchangeProposalResponse(
             proposal.getId(),
             proposal.getRequest().getId(),
+            proposal.getDailySchedule() != null ? proposal.getDailySchedule().getId() : null,
             proposal.getClassroomNameSnapshot(),
             proposal.getProposedBy().getId(),
             proposal.getProposedBy().getName(),

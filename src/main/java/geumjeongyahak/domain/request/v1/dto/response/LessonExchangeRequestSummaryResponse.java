@@ -11,6 +11,9 @@ public record LessonExchangeRequestSummaryResponse(
     @Schema(description = "요청 ID", example = "1")
     Long id,
 
+    @Schema(description = "교환 대상 하루 일정 ID", example = "1")
+    Long dailyScheduleId,
+
     @Schema(description = "반 이름", example = "벚꽃반")
     String classroomName,
 
@@ -29,6 +32,7 @@ public record LessonExchangeRequestSummaryResponse(
     public static LessonExchangeRequestSummaryResponse from(LessonExchangeRequest r) {
         return new LessonExchangeRequestSummaryResponse(
             r.getId(),
+            r.getDailySchedule().getId(),
             r.getClassroomNameSnapshot(),
             r.getRequestedBy().getName(),
             r.getTitle(),

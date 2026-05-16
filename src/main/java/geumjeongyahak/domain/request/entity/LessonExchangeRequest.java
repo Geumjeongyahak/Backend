@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.request.entity;
 
 import geumjeongyahak.domain.base.entity.BaseEntity;
+import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import geumjeongyahak.domain.users.entity.User;
 import jakarta.persistence.*;
@@ -21,6 +22,10 @@ public class LessonExchangeRequest extends BaseEntity {
 
     @Column(nullable = false)
     private LocalDate lessonDate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "daily_schedule_id", nullable = false)
+    private DailySchedule dailySchedule;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requested_by", nullable = false)
@@ -60,15 +65,16 @@ public class LessonExchangeRequest extends BaseEntity {
     private List<LessonExchangeProposal> proposals = new ArrayList<>();
 
     public LessonExchangeRequest(
+        DailySchedule dailySchedule,
         User requestedBy,
-        LocalDate lessonDate,
         String title,
         String classroomNameSnapshot,
         String content,
         LocalDateTime expiresAt
     ) {
+        this.dailySchedule = dailySchedule;
         this.requestedBy = requestedBy;
-        this.lessonDate = lessonDate;
+        this.lessonDate = dailySchedule.getLessonDate();
         this.title = title;
         this.classroomNameSnapshot = classroomNameSnapshot;
         this.content = content;
@@ -90,13 +96,14 @@ public class LessonExchangeRequest extends BaseEntity {
     }
 
     public void update(
-        LocalDate lessonDate,
+        DailySchedule dailySchedule,
         String title,
         String classroomNameSnapshot,
         String content,
         LocalDateTime expiresAt
     ) {
-        this.lessonDate = lessonDate;
+        this.dailySchedule = dailySchedule;
+        this.lessonDate = dailySchedule.getLessonDate();
         this.title = title;
         this.classroomNameSnapshot = classroomNameSnapshot;
         this.content = content;

@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.request.entity;
 
 import geumjeongyahak.domain.base.entity.BaseEntity;
+import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.request.enums.LessonExchangeProposalStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeProposalType;
 import geumjeongyahak.domain.request.exception.LessonExchangeProposal.InvalidProposalStatusException;
@@ -33,6 +34,10 @@ public class LessonExchangeProposal extends BaseEntity {
 
     private LocalDate lessonDate;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "daily_schedule_id")
+    private DailySchedule dailySchedule;
+
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
@@ -54,14 +59,15 @@ public class LessonExchangeProposal extends BaseEntity {
         LessonExchangeRequest request,
         User proposedBy,
         LessonExchangeProposalType proposalType,
-        LocalDate lessonDate,
+        DailySchedule dailySchedule,
         String content,
         String classroomNameSnapshot
     ) {
         this.request = request;
         this.proposedBy = proposedBy;
         this.proposalType = proposalType;
-        this.lessonDate = lessonDate;
+        this.dailySchedule = dailySchedule;
+        this.lessonDate = dailySchedule != null ? dailySchedule.getLessonDate() : null;
         this.content = content;
         this.classroomNameSnapshot = classroomNameSnapshot;
         this.status = LessonExchangeProposalStatus.ACTIVE;
@@ -87,12 +93,13 @@ public class LessonExchangeProposal extends BaseEntity {
 
     public void update(
         LessonExchangeProposalType proposalType,
-        LocalDate lessonDate,
+        DailySchedule dailySchedule,
         String content,
         String classroomNameSnapshot
     ) {
         this.proposalType = proposalType;
-        this.lessonDate = lessonDate;
+        this.dailySchedule = dailySchedule;
+        this.lessonDate = dailySchedule != null ? dailySchedule.getLessonDate() : null;
         this.content = content;
         this.classroomNameSnapshot = classroomNameSnapshot;
     }

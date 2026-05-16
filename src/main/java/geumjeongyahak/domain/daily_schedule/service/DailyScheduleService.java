@@ -33,6 +33,7 @@ import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.student.entity.Student;
 import geumjeongyahak.domain.student.service.StudentProxyService;
 import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.users.service.UserProxyService;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -61,6 +62,7 @@ public class DailyScheduleService {
     private final DailyStudentAttendanceRepository dailyStudentAttendanceRepository;
     private final LessonProxyService lessonProxyService;
     private final StudentProxyService studentProxyService;
+    private final UserProxyService userProxyService;
 
     @Transactional
     public void synchronizeByLesson(Lesson lesson) {
@@ -394,6 +396,30 @@ public class DailyScheduleService {
             "승인된 결석 요청 반영 완료 - DailySchedule 교사 출석 공결 처리 (dailyScheduleId={})",
             dailySchedule.getId()
         );
+    }
+
+    @Transactional
+    public void applyTeacherExchange(Long dailyScheduleId, Long newTeacherId) {
+        log.debug(
+            "DailySchedule 담당 교사 교환 처리 (dailyScheduleId={}, newTeacherId={})",
+            dailyScheduleId,
+            newTeacherId
+        );
+        DailySchedule dailySchedule = dailyScheduleRepository.findByIdAndIsDeletedFalse(dailyScheduleId)
+            .orElseThrow(() -> {
+                log.info("DailySchedule 담당 교사 교환 실패 - 하루 일정을 찾을 수 없습니다. ID: {}", dailyScheduleId);
+                return new DailyScheduleNotFoundException(dailyScheduleId);
+            });
+        User newTeacher = userProxyService.getById(newTeacherId);
+
+        dailySchedule.updateTeacher(newTeacher);
+        lessonProxyService.updateActiveLessonsTeacherByClassroomAndDate(
+            dailySchedule.getClassroom().getId(),
+            dailySchedule.getLessonDate(),
+            newTeacher
+        );
+
+        log.debug("DailySchedule 담당 교사 교환 완료 (dailyScheduleId={}, newTeacherId={})", dailyScheduleId, newTeacherId);
     }
 
     private boolean canViewDailyScheduleSensitiveInfo(

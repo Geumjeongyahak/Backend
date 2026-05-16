@@ -14,6 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
@@ -66,7 +67,7 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
         Long proposalId = createProposal(
             requestId,
             getAuthHeader(volunteer2Token),
-            Map.of("lessonDate", originalProposalDate.toString(), "content", "기존 제안 내용")
+            Map.of("dailyScheduleId", getDailyScheduleIdByLessonDate(originalProposalDate), "content", "기존 제안 내용")
         );
         proposalIds.add(proposalId);
 
@@ -75,7 +76,7 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", updatedProposalDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(updatedProposalDate),
                 "content", "수정된 제안 내용"
             ))
             .patch("/{requestId}/proposals/{proposalId}", requestId, proposalId)
@@ -104,7 +105,7 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
         Long proposalId = createProposal(
             requestId,
             getAuthHeader(volunteer2Token),
-            Map.of("lessonDate", proposalDate.toString(), "content", "교환형 제안")
+            Map.of("dailyScheduleId", getDailyScheduleIdByLessonDate(proposalDate), "content", "교환형 제안")
         );
         proposalIds.add(proposalId);
 
@@ -147,7 +148,7 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", proposalDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(proposalDate),
                 "content", "교환형 제안으로 수정"
             ))
             .patch("/{requestId}/proposals/{proposalId}", requestId, proposalId)
@@ -257,7 +258,7 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
             requestId,
             getAuthHeader(volunteer2Token),
             Map.of(
-                "lessonDate", LocalDate.now().plusDays(15).toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(LocalDate.now().plusDays(15)),
                 "content", "겹치지 않는 제안"
             )
         );
@@ -268,7 +269,7 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", requestDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(requestDate),
                 "content", "같은 날짜 제안으로 수정"
             ))
             .patch("/{requestId}/proposals/{proposalId}", requestId, proposalId)
@@ -277,8 +278,8 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("교환형 제안 수정 시 실제 제안 수업이 없으면 -> 400")
-    void updateProposal_withoutProposalLessons_returns400() {
+    @DisplayName("존재하지 않는 DailySchedule으로 교환형 제안 수정 -> 404")
+    void updateProposal_withoutDailySchedule_returns404() {
         Long requestId = createApprovedRequest(LocalDate.now().plusDays(15));
         Long proposalId = createProposal(
             requestId,
@@ -292,12 +293,12 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", LocalDate.now().plusDays(16).toString(),
+                "dailyScheduleId", 99999L,
                 "content", "수업이 없는 날짜로 수정"
             ))
             .patch("/{requestId}/proposals/{proposalId}", requestId, proposalId)
             .then()
-            .statusCode(400);
+            .statusCode(404);
     }
 
     @Test
@@ -312,13 +313,7 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
         proposalIds.add(proposalId);
 
         var request = lessonExchangeRequestRepository.findById(requestId).orElseThrow();
-        request.update(
-            request.getLessonDate(),
-            request.getTitle(),
-            request.getClassroomNameSnapshot(),
-            request.getContent(),
-            LocalDateTime.now().minusMinutes(1)
-        );
+        ReflectionTestUtils.setField(request, "expiresAt", LocalDateTime.now().minusMinutes(1));
         lessonExchangeRequestRepository.save(request);
 
         given()

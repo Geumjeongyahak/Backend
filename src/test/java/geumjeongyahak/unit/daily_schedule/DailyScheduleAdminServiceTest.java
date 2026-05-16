@@ -20,6 +20,7 @@ import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.student.service.StudentProxyService;
 import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.users.service.UserProxyService;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -49,6 +50,9 @@ class DailyScheduleAdminServiceTest {
     @Mock
     private StudentProxyService studentProxyService;
 
+    @Mock
+    private UserProxyService userProxyService;
+
     private DailyScheduleAdminService dailyScheduleAdminService;
 
     @BeforeEach
@@ -58,7 +62,8 @@ class DailyScheduleAdminServiceTest {
             dailyTeacherAttendanceRepository,
             dailyStudentAttendanceRepository,
             lessonProxyService,
-            studentProxyService
+            studentProxyService,
+            userProxyService
         );
         dailyScheduleAdminService = new DailyScheduleAdminService(
             dailyScheduleRepository,

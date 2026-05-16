@@ -6,23 +6,20 @@ import java.util.Map;
 import lombok.Getter;
 
 @Getter
-public class LessonExchangeAcceptedEvent extends BaseEventDto {
+public class DailyScheduleExchangeAcceptedEvent extends BaseEventDto {
 
-    private final Long lessonId;
+    private final Long dailyScheduleId;
     private final Long newTeacherId;
 
-    public LessonExchangeAcceptedEvent(
-        Long lessonId,
-        Long newTeacherId
-    ) {
-        this.lessonId = lessonId;
+    public DailyScheduleExchangeAcceptedEvent(Long dailyScheduleId, Long newTeacherId) {
+        this.dailyScheduleId = dailyScheduleId;
         this.newTeacherId = newTeacherId;
     }
 
     @Override
     public Map<String, Object> getEventData() {
         Map<String, Object> data = new HashMap<>();
-        data.put("lessonId", lessonId);
+        data.put("dailyScheduleId", dailyScheduleId);
         data.put("newTeacherId", newTeacherId);
         return data;
     }

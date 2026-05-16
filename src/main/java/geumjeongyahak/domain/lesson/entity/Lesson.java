@@ -91,6 +91,10 @@ public class Lesson extends BaseEntity {
         this.status = status;
     }
 
+    public void updateTeacher(User teacher) {
+        this.teacher = teacher;
+    }
+
     public void updateNote(String note) {
         this.note = note;
     }

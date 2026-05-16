@@ -290,37 +290,6 @@ public class LessonService {
         throw new InvalidLessonStatusTransitionException(currentStatus, nextStatus);
     }
 
-    /**
-     * 수업 교환 제안 수락 이벤트 처리용 - 대상 수업의 담당 교사를 변경한다.
-     */
-    @Transactional
-    public void applyTeacherExchange(Long lessonId, Long newTeacherId) {
-        log.debug("담당 교사 교환 처리 (lessonId={}, newTeacherId={})", lessonId, newTeacherId);
-        Optional<Lesson> lessonOpt = findActiveLessonForEvent(lessonId, "수업 교환 수락");
-        if (lessonOpt.isEmpty()) {
-            return;
-        }
-
-        Lesson lesson = lessonOpt.get();
-        User newTeacher = userRepository.findById(newTeacherId)
-            .orElseThrow(() -> new UserNotFoundException(newTeacherId));
-
-        lesson.changeTeacher(newTeacher);
-        publishDailyScheduleSync(lesson);
-    }
-
-    private Optional<Lesson> findActiveLessonForEvent(Long lessonId, String eventName) {
-        Lesson lesson = lessonRepository.findById(lessonId)
-            .orElseThrow(() -> new LessonNotFoundException(lessonId));
-
-        if (lesson.getIsDeleted()) {
-            log.warn("{} 이벤트 처리 스킵 - 삭제된 수업입니다. lessonId={}", eventName, lessonId);
-            return Optional.empty();
-        }
-
-        return Optional.of(lesson);
-    }
-
     @Transactional
     public void assignTeacherToSubjectScheduledLessons(
         Long subjectId,

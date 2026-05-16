@@ -61,7 +61,7 @@ src/test/java/geumjeongyahak/
 | 인증/권한 규칙 | 컨트롤러 `@PreAuthorize` 확인 |
 | 비즈니스 제약 | `*Service.java` 로직 확인 (중복 검사, 상태 전이 등) |
 | **Side effect** | 승인/상태 변경 시 **다른 도메인 엔티티가 변경되는지** 확인 |
-| 보조 도메인 필요 여부 | DailySchedule 기반(AbsenceRequest), 레슨 기반(LessonExchangeRequest), 과목 기반(PurchaseRequest) |
+| 보조 도메인 필요 여부 | DailySchedule 기반(AbsenceRequest, LessonExchangeRequest), 과목 기반(PurchaseRequest) |
 
 ### Step 2 – 헬퍼 준비
 
