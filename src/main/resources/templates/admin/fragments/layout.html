@@ -121,6 +121,9 @@
             padding: 18px;
             background: rgba(21, 26, 24, .38);
         }
+        .push-toggle[hidden], .push-modal-backdrop[hidden] {
+            display: none;
+        }
         .push-modal {
             width: min(420px, 100%);
             padding: 20px;
@@ -648,6 +651,12 @@ const initAdminPush = async () => {
     if (!pushToggle || !('Notification' in window) || !('serviceWorker' in navigator)) {
         return;
     }
+    pushPromptLater?.addEventListener('click', () => {
+        localStorage.setItem(pushState.promptDismissedKey, 'true');
+        if (pushPrompt) {
+            pushPrompt.hidden = true;
+        }
+    });
     const configResponse = await fetch('/admin/push/config').catch(() => null);
     if (!configResponse?.ok) {
         return;
@@ -669,10 +678,6 @@ const initAdminPush = async () => {
     }
     pushPromptEnable?.addEventListener('click', () => {
         subscribeAdminPush().catch(() => setPushToggle('알림 켜기'));
-    });
-    pushPromptLater?.addEventListener('click', () => {
-        localStorage.setItem(pushState.promptDismissedKey, 'true');
-        pushPrompt.hidden = true;
     });
 };
 
