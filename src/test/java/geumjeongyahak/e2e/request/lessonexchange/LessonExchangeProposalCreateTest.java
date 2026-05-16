@@ -1,6 +1,5 @@
 package geumjeongyahak.e2e.request.lessonexchange;
 
-import geumjeongyahak.domain.request.enums.LessonExchangeScope;
 import geumjeongyahak.domain.request.repository.LessonExchangeProposalRepository;
 import geumjeongyahak.domain.request.repository.LessonExchangeRequestRepository;
 import geumjeongyahak.e2e.request.RequestBaseTest;
