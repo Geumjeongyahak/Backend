@@ -9,13 +9,15 @@ import geumjeongyahak.domain.notification.dto.PushNotificationMessage;
 import geumjeongyahak.domain.notification.dto.PushSendResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnBean(FirebaseMessaging.class)
+@ConditionalOnClass(name = "com.google.firebase.messaging.FirebaseMessaging")
+@ConditionalOnProperty(prefix = "app.firebase", name = "enabled", havingValue = "true")
 public class FirebasePushNotificationSender implements PushNotificationSender {
 
     private final FirebaseMessaging firebaseMessaging;

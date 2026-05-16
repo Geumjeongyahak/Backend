@@ -3,12 +3,12 @@ package geumjeongyahak.domain.notification.service.sender;
 import geumjeongyahak.domain.notification.dto.PushNotificationMessage;
 import geumjeongyahak.domain.notification.dto.PushSendResult;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-@ConditionalOnMissingBean(PushNotificationSender.class)
+@ConditionalOnProperty(prefix = "app.firebase", name = "enabled", havingValue = "false", matchIfMissing = true)
 public class NoOpPushNotificationSender implements PushNotificationSender {
 
     @Override
