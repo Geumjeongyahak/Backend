@@ -5,6 +5,7 @@ import static java.util.Map.entry;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.containsString;
 
 import io.restassured.http.ContentType;
 import java.util.List;
@@ -98,6 +99,46 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .extract()
             .jsonPath()
             .getLong("id");
+    }
+
+    @Test
+    @DisplayName("구입 요청 생성 시 영수증 파일 ID 전달 → 상세 응답 receipts 포함")
+    void createRequest_withReceiptFileIds_returnsReceipts() {
+        String receiptFileId1 = uploadPurchaseReceipt();
+        String receiptFileId2 = uploadPurchaseReceipt();
+
+        createdRequestId = given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.ofEntries(
+                entry("title", "영수증 포함 구입 요청"),
+                entry("content", "구입 요청 생성 시 영수증을 함께 첨부합니다."),
+                entry("classroomId", CLASSROOM_ID),
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "복사용지"),
+                    entry("reason", "수업 자료 출력"),
+                    entry("expectedPrice", 10000L)
+                ))),
+                entry("receiptFileIds", List.of(receiptFileId1, receiptFileId2))
+            ))
+            .post()
+            .then()
+            .statusCode(201)
+            .body("status", equalTo("PENDING"))
+            .body("receipts", hasSize(2))
+            .body("receipts[0].fileUrl", containsString("/documents/purchase-items/"))
+            .extract()
+            .jsonPath()
+            .getLong("id");
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get("/{requestId}", createdRequestId)
+            .then()
+            .statusCode(200)
+            .body("receipts", hasSize(2));
     }
 
     // ── 인증 오류 ─────────────────────────────────────────
@@ -231,5 +272,18 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .post()
             .then()
             .statusCode(400);
+    }
+
+    private String uploadPurchaseReceipt() {
+        return given()
+            .basePath("/api/v1/files")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.MULTIPART)
+            .multiPart("file", "receipt.png", "receipt".getBytes(), "image/png")
+            .post("/images/purchase-items")
+            .then()
+            .statusCode(201)
+            .extract()
+            .path("fileId");
     }
 }

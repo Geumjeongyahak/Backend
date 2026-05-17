@@ -36,6 +36,9 @@ public class AbsenceRequest extends BaseEntity {
     @JoinColumn(name = "requested_by", nullable = false)
     private User requestedBy;
 
+    @Column(nullable = false)
+    private String title;
+
     @Column(columnDefinition = "TEXT", nullable = false)
     private String reason;
 
@@ -55,9 +58,10 @@ public class AbsenceRequest extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String note;
 
-    public AbsenceRequest(DailySchedule dailySchedule, User requestedBy, String reason) {
+    public AbsenceRequest(DailySchedule dailySchedule, User requestedBy, String title, String reason) {
         this.dailySchedule = dailySchedule;
         this.requestedBy = requestedBy;
+        this.title = title;
         this.reason = reason;
         this.expiresAt = dailySchedule.getLessonDate().atStartOfDay();
         this.status = RequestStatus.PENDING;
@@ -82,5 +86,10 @@ public class AbsenceRequest extends BaseEntity {
 
     public void expire() {
         this.status = RequestStatus.EXPIRED;
+    }
+
+    public void update(String title, String reason) {
+        this.title = title;
+        this.reason = reason;
     }
 }

@@ -28,6 +28,7 @@ import geumjeongyahak.domain.request.service.AbsenceRequestService;
 import geumjeongyahak.domain.request.v1.dto.request.AbsenceRequestPaginationRequest;
 import geumjeongyahak.domain.request.v1.dto.request.CreateAbsenceRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.request.RejectRequestRequest;
+import geumjeongyahak.domain.request.v1.dto.request.UpdateAbsenceRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.response.AbsenceRequestResponse;
 
 @Slf4j
@@ -80,6 +81,7 @@ public class AbsenceRequestController {
             + "ADMIN 또는 absence-request:read:* 권한 사용자는 전체 결석 요청을 조회할 수 있습니다. "
             + "그 외 VOLUNTEER, MANAGER 사용자는 본인이 생성한 요청만 조회할 수 있으며, MANAGER 권한만으로는 전체 요청을 조회할 수 없습니다. "
             + "status 파라미터를 전달하면 해당 상태의 요청만 반환합니다. "
+            + "keyword 파라미터로 제목, 사유, 작성자 이름, 반 이름을 검색할 수 있습니다. "
             + "page, size 파라미터를 통해 페이지 번호와 크기를 지정할 수 있고 기본 정렬은 생성 시각 최신순입니다. "
             + "응답에는 대상 하루 일정 수업일 기준으로 자동 계산된 만료 시각(expiresAt)이 포함됩니다. "
             + "조회 API는 side effect 를 발생시키지 않습니다."
@@ -115,6 +117,25 @@ public class AbsenceRequestController {
         log.debug("GET /api/v1/absence-requests/{} - 결석 요청 상세 조회", requestId);
         AbsenceRequestResponse response = absenceRequestService.getAbsenceRequest(
             userDetails.getUserId(), requestId, canReadAllAbsenceRequests(userDetails)
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
+    @Operation(
+        summary = "결석 요청 수정",
+        description = "요청자 본인이 PENDING 상태의 결석 요청 제목과 사유를 수정합니다. "
+            + "대리 수정은 허용하지 않으며, 이미 처리된 요청은 수정할 수 없습니다."
+    )
+    @PatchMapping("/{requestId}")
+    public ResponseEntity<AbsenceRequestResponse> updateAbsenceRequest(
+        @PathVariable Long requestId,
+        @Valid @RequestBody UpdateAbsenceRequestRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/absence-requests/{} - 결석 요청 수정", requestId);
+        AbsenceRequestResponse response = absenceRequestService.updateAbsenceRequest(
+            userDetails.getUserId(), requestId, request
         );
         return ResponseEntity.ok(response);
     }

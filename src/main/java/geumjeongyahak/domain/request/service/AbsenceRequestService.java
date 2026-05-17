@@ -5,8 +5,10 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
@@ -22,6 +24,7 @@ import geumjeongyahak.domain.request.exception.RequestNotFoundException;
 import geumjeongyahak.domain.request.repository.AbsenceRequestRepository;
 import geumjeongyahak.domain.request.v1.dto.request.AbsenceRequestPaginationRequest;
 import geumjeongyahak.domain.request.v1.dto.request.CreateAbsenceRequestRequest;
+import geumjeongyahak.domain.request.v1.dto.request.UpdateAbsenceRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.response.AbsenceRequestResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
@@ -53,7 +56,12 @@ public class AbsenceRequestService {
         validateExpiresAtIsFuture(dailySchedule.getLessonDate().atStartOfDay());
         validateNoActiveAbsenceRequest(dailySchedule.getId(), requesterId);
 
-        AbsenceRequest absenceRequest = new AbsenceRequest(dailySchedule, requester, request.reason());
+        AbsenceRequest absenceRequest = new AbsenceRequest(
+            dailySchedule,
+            requester,
+            request.title(),
+            request.reason()
+        );
         AbsenceRequest saved = absenceRequestRepository.save(absenceRequest);
 
         log.debug("결석 요청 생성 완료 (id={})", saved.getId());
@@ -68,18 +76,10 @@ public class AbsenceRequestService {
     ) {
         log.debug("결석 요청 목록 조회 (isAdmin={}, status={})", isAdmin, status);
 
-        Page<AbsenceRequest> page;
-        if (status != null) {
-            page = isAdmin
-                ? absenceRequestRepository.findAllByStatus(status, pageRequest.toRequest())
-                : absenceRequestRepository.findAllByStatusAndRequestedBy_Id(
-                    status, requesterId, pageRequest.toRequest()
-                );
-        } else {
-            page = isAdmin
-                ? absenceRequestRepository.findAll(pageRequest.toRequest())
-                : absenceRequestRepository.findAllByRequestedBy_Id(requesterId, pageRequest.toRequest());
-        }
+        Page<AbsenceRequest> page = absenceRequestRepository.findAll(
+            buildListSpecification(requesterId, isAdmin, status, pageRequest),
+            pageRequest.toRequest()
+        );
 
         return PaginationResponse.from(page, AbsenceRequestResponse::from);
     }
@@ -93,6 +93,29 @@ public class AbsenceRequestService {
             throw new RequestForbiddenException();
         }
 
+        return AbsenceRequestResponse.from(absenceRequest);
+    }
+
+    @Transactional
+    public AbsenceRequestResponse updateAbsenceRequest(
+        Long requesterId,
+        Long requestId,
+        UpdateAbsenceRequestRequest request
+    ) {
+        log.debug("결석 요청 수정 (requesterId={}, requestId={})", requesterId, requestId);
+        AbsenceRequest absenceRequest = absenceRequestRepository.findById(requestId)
+            .orElseThrow(() -> new RequestNotFoundException(requestId));
+
+        if (!absenceRequest.getRequestedBy().getId().equals(requesterId)) {
+            throw new RequestForbiddenException();
+        }
+        if (absenceRequest.getStatus() != RequestStatus.PENDING) {
+            throw new RequestAlreadyProcessedException();
+        }
+
+        absenceRequest.update(request.title(), request.reason());
+
+        log.debug("결석 요청 수정 완료 (requestId={})", requestId);
         return AbsenceRequestResponse.from(absenceRequest);
     }
 
@@ -190,5 +213,48 @@ public class AbsenceRequestService {
         if (!expiresAt.isAfter(LocalDateTime.now())) {
             throw new InvalidAbsenceRequestExpiresInPastException();
         }
+    }
+
+    private Specification<AbsenceRequest> buildListSpecification(
+        Long requesterId,
+        boolean canReadAll,
+        RequestStatus status,
+        AbsenceRequestPaginationRequest pageRequest
+    ) {
+        return Specification.allOf(
+            hasStatus(status),
+            matchesRequesterScope(requesterId, canReadAll),
+            containsKeyword(pageRequest.getKeyword())
+        );
+    }
+
+    private Specification<AbsenceRequest> hasStatus(RequestStatus status) {
+        return (root, query, criteriaBuilder) ->
+            status == null ? null : criteriaBuilder.equal(root.get("status"), status);
+    }
+
+    private Specification<AbsenceRequest> matchesRequesterScope(Long requesterId, boolean canReadAll) {
+        return (root, query, criteriaBuilder) -> {
+            if (canReadAll) {
+                return null;
+            }
+            return criteriaBuilder.equal(root.get("requestedBy").get("id"), requesterId);
+        };
+    }
+
+    private Specification<AbsenceRequest> containsKeyword(String keyword) {
+        return (root, query, criteriaBuilder) -> {
+            if (!StringUtils.hasText(keyword)) {
+                return null;
+            }
+
+            String likeKeyword = "%" + keyword.trim().toLowerCase() + "%";
+            return criteriaBuilder.or(
+                criteriaBuilder.like(criteriaBuilder.lower(root.get("title")), likeKeyword),
+                criteriaBuilder.like(criteriaBuilder.lower(root.get("reason")), likeKeyword),
+                criteriaBuilder.like(criteriaBuilder.lower(root.get("requestedBy").get("name")), likeKeyword),
+                criteriaBuilder.like(criteriaBuilder.lower(root.get("dailySchedule").get("classroom").get("name")), likeKeyword)
+            );
+        };
     }
 }

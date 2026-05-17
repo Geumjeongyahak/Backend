@@ -90,7 +90,10 @@ public class PurchaseRequestAdminViewService {
         Long advancePaymentRequestedAmount,
         List<CreatePurchaseRequestRequest.Item> items
     ) {
-        return purchaseRequestService.createPurchaseRequest(requesterId, new CreatePurchaseRequestRequest(title, content, classroomId, advancePaymentRequestedAmount, items)).id();
+        return purchaseRequestService.createPurchaseRequest(
+            requesterId,
+            new CreatePurchaseRequestRequest(title, content, classroomId, advancePaymentRequestedAmount, items, List.of())
+        ).id();
     }
 
     @Transactional
@@ -102,7 +105,12 @@ public class PurchaseRequestAdminViewService {
         Long advancePaymentRequestedAmount,
         List<CreatePurchaseRequestRequest.Item> items
     ) {
-        purchaseRequestService.updatePurchaseRequest(requesterId, requestId, new CreatePurchaseRequestRequest(title, content, null, advancePaymentRequestedAmount, items), true);
+        purchaseRequestService.updatePurchaseRequest(
+            requesterId,
+            requestId,
+            new CreatePurchaseRequestRequest(title, content, null, advancePaymentRequestedAmount, items, List.of()),
+            true
+        );
     }
 
     @Transactional

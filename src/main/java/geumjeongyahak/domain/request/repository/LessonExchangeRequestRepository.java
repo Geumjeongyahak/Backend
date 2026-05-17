@@ -5,13 +5,14 @@ import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
-public interface LessonExchangeRequestRepository extends JpaRepository<LessonExchangeRequest, Long> {
+public interface LessonExchangeRequestRepository extends JpaRepository<LessonExchangeRequest, Long>, JpaSpecificationExecutor<LessonExchangeRequest> {
 
     Page<LessonExchangeRequest> findAllByStatusNot(
         LessonExchangeRequestStatus status,

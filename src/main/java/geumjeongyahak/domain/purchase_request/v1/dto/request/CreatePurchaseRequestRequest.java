@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
+import java.util.UUID;
 
 public record CreatePurchaseRequestRequest(
 
@@ -29,7 +30,10 @@ public record CreatePurchaseRequestRequest(
     @Valid
     @NotEmpty
     @Schema(description = "구입 항목 목록")
-    List<Item> items
+    List<Item> items,
+
+    @Schema(description = "구입 요청에 첨부할 영수증 파일 ID 목록")
+    List<UUID> receiptFileIds
 ) {
     public record Item(
 

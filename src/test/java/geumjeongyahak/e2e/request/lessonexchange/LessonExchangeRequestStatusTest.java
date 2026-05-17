@@ -506,6 +506,94 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("keyword 로 제목 검색 -> 일치하는 요청만 포함")
+    void getList_filteredByKeywordTitle_containsMatchedRequestOnly() {
+        Long matchedRequestId = createPendingFullRequest(
+            VOLUNTEER_USERNAME,
+            TEACHER_ID,
+            LocalDate.now().plusDays(29),
+            "특별 교환 요청",
+            "일정 조정이 필요합니다."
+        );
+        Long unmatchedRequestId = createPendingFullRequest(
+            VOLUNTEER2_USERNAME,
+            TEACHER2_ID,
+            LocalDate.now().plusDays(30),
+            "일반 교환 요청",
+            "다른 내용입니다."
+        );
+
+        List<Long> requestIds = given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .queryParam("keyword", "특별")
+            .get()
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getList("content.id", Long.class);
+
+        assertThat(requestIds).contains(matchedRequestId);
+        assertThat(requestIds).doesNotContain(unmatchedRequestId);
+    }
+
+    @Test
+    @DisplayName("keyword 로 반 이름 검색 -> 해당 반 요청 포함")
+    void getList_filteredByKeywordClassroomName_containsClassroomRequests() {
+        Long requestId = createPendingFullRequest(
+            VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(31)
+        );
+
+        List<Long> requestIds = given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .queryParam("keyword", "벚꽃반")
+            .get()
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getList("content.id", Long.class);
+
+        assertThat(requestIds).contains(requestId);
+    }
+
+    @Test
+    @DisplayName("keyword 와 mine=true 를 함께 쓰면 본인 요청 중 일치하는 요청만 조회된다")
+    void getList_filteredByKeywordAndMine_returnsOwnMatchedRequestOnly() {
+        Long ownMatchedRequestId = createPendingFullRequest(
+            VOLUNTEER_USERNAME,
+            TEACHER_ID,
+            LocalDate.now().plusDays(32),
+            "나의 교환 요청",
+            "검색 대상입니다."
+        );
+        Long otherMatchedRequestId = createPendingFullRequest(
+            VOLUNTEER2_USERNAME,
+            TEACHER2_ID,
+            LocalDate.now().plusDays(33),
+            "나의 교환 요청",
+            "다른 작성자의 검색 대상입니다."
+        );
+
+        List<Long> requestIds = given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .queryParam("mine", true)
+            .queryParam("keyword", "나의")
+            .get()
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getList("content.id", Long.class);
+
+        assertThat(requestIds).contains(ownMatchedRequestId);
+        assertThat(requestIds).doesNotContain(otherMatchedRequestId);
+    }
+
+    @Test
     @DisplayName("mine=true 와 status 를 함께 쓰면 본인 요청 중 해당 상태만 조회된다")
     void getList_filteredByMineAndStatus_returnsOwnMatchingRequests() {
         Long approvedOwnRequestId = createPendingFullRequest(
@@ -640,6 +728,16 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     }
 
     private Long createPendingFullRequest(String username, Long teacherId, LocalDate lessonDate) {
+        return createPendingFullRequest(username, teacherId, lessonDate, "수업 교환 요청", "해당 일정 조정이 필요합니다.");
+    }
+
+    private Long createPendingFullRequest(
+        String username,
+        Long teacherId,
+        LocalDate lessonDate,
+        String title,
+        String content
+    ) {
         String authHeader = VOLUNTEER_USERNAME.equals(username)
             ? getAuthHeader(volunteerToken)
             : getAuthHeader(volunteer2Token);
@@ -650,8 +748,8 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
         Long requestId = createLessonExchangeRequest(
             authHeader,
             lessonDate,
-            "수업 교환 요청",
-            "해당 일정 조정이 필요합니다.",
+            title,
+            content,
             lessonDate.minusDays(3).atTime(23, 0)
         );
         requestIds.add(requestId);

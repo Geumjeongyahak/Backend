@@ -86,7 +86,8 @@ public class PurchaseRequest extends BaseEntity {
         String title,
         String content,
         Long advancePaymentRequestedAmount,
-        List<PurchaseRequestItem> items
+        List<PurchaseRequestItem> items,
+        List<PurchaseRequestReceipt> receipts
     ) {
         this.classroom = classroom;
         this.requestedBy = requestedBy;
@@ -96,6 +97,8 @@ public class PurchaseRequest extends BaseEntity {
         this.status = PurchaseRequestStatus.PENDING;
         items.forEach(item -> item.assignRequest(this));
         this.items.addAll(items);
+        receipts.forEach(receipt -> receipt.assignRequest(this));
+        this.receipts.addAll(receipts);
     }
 
     public void approve(User approver, String note, Long advancePaymentApprovedAmount) {

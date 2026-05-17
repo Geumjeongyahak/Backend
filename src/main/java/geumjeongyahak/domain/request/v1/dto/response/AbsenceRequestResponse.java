@@ -17,11 +17,20 @@ public record AbsenceRequestResponse(
     @Schema(description = "수업 날짜", example = "2026-03-28")
     LocalDate lessonDate,
 
+    @Schema(description = "분반 ID", example = "1")
+    Long classroomId,
+
+    @Schema(description = "분반 이름", example = "한글반")
+    String classroomName,
+
     @Schema(description = "요청자 ID", example = "3")
     Long requestedById,
 
     @Schema(description = "요청자 이름", example = "홍길동")
     String requestedByName,
+
+    @Schema(description = "결석 요청 제목")
+    String title,
 
     @Schema(description = "결석 사유")
     String reason,
@@ -49,8 +58,11 @@ public record AbsenceRequestResponse(
             r.getId(),
             r.getDailySchedule().getId(),
             r.getDailySchedule().getLessonDate(),
+            r.getDailySchedule().getClassroom().getId(),
+            r.getDailySchedule().getClassroom().getName(),
             r.getRequestedBy().getId(),
             r.getRequestedBy().getName(),
+            r.getTitle(),
             r.getReason(),
             r.getExpiresAt(),
             r.getStatus(),
