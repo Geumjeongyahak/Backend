@@ -11,8 +11,8 @@ public record AbsenceRequestResponse(
     @Schema(description = "요청 ID", example = "1")
     Long id,
 
-    @Schema(description = "수업 ID", example = "1")
-    Long lessonId,
+    @Schema(description = "하루 일정 ID", example = "1")
+    Long dailyScheduleId,
 
     @Schema(description = "수업 날짜", example = "2026-03-28")
     LocalDate lessonDate,
@@ -47,8 +47,8 @@ public record AbsenceRequestResponse(
     public static AbsenceRequestResponse from(AbsenceRequest r) {
         return new AbsenceRequestResponse(
             r.getId(),
-            r.getLesson().getId(),
-            r.getLesson().getDate(),
+            r.getDailySchedule().getId(),
+            r.getDailySchedule().getLessonDate(),
             r.getRequestedBy().getId(),
             r.getRequestedBy().getName(),
             r.getReason(),

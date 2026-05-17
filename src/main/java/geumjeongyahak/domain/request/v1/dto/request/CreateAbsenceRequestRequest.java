@@ -7,8 +7,8 @@ import jakarta.validation.constraints.NotNull;
 public record CreateAbsenceRequestRequest(
 
     @NotNull
-    @Schema(description = "결석할 수업 ID", example = "1")
-    Long lessonId,
+    @Schema(description = "결석할 하루 일정 ID", example = "1")
+    Long dailyScheduleId,
 
     @NotBlank
     @Schema(description = "결석 사유", example = "개인 사정으로 인한 결석")

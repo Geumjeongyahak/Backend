@@ -239,19 +239,6 @@ public class TestLessonHelper {
     // Side-effect 검증용 조회
     // ──────────────────────────────────────────────────────
 
-    /** 수업의 교사 출석 상태(teacherAttendance) 문자열을 반환한다. */
-    public String getLessonTeacherAttendance(String authHeader, Long lessonId) {
-        return given()
-            .basePath("/api/v1/lessons")
-            .header("Authorization", authHeader)
-            .get("/{id}", lessonId)
-            .then()
-            .statusCode(200)
-            .extract()
-            .jsonPath()
-            .getString("teacherAttendance");
-    }
-
     /** 수업 날짜(date) 문자열을 반환한다. */
     public String getLessonDate(String authHeader, Long lessonId) {
         return given()

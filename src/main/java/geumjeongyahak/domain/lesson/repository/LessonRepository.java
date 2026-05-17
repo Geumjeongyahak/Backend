@@ -32,6 +32,12 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
     List<Lesson> findAllByTeacher_IdAndDateAndIsDeletedFalse(Long teacherId, LocalDate date);
 
     @EntityGraph(attributePaths = {"teacher", "subject", "subject.classroom"})
+    List<Lesson> findAllBySubjectClassroomIdAndDateAndIsDeletedFalseOrderByPeriodAscStartTimeAsc(
+        Long classroomId,
+        LocalDate date
+    );
+
+    @EntityGraph(attributePaths = {"teacher", "subject", "subject.classroom"})
     List<Lesson> findAllByTeacher_IdAndDateAndPeriodBetweenAndIsDeletedFalse(
         Long teacherId,
         LocalDate date,

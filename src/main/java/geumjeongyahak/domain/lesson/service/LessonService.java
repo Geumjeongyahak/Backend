@@ -9,11 +9,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
-import geumjeongyahak.domain.lesson.enums.TeacherAttendanceStatus;
+import geumjeongyahak.domain.lesson.event.LessonDailyScheduleSyncRequestedEvent;
 import geumjeongyahak.domain.lesson.exception.InvalidLessonScheduleException;
 import geumjeongyahak.domain.lesson.exception.InvalidLessonStatusTransitionException;
 import geumjeongyahak.domain.lesson.exception.LessonDuplicateException;
@@ -23,7 +24,6 @@ import geumjeongyahak.domain.lesson.v1.dto.request.CreateLessonRequest;
 import geumjeongyahak.domain.lesson.v1.dto.request.LessonRangeRequest;
 import geumjeongyahak.domain.lesson.v1.dto.request.UpdateLessonRequest;
 import geumjeongyahak.domain.lesson.v1.dto.response.LessonDetailResponse;
-import geumjeongyahak.domain.lesson.v1.dto.response.LessonNoteResponse;
 import geumjeongyahak.domain.lesson.v1.dto.response.LessonSummaryResponse;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.subject.entity.Subject;
@@ -42,6 +42,7 @@ public class LessonService {
     private final LessonRepository lessonRepository;
     private final SubjectRepository subjectRepository;
     private final UserRepository userRepository;
+    private final EventPublisher eventPublisher;
 
 
     @Transactional
@@ -85,6 +86,7 @@ public class LessonService {
         );
 
         Lesson saved = lessonRepository.save(lesson);
+        publishDailyScheduleSync(saved);
         log.debug("수업 생성 완료 (lessonId={})", saved.getId());
 
         return LessonDetailResponse.from(saved);
@@ -129,18 +131,6 @@ public class LessonService {
             });
     }
 
-    @Transactional(readOnly = true)
-    public LessonNoteResponse getNote(Long teacherId, Long lessonId, boolean canAccessAnyLesson) {
-        log.debug("수업 노트 조회 요청 (lessonId={})", lessonId);
-        Lesson lesson = (canAccessAnyLesson
-            ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
-            : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
-        ).orElseThrow(() -> new LessonNotFoundException(lessonId));
-
-        log.debug("수업 노트 조회 완료 (lessonId={})", lessonId);
-        return LessonNoteResponse.from(lesson);
-    }
-
     @Transactional
     public LessonDetailResponse updateLesson(Long lessonId, UpdateLessonRequest request) {
         log.debug("수업 수정 요청 (lessonId={})", lessonId);
@@ -149,6 +139,8 @@ public class LessonService {
                 log.info("수업 수정 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
                 return new LessonNotFoundException(lessonId);
             });
+        Long previousClassroomId = lesson.getSubject().getClassroom().getId();
+        LocalDate previousDate = lesson.getDate();
 
         // 최종 값
         Long newSubjectId = request.subjectId() != null ? request.subjectId() : lesson.getSubject().getId();
@@ -201,27 +193,11 @@ public class LessonService {
 
         // 변경 반영
         lesson.update(subject, teacher, newDate, newStart, newEnd, newPeriod);
+        publishDailyScheduleSync(lesson);
+        if (!previousClassroomId.equals(subject.getClassroom().getId()) || !previousDate.equals(newDate)) {
+            publishDailyScheduleSync(previousClassroomId, previousDate);
+        }
         log.debug("수업 수정 완료 (lessonId={})", lessonId);
-        return LessonDetailResponse.from(lesson);
-    }
-
-    @Transactional
-    public LessonDetailResponse updateTeacherAttendance(
-        Long teacherId,
-        Long lessonId,
-        TeacherAttendanceStatus status,
-        boolean canAccessAnyLesson
-    ) {
-        log.debug("교사 출석 처리 요청 (status={})", status);
-        Lesson lesson = (canAccessAnyLesson
-            ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
-            : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
-        ).orElseThrow(() -> {
-            log.warn("교사 출석 처리 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
-            return new LessonNotFoundException(lessonId);
-        });
-        lesson.updateTeacherAttendance(status);
-        log.debug("교사 출석 처리 완료");
         return LessonDetailResponse.from(lesson);
     }
 
@@ -244,27 +220,6 @@ public class LessonService {
         lesson.updateStatus(status);
         log.debug("수업 상태 변경 완료 (status={})", status);
         return LessonDetailResponse.from(lesson);
-    }
-
-    @Transactional
-    public LessonNoteResponse upsertNote(
-        Long teacherId,
-        Long lessonId,
-        String note,
-        boolean canAccessAnyLesson
-    ) {
-        log.debug("수업 노트 업데이트 요청 (lessonId={})", lessonId);
-        Lesson lesson = (canAccessAnyLesson
-            ? lessonRepository.findByIdAndIsDeletedFalse(lessonId)
-            : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId)
-        ).orElseThrow(() -> {
-            log.warn("수업 노트 업데이트 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
-            return new LessonNotFoundException(lessonId);
-        });
-
-        lesson.updateNote(note);
-        log.debug("수업 노트 업데이트 완료 (lessonId={})", lessonId);
-        return LessonNoteResponse.from(lesson);
     }
 
     // ── 이벤트 핸들러 전용 내부 메서드 ─────────────────────────────────────────
@@ -306,26 +261,12 @@ public class LessonService {
                 log.warn("수업 자동 생성 스킵 - 교사 시간 충돌 (date={}, teacherId={})", date, teacherId);
                 continue;
             }
-            lessonRepository.save(new Lesson(subject, teacher, date, startTime, endTime, period));
+            Lesson lesson = lessonRepository.save(new Lesson(subject, teacher, date, startTime, endTime, period));
+            publishDailyScheduleSync(lesson);
             created++;
         }
 
         log.debug("수업 자동 생성 완료 (subjectId={}, 생성={}건, 스킵={}건)", subjectId, created, dates.size() - created);
-    }
-
-    /**
-     * 결석 승인 이벤트 처리용 - 수업 교사 출석 상태를 공결(EXCUSED)로 변경한다.
-     */
-    @Transactional
-    public void applyTeacherExcused(Long lessonId) {
-        log.debug("교사 출석 공결 처리 (lessonId={})", lessonId);
-        Optional<Lesson> lessonOpt = findActiveLessonForEvent(lessonId, "결석 승인");
-        if (lessonOpt.isEmpty()) {
-            return;
-        }
-
-        Lesson lesson = lessonOpt.get();
-        lesson.updateTeacherAttendance(TeacherAttendanceStatus.EXCUSED);
     }
 
     private void validateTeacherAssignable(User teacher) {
@@ -349,36 +290,6 @@ public class LessonService {
         throw new InvalidLessonStatusTransitionException(currentStatus, nextStatus);
     }
 
-    /**
-     * 수업 교환 제안 수락 이벤트 처리용 - 대상 수업의 담당 교사를 변경한다.
-     */
-    @Transactional
-    public void applyTeacherExchange(Long lessonId, Long newTeacherId) {
-        log.debug("담당 교사 교환 처리 (lessonId={}, newTeacherId={})", lessonId, newTeacherId);
-        Optional<Lesson> lessonOpt = findActiveLessonForEvent(lessonId, "수업 교환 수락");
-        if (lessonOpt.isEmpty()) {
-            return;
-        }
-
-        Lesson lesson = lessonOpt.get();
-        User newTeacher = userRepository.findById(newTeacherId)
-            .orElseThrow(() -> new UserNotFoundException(newTeacherId));
-
-        lesson.changeTeacher(newTeacher);
-    }
-
-    private Optional<Lesson> findActiveLessonForEvent(Long lessonId, String eventName) {
-        Lesson lesson = lessonRepository.findById(lessonId)
-            .orElseThrow(() -> new LessonNotFoundException(lessonId));
-
-        if (lesson.getIsDeleted()) {
-            log.warn("{} 이벤트 처리 스킵 - 삭제된 수업입니다. lessonId={}", eventName, lessonId);
-            return Optional.empty();
-        }
-
-        return Optional.of(lesson);
-    }
-
     @Transactional
     public void assignTeacherToSubjectScheduledLessons(
         Long subjectId,
@@ -397,7 +308,10 @@ public class LessonService {
                 from
             );
 
-        lessons.forEach(lesson -> lesson.changeTeacher(newTeacher));
+        lessons.forEach(lesson -> {
+            lesson.changeTeacher(newTeacher);
+            publishDailyScheduleSync(lesson);
+        });
     }
 
     @Transactional
@@ -410,7 +324,12 @@ public class LessonService {
                 from
             );
 
-        lessons.forEach(Lesson::softDelete);
+        lessons.forEach(lesson -> {
+            Long classroomId = lesson.getSubject().getClassroom().getId();
+            LocalDate date = lesson.getDate();
+            lesson.softDelete();
+            publishDailyScheduleSync(classroomId, date);
+        });
     }
 
     @Transactional
@@ -429,7 +348,10 @@ public class LessonService {
                 from
             );
 
-        lessons.forEach(lesson -> lesson.changeSchedule(startTime, endTime, period));
+        lessons.forEach(lesson -> {
+            lesson.changeSchedule(startTime, endTime, period);
+            publishDailyScheduleSync(lesson);
+        });
     }
 
     @Transactional
@@ -470,8 +392,19 @@ public class LessonService {
                 return new LessonNotFoundException(lessonId);
             });
         if (!lesson.getIsDeleted()) {
+            Long classroomId = lesson.getSubject().getClassroom().getId();
+            LocalDate date = lesson.getDate();
             lesson.softDelete();
+            publishDailyScheduleSync(classroomId, date);
         }
         log.debug("수업 삭제 완료 (lessonId={})", lessonId);
+    }
+
+    private void publishDailyScheduleSync(Lesson lesson) {
+        publishDailyScheduleSync(lesson.getSubject().getClassroom().getId(), lesson.getDate());
+    }
+
+    private void publishDailyScheduleSync(Long classroomId, LocalDate lessonDate) {
+        eventPublisher.publish(new LessonDailyScheduleSyncRequestedEvent(classroomId, lessonDate));
     }
 }

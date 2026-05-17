@@ -46,7 +46,7 @@ public class LessonDeleteTest extends LessonBaseTest {
     }
 
     @Test
-    @DisplayName("삭제된 수업은 상태/출석/노트 변경 대상에서 제외된다")
+    @DisplayName("삭제된 수업은 상태 변경 대상에서 제외된다")
     void deleteLesson_ShouldBlockMutations() {
         Long subjectId = createTrackedSubjectAndGetId("삭제 변경 차단");
         Long lessonId = createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2028-03-25", "19:20:00", "20:00:00", 1);
@@ -64,27 +64,6 @@ public class LessonDeleteTest extends LessonBaseTest {
             .then()
             .statusCode(404);
 
-        given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType("application/json")
-            .body("""
-                { "status": "PRESENT" }
-            """)
-            .when()
-            .patch("/{lessonId}/teacher-attendance", lessonId)
-            .then()
-            .statusCode(404);
-
-        given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType("application/json")
-            .body("""
-                { "note": "삭제된 수업 수정 시도" }
-            """)
-            .when()
-            .put("/{lessonId}/note", lessonId)
-            .then()
-            .statusCode(404);
     }
 
     @Test

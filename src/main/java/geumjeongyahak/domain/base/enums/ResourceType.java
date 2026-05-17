@@ -13,6 +13,7 @@ public enum ResourceType {
     STUDENT("student"),
     DEPARTMENT("department"),
     LESSON("lesson"),
+    DAILY_SCHEDULE("daily-schedule"),
     USER("user"),
     ABSENCE_REQUEST("absence-request"),
     PURCHASE_REQUEST("purchase-request"),

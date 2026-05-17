@@ -5,6 +5,9 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
 import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.classroom.entity.Classroom;
+import geumjeongyahak.domain.classroom.enums.ClassroomType;
+import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
 import geumjeongyahak.domain.request.enums.LessonExchangeProposalStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
@@ -150,9 +153,20 @@ class LessonExchangeRequestAdminViewServiceTest {
             .name(requestedByName)
             .role(RoleType.VOLUNTEER)
             .build();
-        LessonExchangeRequest request = new LessonExchangeRequest(
+        Classroom classroom = Classroom.builder()
+            .name(classroomName)
+            .type(ClassroomType.WEEKDAY)
+            .build();
+        DailySchedule dailySchedule = new DailySchedule(
+            classroom,
             requestedBy,
             lessonDate,
+            null,
+            null
+        );
+        LessonExchangeRequest request = new LessonExchangeRequest(
+            dailySchedule,
+            requestedBy,
             title,
             classroomName,
             "수업 교환을 요청합니다.",

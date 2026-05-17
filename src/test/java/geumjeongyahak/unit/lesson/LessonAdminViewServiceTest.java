@@ -7,7 +7,6 @@ import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.base.dto.response.AdminPage;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
-import geumjeongyahak.domain.lesson.enums.TeacherAttendanceStatus;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
 import geumjeongyahak.domain.lesson.service.LessonAdminViewService;
 import geumjeongyahak.domain.lesson.service.LessonAdminViewService.AdminLessonRow;
@@ -35,30 +34,27 @@ class LessonAdminViewServiceTest {
     private LessonAdminViewService lessonAdminViewService;
 
     @Test
-    void getLessons_filtersByDateStatusAndTeacherAttendance() {
+    void getLessons_filtersByDateAndStatus() {
         Lesson matchingLesson = lesson(
             "김교사",
             "국어",
             LocalDate.of(2026, 5, 11),
             1,
-            LessonStatus.SCHEDULED,
-            TeacherAttendanceStatus.ABSENT
+            LessonStatus.SCHEDULED
         );
         Lesson completedLesson = lesson(
             "박교사",
             "수학",
             LocalDate.of(2026, 5, 12),
             2,
-            LessonStatus.COMPLETED,
-            TeacherAttendanceStatus.PRESENT
+            LessonStatus.COMPLETED
         );
         Lesson outsideDateLesson = lesson(
             "이교사",
             "영어",
             LocalDate.of(2026, 5, 18),
             1,
-            LessonStatus.SCHEDULED,
-            TeacherAttendanceStatus.ABSENT
+            LessonStatus.SCHEDULED
         );
         given(lessonRepository.findAllByIsDeletedFalseOrderByDateAscPeriodAsc())
             .willReturn(List.of(matchingLesson, completedLesson, outsideDateLesson));
@@ -67,7 +63,6 @@ class LessonAdminViewServiceTest {
             LocalDate.of(2026, 5, 10),
             LocalDate.of(2026, 5, 12),
             LessonStatus.SCHEDULED,
-            TeacherAttendanceStatus.ABSENT,
             null,
             null,
             null
@@ -85,22 +80,19 @@ class LessonAdminViewServiceTest {
             "수학",
             LocalDate.of(2026, 5, 11),
             1,
-            LessonStatus.SCHEDULED,
-            TeacherAttendanceStatus.ABSENT
+            LessonStatus.SCHEDULED
         );
         Lesson firstTeacherLesson = lesson(
             "김교사",
             "국어",
             LocalDate.of(2026, 5, 12),
             1,
-            LessonStatus.SCHEDULED,
-            TeacherAttendanceStatus.ABSENT
+            LessonStatus.SCHEDULED
         );
         given(lessonRepository.findAllByIsDeletedFalseOrderByDateAscPeriodAsc())
             .willReturn(List.of(secondTeacherLesson, firstTeacherLesson));
 
         AdminPage<AdminLessonRow> page = lessonAdminViewService.getLessons(new LessonFilter(
-            null,
             null,
             null,
             null,
@@ -117,8 +109,7 @@ class LessonAdminViewServiceTest {
         String subjectName,
         LocalDate date,
         int period,
-        LessonStatus status,
-        TeacherAttendanceStatus teacherAttendance
+        LessonStatus status
     ) {
         User teacher = User.builder()
             .nickname(teacherName)
@@ -147,7 +138,6 @@ class LessonAdminViewServiceTest {
             period
         );
         lesson.updateStatus(status);
-        lesson.updateTeacherAttendance(teacherAttendance);
         return lesson;
     }
 }

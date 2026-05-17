@@ -216,7 +216,6 @@ public class LessonReadTest extends LessonBaseTest {
             .body("startTime", notNullValue())
             .body("endTime", notNullValue())
             .body("status", notNullValue())
-            .body("teacherAttendance", notNullValue())
             .body("teacherName", notNullValue())
             .body("subjectName", notNullValue())
             .log().all();
@@ -247,7 +246,6 @@ public class LessonReadTest extends LessonBaseTest {
             .body("date", notNullValue())
             .body("period", anyOf(is(1), is(2), is(3)))
             .body("status", notNullValue())
-            .body("teacherAttendance", notNullValue())
             .log().all();
     }
 

@@ -12,7 +12,7 @@ import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.exception.LessonNotFoundException;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
-import geumjeongyahak.domain.lesson.repository.StudentAttendanceRepository;
+import geumjeongyahak.domain.users.entity.User;
 
 /**
  * Lesson 도메인의 Proxy Service.
@@ -23,7 +23,6 @@ import geumjeongyahak.domain.lesson.repository.StudentAttendanceRepository;
 public class LessonProxyService {
 
     private final LessonRepository lessonRepository;
-    private final StudentAttendanceRepository studentAttendanceRepository;
 
     /**
      * 삭제되지 않은 수업 조회. 없으면 예외 발생.
@@ -37,6 +36,30 @@ public class LessonProxyService {
     @Transactional(readOnly = true)
     public List<Lesson> getActiveLessonsByTeacherAndDate(Long teacherId, LocalDate date) {
         return lessonRepository.findAllByTeacher_IdAndDateAndIsDeletedFalse(teacherId, date);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Lesson> getActiveLessonsByClassroomAndDate(Long classroomId, LocalDate date) {
+        return lessonRepository.findAllBySubjectClassroomIdAndDateAndIsDeletedFalseOrderByPeriodAscStartTimeAsc(
+            classroomId,
+            date
+        );
+    }
+
+    @Transactional
+    public void updateActiveLessonsStatusByClassroomAndDate(Long classroomId, LocalDate date, LessonStatus status) {
+        lessonRepository.findAllBySubjectClassroomIdAndDateAndIsDeletedFalseOrderByPeriodAscStartTimeAsc(
+            classroomId,
+            date
+        ).forEach(lesson -> lesson.updateStatus(status));
+    }
+
+    @Transactional
+    public void updateActiveLessonsTeacherByClassroomAndDate(Long classroomId, LocalDate date, User teacher) {
+        lessonRepository.findAllBySubjectClassroomIdAndDateAndIsDeletedFalseOrderByPeriodAscStartTimeAsc(
+            classroomId,
+            date
+        ).forEach(lesson -> lesson.updateTeacher(teacher));
     }
 
     @Transactional(readOnly = true)
@@ -103,7 +126,6 @@ public class LessonProxyService {
             .anyMatch(lesson ->
                 lesson.getStatus() != LessonStatus.SCHEDULED
                     || (lesson.getNote() != null && !lesson.getNote().isBlank())
-                    || studentAttendanceRepository.existsByLessonId(lesson.getId())
             );
     }
 

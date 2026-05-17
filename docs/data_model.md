@@ -32,15 +32,12 @@
 | Subjects | Lessons | subject_id | 과목별 수업 |
 | Users | Subjects | teacher_id | 봉사자가 담당하는 과목 |
 | Users | Lessons | teacher_id | 봉사자가 진행하는 수업 |
-| Lessons | Student Attendances | lesson_id | 수업별 학생 출석 |
-| Lessons | Lesson Reviews | lesson_id | 수업별 수업 일지 |
-| Lessons | Absence Requests | lesson_id | 수업별 결석 요청 |
+| Daily Schedules | Absence Requests | daily_schedule_id | 하루 일정별 결석 요청 |
 | Lesson Exchange Requests | Lesson Exchange Proposals | request_id | 교환 요청별 제안 |
 | Subjects | Purchase Requests | subject_id | 과목별 기자재 구입 요청 |
 | Purchase Requests | Purchase Receipts | purchase_request_id | 구입 요청별 영수증 |
 | Users | 각종 요청들 | requested_by | 요청자 |
 | Users | 각종 요청들 | approval_by | 승인자 |
-| Students | Student Attendances | student_id | 학생별 출석 기록 |
 | Files | Post Files | file_id | 게시글 이미지 파일 |
 | Files | Post Attachments | file_id | 게시글 첨부 파일 |
 | Files | Purchase Request Receipts | file_id | 기자재 구입 영수증 파일 |
@@ -49,7 +46,7 @@
 
 | 엔티티 A | 엔티티 B | 조인 테이블 | 설명 |
 |----------|----------|-------------|------|
-| Students | Lessons | student_enrollments | 학생 수업 등록 |
+| Students | Subjects | student_enrollments | 학생 과목 등록 |
 
 ### 2.2 ERD 다이어그램
 
@@ -68,15 +65,9 @@ erDiagram
 
     %% 학생 관련
     students ||--o{ student_enrollments : "enrolls"
-    lessons ||--o{ student_enrollments : "has"
-    students ||--o{ student_attendances : "has"
-    lessons ||--o{ student_attendances : "tracks"
-
-    %% 수업 일지
-    lessons ||--o| lesson_reviews : "has"
-
+    subjects ||--o{ student_enrollments : "has"
     %% 요청들
-    lessons ||--o{ absence_requests : "has"
+    daily_schedules ||--o{ absence_requests : "has"
     users ||--o{ lesson_exchange_requests : "requests"
     lesson_exchange_requests ||--o{ lesson_exchange_proposals : "has"
     users ||--o{ lesson_exchange_proposals : "proposes"
@@ -130,31 +121,19 @@ erDiagram
         date date
         time start_time
         time end_time
-        varchar attendance
+        varchar status
+        text note
     }
 
     student_enrollments {
         bigint id PK
         bigint student_id FK
-        bigint lesson_id FK
-    }
-
-    student_attendances {
-        bigint id PK
-        bigint lesson_id FK
-        bigint student_id FK
-        varchar attendance
-    }
-
-    lesson_reviews {
-        bigint id PK
-        bigint lesson_id FK
-        text content
+        bigint subject_id FK
     }
 
     absence_requests {
         bigint id PK
-        bigint lesson_id FK
+        bigint daily_schedule_id FK
         bigint requested_by FK
         text reason
         timestamp expires_at
@@ -303,7 +282,7 @@ erDiagram
 
 ### 3.7 수업 (lessons)
 
-수업을 관리하는 엔티티입니다. 봉사자가 관리자와 협의하여 수업을 생성할 때, 시작일, 종료일, 요일, 시간 등을 기반으로 자동 생성됩니다. 수업이 생성된 후에는 수업에 등록된 학생들에게 자동으로 수업 출석을 생성합니다. 
+수업을 관리하는 엔티티입니다. 봉사자가 관리자와 협의하여 수업을 생성할 때, 시작일, 종료일, 요일, 시간 등을 기반으로 자동 생성됩니다.
 이 수업은 캘린더 뷰 형태로 일별 / 월별로 조회할 수 있습니다. 
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
@@ -314,61 +293,39 @@ erDiagram
 | date | DATE | NOT NULL | 수업 날짜 |
 | start_time | TIME | NOT NULL | 수업 시작 시간 |
 | end_time | TIME | NOT NULL | 수업 종료 시간 |
-| attendance | VARCHAR(20) | NOT NULL | 교사(봉사자)의 출석 여부 |
+| status | VARCHAR(20) | NOT NULL | 수업 상태 |
+| note | TEXT | NULL | DailySchedule 수업 일지에서 저장한 교시별 수업 내용 |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
-### 3.8 학생 등록 (student_enrollments)
+### 3.8 학생 과목 등록 (student_enrollments)
 
-학생이 수업에 등록하는 엔티티입니다. 수업이 생성된 뒤 학생은 원하는 수업을 등록할 수 있습니다.
+학생이 과목에 등록하는 엔티티입니다. 등록된 학생은 해당 과목이 속한 분반의 DailySchedule 학생 출석부 초기화 대상이 됩니다.
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
 | id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
 | student_id | BIGINT | FOREIGN KEY | 학생 ID |
-| lesson_id | BIGINT | FOREIGN KEY | 수업 ID |
+| subject_id | BIGINT | FOREIGN KEY | 과목 ID |
+| enrollment_request_id | BIGINT | FOREIGN KEY, NULL | 등록 요청 ID |
+| status | VARCHAR(20) | NOT NULL | 등록 상태 |
+| enrolled_at | TIMESTAMP | NOT NULL | 등록 시각 |
+| withdrawn_at | TIMESTAMP | NULL | 철회 시각 |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
 
-### 3.9 학생 출석 (student_attendances)
+### 3.9 결석 요청 (absence_requests)
 
-학생의 출석을 관리하는 엔티티입니다. 수업이 생성된 뒤 등록된 학생에 대해 자동 생성되어 출석을 관리합니다.
-
-| 필드명 | 데이터 타입 | 제약조건 | 설명 |
-|--------|-------------|----------|------|
-| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
-| lesson_id | BIGINT | FOREIGN KEY | 수업 ID |
-| student_id | BIGINT | FOREIGN KEY | 학생 ID |
-| attendance | VARCHAR(20) | NOT NULL | 학생의 출석 여부 |
-| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
-| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
-
-
-### 3.10 수업 일지 (lesson_reviews) 
-
-수업 일지를 관리하는 엔티티입니다. 봉사자가 매 수업이 끝난 뒤 특이사항등을 기재한 수업 일지를 작성합니다.
+교사(봉사자)는 하루 일정에 부득이하게 결석할 때 이를 요청하기 위해 사용하는 엔티티입니다.
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
 | id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
-| lesson_id | BIGINT | FOREIGN KEY | 수업 ID |
-| content | TEXT | NOT NULL | 수업 일지 내용 |
-| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
-| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
-
-
-### 3.11 결석 요청 (absence_requests)
-
-교사(봉사자)는 수업에 부득이하게 결석할 때 이를 요청하기 위해 사용하는 엔티티입니다.
-
-| 필드명 | 데이터 타입 | 제약조건 | 설명 |
-|--------|-------------|----------|------|
-| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
-| lesson_id | BIGINT | FOREIGN KEY | 수업 ID |
+| daily_schedule_id | BIGINT | FOREIGN KEY | 하루 일정 ID |
 | requested_by | BIGINT | FOREIGN KEY | 결석 요청자 ID |
 | reason | TEXT | NOT NULL | 결석 이유 |
-| expires_at | TIMESTAMP | NOT NULL | 결석 요청 만료 시각. 대상 수업일의 00:00으로 자동 설정 |
+| expires_at | TIMESTAMP | NOT NULL | 결석 요청 만료 시각. 대상 하루 일정 수업일의 00:00으로 자동 설정 |
 | status | VARCHAR(20) | NOT NULL | 결석 요청 상태 |
 | approval_at | TIMESTAMP | NULL | 결석 요청 승인일시 |
 | approval_by | BIGINT | FOREIGN KEY | 결석 요청 승인자 ID |
@@ -381,16 +338,16 @@ erDiagram
 - `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED` 상태는 재처리할 수 없음
 
 **정책:**
-- 요청자는 대상 수업의 담당 교사여야 함. 관리자/매니저도 담당 교사가 아니면 대리 생성할 수 없음
-- 같은 수업과 같은 요청자 기준으로 `PENDING`, `APPROVED` 요청이 있으면 중복 생성 불가
+- 요청자는 대상 하루 일정의 담당 교사여야 함. 관리자/매니저도 담당 교사가 아니면 대리 생성할 수 없음
+- 같은 하루 일정과 같은 요청자 기준으로 `PENDING`, `APPROVED` 요청이 있으면 중복 생성 불가
 - `REJECTED`, `CANCELLED` 요청은 재요청 가능
 - 취소는 물리 삭제가 아니라 `CANCELLED` 상태 변경이며 요청자 본인만 가능
-- 승인 시 `AbsenceApprovedEvent`가 발행되어 대상 수업의 교사 출석 상태가 `EXCUSED`로 변경됨
 - 만료 시각이 지난 `PENDING` 요청은 스케줄러가 `EXPIRED`로 변경함
 
-### 3.12 수업 교환 요청 (lesson_exchange_requests)
+### 3.10 수업 교환 요청 (lesson_exchange_requests)
 
 교사(봉사자)는 특정 날짜의 자신의 수업 전체에 대해 하루 단위 수업 교환을 요청할 때 사용하는 엔티티입니다.
+현재 수업 교환 요청은 `lesson_date`와 요청자 기준 활성 Lesson 목록으로 대상을 계산합니다. 장기적으로는 DailySchedule 기반 전환을 검토할 수 있지만, 현 구현에서는 제안 수락 시 실제 교시별 Lesson 담당 교사를 변경해야 하므로 Lesson 기반 구조를 유지합니다.
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
@@ -414,7 +371,7 @@ erDiagram
 - `PENDING` → `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED`
 - `APPROVED` → `COMPLETED`, `EXPIRED`
 
-### 3.12.1 수업 교환 제안 (lesson_exchange_proposals)
+### 3.10.1 수업 교환 제안 (lesson_exchange_proposals)
 
 승인된 수업 교환 요청에 대해 다른 봉사자가 교환형 또는 대체형 제안을 등록할 때 사용하는 엔티티입니다.
 

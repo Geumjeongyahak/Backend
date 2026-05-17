@@ -1,6 +1,7 @@
 package geumjeongyahak.e2e.request;
 
 import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleRepository;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.entity.UserPermission;
 import geumjeongyahak.domain.users.repository.UserPermissionRepository;
@@ -32,7 +33,7 @@ import static java.util.Map.entry;
  * </ul>
  *
  * <h3>레슨 기반 요청 주의사항</h3>
- * AbsenceRequest·LessonExchangeRequest 는 lessonId 를 통해 수업 상태를 변경하므로
+ * AbsenceRequest 는 DailySchedule, LessonExchangeRequest 는 lessonId 를 통해 수업 상태를 변경하므로
  * 각 테스트 메서드는 {@link TestLessonHelper}로 독립적인 수업을 생성해야 한다.
  */
 @Tag("request")
@@ -51,6 +52,9 @@ public abstract class RequestBaseTest extends BaseE2ETest {
 
     @Autowired
     protected UserPermissionRepository userPermissionRepository;
+
+    @Autowired
+    protected DailyScheduleRepository dailyScheduleRepository;
 
     protected String adminToken;
     protected String managerToken;
@@ -75,17 +79,34 @@ public abstract class RequestBaseTest extends BaseE2ETest {
     // ──────────────────────────────────────────────────────
 
     protected Long createAbsenceRequest(String authHeader, Long lessonId, String reason) {
+        Long dailyScheduleId = getDailyScheduleIdByLessonId(lessonId);
         return given()
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, authHeader)
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonId", lessonId, "reason", reason))
+            .body(Map.of("dailyScheduleId", dailyScheduleId, "reason", reason))
             .post()
             .then()
             .statusCode(201)
             .extract()
             .jsonPath()
             .getLong("id");
+    }
+
+    protected Long getDailyScheduleIdByLessonId(Long lessonId) {
+        LocalDate lessonDate = LocalDate.parse(lessonHelper.getLessonDate(getAuthHeader(adminToken), lessonId));
+        return getDailyScheduleIdByLessonDate(lessonDate);
+    }
+
+    protected Long getDailyScheduleIdByLessonDate(LocalDate lessonDate) {
+        return getDailyScheduleIdByClassroomAndLessonDate(CLASSROOM_ID, lessonDate);
+    }
+
+    protected Long getDailyScheduleIdByClassroomAndLessonDate(Long classroomId, LocalDate lessonDate) {
+        return dailyScheduleRepository
+            .findByClassroomIdAndLessonDateAndIsDeletedFalse(classroomId, lessonDate)
+            .orElseThrow()
+            .getId();
     }
 
     protected Long createLessonExchangeRequest(
@@ -119,8 +140,12 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         String content,
         LocalDateTime expiresAt
     ) {
+        Long dailyScheduleId = dailyScheduleRepository
+            .findByClassroomIdAndLessonDateAndIsDeletedFalse(CLASSROOM_ID, lessonDate)
+            .orElseThrow()
+            .getId();
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("lessonDate", lessonDate.toString());
+        body.put("dailyScheduleId", dailyScheduleId);
         body.put("title", title);
         body.put("content", content);
         body.put("expiresAt", expiresAt.toString());
