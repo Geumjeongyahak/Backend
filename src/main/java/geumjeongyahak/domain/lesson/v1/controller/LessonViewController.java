@@ -1,7 +1,6 @@
 package geumjeongyahak.domain.lesson.v1.controller;
 
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
-import geumjeongyahak.domain.lesson.enums.TeacherAttendanceStatus;
 import geumjeongyahak.domain.lesson.service.LessonAdminViewService;
 import geumjeongyahak.domain.lesson.service.LessonAdminViewService.LessonFilter;
 import java.time.LocalDate;
@@ -28,20 +27,18 @@ public class LessonViewController {
         @RequestParam(required = false) @DateTimeFormat(iso = DATE) LocalDate startDate,
         @RequestParam(required = false) @DateTimeFormat(iso = DATE) LocalDate endDate,
         @RequestParam(required = false) LessonStatus status,
-        @RequestParam(required = false) TeacherAttendanceStatus teacherAttendance,
         @RequestParam(required = false) Integer page,
         @RequestParam(required = false) Integer size,
         @RequestParam(required = false) String sort,
         Model model,
         Authentication authentication
     ) {
-        LessonFilter filter = new LessonFilter(startDate, endDate, status, teacherAttendance, page, size, sort);
+        LessonFilter filter = new LessonFilter(startDate, endDate, status, page, size, sort);
         model.addAttribute("active", "lessons");
         model.addAttribute("adminName", authentication.getName());
         model.addAttribute("filter", filter);
         model.addAttribute("lessonsPage", lessonAdminViewService.getLessons(filter));
         model.addAttribute("lessonStatuses", lessonAdminViewService.getStatuses());
-        model.addAttribute("teacherAttendanceStatuses", lessonAdminViewService.getTeacherAttendanceStatuses());
         return "admin/lesson/lessons";
     }
 }

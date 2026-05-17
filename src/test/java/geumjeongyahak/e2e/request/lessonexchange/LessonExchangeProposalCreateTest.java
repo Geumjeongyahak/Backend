@@ -68,7 +68,7 @@ class LessonExchangeProposalCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", proposalDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(proposalDate),
                 "content", "다음 날 수업으로 교환 가능합니다."
             ))
             .post("/{requestId}/proposals", requestId)
@@ -77,6 +77,7 @@ class LessonExchangeProposalCreateTest extends RequestBaseTest {
             .body("id", notNullValue())
             .body("requestId", equalTo(requestId.intValue()))
             .body("proposalType", equalTo("EXCHANGE"))
+            .body("dailyScheduleId", equalTo(getDailyScheduleIdByLessonDate(proposalDate).intValue()))
             .body("$", not(hasKey("proposalScope")))
             .body("lessonDate", equalTo(proposalDate.toString()))
             .body("$", not(hasKey("startPeriod")))
@@ -129,7 +130,7 @@ class LessonExchangeProposalCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", requestDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(requestDate),
                 "content", "같은 날짜 수업으로 교환 가능합니다."
             ))
             .post("/{requestId}/proposals", requestId)
@@ -228,7 +229,7 @@ class LessonExchangeProposalCreateTest extends RequestBaseTest {
         Long proposalId = createProposal(
             requestId,
             getAuthHeader(volunteer2Token),
-            Map.of("lessonDate", proposalDate.toString(), "content", "첫 제안")
+            Map.of("dailyScheduleId", getDailyScheduleIdByLessonDate(proposalDate), "content", "첫 제안")
         );
         proposalIds.add(proposalId);
 
@@ -236,7 +237,7 @@ class LessonExchangeProposalCreateTest extends RequestBaseTest {
             .basePath("/api/v1/lesson-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonDate", proposalDate.toString(), "content", "중복 제안"))
+            .body(Map.of("dailyScheduleId", getDailyScheduleIdByLessonDate(proposalDate), "content", "중복 제안"))
             .post("/{requestId}/proposals", requestId)
             .then()
             .statusCode(409);
@@ -279,15 +280,15 @@ class LessonExchangeProposalCreateTest extends RequestBaseTest {
             .basePath("/api/v1/lesson-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
-            .body(Map.of("lessonDate", LocalDate.now().plusDays(14).toString()))
+            .body(Map.of("dailyScheduleId", 99999L))
             .post("/{requestId}/proposals", requestId)
             .then()
             .statusCode(400);
     }
 
     @Test
-    @DisplayName("교환형 제안 조건에 맞는 수업이 없으면 -> 400")
-    void createProposal_withoutProposalLessons_returns400() {
+    @DisplayName("존재하지 않는 DailySchedule으로 교환형 제안 생성 -> 404")
+    void createProposal_withoutDailySchedule_returns404() {
         Long requestId = createApprovedRequest(LocalDate.now().plusDays(15));
 
         given()
@@ -295,17 +296,17 @@ class LessonExchangeProposalCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", LocalDate.now().plusDays(16).toString(),
+                "dailyScheduleId", 99999L,
                 "content", "해당 날짜 수업 없음"
             ))
             .post("/{requestId}/proposals", requestId)
             .then()
-            .statusCode(400);
+            .statusCode(404);
     }
 
     @Test
-    @DisplayName("교환형 제안에 여러 반 수업이 섞이면 -> 409")
-    void createProposal_acrossMultipleClassrooms_returns409() {
+    @DisplayName("다른 반 DailySchedule으로 교환형 제안 생성 -> 201")
+    void createProposal_withAnotherClassroomDailySchedule_returns201() {
         LocalDate requestDate = LocalDate.now().plusDays(16);
         LocalDate proposalDate = LocalDate.now().plusDays(17);
         Long requestId = createApprovedRequest(requestDate);
@@ -314,18 +315,25 @@ class LessonExchangeProposalCreateTest extends RequestBaseTest {
         Long subjectId2 = registerSubject(2L, TEACHER2_ID);
         registerLesson(subjectId1, TEACHER2_ID, proposalDate, "09:00:00", "09:50:00", 1);
         registerLesson(subjectId2, TEACHER2_ID, proposalDate, "10:00:00", "10:50:00", 2);
+        Long dailyScheduleId = getDailyScheduleIdByClassroomAndLessonDate(2L, proposalDate);
 
-        given()
+        Long proposalId = given()
             .basePath("/api/v1/lesson-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", proposalDate.toString(),
-                "content", "다른 반 수업이 섞인 교환 제안"
+                "dailyScheduleId", dailyScheduleId,
+                "content", "다른 반 DailySchedule을 선택한 교환 제안"
             ))
             .post("/{requestId}/proposals", requestId)
             .then()
-            .statusCode(409);
+            .statusCode(201)
+            .body("dailyScheduleId", equalTo(dailyScheduleId.intValue()))
+            .extract()
+            .jsonPath()
+            .getLong("id");
+
+        proposalIds.add(proposalId);
     }
 
     private Long createApprovedRequest(LocalDate lessonDate) {

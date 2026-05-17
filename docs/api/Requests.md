@@ -7,7 +7,8 @@
 ## 1. 역할과 범위
 
 - 교사 이상 권한(`VOLUNTEER`, `MANAGER`, `ADMIN`) 사용자가 요청 기능에 접근할 수 있습니다.
-- 결석 요청은 대상 수업의 담당 교사만 생성할 수 있습니다. 관리자/매니저도 담당 교사가 아니면 대리 생성할 수 없습니다.
+- 결석 요청은 대상 하루 일정의 담당 교사만 생성할 수 있습니다. 관리자/매니저도 담당 교사가 아니면 대리 생성할 수 없습니다.
+- 결석 요청은 캘린더 뷰가 아니라 수업 결강 페이지에서 생성하며, 요청 대상은 `Lesson`이 아닌 `DailySchedule`입니다.
 - 봉사자가 자신의 수업에 대해 교환 요청을 생성, 수정, 취소합니다.
 - 결석 요청은 관리자 또는 `absence-request:manage:*` 권한자가 승인/반려합니다.
 - 수업 교환 요청은 관리자 또는 `lesson-exchange-request:manage:*` 권한자가 승인/반려합니다.
@@ -40,16 +41,18 @@
 ### 2.3 하루 단위 교환 규칙
 
 - 요청과 제안은 교시 범위를 입력받지 않습니다.
-- 요청은 `lessonDate`에 해당하는 요청자 수업 전체를 하루 단위로 대상으로 삼습니다.
-- 교환형 제안은 `lessonDate`에 해당하는 제안자 수업 전체를 하루 단위로 대상으로 삼습니다.
-- 교환형 제안은 요청과 같은 날짜로 생성하거나 수정할 수 없습니다.
+- 요청은 `dailyScheduleId`에 해당하는 하루 일정을 대상으로 삼습니다.
+- 교환형 제안은 `dailyScheduleId`에 해당하는 제안자 하루 일정을 대상으로 삼습니다.
+- 교환형 제안은 요청과 같은 `DailySchedule`로 생성하거나 수정할 수 없습니다.
+- 제안 수락 시 `DailySchedule.teacher`를 변경하고, 해당 DailySchedule의 반/날짜에 연결된 `Lesson.teacher`도 함께 변경합니다.
+- 응답의 `lessonDate`는 기존 화면 호환과 이력 표시를 위한 snapshot 성격의 값이며, 요청/제안의 기준 식별자는 `dailyScheduleId`입니다.
 
 ### 2.4 제안 타입 규칙
 
 | 조건 | proposalType |
 |---|---|
-| `lessonDate` 있음 | `EXCHANGE` |
-| `lessonDate` 없음 | `SUBSTITUTION` |
+| `dailyScheduleId` 있음 | `EXCHANGE` |
+| `dailyScheduleId` 없음 | `SUBSTITUTION` |
 
 - `EXCHANGE`는 제안자가 자신의 다른 수업을 내놓는 교환형 제안입니다.
 - `SUBSTITUTION`은 제안 수업 없이 요청 수업을 대신 맡는 대체형 제안입니다.
@@ -77,7 +80,7 @@
 
 | API | 권한 |
 |---|---|
-| 결석 요청 생성 | `VOLUNTEER`, `MANAGER`, `ADMIN` + 대상 수업 담당 교사 조건 |
+| 결석 요청 생성 | `VOLUNTEER`, `MANAGER`, `ADMIN` + 대상 하루 일정 담당 교사 조건 |
 | 결석 요청 목록/상세 조회 | `VOLUNTEER`, `MANAGER`, `ADMIN`, `absence-request:read:*` |
 | 결석 요청 전체 조회 | `ADMIN`, `absence-request:read:*` |
 | 결석 요청 승인/반려 | `ADMIN`, `absence-request:manage:*` |
@@ -122,18 +125,20 @@
 
 ## 5. 결석 요청 API
 
+결석 요청은 하루 단위 결강 요청입니다. 수업 결강 페이지는 `DailySchedule` 목록 또는 상세를 기준으로 요청 대상을 선택하고, 생성 API에는 `dailyScheduleId`를 전달합니다.
+
 ## 5.1 결석 요청 생성
 
 - **URL**: `/api/v1/absence-requests`
 - **Method**: `POST`
-- **Description**: 대상 수업의 담당 교사가 결석 요청을 생성합니다. `ADMIN`, `MANAGER` 권한이 있어도 담당 교사가 아니면 대리 생성할 수 없습니다.
+- **Description**: 대상 하루 일정의 담당 교사가 결석 요청을 생성합니다. `ADMIN`, `MANAGER` 권한이 있어도 담당 교사가 아니면 대리 생성할 수 없습니다.
 
 ### Request Body 예시
 
 ```json
 {
-  "lessonId": 1,
   "title": "개인 사정으로 결석합니다",
+  "dailyScheduleId": 1,
   "reason": "개인 사정으로 인한 결석"
 }
 ```
@@ -143,7 +148,7 @@
 ```json
 {
   "id": 10,
-  "lessonId": 1,
+  "dailyScheduleId": 1,
   "lessonDate": "2026-05-12",
   "classroomId": 1,
   "classroomName": "벚꽃반",
@@ -163,18 +168,18 @@
 ### 구현 기준 동작
 
 - 요청은 `PENDING` 상태로 생성됩니다.
-- `expiresAt`은 입력받지 않고 대상 수업일의 00:00으로 자동 설정합니다.
-- 같은 수업에 같은 요청자의 `PENDING` 또는 `APPROVED` 결석 요청이 있으면 중복 생성할 수 없습니다.
+- `expiresAt`은 입력받지 않고 대상 하루 일정 수업일의 00:00으로 자동 설정합니다.
+- 같은 하루 일정에 같은 요청자의 `PENDING` 또는 `APPROVED` 결석 요청이 있으면 중복 생성할 수 없습니다.
 - `REJECTED`, `CANCELLED` 요청은 재요청을 막지 않습니다.
-- 생성 시점에 이미 만료된 수업 당일 또는 과거 수업은 요청할 수 없습니다.
+- 생성 시점에 이미 만료된 하루 일정 당일 또는 과거 일정은 요청할 수 없습니다.
 
 ### 주요 실패 케이스
 
 | 상황 | HTTP |
 |---|---|
-| 대상 수업 담당 교사가 아님 | 403 |
-| 같은 수업에 진행 중인 결석 요청 존재 | 409 |
-| 이미 만료된 수업에 대한 요청 | 400 |
+| 대상 하루 일정 담당 교사가 아님 | 403 |
+| 같은 하루 일정에 진행 중인 결석 요청 존재 | 409 |
+| 이미 만료된 하루 일정에 대한 요청 | 400 |
 
 ## 5.2 결석 요청 목록 조회
 
@@ -204,7 +209,7 @@
   "content": [
     {
       "id": 10,
-      "lessonId": 1,
+      "dailyScheduleId": 1,
       "lessonDate": "2026-05-12",
       "classroomId": 1,
       "classroomName": "벚꽃반",
@@ -271,7 +276,7 @@
 
 - 요청 상태가 `APPROVED`로 변경됩니다.
 - `approvalAt`, `approvalBy`가 기록됩니다.
-- `AbsenceApprovedEvent`가 발행되고, 대상 수업의 `teacherAttendance`가 `EXCUSED`로 변경됩니다.
+- 승인 이벤트를 통해 연결된 DailySchedule 교사 출석이 `EXCUSED`로 반영됩니다.
 - 이미 `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED` 상태인 요청은 재처리할 수 없습니다.
 
 ## 5.6 결석 요청 반려
@@ -303,16 +308,18 @@
 ### Side Effects
 
 - 요청을 물리 삭제하지 않고 상태를 `CANCELLED`로 변경합니다.
-- 수업 출석 상태를 변경하지 않습니다.
+- DailySchedule 교사 출석 상태를 변경하지 않습니다.
 - 본인 요청이 아니거나 이미 처리된 요청이면 취소할 수 없습니다.
 
 ## 5.8 결석 요청 자동 만료
 
 - `PENDING` 상태의 결석 요청 중 `expiresAt`이 지난 요청은 스케줄러가 자동으로 `EXPIRED` 처리합니다.
-- `expiresAt`은 수업 하루 전까지 처리를 유도하기 위해 대상 수업일의 00:00으로 자동 설정됩니다.
+- `expiresAt`은 수업 하루 전까지 처리를 유도하기 위해 대상 하루 일정 수업일의 00:00으로 자동 설정됩니다.
 - 만료된 요청은 승인, 반려, 취소할 수 없습니다.
 
 ## 6. 수업 교환 요청 API
+
+수업 교환 요청은 `DailySchedule` 기반으로 동작합니다. API 입력은 `dailyScheduleId`이며, 서비스는 해당 DailySchedule의 담당 교사와 요청자를 검증한 뒤 하루 단위 교환 요청을 생성합니다. 제안 수락 시에는 DailySchedule의 담당 교사를 변경하고, 같은 반/날짜의 활성 Lesson 담당 교사도 함께 변경합니다.
 
 ## 6.1 요청 생성
 
@@ -324,7 +331,7 @@
 
 ```json
 {
-  "lessonDate": "2026-05-12",
+  "dailyScheduleId": 1,
   "title": "금요일 수업 교환 요청",
   "content": "개인 일정으로 인해 교환이 필요합니다.",
   "expiresAt": "2026-05-09T23:00:00"
@@ -340,8 +347,8 @@
 
 | 상황 | HTTP |
 |---|---|
-| 본인 수업이 아닌 날짜 | 403 |
-| 이미 같은 날짜에 `PENDING`/`APPROVED` 요청 존재 | 409 |
+| 본인이 담당하지 않는 DailySchedule | 403 |
+| 이미 같은 DailySchedule에 `PENDING`/`APPROVED` 요청 존재 | 409 |
 | 교환 요청 가능 기간(현재+4일) 이전 수업 | 400 |
 | 만료 시각 정책 위반 | 400 |
 
@@ -375,7 +382,7 @@
 
 - 요청 생성과 동일한 입력 정책을 사용합니다.
 - 수정 후 반 이름 snapshot도 함께 갱신됩니다.
-- 요청 날짜를 변경하면 변경된 날짜의 요청자 수업 전체를 하루 단위로 다시 검증합니다.
+- `dailyScheduleId`를 변경하면 변경된 DailySchedule의 담당 교사와 정책을 다시 검증합니다.
 
 ## 6.5 요청 취소
 
@@ -430,7 +437,7 @@
 
 ```json
 {
-  "lessonDate": "2026-05-13",
+  "dailyScheduleId": 2,
   "content": "수요일 수업으로 교환 가능합니다."
 }
 ```
@@ -446,8 +453,8 @@
 ### 구현 기준 동작
 
 - 같은 요청에 대해 동일 제안자는 `ACTIVE` 제안 1건만 가질 수 있습니다.
-- `EXCHANGE` 제안은 요청 날짜와 같은 날짜로 생성할 수 없습니다.
-- `EXCHANGE` 제안은 제안 날짜에 제안자의 수업이 있어야 하며, 해당 날짜 수업 전체가 교환 대상입니다.
+- `EXCHANGE` 제안은 요청 DailySchedule과 같은 DailySchedule로 생성할 수 없습니다.
+- `EXCHANGE` 제안은 제안자가 담당하는 DailySchedule이어야 하며, 해당 DailySchedule의 반/날짜 수업 전체가 교환 대상입니다.
 - `SUBSTITUTION` 제안은 요청 수업 시간대에 제안자의 기존 수업이 충돌하면 생성할 수 없습니다.
 
 ## 7.2 제안 목록 조회
@@ -513,8 +520,8 @@ sequenceDiagram
     participant ProposalAPI as LessonExchangeProposalController
     participant RequestService as LessonExchangeRequestService
     participant ProposalService as LessonExchangeProposalService
-    participant EventHandler as RequestEventHandler
-    participant LessonService as LessonService
+    participant EventHandler as DailyScheduleExchangeEventHandler
+    participant DailyScheduleService as DailyScheduleService
 
     Requester->>RequestAPI: POST /lesson-exchange-requests
     RequestAPI->>RequestService: createLessonExchangeRequest(...)
@@ -530,8 +537,8 @@ sequenceDiagram
 
     Requester->>ProposalAPI: PATCH /{requestId}/proposals/{proposalId}/accept
     ProposalAPI->>ProposalService: acceptLessonExchangeProposal(...)
-    ProposalService->>EventHandler: LessonExchangeAcceptedEvent 발행
-    EventHandler->>LessonService: applyTeacherExchange(...)
+    ProposalService->>EventHandler: DailyScheduleExchangeAcceptedEvent 발행
+    EventHandler->>DailyScheduleService: applyTeacherExchange(...)
     ProposalService-->>Requester: 요청 COMPLETED, 제안 ACCEPTED
 ```
 

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -757,13 +758,7 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
 
     private void setRequestExpiresAt(Long requestId, LocalDateTime expiresAt) {
         var request = lessonExchangeRequestRepository.findById(requestId).orElseThrow();
-        request.update(
-            request.getLessonDate(),
-            request.getTitle(),
-            request.getClassroomNameSnapshot(),
-            request.getContent(),
-            expiresAt
-        );
+        ReflectionTestUtils.setField(request, "expiresAt", expiresAt);
         lessonExchangeRequestRepository.save(request);
     }
 

@@ -73,7 +73,7 @@ class LessonExchangeProposalAcceptTest extends RequestBaseTest {
             requestId,
             getAuthHeader(volunteer2Token),
             Map.of(
-                "lessonDate", proposalDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(proposalDate),
                 "content", "교환 제안"
             )
         );
@@ -242,7 +242,7 @@ class LessonExchangeProposalAcceptTest extends RequestBaseTest {
             requestId,
             getAuthHeader(volunteer2Token),
             Map.of(
-                "lessonDate", proposalDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(proposalDate),
                 "content", "교시 수가 다른 교환 제안"
             )
         );

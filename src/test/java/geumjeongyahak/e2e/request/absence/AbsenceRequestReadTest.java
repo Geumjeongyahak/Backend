@@ -50,9 +50,9 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID);
 
         lessonIdForVolunteer1 = lessonHelper.createLessonAndGetId(
-            getAuthHeader(adminToken), subjectId, TEACHER_ID);
+            getAuthHeader(adminToken), subjectId, TEACHER_ID, "2027-09-01", "09:00:00", "10:00:00", 1);
         lessonIdForVolunteer2 = lessonHelper.createLessonAndGetId(
-            getAuthHeader(adminToken), subjectId, TEACHER2_ID);
+            getAuthHeader(adminToken), subjectId, TEACHER2_ID, "2027-09-02", "09:00:00", "10:00:00", 1);
 
         requestIdByVolunteer1 = createAbsenceRequest(
             getAuthHeader(volunteerToken), lessonIdForVolunteer1, "봉사자1 결석 요청", "봉사자1 결석 사유");

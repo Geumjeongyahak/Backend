@@ -14,7 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import geumjeongyahak.domain.lesson.repository.StudentAttendanceRepository;
+import geumjeongyahak.domain.daily_schedule.repository.DailyStudentAttendanceRepository;
 import geumjeongyahak.domain.student.repository.StudentRepository;
 import geumjeongyahak.domain.student.v1.dto.request.CreateStudentRequest;
 import geumjeongyahak.domain.student.v1.dto.request.UpdateStudentRequest;
@@ -24,7 +24,7 @@ import geumjeongyahak.domain.student.v1.dto.response.StudentResponse;
 class StudentListReadTest extends StudentBaseTest {
 
     @Autowired
-    private StudentAttendanceRepository studentAttendanceRepository;
+    private DailyStudentAttendanceRepository dailyStudentAttendanceRepository;
 
     @Autowired
     private StudentRepository studentRepository;
@@ -33,7 +33,7 @@ class StudentListReadTest extends StudentBaseTest {
     @Override
     protected void setUp() {
         super.setUp();
-        studentAttendanceRepository.deleteAll();
+        dailyStudentAttendanceRepository.deleteAll();
         studentRepository.deleteAll();
         createSeedStudents();
     }

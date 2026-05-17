@@ -7,7 +7,7 @@
         <div class="page-title">
             <div>
                 <h1>수업</h1>
-                <p>날짜, 수업 상태, 교사 출석 상태 기준으로 수업 정보를 조회합니다.</p>
+                <p>날짜와 수업 상태 기준으로 수업 정보를 조회합니다.</p>
             </div>
         </div>
 
@@ -22,12 +22,6 @@
                 <select name="status">
                     <option value="">전체</option>
                     <option th:each="status : ${lessonStatuses}" th:value="${status.name()}" th:text="${status.displayName}" th:selected="${filter.status == status}">예정</option>
-                </select>
-            </label>
-            <label>교사 출석
-                <select name="teacherAttendance">
-                    <option value="">전체</option>
-                    <option th:each="attendance : ${teacherAttendanceStatuses}" th:value="${attendance.name()}" th:text="${attendance.displayName}" th:selected="${filter.teacherAttendance == attendance}">출석</option>
                 </select>
             </label>
             <label>페이지 크기
@@ -63,7 +57,6 @@
                         <th>교사</th>
                         <th>과목</th>
                         <th>수업 상태</th>
-                        <th>교사 출석</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -75,10 +68,9 @@
                         <td th:text="${lesson.teacherName}">홍길동</td>
                         <td th:text="${lesson.subjectName}">국어</td>
                         <td><span class="pill" th:text="${lesson.statusLabel}">예정</span></td>
-                        <td><span class="pill" th:text="${lesson.teacherAttendanceLabel}">결석</span></td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(lessonsPage.content)}">
-                        <td colspan="8" class="empty">조회된 수업이 없습니다.</td>
+                        <td colspan="7" class="empty">조회된 수업이 없습니다.</td>
                     </tr>
                     </tbody>
                 </table>
@@ -86,8 +78,8 @@
             <div class="pager">
                 <span th:text="|총 ${lessonsPage.totalElements}건 · ${lessonsPage.page + 1}/${lessonsPage.totalPages == 0 ? 1 : lessonsPage.totalPages} 페이지|">총 0건</span>
                 <div>
-                    <a class="reset-link" th:classappend="${!lessonsPage.hasPrevious()} ? 'disabled'" th:href="@{/admin/lesson/lessons(startDate=${filter.startDate},endDate=${filter.endDate},status=${filter.status},teacherAttendance=${filter.teacherAttendance},size=${lessonsPage.size},sort=${filter.sort},page=${lessonsPage.previousPage()})}">이전</a>
-                    <a class="reset-link" th:classappend="${!lessonsPage.hasNext()} ? 'disabled'" th:href="@{/admin/lesson/lessons(startDate=${filter.startDate},endDate=${filter.endDate},status=${filter.status},teacherAttendance=${filter.teacherAttendance},size=${lessonsPage.size},sort=${filter.sort},page=${lessonsPage.nextPage()})}">다음</a>
+                    <a class="reset-link" th:classappend="${!lessonsPage.hasPrevious()} ? 'disabled'" th:href="@{/admin/lesson/lessons(startDate=${filter.startDate},endDate=${filter.endDate},status=${filter.status},size=${lessonsPage.size},sort=${filter.sort},page=${lessonsPage.previousPage()})}">이전</a>
+                    <a class="reset-link" th:classappend="${!lessonsPage.hasNext()} ? 'disabled'" th:href="@{/admin/lesson/lessons(startDate=${filter.startDate},endDate=${filter.endDate},status=${filter.status},size=${lessonsPage.size},sort=${filter.sort},page=${lessonsPage.nextPage()})}">다음</a>
                 </div>
             </div>
         </section>

@@ -7,6 +7,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import geumjeongyahak.domain.request.entity.AbsenceRequest;
 import geumjeongyahak.domain.request.enums.RequestStatus;
 
@@ -24,17 +26,29 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
         Pageable pageable
     );
 
-    boolean existsByLesson_IdAndRequestedBy_Id(Long lessonId, Long requestedById);
-
-    boolean existsByLesson_IdAndRequestedBy_IdAndStatusIn(
-        Long lessonId,
+    boolean existsByDailySchedule_IdAndRequestedBy_IdAndStatusIn(
+        Long dailyScheduleId,
         Long requestedById,
         List<RequestStatus> statuses
     );
 
-    boolean existsByLesson_Id(Long lessonId);
+    boolean existsByDailySchedule_Id(Long dailyScheduleId);
 
-    boolean existsByLesson_IdIn(List<Long> lessonIds);
+    boolean existsByDailySchedule_IdIn(List<Long> dailyScheduleIds);
+
+    @Query("""
+        select count(absenceRequest) > 0
+        from AbsenceRequest absenceRequest
+        where exists (
+            select 1
+            from Lesson lesson
+            where lesson.id in :lessonIds
+                and lesson.isDeleted = false
+                and lesson.subject.classroom.id = absenceRequest.dailySchedule.classroom.id
+                and lesson.date = absenceRequest.dailySchedule.lessonDate
+        )
+        """)
+    boolean existsByDailyScheduleMatchingLessonIds(@Param("lessonIds") List<Long> lessonIds);
 
     List<AbsenceRequest> findAllByStatusInAndExpiresAtBefore(
         Collection<RequestStatus> statuses,

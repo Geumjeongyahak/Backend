@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -83,14 +84,16 @@ public class SubjectUpdateTest extends SubjectBaseTest {
     }
 
     private void createLessonExchangeRequestForTeacher(long teacherId, String lessonDate, String status) {
+        Long dailyScheduleId = findOrCreateDailySchedule(teacherId, lessonDate);
         jdbcTemplate.update(
             """
             INSERT INTO lesson_exchange_requests (
-                id, lesson_date, requested_by, title, classroom_name_snapshot, content, status, expires_at
+                id, daily_schedule_id, lesson_date, requested_by, title, classroom_name_snapshot, content, status, expires_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             1L,
+            dailyScheduleId,
             lessonDate,
             teacherId,
             "교환 요청",
@@ -103,23 +106,61 @@ public class SubjectUpdateTest extends SubjectBaseTest {
 
     private void createLessonExchangeProposalForTeacher(long teacherId, String lessonDate) {
         createLessonExchangeRequestForTeacher(NEW_TEACHER_ID, lessonDate);
+        Long dailyScheduleId = findOrCreateDailySchedule(teacherId, lessonDate);
         jdbcTemplate.update(
             """
             INSERT INTO lesson_exchange_proposals (
-                id, request_id, proposed_by, proposal_type, lesson_date, content,
+                id, request_id, proposed_by, proposal_type, daily_schedule_id, lesson_date, content,
                 classroom_name_snapshot, status
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             1L,
             1L,
             teacherId,
             "EXCHANGE",
+            dailyScheduleId,
             lessonDate,
             "교환 제안 내용",
             "벚꽃반",
             "ACTIVE"
         );
+    }
+
+    private Long findOrCreateDailySchedule(long teacherId, String lessonDate) {
+        try {
+            return jdbcTemplate.queryForObject(
+                """
+                SELECT id
+                FROM daily_schedules
+                WHERE classroom_id = ? AND lesson_date = ? AND is_deleted = FALSE
+                """,
+                Long.class,
+                CLASSROOM_1,
+                Date.valueOf(lessonDate)
+            );
+        } catch (EmptyResultDataAccessException ignored) {
+            jdbcTemplate.update(
+                """
+                INSERT INTO daily_schedules (classroom_id, teacher_id, lesson_date, status)
+                VALUES (?, ?, ?, ?)
+                """,
+                CLASSROOM_1,
+                teacherId,
+                Date.valueOf(lessonDate),
+                "SCHEDULED"
+            );
+            return jdbcTemplate.queryForObject(
+                """
+                SELECT id
+                FROM daily_schedules
+                WHERE classroom_id = ? AND lesson_date = ? AND is_deleted = FALSE
+                """,
+                Long.class,
+                CLASSROOM_1,
+                Date.valueOf(lessonDate)
+            );
+        }
     }
 
     @Test
@@ -541,9 +582,9 @@ public class SubjectUpdateTest extends SubjectBaseTest {
         jdbcTemplate.update(
             """
             INSERT INTO lessons (
-                id, subject_id, teacher_id, date, start_time, end_time, period, status, teacher_attendance, is_deleted
+                id, subject_id, teacher_id, date, start_time, end_time, period, status, is_deleted
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             100L,
             100L,
@@ -553,7 +594,6 @@ public class SubjectUpdateTest extends SubjectBaseTest {
             "20:50:00",
             3,
             "SCHEDULED",
-            "ABSENT",
             false
         );
 

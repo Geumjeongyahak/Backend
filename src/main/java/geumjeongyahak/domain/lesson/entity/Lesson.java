@@ -15,7 +15,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import geumjeongyahak.domain.base.entity.BaseEntity;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
-import geumjeongyahak.domain.lesson.enums.TeacherAttendanceStatus;
 import geumjeongyahak.domain.subject.entity.Subject;
 import geumjeongyahak.domain.users.entity.User;
 
@@ -49,10 +48,6 @@ public class Lesson extends BaseEntity {
     @Column(nullable = false, length = 20)
     private LessonStatus status;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private TeacherAttendanceStatus teacherAttendance;
-
     @Column(columnDefinition = "TEXT")
     private String note;
 
@@ -74,7 +69,6 @@ public class Lesson extends BaseEntity {
         this.endTime = endTime;
         this.period = period;
         this.status = LessonStatus.SCHEDULED;
-        this.teacherAttendance = TeacherAttendanceStatus.ABSENT;
     }
 
     public void update(
@@ -93,12 +87,12 @@ public class Lesson extends BaseEntity {
         this.period = newPeriod;
     }
 
-    public void updateTeacherAttendance(TeacherAttendanceStatus teacherAttendance) {
-        this.teacherAttendance = teacherAttendance;
-    }
-
     public void updateStatus(LessonStatus status) {
         this.status = status;
+    }
+
+    public void updateTeacher(User teacher) {
+        this.teacher = teacher;
     }
 
     public void updateNote(String note) {

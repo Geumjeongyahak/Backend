@@ -4,7 +4,6 @@ import geumjeongyahak.domain.base.dto.response.AdminPage;
 import geumjeongyahak.domain.base.dto.response.AdminSorts;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
-import geumjeongyahak.domain.lesson.enums.TeacherAttendanceStatus;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -27,8 +26,6 @@ public class LessonAdminViewService {
             .stream()
             .filter(lesson -> matchesDateRange(lesson, filter.startDate(), filter.endDate()))
             .filter(lesson -> filter.status() == null || lesson.getStatus() == filter.status())
-            .filter(lesson -> filter.teacherAttendance() == null
-                || lesson.getTeacherAttendance() == filter.teacherAttendance())
             .map(AdminLessonRow::from)
             .toList();
 
@@ -50,8 +47,7 @@ public class LessonAdminViewService {
             "period", Comparator.comparing(AdminLessonRow::period, Comparator.nullsLast(Integer::compareTo)),
             "teacherName", Comparator.comparing(AdminLessonRow::teacherName, Comparator.nullsLast(String::compareToIgnoreCase)),
             "subjectName", Comparator.comparing(AdminLessonRow::subjectName, Comparator.nullsLast(String::compareToIgnoreCase)),
-            "status", Comparator.comparing(AdminLessonRow::status, Comparator.nullsLast(String::compareToIgnoreCase)),
-            "teacherAttendance", Comparator.comparing(AdminLessonRow::teacherAttendance, Comparator.nullsLast(String::compareToIgnoreCase))
+            "status", Comparator.comparing(AdminLessonRow::status, Comparator.nullsLast(String::compareToIgnoreCase))
         ), "date,ASC;period,ASC");
     }
 
@@ -59,15 +55,10 @@ public class LessonAdminViewService {
         return LessonStatus.values();
     }
 
-    public TeacherAttendanceStatus[] getTeacherAttendanceStatuses() {
-        return TeacherAttendanceStatus.values();
-    }
-
     public record LessonFilter(
         LocalDate startDate,
         LocalDate endDate,
         LessonStatus status,
-        TeacherAttendanceStatus teacherAttendance,
         Integer page,
         Integer size,
         String sort
@@ -83,9 +74,7 @@ public class LessonAdminViewService {
         String teacherName,
         String subjectName,
         String status,
-        String statusLabel,
-        String teacherAttendance,
-        String teacherAttendanceLabel
+        String statusLabel
     ) {
         private static AdminLessonRow from(Lesson lesson) {
             return new AdminLessonRow(
@@ -97,9 +86,7 @@ public class LessonAdminViewService {
                 lesson.getTeacher().getName(),
                 lesson.getSubject().getName(),
                 lesson.getStatus().name(),
-                lesson.getStatus().getDisplayName(),
-                lesson.getTeacherAttendance().name(),
-                lesson.getTeacherAttendance().getDisplayName()
+                lesson.getStatus().getDisplayName()
             );
         }
     }

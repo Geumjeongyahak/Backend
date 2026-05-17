@@ -56,7 +56,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", lessonDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(lessonDate),
                 "title", "하루 단위 교환 요청",
                 "content", "해당 날짜 수업 교환을 요청합니다.",
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
@@ -66,6 +66,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .statusCode(201)
             .body("id", notNullValue())
             .body("classroomName", equalTo("벚꽃반"))
+            .body("dailyScheduleId", equalTo(getDailyScheduleIdByLessonDate(lessonDate).intValue()))
             .body("lessonDate", equalTo(lessonDate.toString()))
             .body("requestedByName", equalTo("홍길동"))
             .body("title", equalTo("하루 단위 교환 요청"))
@@ -89,7 +90,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/lesson-exchange-requests")
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", lessonDate.toString(),
+                "dailyScheduleId", 99999L,
                 "title", "제목",
                 "content", "내용",
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
@@ -109,7 +110,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(guestToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", lessonDate.toString(),
+                "dailyScheduleId", 99999L,
                 "title", "게스트 요청",
                 "content", "게스트는 요청을 생성할 수 없습니다.",
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
@@ -131,7 +132,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", lessonDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(lessonDate),
                 "title", "타인 수업 요청",
                 "content", "내 수업이 아닌 일정으로 요청",
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
@@ -162,7 +163,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", lessonDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(lessonDate),
                 "title", "두 번째 요청",
                 "content", "중복 생성 시도",
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
@@ -182,7 +183,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", lessonDate.toString(),
+                "dailyScheduleId", 99999L,
                 "title", "",
                 "content", "내용",
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
@@ -204,7 +205,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", lessonDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(lessonDate),
                 "title", "만료 정책 위반",
                 "content", "너무 늦은 만료 시각",
                 "expiresAt", lessonDate.minusDays(2).atTime(12, 0).toString()
@@ -226,7 +227,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", lessonDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(lessonDate),
                 "title", "경계 날짜 요청",
                 "content", "요청 가능 시작일 경계 테스트",
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 59, 59).toString()
@@ -253,7 +254,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", lessonDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(lessonDate),
                 "title", "정책 이전 날짜 요청",
                 "content", "요청 가능 시작일보다 이른 날짜",
                 "expiresAt", lessonDate.minusDays(2).atTime(23, 59, 59).toString()
@@ -275,7 +276,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", lessonDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(lessonDate),
                 "title", "만료 경계 허용",
                 "content", "정책 상한 시각과 같은 만료 시각",
                 "expiresAt", lessonDate.minusDays(3).atTime(23, 59, 59).toString()
@@ -302,7 +303,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", lessonDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(lessonDate),
                 "title", "수업일 경계 만료",
                 "content", "수업일 자정과 같은 만료 시각",
                 "expiresAt", lessonDate.atStartOfDay().toString()
@@ -334,7 +335,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", lessonDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(lessonDate),
                 "title", "재요청",
                 "content", "반려 후 같은 날짜 재요청",
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
@@ -371,7 +372,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", lessonDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(lessonDate),
                 "title", "완료 후 재요청",
                 "content", "완료된 요청 이후 새 요청 생성",
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
@@ -408,7 +409,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "lessonDate", lessonDate.toString(),
+                "dailyScheduleId", getDailyScheduleIdByLessonDate(lessonDate),
                 "title", "취소 후 재요청",
                 "content", "취소된 요청 이후 새 요청 생성",
                 "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()

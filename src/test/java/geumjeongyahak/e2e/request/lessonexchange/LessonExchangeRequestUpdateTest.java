@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
@@ -148,8 +149,8 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("수업이 없는 날짜로 수정하면 -> 403")
-    void updateRequest_toDateWithoutLessons_returns403() {
+    @DisplayName("존재하지 않는 DailySchedule로 수정하면 -> 404")
+    void updateRequest_toMissingDailySchedule_returns404() {
         LocalDate lessonDate = LocalDate.now().plusDays(13);
         LocalDate emptyDate = LocalDate.now().plusDays(14);
         createLessons(TEACHER_ID, lessonDate, 1);
@@ -167,15 +168,15 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
             .basePath("/api/v1/lesson-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(buildLessonExchangeRequestBody(
-                emptyDate,
-                "수업 없는 날짜로 수정",
-                "수업이 없는 날짜",
-                emptyDate.minusDays(3).atTime(21, 0)
+            .body(Map.of(
+                "dailyScheduleId", 99999L,
+                "title", "수업 없는 날짜로 수정",
+                "content", "수업이 없는 날짜",
+                "expiresAt", emptyDate.minusDays(3).atTime(21, 0).toString()
             ))
             .patch("/{id}", requestId)
             .then()
-            .statusCode(403);
+            .statusCode(404);
     }
 
     @Test

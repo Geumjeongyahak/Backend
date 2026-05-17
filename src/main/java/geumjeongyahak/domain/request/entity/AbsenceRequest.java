@@ -3,7 +3,7 @@ package geumjeongyahak.domain.request.entity;
 import java.time.LocalDateTime;
 
 import geumjeongyahak.domain.base.entity.BaseEntity;
-import geumjeongyahak.domain.lesson.entity.Lesson;
+import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.request.enums.RequestStatus;
 import geumjeongyahak.domain.users.entity.User;
 
@@ -28,13 +28,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AbsenceRequest extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "lesson_id", nullable = false)
-    private Lesson lesson;
+    @JoinColumn(name = "daily_schedule_id", nullable = false)
+    private DailySchedule dailySchedule;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requested_by", nullable = false)
@@ -62,12 +58,12 @@ public class AbsenceRequest extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String note;
 
-    public AbsenceRequest(Lesson lesson, User requestedBy, String title, String reason) {
-        this.lesson = lesson;
+    public AbsenceRequest(DailySchedule dailySchedule, User requestedBy, String title, String reason) {
+        this.dailySchedule = dailySchedule;
         this.requestedBy = requestedBy;
         this.title = title;
         this.reason = reason;
-        this.expiresAt = lesson.getDate().atStartOfDay();
+        this.expiresAt = dailySchedule.getLessonDate().atStartOfDay();
         this.status = RequestStatus.PENDING;
     }
 

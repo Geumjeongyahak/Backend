@@ -11,8 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
-import geumjeongyahak.domain.lesson.entity.Lesson;
-import geumjeongyahak.domain.lesson.service.LessonProxyService;
+import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
+import geumjeongyahak.domain.daily_schedule.service.DailyScheduleProxyService;
 import geumjeongyahak.domain.request.entity.AbsenceRequest;
 import geumjeongyahak.domain.request.enums.RequestStatus;
 import geumjeongyahak.domain.request.event.AbsenceApprovedEvent;
@@ -36,23 +36,32 @@ import geumjeongyahak.domain.users.service.UserProxyService;
 public class AbsenceRequestService {
 
     private final AbsenceRequestRepository absenceRequestRepository;
-    private final LessonProxyService lessonProxyService;
+    private final DailyScheduleProxyService dailyScheduleProxyService;
     private final UserProxyService userProxyService;
     private final EventPublisher eventPublisher;
 
 
     @Transactional
     public AbsenceRequestResponse createAbsenceRequest(Long requesterId, CreateAbsenceRequestRequest request) {
-        log.debug("결석 요청 생성 (requesterId={}, lessonId={})", requesterId, request.lessonId());
+        log.debug(
+            "결석 요청 생성 (requesterId={}, dailyScheduleId={})",
+            requesterId,
+            request.dailyScheduleId()
+        );
 
-        Lesson lesson = lessonProxyService.getActiveById(request.lessonId());
+        DailySchedule dailySchedule = dailyScheduleProxyService.getActiveById(request.dailyScheduleId());
         User requester = userProxyService.getById(requesterId);
 
-        validateRequesterIsLessonTeacher(lesson, requesterId);
-        validateExpiresAtIsFuture(lesson.getDate().atStartOfDay());
-        validateNoActiveAbsenceRequest(lesson.getId(), requesterId);
+        validateRequesterIsDailyScheduleTeacher(dailySchedule, requesterId);
+        validateExpiresAtIsFuture(dailySchedule.getLessonDate().atStartOfDay());
+        validateNoActiveAbsenceRequest(dailySchedule.getId(), requesterId);
 
-        AbsenceRequest absenceRequest = new AbsenceRequest(lesson, requester, request.title(), request.reason());
+        AbsenceRequest absenceRequest = new AbsenceRequest(
+            dailySchedule,
+            requester,
+            request.title(),
+            request.reason()
+        );
         AbsenceRequest saved = absenceRequestRepository.save(absenceRequest);
 
         log.debug("결석 요청 생성 완료 (id={})", saved.getId());
@@ -122,10 +131,9 @@ public class AbsenceRequestService {
 
         User approver = userProxyService.getById(approverId);
         absenceRequest.approve(approver);
-
         eventPublisher.publish(new AbsenceApprovedEvent(
-            absenceRequest.getLesson().getId(),
-            approverId
+            absenceRequest.getId(),
+            absenceRequest.getDailySchedule().getId()
         ));
 
         log.debug("결석 요청 승인 완료 (requestId={})", requestId);
@@ -184,15 +192,15 @@ public class AbsenceRequestService {
         return expiredRequests.size();
     }
 
-    private void validateRequesterIsLessonTeacher(Lesson lesson, Long requesterId) {
-        if (!lesson.getTeacher().getId().equals(requesterId)) {
+    private void validateRequesterIsDailyScheduleTeacher(DailySchedule dailySchedule, Long requesterId) {
+        if (!dailySchedule.getTeacher().getId().equals(requesterId)) {
             throw new RequestForbiddenException();
         }
     }
 
-    private void validateNoActiveAbsenceRequest(Long lessonId, Long requesterId) {
-        boolean exists = absenceRequestRepository.existsByLesson_IdAndRequestedBy_IdAndStatusIn(
-            lessonId,
+    private void validateNoActiveAbsenceRequest(Long dailyScheduleId, Long requesterId) {
+        boolean exists = absenceRequestRepository.existsByDailySchedule_IdAndRequestedBy_IdAndStatusIn(
+            dailyScheduleId,
             requesterId,
             List.of(RequestStatus.PENDING, RequestStatus.APPROVED)
         );
@@ -245,10 +253,7 @@ public class AbsenceRequestService {
                 criteriaBuilder.like(criteriaBuilder.lower(root.get("title")), likeKeyword),
                 criteriaBuilder.like(criteriaBuilder.lower(root.get("reason")), likeKeyword),
                 criteriaBuilder.like(criteriaBuilder.lower(root.get("requestedBy").get("name")), likeKeyword),
-                criteriaBuilder.like(
-                    criteriaBuilder.lower(root.get("lesson").get("subject").get("classroom").get("name")),
-                    likeKeyword
-                )
+                criteriaBuilder.like(criteriaBuilder.lower(root.get("dailySchedule").get("classroom").get("name")), likeKeyword)
             );
         };
     }

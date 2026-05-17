@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
 import io.restassured.http.ContentType;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
@@ -14,6 +15,9 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.util.ReflectionTestUtils;
+import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
+import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleRepository;
+import geumjeongyahak.domain.daily_schedule.repository.DailyTeacherAttendanceRepository;
 import geumjeongyahak.domain.request.enums.RequestStatus;
 import geumjeongyahak.domain.request.repository.AbsenceRequestRepository;
 import geumjeongyahak.domain.request.service.AbsenceRequestService;
@@ -22,9 +26,6 @@ import geumjeongyahak.e2e.request.RequestBaseTest;
 /**
  * 결석 요청 상태 변경(승인·반려·삭제) E2E 테스트.
  *
- * <h3>Side-effect 검증</h3>
- * 결석 요청 승인 시 수업의 teacherAttendance 가 EXCUSED 로 변경되는지 확인한다.
- * 각 테스트는 독립 수업을 생성해 다른 테스트의 수업 상태에 영향을 주지 않는다.
  */
 @Tag("absence-request")
 @DisplayName("E2E: 결석 요청 승인·반려·삭제 테스트")
@@ -35,6 +36,12 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
 
     @Autowired
     private AbsenceRequestService absenceRequestService;
+
+    @Autowired
+    private DailyScheduleRepository dailyScheduleRepository;
+
+    @Autowired
+    private DailyTeacherAttendanceRepository dailyTeacherAttendanceRepository;
 
     private Long currentSubjectId;
     private Long currentLessonId;
@@ -88,14 +95,10 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("[Side-effect] 결석 요청 승인 → 수업 teacherAttendance 가 EXCUSED 로 변경")
-    void approve_updatesLessonTeacherAttendance_toExcused() {
+    @DisplayName("결석 요청 승인 시 DailySchedule 교사 출석은 공결로 반영된다")
+    void approve_updatesDailyScheduleTeacherAttendanceToExcused() {
         currentRequestId = setupPendingRequest(TEACHER_ID);
-
-        // 승인 전: ABSENT (init_data 기본값 아닌 새 수업 기본값)
-        String before = lessonHelper.getLessonTeacherAttendance(
-            getAuthHeader(adminToken), currentLessonId);
-        assertThat(before).isEqualTo("ABSENT");
+        LocalDate lessonDate = LocalDate.parse(lessonHelper.getLessonDate(getAuthHeader(adminToken), currentLessonId));
 
         given()
             .basePath("/api/v1/absence-requests")
@@ -104,10 +107,16 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
             .then()
             .statusCode(200);
 
-        // 승인 후: EXCUSED
-        String after = lessonHelper.getLessonTeacherAttendance(
-            getAuthHeader(adminToken), currentLessonId);
-        assertThat(after).isEqualTo("EXCUSED");
+        Long dailyScheduleId = dailyScheduleRepository
+            .findByClassroomIdAndLessonDateAndIsDeletedFalse(CLASSROOM_ID, lessonDate)
+            .orElseThrow()
+            .getId();
+
+        assertThat(dailyTeacherAttendanceRepository
+            .findByDailyScheduleIdAndIsDeletedFalse(dailyScheduleId)
+            .orElseThrow()
+            .getStatus()
+        ).isEqualTo(DailyTeacherAttendanceStatus.EXCUSED);
     }
 
     @Test
@@ -358,27 +367,6 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
             .then()
             .statusCode(200)
             .body("status", equalTo("CANCELLED"));
-    }
-
-    @Test
-    @DisplayName("취소는 수업 teacherAttendance 를 변경하지 않음")
-    void delete_doesNotUpdateLessonTeacherAttendance() {
-        currentRequestId = setupPendingRequest(TEACHER_ID);
-
-        String before = lessonHelper.getLessonTeacherAttendance(
-            getAuthHeader(adminToken), currentLessonId);
-        assertThat(before).isEqualTo("ABSENT");
-
-        given()
-            .basePath("/api/v1/absence-requests")
-            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
-            .delete("/{id}", currentRequestId)
-            .then()
-            .statusCode(204);
-
-        String after = lessonHelper.getLessonTeacherAttendance(
-            getAuthHeader(adminToken), currentLessonId);
-        assertThat(after).isEqualTo("ABSENT");
     }
 
     @Test

@@ -9,6 +9,7 @@
 - [Students](./Students.md)
 - [Subjects](./Subjects.md)
 - [Lessons](./Lessons.md)
+- [DailySchedules](./DailySchedules.md)
 - [Requests](./Requests.md)
 - [Channels](./Channels.md)
 - [Posts](./Posts.md)
