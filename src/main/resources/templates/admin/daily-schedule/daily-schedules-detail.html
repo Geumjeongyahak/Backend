@@ -63,6 +63,25 @@
             </div>
         </section>
 
+        <form class="panel filter-grid"
+              th:action="@{/admin/daily-schedule/daily-schedules/{dailyScheduleId}/status(dailyScheduleId=${schedule.dailyScheduleId})}"
+              method="post">
+            <input type="hidden" name="from" th:value="${filter.from != null ? #temporals.format(filter.from, 'yyyy-MM-dd') : ''}">
+            <input type="hidden" name="to" th:value="${filter.to != null ? #temporals.format(filter.to, 'yyyy-MM-dd') : ''}">
+            <input type="hidden" name="classroomId" th:value="${filter.classroomId}">
+            <input type="hidden" name="teacherId" th:value="${filter.teacherId}">
+            <input type="hidden" name="filterStatus" th:value="${filter.status}">
+            <label>하루 일정 상태
+                <select name="status">
+                    <option th:each="status : ${statuses}"
+                            th:value="${status.name()}"
+                            th:text="${status.displayName}"
+                            th:selected="${schedule.status == status}">예정</option>
+                </select>
+            </label>
+            <button class="button" type="submit">상태 변경</button>
+        </form>
+
         <section class="panel">
             <h2>교사 출석</h2>
             <div class="detail-grid" th:if="${schedule.teacherAttendance != null}">

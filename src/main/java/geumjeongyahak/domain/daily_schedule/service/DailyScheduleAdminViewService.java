@@ -8,6 +8,7 @@ import geumjeongyahak.domain.daily_schedule.enums.DailyStudentAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.repository.DailyStudentAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleStatusRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
 import geumjeongyahak.domain.users.entity.User;
@@ -34,6 +35,7 @@ public class DailyScheduleAdminViewService {
     private static final boolean ADMIN_CAN_VIEW_SENSITIVE_INFO = true;
 
     private final DailyScheduleService dailyScheduleService;
+    private final DailyScheduleAdminService dailyScheduleAdminService;
     private final DailyStudentAttendanceRepository dailyStudentAttendanceRepository;
     private final ClassroomProxyService classroomProxyService;
     private final UserProxyService userProxyService;
@@ -89,6 +91,16 @@ public class DailyScheduleAdminViewService {
             dailyScheduleId,
             viewerId,
             ADMIN_CAN_VIEW_SENSITIVE_INFO
+        );
+    }
+
+    @Transactional
+    public void updateStatus(Long adminId, Long dailyScheduleId, DailyScheduleStatus status) {
+        dailyScheduleAdminService.updateStatus(
+            dailyScheduleId,
+            adminId,
+            ADMIN_CAN_VIEW_SENSITIVE_INFO,
+            new UpdateDailyScheduleStatusRequest(status)
         );
     }
 
