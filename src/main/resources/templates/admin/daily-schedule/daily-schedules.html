@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('하루 일정 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>하루 일정</h1>
+                <p>주간 단위로 하루 일정과 출석 처리 현황을 확인합니다.</p>
+            </div>
+        </div>
+
+        <section class="panel">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                <div>
+                    <h2 style="margin: 0;" th:text="|${dailySchedulesPage.from} ~ ${dailySchedulesPage.to}|">2026-05-18 ~ 2026-05-24</h2>
+                    <p>기본 조회 범위는 오늘이 포함된 주입니다.</p>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <a class="reset-link"
+                       th:href="@{/admin/daily-schedule/daily-schedules(from=${dailySchedulesPage.previousWeek.from},to=${dailySchedulesPage.previousWeek.to},classroomId=${filter.classroomId},teacherId=${filter.teacherId},status=${filter.status})}">이전 주</a>
+                    <a class="reset-link"
+                       th:href="@{/admin/daily-schedule/daily-schedules(from=${dailySchedulesPage.currentWeek.from},to=${dailySchedulesPage.currentWeek.to},classroomId=${filter.classroomId},teacherId=${filter.teacherId},status=${filter.status})}">이번 주</a>
+                    <a class="reset-link"
+                       th:href="@{/admin/daily-schedule/daily-schedules(from=${dailySchedulesPage.nextWeek.from},to=${dailySchedulesPage.nextWeek.to},classroomId=${filter.classroomId},teacherId=${filter.teacherId},status=${filter.status})}">다음 주</a>
+                </div>
+            </div>
+        </section>
+
+        <form class="panel filter-grid" th:action="@{/admin/daily-schedule/daily-schedules}" method="get">
+            <label>시작일
+                <input name="from" type="date" th:value="${dailySchedulesPage.from}">
+            </label>
+            <label>종료일
+                <input name="to" type="date" th:value="${dailySchedulesPage.to}">
+            </label>
+            <label>분반
+                <select name="classroomId">
+                    <option value="">전체</option>
+                    <option th:each="classroom : ${classrooms}"
+                            th:value="${classroom.id}"
+                            th:text="${classroom.name}"
+                            th:selected="${filter.classroomId == classroom.id}">벚꽃반</option>
+                </select>
+            </label>
+            <label>교사
+                <select name="teacherId">
+                    <option value="">전체</option>
+                    <option th:each="teacher : ${teachers}"
+                            th:value="${teacher.id}"
+                            th:text="${teacher.name}"
+                            th:selected="${filter.teacherId == teacher.id}">홍길동</option>
+                </select>
+            </label>
+            <label>상태
+                <select name="status">
+                    <option value="">전체</option>
+                    <option th:each="status : ${statuses}"
+                            th:value="${status.name()}"
+                            th:text="${status.displayName}"
+                            th:selected="${filter.status == status}">예정</option>
+                </select>
+            </label>
+            <button class="button" type="submit">조회</button>
+            <a class="reset-link" th:href="@{/admin/daily-schedule/daily-schedules}">초기화</a>
+        </form>
+
+        <section class="panel table-panel">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>수업일</th>
+                        <th>분반</th>
+                        <th>담당 교사</th>
+                        <th>운영 시간</th>
+                        <th>하루 일정 상태</th>
+                        <th>교사 출석</th>
+                        <th>학생 출석</th>
+                        <th>수업 수</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="schedule : ${dailySchedulesPage.rows}">
+                        <td th:text="${schedule.dailyScheduleId}">1</td>
+                        <td th:text="${schedule.lessonDate}">2026-05-20</td>
+                        <td th:text="${schedule.classroomName}">벚꽃반</td>
+                        <td th:text="${schedule.teacherName}">홍길동</td>
+                        <td th:text="${schedule.activityStartTime != null && schedule.activityEndTime != null ? schedule.activityStartTime + ' - ' + schedule.activityEndTime : '-'}">19:20 - 21:40</td>
+                        <td>
+                            <span class="pill" th:text="${schedule.statusLabel}">예정</span>
+                        </td>
+                        <td>
+                            <span class="pill" th:text="${schedule.teacherAttendanceStatusLabel}">미처리</span>
+                        </td>
+                        <td th:text="|출석 ${schedule.studentAttendanceSummary.presentCount} / 지각 ${schedule.studentAttendanceSummary.lateCount} / 결석 ${schedule.studentAttendanceSummary.absentCount} / 전체 ${schedule.studentAttendanceSummary.totalCount}|">
+                            출석 0 / 지각 0 / 결석 0 / 전체 0
+                        </td>
+                        <td th:text="${schedule.lessonCount}">3</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(dailySchedulesPage.rows)}">
+                        <td colspan="9" class="empty">조회된 하루 일정이 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>
