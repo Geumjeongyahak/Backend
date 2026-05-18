@@ -112,8 +112,7 @@ class LessonAdminViewServiceTest {
         LessonStatus status
     ) {
         User teacher = User.builder()
-            .nickname(teacherName)
-            .name(teacherName)
+                        .name(teacherName)
             .role(RoleType.VOLUNTEER)
             .build();
         Subject subject = new Subject(

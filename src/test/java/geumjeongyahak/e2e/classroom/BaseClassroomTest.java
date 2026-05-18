@@ -30,8 +30,8 @@ public abstract class BaseClassroomTest extends BaseE2ETest {
         this.userTestHelper.createTestUser(TEST_ADMIN_USERNAME, RoleType.ADMIN);
         this.userTestHelper.createTestUser(TEST_GUEST_USERNAME, RoleType.GUEST);
         // 토큰 생성
-        this.adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
-        this.guestAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_GUEST_USERNAME);
+        this.adminAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_ADMIN_USERNAME);
+        this.guestAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_GUEST_USERNAME);
     }
 
     @AfterEach

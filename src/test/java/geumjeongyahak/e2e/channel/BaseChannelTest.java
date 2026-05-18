@@ -29,8 +29,8 @@ public abstract class BaseChannelTest extends BaseE2ETest {
         userTestHelper.createTestUser(TEST_CHANNEL_ADMIN_USERNAME, RoleType.ADMIN);
         userTestHelper.createTestUser(TEST_CHANNEL_GUEST_USERNAME, RoleType.GUEST);
 
-        adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_CHANNEL_ADMIN_USERNAME);
-        guestAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_CHANNEL_GUEST_USERNAME);
+        adminAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_CHANNEL_ADMIN_USERNAME);
+        guestAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_CHANNEL_GUEST_USERNAME);
     }
 
     @AfterEach

@@ -25,7 +25,7 @@ public abstract class UserBaseTest extends BaseE2ETest {
             "pw_" + TEST_VOLUNTEER_USERNAME,
             RoleType.VOLUNTEER
         );
-        this.adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
-        this.volunteerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_VOLUNTEER_USERNAME);
+        this.adminAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_ADMIN_USERNAME);
+        this.volunteerAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_VOLUNTEER_USERNAME);
     }
 }

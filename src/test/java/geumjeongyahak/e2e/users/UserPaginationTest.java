@@ -21,7 +21,6 @@ class UserPaginationTest extends UserBaseTest {
         for (int i = 1; i <= 15; i++) {
             CreateUserRequest req = new CreateUserRequest(
                     "pagetest" + i + "@test.com",
-                    "pagetest" + i,
                     "Page Test User " + i,
                     "pw_pagetest" + i,
                     "010-" + String.format("%04d", i) + "-5678",
@@ -40,7 +39,7 @@ class UserPaginationTest extends UserBaseTest {
                 .extract()
                 .as(UserDetailResponse.class);
 
-            userTestHelper.setUser(createdUser.nickname());
+            userTestHelper.setUser(createdUser.email());
         }
     }
 

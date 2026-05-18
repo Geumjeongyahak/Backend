@@ -64,7 +64,7 @@ class AbsenceRequestReadTest extends RequestBaseTest {
                 readPermissionUser.getId(), "absence-request:read:*")
             .orElseGet(() -> userPermissionRepository.save(
                 new UserPermission(readPermissionUser, "absence-request:read:*")));
-        readPermissionToken = userTestHelper.generateAccessTokenByNickname("absence-reader");
+        readPermissionToken = userTestHelper.generateAccessTokenByUserKey("absence-reader");
     }
 
     @AfterEach
