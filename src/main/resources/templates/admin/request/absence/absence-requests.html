@@ -51,6 +51,7 @@
                         <th>만료 시각</th>
                         <th>생성일</th>
                         <th>처리일</th>
+                        <th>처리</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -69,9 +70,25 @@
                         <td th:text="${#temporals.format(request.expiresAt, 'yyyy.MM.dd HH:mm')}">2026.05.20 00:00</td>
                         <td th:text="${#temporals.format(request.createdAt, 'yyyy.MM.dd')}">2026.05.18</td>
                         <td th:text="${request.approvalAt != null ? #temporals.format(request.approvalAt, 'yyyy.MM.dd HH:mm') : '-'}">-</td>
+                        <td>
+                            <form class="inline-form"
+                                  th:if="${request.status.name() == 'PENDING'}"
+                                  th:action="@{/admin/request/absence/absence-requests/{requestId}/approve(requestId=${request.id})}"
+                                  method="post">
+                                <button class="button" type="submit">승인</button>
+                            </form>
+                            <form class="inline-form"
+                                  th:if="${request.status.name() == 'PENDING'}"
+                                  th:action="@{/admin/request/absence/absence-requests/{requestId}/reject(requestId=${request.id})}"
+                                  method="post">
+                                <input name="note" placeholder="반려 사유" required>
+                                <button class="button danger" type="submit">반려</button>
+                            </form>
+                            <span th:unless="${request.status.name() == 'PENDING'}">처리 완료</span>
+                        </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(absenceRequestsPage.content)}">
-                        <td colspan="10" class="empty">결석 요청이 없습니다.</td>
+                        <td colspan="11" class="empty">결석 요청이 없습니다.</td>
                     </tr>
                     </tbody>
                 </table>

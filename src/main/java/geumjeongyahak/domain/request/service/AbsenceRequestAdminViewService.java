@@ -54,6 +54,16 @@ public class AbsenceRequestAdminViewService {
         };
     }
 
+    @Transactional
+    public void approve(Long approverId, Long requestId) {
+        absenceRequestService.approveAbsenceRequest(approverId, requestId);
+    }
+
+    @Transactional
+    public void reject(Long approverId, Long requestId, String note) {
+        absenceRequestService.rejectAbsenceRequest(approverId, requestId, note);
+    }
+
     public record AbsenceRequestFilter(
         RequestStatus status,
         String keyword,
