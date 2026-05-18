@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('결석 요청 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>결석 요청</h1>
+                <p>교사 결석 요청을 상태와 검색어 기준으로 조회합니다.</p>
+            </div>
+        </div>
+
+        <form class="panel filter-grid" th:action="@{/admin/request/absence/absence-requests}" method="get">
+            <label>검색어
+                <input name="keyword" th:value="${filter.keyword}" placeholder="제목, 사유, 요청자, 분반">
+            </label>
+            <label>상태
+                <select name="status">
+                    <option value="">전체</option>
+                    <option th:each="status : ${statuses}"
+                            th:value="${status.name()}"
+                            th:text="${absenceRequestAdminViewService.getStatusLabel(status)}"
+                            th:selected="${selectedStatus == status}">승인 대기</option>
+                </select>
+            </label>
+            <label>페이지 크기
+                <select name="size">
+                    <option value="10" th:selected="${absenceRequestsPage.size == 10}">10</option>
+                    <option value="20" th:selected="${absenceRequestsPage.size == 20}">20</option>
+                    <option value="50" th:selected="${absenceRequestsPage.size == 50}">50</option>
+                    <option value="100" th:selected="${absenceRequestsPage.size == 100}">100</option>
+                </select>
+            </label>
+            <button class="button" type="submit">조회</button>
+            <a class="reset-link" th:href="@{/admin/request/absence/absence-requests}">초기화</a>
+        </form>
+
+        <section class="panel table-panel">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>제목</th>
+                        <th>분반</th>
+                        <th>수업일</th>
+                        <th>요청자</th>
+                        <th>사유</th>
+                        <th>상태</th>
+                        <th>만료 시각</th>
+                        <th>생성일</th>
+                        <th>처리일</th>
+                        <th>처리</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="request : ${absenceRequestsPage.content}">
+                        <td th:text="${request.id}">1</td>
+                        <td th:text="${request.title}">결석 요청</td>
+                        <td th:text="${request.classroomName}">벚꽃반</td>
+                        <td th:text="${request.lessonDate}">2026-05-20</td>
+                        <td th:text="${request.requestedByName}">홍길동</td>
+                        <td th:text="${request.reason}">개인 사정</td>
+                        <td>
+                            <span class="pill"
+                                  th:classappend="'status-' + ${request.status.name()}"
+                                  th:text="${absenceRequestAdminViewService.getStatusLabel(request.status)}">승인 대기</span>
+                        </td>
+                        <td th:text="${#temporals.format(request.expiresAt, 'yyyy.MM.dd HH:mm')}">2026.05.20 00:00</td>
+                        <td th:text="${#temporals.format(request.createdAt, 'yyyy.MM.dd')}">2026.05.18</td>
+                        <td th:text="${request.approvalAt != null ? #temporals.format(request.approvalAt, 'yyyy.MM.dd HH:mm') : '-'}">-</td>
+                        <td>
+                            <form class="inline-form"
+                                  th:if="${request.status.name() == 'PENDING'}"
+                                  th:action="@{/admin/request/absence/absence-requests/{requestId}/approve(requestId=${request.id})}"
+                                  method="post">
+                                <button class="button" type="submit">승인</button>
+                            </form>
+                            <form class="inline-form"
+                                  th:if="${request.status.name() == 'PENDING'}"
+                                  th:action="@{/admin/request/absence/absence-requests/{requestId}/reject(requestId=${request.id})}"
+                                  method="post">
+                                <input name="note" placeholder="반려 사유" required>
+                                <button class="button danger" type="submit">반려</button>
+                            </form>
+                            <span th:unless="${request.status.name() == 'PENDING'}">처리 완료</span>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(absenceRequestsPage.content)}">
+                        <td colspan="11" class="empty">결석 요청이 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pager">
+                <span th:text="|총 ${absenceRequestsPage.totalElements}건 · ${absenceRequestsPage.page + 1}/${absenceRequestsPage.totalPages == 0 ? 1 : absenceRequestsPage.totalPages} 페이지|">총 0건</span>
+                <div>
+                    <a class="reset-link"
+                       th:classappend="${!absenceRequestsPage.hasPrevious()} ? 'disabled'"
+                       th:href="@{/admin/request/absence/absence-requests(status=${filter.status},keyword=${filter.keyword},size=${absenceRequestsPage.size},page=${absenceRequestsPage.previousPage()})}">이전</a>
+                    <a class="reset-link"
+                       th:classappend="${!absenceRequestsPage.hasNext()} ? 'disabled'"
+                       th:href="@{/admin/request/absence/absence-requests(status=${filter.status},keyword=${filter.keyword},size=${absenceRequestsPage.size},page=${absenceRequestsPage.nextPage()})}">다음</a>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

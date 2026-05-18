@@ -6,6 +6,8 @@ import geumjeongyahak.domain.classroom.repository.ClassroomRepository;
 import geumjeongyahak.domain.department.repository.DepartmentRepository;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
+import geumjeongyahak.domain.request.enums.RequestStatus;
+import geumjeongyahak.domain.request.repository.AbsenceRequestRepository;
 import geumjeongyahak.domain.student.repository.StudentRepository;
 import geumjeongyahak.domain.users.repository.UserRepository;
 import java.time.DayOfWeek;
@@ -24,6 +26,7 @@ public class AdminDashboardService {
     private final DepartmentRepository departmentRepository;
     private final ClassroomRepository classroomRepository;
     private final PurchaseRequestRepository purchaseRequestRepository;
+    private final AbsenceRequestRepository absenceRequestRepository;
     private final StudentRepository studentRepository;
     private final LessonRepository lessonRepository;
 
@@ -37,6 +40,7 @@ public class AdminDashboardService {
             departmentRepository.count(),
             classroomRepository.count(),
             purchaseRequestRepository.countByStatus(PurchaseRequestStatus.PENDING),
+            absenceRequestRepository.countByStatus(RequestStatus.PENDING),
             studentRepository.count(),
             lessonRepository.countByIsDeletedFalse(),
             lessonRepository.countByIsDeletedFalseAndDate(today),
@@ -52,6 +56,7 @@ public class AdminDashboardService {
         long departmentCount,
         long classroomCount,
         long pendingPurchaseRequestCount,
+        long pendingAbsenceRequestCount,
         long studentCount,
         long lessonCount,
         long todayLessonCount,

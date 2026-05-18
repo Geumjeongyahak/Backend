@@ -25,6 +25,16 @@ public record AdminPage<T>(
         );
     }
 
+    public static <T> AdminPage<T> from(PaginationResponse<T> response) {
+        return new AdminPage<>(
+            response.getContent(),
+            response.getPage(),
+            response.getSize(),
+            response.getTotalElements(),
+            response.getTotalPages()
+        );
+    }
+
     public boolean hasPrevious() {
         return page > 0;
     }

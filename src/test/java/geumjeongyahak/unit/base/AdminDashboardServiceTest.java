@@ -13,6 +13,8 @@ import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
+import geumjeongyahak.domain.request.enums.RequestStatus;
+import geumjeongyahak.domain.request.repository.AbsenceRequestRepository;
 import geumjeongyahak.domain.student.repository.StudentRepository;
 import geumjeongyahak.domain.users.repository.UserRepository;
 import java.time.LocalDate;
@@ -38,6 +40,9 @@ class AdminDashboardServiceTest {
     private PurchaseRequestRepository purchaseRequestRepository;
 
     @Mock
+    private AbsenceRequestRepository absenceRequestRepository;
+
+    @Mock
     private StudentRepository studentRepository;
 
     @Mock
@@ -52,6 +57,7 @@ class AdminDashboardServiceTest {
         given(departmentRepository.count()).willReturn(6L);
         given(classroomRepository.count()).willReturn(9L);
         given(purchaseRequestRepository.countByStatus(PurchaseRequestStatus.PENDING)).willReturn(2L);
+        given(absenceRequestRepository.countByStatus(RequestStatus.PENDING)).willReturn(5L);
         given(studentRepository.count()).willReturn(11L);
         given(lessonRepository.countByIsDeletedFalse()).willReturn(20L);
         given(lessonRepository.countByIsDeletedFalseAndDate(any(LocalDate.class))).willReturn(3L);
@@ -67,6 +73,7 @@ class AdminDashboardServiceTest {
         assertThat(summary.departmentCount()).isEqualTo(6L);
         assertThat(summary.classroomCount()).isEqualTo(9L);
         assertThat(summary.pendingPurchaseRequestCount()).isEqualTo(2L);
+        assertThat(summary.pendingAbsenceRequestCount()).isEqualTo(5L);
         assertThat(summary.studentCount()).isEqualTo(11L);
         assertThat(summary.lessonCount()).isEqualTo(20L);
         assertThat(summary.todayLessonCount()).isEqualTo(3L);
