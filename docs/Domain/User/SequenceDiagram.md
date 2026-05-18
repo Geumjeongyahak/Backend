@@ -86,12 +86,7 @@ sequenceDiagram
     UserAdminController->>UserAdminController: @PreAuthorize 권한 검사<br/>(ADMIN or user:manage:*)
     UserAdminController->>UserCrudService: createUser(request)
 
-    UserCrudService->>UserProxyService: existsByNickname(nickname)
-    UserProxyService->>UserRepository: existsByNickname(nickname)
-    alt 닉네임 중복
         UserRepository-->>UserProxyService: true
-        UserCrudService-->>UserAdminController: DuplicateNicknameException
-        UserAdminController-->>Client: 409 BIZ-01-001
     end
 
     UserCrudService->>UserProxyService: existsByEmail(email)
@@ -158,12 +153,7 @@ sequenceDiagram
 
     Note over UserCrudService,CredentialRepository: 트랜잭션 시작
 
-    opt nickname 변경 요청
-        UserCrudService->>UserProxyService: existsByNickname(newNickname)
-        alt 닉네임 중복
-            UserCrudService-->>Client: 409 BIZ-01-001
         end
-        UserCrudService->>UserCrudService: user.setNickname(newNickname)
     end
 
     opt email 변경 요청
@@ -297,12 +287,7 @@ sequenceDiagram
     Note over UserCrudService,CredentialRepository: 트랜잭션 시작
     Note over UserCrudService: role=empty, departmentId=empty → 변경 불가
 
-    opt nickname 변경 요청
-        UserCrudService->>UserProxyService: existsByNickname(newNickname)
-        alt 닉네임 중복
-            UserCrudService-->>Client: 409 BIZ-01-001
         end
-        UserCrudService->>UserCrudService: user.setNickname(newNickname)
     end
 
     opt email 변경 요청
