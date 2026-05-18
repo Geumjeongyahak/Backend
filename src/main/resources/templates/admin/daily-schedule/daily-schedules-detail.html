@@ -191,9 +191,44 @@
             </div>
         </form>
 
-        <section class="panel table-panel">
+        <form id="journalForm"
+              class="panel table-panel"
+              th:action="@{/admin/daily-schedule/daily-schedules/{dailyScheduleId}/journal(dailyScheduleId=${schedule.dailyScheduleId})}"
+              method="post">
+            <input type="hidden" name="from" th:value="${filter.from != null ? #temporals.format(filter.from, 'yyyy-MM-dd') : ''}">
+            <input type="hidden" name="to" th:value="${filter.to != null ? #temporals.format(filter.to, 'yyyy-MM-dd') : ''}">
+            <input type="hidden" name="classroomId" th:value="${filter.classroomId}">
+            <input type="hidden" name="teacherId" th:value="${filter.teacherId}">
+            <input type="hidden" name="filterStatus" th:value="${filter.status}">
             <div style="padding: 22px 22px 0;">
-                <h2>수업 일지</h2>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                    <h2>수업 일지</h2>
+                    <button class="button" type="submit" th:if="${!#lists.isEmpty(schedule.lessons)}">
+                        수업 일지 저장
+                    </button>
+                </div>
+                <div class="detail-grid" style="margin: 16px 0;">
+                    <label class="check-label">
+                        <input type="checkbox"
+                               id="personalInfoConsent"
+                               name="personalInfoConsent"
+                               value="true"
+                               th:checked="${schedule.personalInfoConsent}">
+                        개인정보 활용 동의
+                    </label>
+                    <label>주민번호 앞자리
+                        <input id="residentRegistrationNumberPrefix"
+                               name="residentRegistrationNumberPrefix"
+                               type="text"
+                               inputmode="numeric"
+                               maxlength="6"
+                               pattern="[0-9]{6}"
+                               th:value="${schedule.residentRegistrationNumberPrefix}">
+                    </label>
+                </div>
+                <p id="journalValidationMessage" style="display: none; color: var(--danger); font-weight: 800;">
+                    개인정보 활용 동의 여부와 주민번호 앞자리 입력값이 일치하지 않습니다.
+                </p>
             </div>
             <div class="table-scroll">
                 <table>
@@ -212,7 +247,12 @@
                         <td th:text="${lesson.period}">1</td>
                         <td th:text="${lesson.startTime != null && lesson.endTime != null ? lesson.startTime + ' - ' + lesson.endTime : '-'}">19:20 - 20:00</td>
                         <td th:text="${lesson.subjectName}">국어</td>
-                        <td th:text="${lesson.note != null && !#strings.isEmpty(lesson.note) ? lesson.note : '-'}">오늘 수업 내용</td>
+                        <td>
+                            <input type="hidden" name="lessonIds" th:value="${lesson.lessonId}">
+                            <textarea name="notes"
+                                      required
+                                      th:text="${lesson.note}">오늘 수업 내용</textarea>
+                        </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(schedule.lessons)}">
                         <td colspan="5" class="empty">수업 일지 정보가 없습니다.</td>
@@ -220,8 +260,36 @@
                     </tbody>
                 </table>
             </div>
-        </section>
+        </form>
     </main>
 </div>
+<script>
+const journalForm = document.getElementById('journalForm');
+const personalInfoConsent = document.getElementById('personalInfoConsent');
+const residentRegistrationNumberPrefix = document.getElementById('residentRegistrationNumberPrefix');
+const journalValidationMessage = document.getElementById('journalValidationMessage');
+
+if (journalForm && personalInfoConsent && residentRegistrationNumberPrefix && journalValidationMessage) {
+    journalForm.addEventListener('submit', (event) => {
+        const hasConsent = personalInfoConsent.checked;
+        const residentPrefix = residentRegistrationNumberPrefix.value.trim();
+        const valid = hasConsent
+            ? /^\d{6}$/.test(residentPrefix)
+            : residentPrefix.length === 0;
+
+        if (valid) {
+            journalValidationMessage.style.display = 'none';
+            return;
+        }
+
+        event.preventDefault();
+        journalValidationMessage.textContent = hasConsent
+            ? '개인정보 활용에 동의한 경우 주민번호 앞자리 6자리를 입력해야 합니다.'
+            : '개인정보 활용에 동의하지 않은 경우 주민번호 앞자리를 비워주세요.';
+        journalValidationMessage.style.display = 'block';
+        residentRegistrationNumberPrefix.focus();
+    });
+}
+</script>
 </body>
 </html>

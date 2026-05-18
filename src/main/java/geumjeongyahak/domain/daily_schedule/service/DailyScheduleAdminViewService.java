@@ -8,6 +8,7 @@ import geumjeongyahak.domain.daily_schedule.enums.DailyStudentAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.repository.DailyStudentAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendanceItemRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendancesRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleStatusRequest;
@@ -138,6 +139,26 @@ public class DailyScheduleAdminViewService {
             ADMIN_CAN_WRITE_ANY_DAILY_SCHEDULE,
             ADMIN_CAN_VIEW_SENSITIVE_INFO,
             new UpdateDailyStudentAttendancesRequest(attendances)
+        );
+    }
+
+    @Transactional
+    public void updateJournal(
+        Long adminId,
+        Long dailyScheduleId,
+        Boolean personalInfoConsent,
+        String residentRegistrationNumberPrefix,
+        List<UpdateDailyScheduleJournalRequest.LessonJournalRequest> lessonJournals
+    ) {
+        dailyScheduleService.updateJournal(
+            dailyScheduleId,
+            adminId,
+            ADMIN_CAN_WRITE_ANY_DAILY_SCHEDULE,
+            new UpdateDailyScheduleJournalRequest(
+                personalInfoConsent,
+                residentRegistrationNumberPrefix,
+                lessonJournals
+            )
         );
     }
 

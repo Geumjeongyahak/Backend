@@ -8,6 +8,7 @@ import geumjeongyahak.domain.daily_schedule.enums.DailyStudentAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleAdminViewService;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleAdminViewService.DailyScheduleFilter;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendanceItemRequest;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -159,6 +160,35 @@ public class DailyScheduleViewController {
         return "redirect:/admin/daily-schedule/daily-schedules/" + dailyScheduleId;
     }
 
+    @PreAuthorize(DAILY_SCHEDULE_MANAGE_ACCESS)
+    @PostMapping("/{dailyScheduleId}/journal")
+    public String updateJournal(
+        @PathVariable Long dailyScheduleId,
+        @RequestParam(required = false) Boolean personalInfoConsent,
+        @RequestParam(required = false) String residentRegistrationNumberPrefix,
+        @RequestParam List<Long> lessonIds,
+        @RequestParam List<String> notes,
+        @RequestParam(required = false) @DateTimeFormat(iso = DATE) LocalDate from,
+        @RequestParam(required = false) @DateTimeFormat(iso = DATE) LocalDate to,
+        @RequestParam(required = false) Long classroomId,
+        @RequestParam(required = false) Long teacherId,
+        @RequestParam(required = false) DailyScheduleStatus filterStatus,
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        RedirectAttributes redirectAttributes
+    ) {
+        boolean consent = Boolean.TRUE.equals(personalInfoConsent);
+        dailyScheduleAdminViewService.updateJournal(
+            userDetails.getUserId(),
+            dailyScheduleId,
+            consent,
+            normalizeResidentRegistrationNumberPrefix(consent, residentRegistrationNumberPrefix),
+            buildLessonJournals(lessonIds, notes)
+        );
+        redirectAttributes.addFlashAttribute("message", "수업 일지를 저장했습니다.");
+        addListFilterRedirectAttributes(redirectAttributes, from, to, classroomId, teacherId, filterStatus);
+        return "redirect:/admin/daily-schedule/daily-schedules/" + dailyScheduleId;
+    }
+
     private List<UpdateDailyStudentAttendanceItemRequest> buildStudentAttendanceItems(
         List<Long> studentIds,
         List<DailyStudentAttendanceStatus> statuses
@@ -171,6 +201,30 @@ public class DailyScheduleViewController {
             items.add(new UpdateDailyStudentAttendanceItemRequest(studentIds.get(i), statuses.get(i)));
         }
         return items;
+    }
+
+    private List<UpdateDailyScheduleJournalRequest.LessonJournalRequest> buildLessonJournals(
+        List<Long> lessonIds,
+        List<String> notes
+    ) {
+        List<UpdateDailyScheduleJournalRequest.LessonJournalRequest> journals = new ArrayList<>();
+        if (lessonIds.size() != notes.size()) {
+            throw new IllegalArgumentException("수업 일지 요청 값이 올바르지 않습니다.");
+        }
+        for (int i = 0; i < lessonIds.size(); i++) {
+            journals.add(new UpdateDailyScheduleJournalRequest.LessonJournalRequest(lessonIds.get(i), notes.get(i)));
+        }
+        return journals;
+    }
+
+    private String normalizeResidentRegistrationNumberPrefix(
+        boolean personalInfoConsent,
+        String residentRegistrationNumberPrefix
+    ) {
+        if (!personalInfoConsent || residentRegistrationNumberPrefix == null || residentRegistrationNumberPrefix.isBlank()) {
+            return null;
+        }
+        return residentRegistrationNumberPrefix.trim();
     }
 
     private void addListFilterRedirectAttributes(
