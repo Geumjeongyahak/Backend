@@ -114,10 +114,27 @@ INSERT INTO daily_schedules (
 )
 VALUES
     (1, 1, 2, '2026-06-10', '19:20:00', '21:40:00', 'SCHEDULED', FALSE, '2026-05-20 00:00:00', '2026-05-20 00:00:00'),
-    (2, 2, 3, '2026-06-17', '19:20:00', '21:40:00', 'SCHEDULED', FALSE, '2026-05-20 00:00:00', '2026-05-20 00:00:00');
-ALTER SEQUENCE daily_schedules_id_seq RESTART WITH 3;
+    (2, 2, 3, '2026-06-17', '19:20:00', '21:40:00', 'SCHEDULED', FALSE, '2026-05-20 00:00:00', '2026-05-20 00:00:00'),
+    (3, 1, 2, '2026-06-24', '19:20:00', '21:40:00', 'SCHEDULED', FALSE, '2026-05-20 00:00:00', '2026-05-20 00:00:00'),
+    (4, 2, 3, '2026-06-24', '19:20:00', '21:40:00', 'SCHEDULED', FALSE, '2026-05-20 00:00:00', '2026-05-20 00:00:00'),
+    (5, 8, 2, '2026-06-27', '19:20:00', '20:00:00', 'SCHEDULED', FALSE, '2026-05-20 00:00:00', '2026-05-20 00:00:00');
+ALTER SEQUENCE daily_schedules_id_seq RESTART WITH 6;
 
--- 11. Lesson Exchange Requests
+-- 11. Absence Requests
+INSERT INTO absence_requests (
+    id, daily_schedule_id, requested_by, title, reason, expires_at, status,
+    approval_at, approval_by, note, created_at, updated_at
+)
+VALUES
+    (1, 3, 2, '6월 24일 한글 기초 결석 요청', '개인 일정으로 6월 24일 한글 기초 수업에 참석하기 어렵습니다.',
+     '2026-06-24 00:00:00', 'PENDING', NULL, NULL, NULL, '2026-05-26 09:00:00', '2026-05-26 09:00:00'),
+    (2, 4, 3, '승인된 수학 기초 결석 요청', '병원 진료 일정으로 수업 참석이 어려워 결석을 요청했습니다.',
+     '2026-06-24 00:00:00', 'APPROVED', '2026-05-27 10:30:00', 1, NULL, '2026-05-26 13:20:00', '2026-05-27 10:30:00'),
+    (3, 5, 2, '반려된 스마트폰 활용 결석 요청', '일정 조정 가능성이 있어 결석 요청을 제출했습니다.',
+     '2026-06-27 00:00:00', 'REJECTED', '2026-05-28 14:10:00', 1, '수업 대체 운영 계획 확인 후 다시 요청해주세요.', '2026-05-27 16:40:00', '2026-05-28 14:10:00');
+ALTER SEQUENCE absence_requests_id_seq RESTART WITH 4;
+
+-- 12. Lesson Exchange Requests
 INSERT INTO lesson_exchange_requests (
     id, daily_schedule_id, lesson_date, requested_by, title, classroom_name_snapshot, content, status,
     expires_at, processed_at, processed_by, completed_at, cancelled_at, rejection_note,
@@ -140,7 +157,7 @@ VALUES
      '2026-06-07 23:59:00', NULL, NULL, NULL, '2026-05-24 18:00:00', NULL, '2026-05-24 12:00:00', '2026-05-24 18:00:00');
 ALTER SEQUENCE lesson_exchange_requests_id_seq RESTART WITH 8;
 
--- 12. Lesson Exchange Proposals
+-- 13. Lesson Exchange Proposals
 INSERT INTO lesson_exchange_proposals (
     id, request_id, proposed_by, proposal_type, daily_schedule_id, lesson_date, content, classroom_name_snapshot,
     status, accepted_at, withdrawn_at, closed_at, created_at, updated_at
@@ -158,7 +175,7 @@ VALUES
      'CLOSED', NULL, NULL, '2026-05-25 16:00:00', '2026-05-24 10:30:00', '2026-05-25 16:00:00');
 ALTER SEQUENCE lesson_exchange_proposals_id_seq RESTART WITH 6;
 
--- 13. Students
+-- 14. Students
 INSERT INTO students (id, class_id, name, phone_number, description, status)
 VALUES
     (1, 1, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),
