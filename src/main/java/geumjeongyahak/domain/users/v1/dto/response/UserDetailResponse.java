@@ -17,9 +17,6 @@ public record UserDetailResponse(
     @Schema(description = "사용자 이름", example = "홍길동")
     String name,
 
-    @Schema(description = "서비스 내 표시용 닉네임", example = "까치")
-    String nickname,
-
     @Schema(description = "사용자 기본 이메일이자 Local 로그인 이메일로 사용될 수 있는 값", example = "user@example.com")
     String email,
 
@@ -45,7 +42,6 @@ public record UserDetailResponse(
         return new UserDetailResponse(
             user.getId(),
             user.getName(),
-            user.getNickname(),
             user.getEmail(),
             user.getPhoneNumber(),
             user.getRole().name(),

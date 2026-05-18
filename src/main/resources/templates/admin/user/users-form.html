@@ -6,7 +6,6 @@
     <div class="page-title"><div><h1>사용자 등록</h1><p>새 관리자/봉사자 계정을 생성합니다.</p></div></div>
     <form class="panel form-grid" th:action="@{/admin/user/users}" method="post">
         <label>이메일 <input name="email" type="email" required></label>
-        <label>닉네임 <input name="nickname" required></label>
         <label>이름 <input name="name" required></label>
         <label>비밀번호 <input name="password" type="password" minlength="8" required></label>
         <label>연락처 <input name="phoneNumber"></label>

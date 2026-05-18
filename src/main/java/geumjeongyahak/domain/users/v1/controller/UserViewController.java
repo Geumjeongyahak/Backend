@@ -55,7 +55,6 @@ public class UserViewController {
     @PostMapping
     public String createUser(
         @RequestParam String email,
-        @RequestParam String nickname,
         @RequestParam String name,
         @RequestParam String password,
         @RequestParam(required = false) String phoneNumber,
@@ -63,7 +62,7 @@ public class UserViewController {
         @RequestParam(required = false) Long departmentId,
         RedirectAttributes redirectAttributes
     ) {
-        Long userId = userAdminViewService.createUser(email, nickname, name, password, phoneNumber, role, departmentId);
+        Long userId = userAdminViewService.createUser(email, name, password, phoneNumber, role, departmentId);
         redirectAttributes.addFlashAttribute("message", "사용자를 등록했습니다.");
         return "redirect:/admin/user/users/" + userId;
     }
@@ -100,14 +99,13 @@ public class UserViewController {
     public String updateUser(
         @PathVariable Long userId,
         @RequestParam String email,
-        @RequestParam String nickname,
         @RequestParam String name,
         @RequestParam(required = false) String phoneNumber,
         @RequestParam String role,
         @RequestParam(required = false) Long departmentId,
         RedirectAttributes redirectAttributes
     ) {
-        userAdminViewService.updateUser(userId, email, nickname, name, phoneNumber, role, departmentId);
+        userAdminViewService.updateUser(userId, email, name, phoneNumber, role, departmentId);
         redirectAttributes.addFlashAttribute("message", "사용자 정보를 수정했습니다.");
         return "redirect:/admin/user/users/" + userId;
     }

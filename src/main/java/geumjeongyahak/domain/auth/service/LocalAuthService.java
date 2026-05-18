@@ -59,7 +59,6 @@ public class LocalAuthService {
 
         User user = User.builder()
             .name(request.name())
-            .nickname(request.nickname())
             .email(request.email())
             .phoneNumber(request.phoneNumber())
             .profileImageUrl(request.profileImageUrl())

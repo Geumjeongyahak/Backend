@@ -13,11 +13,6 @@ public record CreateUserRequest(
     @ValidEmail
     String email,
 
-    @Schema(description = "서비스 내 표시용 닉네임. 중복될 수 없습니다.", example = "까치")
-    @NotBlank(message = "닉네임은 필수입니다.")
-    @Size(max = 30, message = "닉네임은 30자 이하여야 합니다.")
-    String nickname,
-
     @Schema(description = "사용자 실명 또는 운영상 관리 이름", example = "홍길동")
     @NotBlank(message = "이름은 필수입니다.")
     @Size(max = 50, message = "이름은 50자 이하여야 합니다.")

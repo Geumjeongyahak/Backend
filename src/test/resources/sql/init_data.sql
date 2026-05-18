@@ -10,20 +10,20 @@ ALTER TABLE departments ALTER COLUMN id RESTART WITH 7;
 
 -- 2. Users
 -- admin1234 / admin1234
-INSERT INTO users (id, nickname, name, primary_email, role, department_id) VALUES
-    (1, 'admin1234', '관리자', 'admin@test.com', 'ADMIN', 4);
+INSERT INTO users (id, name, primary_email, role, department_id) VALUES
+    (1, '관리자', 'admin@test.com', 'ADMIN', 4);
 
 -- teacher01 / teacher01
-INSERT INTO users (id, nickname, name, primary_email, role, department_id) VALUES
-    (2, 'teacher01', '홍길동', 'teacher01@test.com', 'VOLUNTEER', 2);
+INSERT INTO users (id, name, primary_email, role, department_id) VALUES
+    (2, '홍길동', 'teacher01@test.com', 'VOLUNTEER', 2);
 
 -- teacher02 / teacher02
-INSERT INTO users (id, nickname, name, primary_email, role, department_id) VALUES
-    (3, 'teacher02', '김철수', 'teacher02@test.com', 'VOLUNTEER', 2);
+INSERT INTO users (id, name, primary_email, role, department_id) VALUES
+    (3, '김철수', 'teacher02@test.com', 'VOLUNTEER', 2);
 
 -- guest01 / guest01
-INSERT INTO users (id, nickname, name, primary_email, role, department_id) VALUES
-    (4, 'guest01', '이영희', 'guest01@test.com', 'GUEST', NULL);
+INSERT INTO users (id, name, primary_email, role, department_id) VALUES
+    (4, '이영희', 'guest01@test.com', 'GUEST', NULL);
 
 ALTER TABLE users ALTER COLUMN id RESTART WITH 5;
 
@@ -98,4 +98,3 @@ VALUES
     (1, 1, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),
     (2, 1, '박민수', '010-4444-4444', '기초반', 'ENROLLED');
 ALTER TABLE students ALTER COLUMN id RESTART WITH 3;
-

@@ -7,9 +7,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserRepository extends JpaRepository<User, Long>{
-    java.util.Optional<User> findByNickname(String nickname);
+    java.util.Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
-    boolean existsByNickname(String nickname);
     boolean existsByDepartmentId(Long departmentId);
     boolean existsByIdAndDepartmentId(Long userId, Long departmentId);
     long countByDepartmentId(Long departmentId);

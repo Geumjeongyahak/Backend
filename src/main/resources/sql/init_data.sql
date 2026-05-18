@@ -12,20 +12,20 @@ ALTER SEQUENCE departments_id_seq RESTART WITH 7;
 
 -- 2. Users
 -- admin1234 / admin1234
-INSERT INTO users (id, nickname, name, primary_email, role, department_id) VALUES
-    (1, 'admin1234', '관리자', 'admin@test.com', 'ADMIN', 4);
+INSERT INTO users (id, name, primary_email, role, department_id) VALUES
+    (1, '관리자', 'admin@test.com', 'ADMIN', 4);
 
 -- teacher01 / teacher01
-INSERT INTO users (id, nickname, name, primary_email, role, department_id) VALUES
-    (2, 'teacher01', '홍길동', 'teacher01@test.com', 'VOLUNTEER', 2);
+INSERT INTO users (id, name, primary_email, role, department_id) VALUES
+    (2, '홍길동', 'teacher01@test.com', 'VOLUNTEER', 2);
 
 -- teacher02 / teacher02
-INSERT INTO users (id, nickname, name, primary_email, role, department_id) VALUES
-    (3, 'teacher02', '김철수', 'teacher02@test.com', 'VOLUNTEER', 2);
+INSERT INTO users (id, name, primary_email, role, department_id) VALUES
+    (3, '김철수', 'teacher02@test.com', 'VOLUNTEER', 2);
 
 -- guest01 / guest01
-INSERT INTO users (id, nickname, name, primary_email, role, department_id) VALUES
-    (4, 'guest01', '이영희', 'guest01@test.com', 'GUEST', NULL);
+INSERT INTO users (id, name, primary_email, role, department_id) VALUES
+    (4, '이영희', 'guest01@test.com', 'GUEST', NULL);
 
 ALTER SEQUENCE users_id_seq RESTART WITH 5;
 
