@@ -8,6 +8,7 @@ import geumjeongyahak.domain.daily_schedule.enums.DailyStudentAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.repository.DailyStudentAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
@@ -30,6 +31,7 @@ public class DailyScheduleAdminViewService {
 
     private static final int PREVIOUS_WEEK_OFFSET = -1;
     private static final int NEXT_WEEK_OFFSET = 1;
+    private static final boolean ADMIN_CAN_VIEW_SENSITIVE_INFO = true;
 
     private final DailyScheduleService dailyScheduleService;
     private final DailyStudentAttendanceRepository dailyStudentAttendanceRepository;
@@ -80,6 +82,14 @@ public class DailyScheduleAdminViewService {
             .stream()
             .map(TeacherOption::from)
             .toList();
+    }
+
+    public DailyScheduleDetailResponse getDailySchedule(Long viewerId, Long dailyScheduleId) {
+        return dailyScheduleService.getDailySchedule(
+            dailyScheduleId,
+            viewerId,
+            ADMIN_CAN_VIEW_SENSITIVE_INFO
+        );
     }
 
     public DailyScheduleStatus[] getStatuses() {

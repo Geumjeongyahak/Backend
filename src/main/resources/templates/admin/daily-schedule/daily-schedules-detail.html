@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('하루 일정 상세')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>하루 일정 상세</h1>
+                <p th:text="|${schedule.lessonDate} ${schedule.classroomName} 일정과 출석 현황입니다.|">
+                    2026-05-20 벚꽃반 일정과 출석 현황입니다.
+                </p>
+            </div>
+            <a class="reset-link"
+               th:href="@{/admin/daily-schedule/daily-schedules(from=${filter.from},to=${filter.to},classroomId=${filter.classroomId},teacherId=${filter.teacherId},status=${filter.status})}">
+                목록으로
+            </a>
+        </div>
+
+        <section class="panel">
+            <h2>기본 정보</h2>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span>ID</span>
+                    <strong th:text="${schedule.dailyScheduleId}">1</strong>
+                </div>
+                <div class="detail-item">
+                    <span>수업일</span>
+                    <strong th:text="${schedule.lessonDate}">2026-05-20</strong>
+                </div>
+                <div class="detail-item">
+                    <span>분반</span>
+                    <strong th:text="|${schedule.classroomName} (#${schedule.classroomId})|">벚꽃반 (#1)</strong>
+                </div>
+                <div class="detail-item">
+                    <span>담당 교사</span>
+                    <strong th:text="|${schedule.teacherName} (#${schedule.teacherId})|">홍길동 (#2)</strong>
+                </div>
+                <div class="detail-item">
+                    <span>교사 연락처</span>
+                    <strong th:text="${schedule.teacherPhoneNumber != null ? schedule.teacherPhoneNumber : '-'}">010-0000-0000</strong>
+                </div>
+                <div class="detail-item">
+                    <span>주민번호 앞자리</span>
+                    <strong th:text="${schedule.residentRegistrationNumberPrefix != null ? schedule.residentRegistrationNumberPrefix : '-'}">900101</strong>
+                </div>
+                <div class="detail-item">
+                    <span>개인정보 활용 동의</span>
+                    <strong th:text="${schedule.personalInfoConsent ? '동의' : '미동의'}">동의</strong>
+                </div>
+                <div class="detail-item">
+                    <span>운영 시간</span>
+                    <strong th:text="${schedule.activityStartTime != null && schedule.activityEndTime != null ? schedule.activityStartTime + ' - ' + schedule.activityEndTime : '-'}">
+                        19:20 - 21:40
+                    </strong>
+                </div>
+                <div class="detail-item">
+                    <span>하루 일정 상태</span>
+                    <strong>
+                        <span class="pill" th:text="${schedule.status.displayName}">예정</span>
+                    </strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>교사 출석</h2>
+            <div class="detail-grid" th:if="${schedule.teacherAttendance != null}">
+                <div class="detail-item">
+                    <span>출석 ID</span>
+                    <strong th:text="${schedule.teacherAttendance.attendanceId}">1</strong>
+                </div>
+                <div class="detail-item">
+                    <span>출석 상태</span>
+                    <strong>
+                        <span class="pill" th:text="${schedule.teacherAttendance.status.displayName}">출석</span>
+                    </strong>
+                </div>
+                <div class="detail-item">
+                    <span>출석 처리 시각</span>
+                    <strong th:text="${schedule.teacherAttendance.attendedAt != null ? schedule.teacherAttendance.attendedAt : '-'}">
+                        2026-05-20T19:20
+                    </strong>
+                </div>
+                <div class="detail-item">
+                    <span>봉사 인정 시간</span>
+                    <strong th:text="${schedule.teacherAttendance.volunteerServiceMinutes != null ? schedule.teacherAttendance.volunteerServiceMinutes + '분' : '-'}">
+                        120분
+                    </strong>
+                </div>
+                <div class="detail-item">
+                    <span>위도</span>
+                    <strong th:text="${schedule.teacherAttendance.latitude != null ? schedule.teacherAttendance.latitude : '-'}">35.1795543</strong>
+                </div>
+                <div class="detail-item">
+                    <span>경도</span>
+                    <strong th:text="${schedule.teacherAttendance.longitude != null ? schedule.teacherAttendance.longitude : '-'}">129.0756416</strong>
+                </div>
+            </div>
+            <p class="empty" th:if="${schedule.teacherAttendance == null}">교사 출석 정보가 아직 없습니다.</p>
+        </section>
+
+        <section class="panel table-panel">
+            <div style="padding: 22px 22px 0;">
+                <h2>학생 출석</h2>
+            </div>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>출석 ID</th>
+                        <th>학생 ID</th>
+                        <th>학생명</th>
+                        <th>상태</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="attendance : ${schedule.studentAttendances}">
+                        <td th:text="${attendance.attendanceId}">1</td>
+                        <td th:text="${attendance.studentId}">10</td>
+                        <td th:text="${attendance.studentName}">최양지</td>
+                        <td>
+                            <span class="pill" th:text="${attendance.status.displayName}">출석</span>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(schedule.studentAttendances)}">
+                        <td colspan="4" class="empty">학생 출석 정보가 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel table-panel">
+            <div style="padding: 22px 22px 0;">
+                <h2>수업 일지</h2>
+            </div>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>수업 ID</th>
+                        <th>교시</th>
+                        <th>시간</th>
+                        <th>과목</th>
+                        <th>일지</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="lesson : ${schedule.lessons}">
+                        <td th:text="${lesson.lessonId}">1</td>
+                        <td th:text="${lesson.period}">1</td>
+                        <td th:text="${lesson.startTime != null && lesson.endTime != null ? lesson.startTime + ' - ' + lesson.endTime : '-'}">19:20 - 20:00</td>
+                        <td th:text="${lesson.subjectName}">국어</td>
+                        <td th:text="${lesson.note != null && !#strings.isEmpty(lesson.note) ? lesson.note : '-'}">오늘 수업 내용</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(schedule.lessons)}">
+                        <td colspan="5" class="empty">수업 일지 정보가 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

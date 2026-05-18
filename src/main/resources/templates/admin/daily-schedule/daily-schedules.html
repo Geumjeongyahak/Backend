@@ -80,6 +80,7 @@
                         <th>교사 출석</th>
                         <th>학생 출석</th>
                         <th>수업 수</th>
+                        <th>관리</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -99,9 +100,15 @@
                             출석 0 / 지각 0 / 결석 0 / 전체 0
                         </td>
                         <td th:text="${schedule.lessonCount}">3</td>
+                        <td>
+                            <a class="reset-link"
+                               th:href="@{/admin/daily-schedule/daily-schedules/{dailyScheduleId}(dailyScheduleId=${schedule.dailyScheduleId},from=${dailySchedulesPage.from},to=${dailySchedulesPage.to},classroomId=${filter.classroomId},teacherId=${filter.teacherId},status=${filter.status})}">
+                                상세보기
+                            </a>
+                        </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(dailySchedulesPage.rows)}">
-                        <td colspan="9" class="empty">조회된 하루 일정이 없습니다.</td>
+                        <td colspan="10" class="empty">조회된 하루 일정이 없습니다.</td>
                     </tr>
                     </tbody>
                 </table>
