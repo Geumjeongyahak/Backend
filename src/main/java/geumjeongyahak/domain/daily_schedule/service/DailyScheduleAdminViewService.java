@@ -8,11 +8,15 @@ import geumjeongyahak.domain.daily_schedule.enums.DailyStudentAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.repository.DailyStudentAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendanceItemRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendancesRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleStatusRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyTeacherAttendanceRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -33,6 +37,7 @@ public class DailyScheduleAdminViewService {
     private static final int PREVIOUS_WEEK_OFFSET = -1;
     private static final int NEXT_WEEK_OFFSET = 1;
     private static final boolean ADMIN_CAN_VIEW_SENSITIVE_INFO = true;
+    private static final boolean ADMIN_CAN_WRITE_ANY_DAILY_SCHEDULE = true;
 
     private final DailyScheduleService dailyScheduleService;
     private final DailyScheduleAdminService dailyScheduleAdminService;
@@ -104,8 +109,48 @@ public class DailyScheduleAdminViewService {
         );
     }
 
+    @Transactional
+    public void updateTeacherAttendance(
+        Long adminId,
+        Long dailyScheduleId,
+        DailyTeacherAttendanceStatus status,
+        BigDecimal latitude,
+        BigDecimal longitude
+    ) {
+        dailyScheduleService.updateTeacherAttendance(
+            dailyScheduleId,
+            adminId,
+            ADMIN_CAN_WRITE_ANY_DAILY_SCHEDULE,
+            ADMIN_CAN_VIEW_SENSITIVE_INFO,
+            new UpdateDailyTeacherAttendanceRequest(status, latitude, longitude)
+        );
+    }
+
+    @Transactional
+    public void updateStudentAttendances(
+        Long adminId,
+        Long dailyScheduleId,
+        List<UpdateDailyStudentAttendanceItemRequest> attendances
+    ) {
+        dailyScheduleService.updateStudentAttendances(
+            dailyScheduleId,
+            adminId,
+            ADMIN_CAN_WRITE_ANY_DAILY_SCHEDULE,
+            ADMIN_CAN_VIEW_SENSITIVE_INFO,
+            new UpdateDailyStudentAttendancesRequest(attendances)
+        );
+    }
+
     public DailyScheduleStatus[] getStatuses() {
         return DailyScheduleStatus.values();
+    }
+
+    public DailyTeacherAttendanceStatus[] getTeacherAttendanceStatuses() {
+        return DailyTeacherAttendanceStatus.values();
+    }
+
+    public DailyStudentAttendanceStatus[] getStudentAttendanceStatuses() {
+        return DailyStudentAttendanceStatus.values();
     }
 
     public String getScheduleStatusLabel(DailyScheduleStatus status) {

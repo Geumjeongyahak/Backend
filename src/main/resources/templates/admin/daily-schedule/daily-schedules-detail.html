@@ -117,11 +117,44 @@
                 </div>
             </div>
             <p class="empty" th:if="${schedule.teacherAttendance == null}">교사 출석 정보가 아직 없습니다.</p>
+            <form class="filter-grid"
+                  style="margin-top: 18px;"
+                  th:action="@{/admin/daily-schedule/daily-schedules/{dailyScheduleId}/teacher-attendance(dailyScheduleId=${schedule.dailyScheduleId})}"
+                  method="post">
+                <input type="hidden" name="from" th:value="${filter.from != null ? #temporals.format(filter.from, 'yyyy-MM-dd') : ''}">
+                <input type="hidden" name="to" th:value="${filter.to != null ? #temporals.format(filter.to, 'yyyy-MM-dd') : ''}">
+                <input type="hidden" name="classroomId" th:value="${filter.classroomId}">
+                <input type="hidden" name="teacherId" th:value="${filter.teacherId}">
+                <input type="hidden" name="filterStatus" th:value="${filter.status}">
+                <label>교사 출석 상태
+                    <select name="teacherAttendanceStatus">
+                        <option th:each="status : ${teacherAttendanceStatuses}"
+                                th:value="${status.name()}"
+                                th:text="${status.displayName}"
+                                th:selected="${schedule.teacherAttendance != null ? schedule.teacherAttendance.status == status : status.name() == 'ABSENT'}">
+                            출석
+                        </option>
+                    </select>
+                </label>
+                <button class="button" type="submit">교사 출석 저장</button>
+            </form>
         </section>
 
-        <section class="panel table-panel">
+        <form class="panel table-panel"
+              th:action="@{/admin/daily-schedule/daily-schedules/{dailyScheduleId}/student-attendances(dailyScheduleId=${schedule.dailyScheduleId})}"
+              method="post">
+            <input type="hidden" name="from" th:value="${filter.from != null ? #temporals.format(filter.from, 'yyyy-MM-dd') : ''}">
+            <input type="hidden" name="to" th:value="${filter.to != null ? #temporals.format(filter.to, 'yyyy-MM-dd') : ''}">
+            <input type="hidden" name="classroomId" th:value="${filter.classroomId}">
+            <input type="hidden" name="teacherId" th:value="${filter.teacherId}">
+            <input type="hidden" name="filterStatus" th:value="${filter.status}">
             <div style="padding: 22px 22px 0;">
-                <h2>학생 출석</h2>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                    <h2>학생 출석</h2>
+                    <button class="button" type="submit" th:if="${!#lists.isEmpty(schedule.studentAttendances)}">
+                        학생 출석 저장
+                    </button>
+                </div>
             </div>
             <div class="table-scroll">
                 <table>
@@ -139,7 +172,15 @@
                         <td th:text="${attendance.studentId}">10</td>
                         <td th:text="${attendance.studentName}">최양지</td>
                         <td>
-                            <span class="pill" th:text="${attendance.status.displayName}">출석</span>
+                            <input type="hidden" name="studentIds" th:value="${attendance.studentId}">
+                            <select name="studentAttendanceStatuses">
+                                <option th:each="status : ${studentAttendanceStatuses}"
+                                        th:value="${status.name()}"
+                                        th:text="${status.displayName}"
+                                        th:selected="${attendance.status == status}">
+                                    출석
+                                </option>
+                            </select>
                         </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(schedule.studentAttendances)}">
@@ -148,7 +189,7 @@
                     </tbody>
                 </table>
             </div>
-        </section>
+        </form>
 
         <section class="panel table-panel">
             <div style="padding: 22px 22px 0;">
