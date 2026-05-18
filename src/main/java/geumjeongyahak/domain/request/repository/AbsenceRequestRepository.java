@@ -14,6 +14,8 @@ import geumjeongyahak.domain.request.enums.RequestStatus;
 
 public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, Long>, JpaSpecificationExecutor<AbsenceRequest> {
 
+    long countByStatus(RequestStatus status);
+
     Page<AbsenceRequest> findAll(Pageable pageable);
 
     Page<AbsenceRequest> findAllByRequestedBy_Id(Long requestedById, Pageable pageable);
