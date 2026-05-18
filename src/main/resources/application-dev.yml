@@ -13,7 +13,9 @@ spring:
     show-sql: false
   sql:
     init:
-      mode: never
+      mode: always
+      data-locations: classpath:/sql/init_data.sql
+      continue-on-error: true
   cloud:
     gcp:
       storage:
