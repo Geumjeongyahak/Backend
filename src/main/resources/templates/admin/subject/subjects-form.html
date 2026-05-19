@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('과목 등록')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>과목 등록</h1>
+                <p>분반의 정기 수업 편성과 담당 교사를 등록합니다.</p>
+            </div>
+            <a class="reset-link" th:href="@{/admin/subject/subjects}">목록으로</a>
+        </div>
+
+        <form class="panel form-grid" th:action="@{/admin/subject/subjects}" method="post">
+            <label>분반
+                <select name="classroomId" required>
+                    <option value="">선택</option>
+                    <option th:each="classroom : ${classrooms}"
+                            th:value="${classroom.id}"
+                            th:text="${classroom.name}">벚꽃반</option>
+                </select>
+            </label>
+            <label>담당 교사
+                <select name="teacherId">
+                    <option value="">미배정</option>
+                    <option th:each="teacher : ${teachers}"
+                            th:value="${teacher.id}"
+                            th:text="${teacher.name}">홍길동</option>
+                </select>
+            </label>
+            <label>과목명
+                <input name="name" maxlength="50" required>
+            </label>
+            <label>운영 시작일
+                <input name="startAt" type="date" required>
+            </label>
+            <label>운영 종료일
+                <input name="endAt" type="date" required>
+            </label>
+            <label>요일
+                <select name="dayOfWeek" required>
+                    <option th:each="dayOfWeek : ${dayOfWeeks}"
+                            th:value="${dayOfWeek.value.name()}"
+                            th:text="${dayOfWeek.label}">월요일</option>
+                </select>
+            </label>
+            <label>교시
+                <input name="period" type="number" min="1" required>
+            </label>
+            <label>시작 시간
+                <input name="startTime" type="time" required>
+            </label>
+            <label>종료 시간
+                <input name="endTime" type="time" required>
+            </label>
+            <label>설명
+                <textarea name="description"></textarea>
+            </label>
+            <button class="button" type="submit">등록</button>
+        </form>
+    </main>
+</div>
+</body>
+</html>

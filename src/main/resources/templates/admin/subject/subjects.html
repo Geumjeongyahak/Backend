@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('과목 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>과목</h1>
+                <p>분반별 정기 수업 편성과 담당 교사 배정 상태를 조회합니다.</p>
+            </div>
+            <a class="button" th:href="@{/admin/subject/subjects/new}">과목 등록</a>
+        </div>
+
+        <form class="panel filter-grid" th:action="@{/admin/subject/subjects}" method="get">
+            <label>분반
+                <select name="classroomId">
+                    <option value="">전체</option>
+                    <option th:each="classroom : ${classrooms}"
+                            th:value="${classroom.id}"
+                            th:text="${classroom.name}"
+                            th:selected="${filter.classroomId == classroom.id}">벚꽃반</option>
+                </select>
+            </label>
+            <label>상태
+                <select name="active">
+                    <option value="">전체</option>
+                    <option value="true" th:selected="${filter.active != null && filter.active}">활성</option>
+                    <option value="false" th:selected="${filter.active != null && !filter.active}">비활성</option>
+                </select>
+            </label>
+            <button class="button" type="submit">조회</button>
+            <a class="reset-link" th:href="@{/admin/subject/subjects}">초기화</a>
+        </form>
+
+        <section class="panel table-panel">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>과목명</th>
+                        <th>분반</th>
+                        <th>담당 교사</th>
+                        <th>운영 기간</th>
+                        <th>요일</th>
+                        <th>교시</th>
+                        <th>수업 시간</th>
+                        <th>수업 횟수</th>
+                        <th>상태</th>
+                        <th>관리</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="subject : ${subjectsPage.rows}">
+                        <td th:text="${subject.id}">1</td>
+                        <td th:text="${subject.name}">한글 기초</td>
+                        <td th:text="${subject.classroomName}">벚꽃반</td>
+                        <td th:text="${subject.teacherLabel}">홍길동</td>
+                        <td th:text="|${subject.startAt} ~ ${subject.endAt}|">2026-03-01 ~ 2026-08-31</td>
+                        <td th:text="${subject.dayOfWeekLabel}">월요일</td>
+                        <td th:text="${subject.period}">1</td>
+                        <td th:text="${subject.startTime != null && subject.endTime != null ? subject.startTime + ' - ' + subject.endTime : '-'}">19:20 - 20:00</td>
+                        <td th:text="${subject.times}">12</td>
+                        <td>
+                            <span class="pill" th:text="${subject.activeLabel}">활성</span>
+                        </td>
+                        <td>
+                            <a class="reset-link"
+                               th:href="@{/admin/subject/subjects/{subjectId}(subjectId=${subject.id},classroomId=${filter.classroomId},active=${filter.active})}">
+                                상세보기
+                            </a>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(subjectsPage.rows)}">
+                        <td colspan="11" class="empty">조회된 과목이 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

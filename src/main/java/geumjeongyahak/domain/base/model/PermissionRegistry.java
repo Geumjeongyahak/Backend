@@ -29,7 +29,7 @@ public class PermissionRegistry {
         allow(ResourceType.STUDENT, PermissionScope.GLOBAL_ONLY,
             ActionType.WRITE, ActionType.MANAGE);
         allow(ResourceType.SUBJECT, PermissionScope.GLOBAL_ONLY,
-            ActionType.WRITE, ActionType.MANAGE);
+            ActionType.READ, ActionType.WRITE, ActionType.MANAGE);
         allow(ResourceType.LESSON, PermissionScope.GLOBAL_ONLY,
             ActionType.READ, ActionType.WRITE, ActionType.MANAGE);
         allow(ResourceType.DAILY_SCHEDULE, PermissionScope.GLOBAL_ONLY,

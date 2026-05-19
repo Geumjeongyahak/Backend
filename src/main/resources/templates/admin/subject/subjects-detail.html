@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('과목 상세')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>과목 상세</h1>
+                <p th:text="|${subject.classroomName} ${subject.name} 편성 정보입니다.|">
+                    벚꽃반 한글 기초 편성 정보입니다.
+                </p>
+            </div>
+            <a class="reset-link"
+               th:href="@{/admin/subject/subjects(classroomId=${filter.classroomId},active=${filter.active})}">
+                목록으로
+            </a>
+            <a class="button"
+               th:href="@{/admin/subject/subjects/{subjectId}/edit(subjectId=${subject.id},classroomId=${filter.classroomId},active=${filter.active})}">
+                기본 정보 수정
+            </a>
+        </div>
+
+        <p class="flash"
+           style="margin: 0; background: #fff0ed; color: var(--danger);"
+           th:if="${errorMessage}"
+           th:text="${errorMessage}">
+            요청을 처리할 수 없습니다.
+        </p>
+
+        <section class="panel">
+            <h2>기본 정보</h2>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span>ID</span>
+                    <strong th:text="${subject.id}">1</strong>
+                </div>
+                <div class="detail-item">
+                    <span>상태</span>
+                    <strong>
+                        <span class="pill" th:text="${subject.activeLabel}">활성</span>
+                    </strong>
+                </div>
+                <div class="detail-item">
+                    <span>과목명</span>
+                    <strong th:text="${subject.name}">한글 기초</strong>
+                </div>
+                <div class="detail-item">
+                    <span>분반</span>
+                    <strong th:text="|${subject.classroomName} (#${subject.classroomId})|">벚꽃반 (#1)</strong>
+                </div>
+                <div class="detail-item">
+                    <span>담당 교사</span>
+                    <strong th:text="${subject.teacherId != null ? subject.teacherLabel + ' (#' + subject.teacherId + ')' : subject.teacherLabel}">
+                        홍길동 (#2)
+                    </strong>
+                </div>
+                <div class="detail-item">
+                    <span>교사 배정 시각</span>
+                    <strong th:text="${subject.teacherAssignedAt != null ? subject.teacherAssignedAt : '-'}">
+                        2026-05-01T10:00
+                    </strong>
+                </div>
+                <div class="detail-item">
+                    <span>운영 기간</span>
+                    <strong th:text="|${subject.startAt} ~ ${subject.endAt}|">2026-03-01 ~ 2026-08-31</strong>
+                </div>
+                <div class="detail-item">
+                    <span>요일</span>
+                    <strong th:text="${subject.dayOfWeekLabel}">월요일</strong>
+                </div>
+                <div class="detail-item">
+                    <span>교시</span>
+                    <strong th:text="${subject.period}">1</strong>
+                </div>
+                <div class="detail-item">
+                    <span>수업 시간</span>
+                    <strong th:text="${subject.startTime != null && subject.endTime != null ? subject.startTime + ' - ' + subject.endTime : '-'}">
+                        19:20 - 20:00
+                    </strong>
+                </div>
+                <div class="detail-item">
+                    <span>수업 횟수</span>
+                    <strong th:text="${subject.times}">12</strong>
+                </div>
+                <div class="detail-item">
+                    <span>설명</span>
+                    <strong th:text="${subject.description != null && !subject.description.isBlank() ? subject.description : '-'}">
+                        과목 설명
+                    </strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>담당 교사</h2>
+            <form class="filter-grid"
+                  th:action="@{/admin/subject/subjects/{subjectId}/teacher(subjectId=${subject.id})}"
+                  method="post">
+                <input type="hidden" name="classroomId" th:value="${filter.classroomId}">
+                <input type="hidden" name="active" th:value="${filter.active}">
+                <label>담당 교사
+                    <select name="teacherId">
+                        <option value="" th:selected="${subject.teacherId == null}">미배정</option>
+                        <option th:each="teacher : ${teachers}"
+                                th:value="${teacher.id}"
+                                th:text="${teacher.name}"
+                                th:selected="${subject.teacherId == teacher.id}">홍길동</option>
+                    </select>
+                </label>
+                <button class="button" type="submit">담당 교사 저장</button>
+            </form>
+        </section>
+
+        <section class="panel">
+            <h2>일정</h2>
+            <form class="filter-grid"
+                  th:action="@{/admin/subject/subjects/{subjectId}/schedule(subjectId=${subject.id})}"
+                  method="post">
+                <input type="hidden" name="classroomId" th:value="${filter.classroomId}">
+                <input type="hidden" name="active" th:value="${filter.active}">
+                <label>운영 시작일
+                    <input name="startAt" type="date" required th:value="${subject.startAt}">
+                </label>
+                <label>운영 종료일
+                    <input name="endAt" type="date" required th:value="${subject.endAt}">
+                </label>
+                <label>요일
+                    <select name="dayOfWeek" required>
+                        <option th:each="dayOfWeek : ${dayOfWeeks}"
+                                th:value="${dayOfWeek.value.name()}"
+                                th:text="${dayOfWeek.label}"
+                                th:selected="${subject.dayOfWeek == dayOfWeek.value}">월요일</option>
+                    </select>
+                </label>
+                <label>교시
+                    <input name="period" type="number" min="1" required th:value="${subject.period}">
+                </label>
+                <label>시작 시간
+                    <input name="startTime" type="time" required th:value="${subject.startTime}">
+                </label>
+                <label>종료 시간
+                    <input name="endTime" type="time" required th:value="${subject.endTime}">
+                </label>
+                <button class="button" type="submit">일정 저장</button>
+            </form>
+        </section>
+
+        <section class="panel">
+            <h2>운영 상태</h2>
+            <form th:if="${subject.isActive}"
+                  th:action="@{/admin/subject/subjects/{subjectId}/deactivate(subjectId=${subject.id})}"
+                  method="post"
+                  onsubmit="return confirm('이 과목을 비활성화할까요?');">
+                <input type="hidden" name="classroomId" th:value="${filter.classroomId}">
+                <input type="hidden" name="active" th:value="${filter.active}">
+                <button class="button danger" type="submit">과목 비활성화</button>
+            </form>
+            <p th:unless="${subject.isActive}">이미 비활성화된 과목입니다.</p>
+        </section>
+    </main>
+</div>
+</body>
+</html>
