@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.subject.v1.controller;
 
+import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.domain.subject.service.SubjectAdminViewService;
 import geumjeongyahak.domain.subject.service.SubjectAdminViewService.SubjectFilter;
 import java.time.DayOfWeek;
@@ -62,6 +63,7 @@ public class SubjectViewController {
         model.addAttribute("adminName", authentication.getName());
         model.addAttribute("filter", filter);
         model.addAttribute("subject", subjectAdminViewService.getSubject(subjectId));
+        model.addAttribute("teachers", subjectAdminViewService.getTeacherOptions());
         return "admin/subject/subjects-detail";
     }
 
@@ -132,6 +134,26 @@ public class SubjectViewController {
     ) {
         subjectAdminViewService.updateSubject(subjectId, name, description);
         redirectAttributes.addFlashAttribute("message", "과목 기본 정보를 수정했습니다.");
+        addRedirectAttributeIfPresent(redirectAttributes, "classroomId", classroomId);
+        addRedirectAttributeIfPresent(redirectAttributes, "active", active);
+        return "redirect:/admin/subject/subjects/" + subjectId;
+    }
+
+    @PreAuthorize(SUBJECT_MANAGE_ACCESS)
+    @PostMapping("/{subjectId}/teacher")
+    public String assignTeacher(
+        @PathVariable Long subjectId,
+        @RequestParam(required = false) Long teacherId,
+        @RequestParam(required = false) Long classroomId,
+        @RequestParam(required = false) Boolean active,
+        RedirectAttributes redirectAttributes
+    ) {
+        try {
+            subjectAdminViewService.assignTeacher(subjectId, teacherId);
+            redirectAttributes.addFlashAttribute("message", "담당 교사를 변경했습니다.");
+        } catch (BusinessException exception) {
+            redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
+        }
         addRedirectAttributeIfPresent(redirectAttributes, "classroomId", classroomId);
         addRedirectAttributeIfPresent(redirectAttributes, "active", active);
         return "redirect:/admin/subject/subjects/" + subjectId;

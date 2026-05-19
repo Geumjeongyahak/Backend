@@ -2,6 +2,7 @@ package geumjeongyahak.domain.subject.service;
 
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
+import geumjeongyahak.domain.subject.v1.dto.request.AssignSubjectTeacherRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.CreateSubjectRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectBasicRequest;
 import geumjeongyahak.domain.subject.v1.dto.response.SubjectDetailResponse;
@@ -100,6 +101,11 @@ public class SubjectAdminViewService {
             subjectId,
             new UpdateSubjectBasicRequest(name, normalizeDescription(description))
         );
+    }
+
+    @Transactional
+    public void assignTeacher(Long subjectId, Long teacherId) {
+        subjectService.assignTeacher(subjectId, new AssignSubjectTeacherRequest(teacherId));
     }
 
     private Comparator<SubjectDetailResponse> subjectComparator() {
