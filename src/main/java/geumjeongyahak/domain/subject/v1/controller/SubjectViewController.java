@@ -193,6 +193,21 @@ public class SubjectViewController {
         return "redirect:/admin/subject/subjects/" + subjectId;
     }
 
+    @PreAuthorize(SUBJECT_MANAGE_ACCESS)
+    @PostMapping("/{subjectId}/deactivate")
+    public String deactivateSubject(
+        @PathVariable Long subjectId,
+        @RequestParam(required = false) Long classroomId,
+        @RequestParam(required = false) Boolean active,
+        RedirectAttributes redirectAttributes
+    ) {
+        subjectAdminViewService.deactivateSubject(subjectId);
+        redirectAttributes.addFlashAttribute("message", "과목을 비활성화했습니다.");
+        addRedirectAttributeIfPresent(redirectAttributes, "classroomId", classroomId);
+        addRedirectAttributeIfPresent(redirectAttributes, "active", active);
+        return "redirect:/admin/subject/subjects/" + subjectId;
+    }
+
     private void addSubjectFormAttributes(Model model, Authentication authentication) {
         model.addAttribute("active", "subjects");
         model.addAttribute("adminName", authentication.getName());

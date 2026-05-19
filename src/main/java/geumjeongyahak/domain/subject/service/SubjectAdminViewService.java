@@ -125,6 +125,11 @@ public class SubjectAdminViewService {
         );
     }
 
+    @Transactional
+    public void deactivateSubject(Long subjectId) {
+        subjectService.deleteSubject(subjectId);
+    }
+
     private Comparator<SubjectDetailResponse> subjectComparator() {
         return Comparator
             .comparing(SubjectDetailResponse::classroomName, Comparator.nullsLast(String::compareTo))

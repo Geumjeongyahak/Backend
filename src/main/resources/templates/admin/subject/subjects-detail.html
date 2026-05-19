@@ -145,6 +145,19 @@
                 <button class="button" type="submit">일정 저장</button>
             </form>
         </section>
+
+        <section class="panel">
+            <h2>운영 상태</h2>
+            <form th:if="${subject.isActive}"
+                  th:action="@{/admin/subject/subjects/{subjectId}/deactivate(subjectId=${subject.id})}"
+                  method="post"
+                  onsubmit="return confirm('이 과목을 비활성화할까요?');">
+                <input type="hidden" name="classroomId" th:value="${filter.classroomId}">
+                <input type="hidden" name="active" th:value="${filter.active}">
+                <button class="button danger" type="submit">과목 비활성화</button>
+            </form>
+            <p th:unless="${subject.isActive}">이미 비활성화된 과목입니다.</p>
+        </section>
     </main>
 </div>
 </body>
