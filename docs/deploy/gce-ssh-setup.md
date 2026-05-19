@@ -149,6 +149,137 @@ gcloud compute firewall-rules create allow-monitoring-to-api-observability \
   --target-tags=api-server
 ```
 
+### 3.3 PR 머지 전 수동 배포 검증
+
+머지 전에 현재 로컬 브랜치의 backend 이미지를 GHCR에 임시 태그로 push하고, GCE 인스턴스에서 pull/up 해서 직접 확인할 수 있습니다.
+
+이 절차는 GitHub Actions를 우회해서 수동으로 검증하는 방법입니다. 서버의 `~/app-dev/.env`는 그대로 사용하고, 검증할 이미지 태그만 `APP_IMAGE`로 override합니다.
+
+#### 3.3.1 로컬에서 이미지 build/push
+
+현재 브랜치와 짧은 커밋 SHA로 검증용 태그를 만듭니다.
+
+```bash
+export IMAGE_TAG="$(git branch --show-current | tr '/' '-')-$(git rev-parse --short HEAD)"
+export APP_IMAGE="ghcr.io/geumjeongyahak/backend:${IMAGE_TAG}"
+
+docker login ghcr.io -u <github-username>
+docker build -t "${APP_IMAGE}" -f infra/app/Dockerfile .
+docker push "${APP_IMAGE}"
+```
+
+예시:
+
+```text
+ghcr.io/geumjeongyahak/backend:feature-channel-create-type-c9921cf
+```
+
+#### 3.3.2 gcloud로 compose/config 복사
+
+로컬의 현재 파일을 App/DB GCE 인스턴스의 `~/app-dev`로 복사합니다.
+
+```bash
+export GCE_INSTANCE=<app-db-instance-name>
+export GCE_ZONE=<gce-zone>
+
+gcloud compute ssh "${GCE_INSTANCE}" \
+  --zone "${GCE_ZONE}" \
+  --command "mkdir -p ~/app-dev/src/main/resources/sql ~/app-dev/infra/app-server"
+
+gcloud compute scp \
+  docker-compose.yml \
+  docker-compose.dev.yml \
+  Makefile \
+  "${GCE_INSTANCE}:~/app-dev/" \
+  --zone "${GCE_ZONE}"
+
+gcloud compute scp \
+  src/main/resources/sql/init_scheme.sql \
+  src/main/resources/sql/init_data.sql \
+  "${GCE_INSTANCE}:~/app-dev/src/main/resources/sql/" \
+  --zone "${GCE_ZONE}"
+
+gcloud compute scp \
+  --recurse infra/app-server \
+  "${GCE_INSTANCE}:~/app-dev/infra/" \
+  --zone "${GCE_ZONE}"
+```
+
+#### 3.3.3 GCE에서 pull/up
+
+GCE 인스턴스에서 GHCR 로그인 후, 방금 push한 이미지를 pull해서 올립니다.
+
+```bash
+gcloud compute ssh "${GCE_INSTANCE}" \
+  --zone "${GCE_ZONE}" \
+  --command "cd ~/app-dev && test -f .env && docker login ghcr.io -u <github-username> && APP_IMAGE=${APP_IMAGE} make deploy-dev"
+```
+
+`docker login`에서 토큰 입력이 번거롭다면 GCE에 접속해서 한 번만 로그인해도 됩니다.
+
+```bash
+gcloud compute ssh "${GCE_INSTANCE}" --zone "${GCE_ZONE}"
+cd ~/app-dev
+docker login ghcr.io -u <github-username>
+APP_IMAGE=ghcr.io/geumjeongyahak/backend:<tag> make deploy-dev
+```
+
+#### 3.3.4 동작 확인
+
+GCE 인스턴스에서 컨테이너 상태와 로그를 확인합니다.
+
+```bash
+gcloud compute ssh "${GCE_INSTANCE}" \
+  --zone "${GCE_ZONE}" \
+  --command "cd ~/app-dev && make ps-dev"
+
+gcloud compute ssh "${GCE_INSTANCE}" \
+  --zone "${GCE_ZONE}" \
+  --command "cd ~/app-dev && docker compose -f docker-compose.yml -f docker-compose.dev.yml -f infra/app-server/docker-compose.observability.yml logs --tail=100 app"
+```
+
+로컬에서 API와 actuator health를 확인합니다.
+
+```bash
+export API_HOST=<app-db-external-ip-or-domain>
+
+curl -f "http://${API_HOST}:8080/actuator/health"
+curl -f "http://${API_HOST}:9090/actuator/health"
+```
+
+API 포트가 외부에 직접 열려 있지 않다면 SSH 터널로 확인합니다.
+
+```bash
+gcloud compute ssh "${GCE_INSTANCE}" \
+  --zone "${GCE_ZONE}" \
+  -- -L 18080:localhost:8080 -L 19090:localhost:9090
+
+curl -f http://localhost:18080/actuator/health
+curl -f http://localhost:19090/actuator/health
+```
+
+#### 3.3.5 기존 dev 이미지로 되돌리기
+
+검증이 끝나면 현재 dev 배포 태그로 되돌립니다.
+
+```bash
+gcloud compute ssh "${GCE_INSTANCE}" \
+  --zone "${GCE_ZONE}" \
+  --command "cd ~/app-dev && APP_IMAGE=ghcr.io/geumjeongyahak/backend:dev-latest make deploy-dev"
+```
+
+#### 3.3.6 임시 이미지 정리
+
+로컬과 GCE의 사용하지 않는 이미지는 정리할 수 있습니다.
+
+```bash
+docker image prune -f
+
+gcloud compute ssh "${GCE_INSTANCE}" \
+  --zone "${GCE_ZONE}" \
+  --command "docker image prune -f"
+```
+
 ---
 
 ## 4. 트러블슈팅
