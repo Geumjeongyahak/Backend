@@ -5,13 +5,14 @@ import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record CreateLessonExchangeRequestRequest(
 
     @NotNull
-    @Schema(description = "교환 대상 하루 일정 ID. 해당 DailySchedule에 연결된 수업 전체를 하루 단위로 교환 요청합니다.", example = "1")
-    Long dailyScheduleId,
+    @Schema(description = "교환 대상 수업일. 로그인 사용자의 해당 날짜 DailySchedule에 연결된 수업 전체를 하루 단위로 교환 요청합니다.", example = "2026-06-10")
+    LocalDate lessonDate,
 
     @NotBlank
     @Schema(description = "요청 제목", example = "수업 교환 요청")

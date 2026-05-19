@@ -144,12 +144,8 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         String content,
         LocalDateTime expiresAt
     ) {
-        Long dailyScheduleId = dailyScheduleRepository
-            .findByClassroomIdAndLessonDateAndIsDeletedFalse(CLASSROOM_ID, lessonDate)
-            .orElseThrow()
-            .getId();
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("dailyScheduleId", dailyScheduleId);
+        body.put("lessonDate", lessonDate.toString());
         body.put("title", title);
         body.put("content", content);
         body.put("expiresAt", expiresAt.toString());

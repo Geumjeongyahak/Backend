@@ -58,14 +58,14 @@ public class LessonExchangeRequestService {
         CreateLessonExchangeRequestRequest request
     ) {
         log.debug(
-            "수업 교환 요청 생성 (requesterId={}, dailyScheduleId={})",
+            "수업 교환 요청 생성 (requesterId={}, lessonDate={})",
             requesterId,
-            request.dailyScheduleId()
+            request.lessonDate()
         );
 
         DailySchedule dailySchedule = getTargetDailySchedule(
             requesterId,
-            request.dailyScheduleId()
+            request.lessonDate()
         );
 
         validateNoActiveExchangeRequestExists(
@@ -167,7 +167,7 @@ public class LessonExchangeRequestService {
 
         DailySchedule dailySchedule = getTargetDailySchedule(
             requesterId,
-            request.dailyScheduleId()
+            request.lessonDate()
         );
 
         validateNoActiveExchangeRequestExists(
@@ -346,13 +346,9 @@ public class LessonExchangeRequestService {
 
     private DailySchedule getTargetDailySchedule(
         Long requesterId,
-        Long dailyScheduleId
+        LocalDate lessonDate
     ) {
-        DailySchedule dailySchedule = dailyScheduleProxyService.getActiveById(dailyScheduleId);
-        if (!dailySchedule.getTeacher().getId().equals(requesterId)) {
-            throw new RequestForbiddenException();
-        }
-        return dailySchedule;
+        return dailyScheduleProxyService.getActiveByTeacherIdAndLessonDate(requesterId, lessonDate);
     }
 
     private Specification<LessonExchangeRequest> buildListSpecification(
