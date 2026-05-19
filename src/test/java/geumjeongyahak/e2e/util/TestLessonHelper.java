@@ -25,6 +25,7 @@ public class TestLessonHelper {
     private static final LocalDate SUBJECT_BASE_DATE = LocalDate.of(2050, 1, 1);
     private static final LocalDate LESSON_BASE_DATE = LocalDate.of(2026, 8, 1);
     private static final AtomicLong SUBJECT_SEQUENCE = new AtomicLong();
+    private static final AtomicLong LESSON_SEQUENCE = new AtomicLong();
     private final List<Long> createdSubjectIds = new ArrayList<>();
     private final List<Long> createdLessonIds = new ArrayList<>();
 
@@ -140,11 +141,12 @@ public class TestLessonHelper {
      * 날짜는 BASE_DATE(2026-08-01)에서 자동 증가하여 teacher+date 충돌을 방지한다.
      */
     public Long createLessonAndGetId(String authHeader, Long subjectId, Long teacherId) {
+        long sequence = LESSON_SEQUENCE.incrementAndGet();
         return createLessonAndGetId(
             authHeader,
             subjectId,
             teacherId,
-            LESSON_BASE_DATE.plusDays(Math.floorMod(System.nanoTime(), 10_000)).toString(),
+            LESSON_BASE_DATE.plusDays(sequence).toString(),
             "09:00:00",
             "10:00:00",
             1

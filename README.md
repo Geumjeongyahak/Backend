@@ -78,6 +78,11 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 
 실행 후 API 문서는 http://localhost:8080/swagger-ui.html 에서 확인할 수 있습니다.
 
+### 테스트 컨벤션
+
+PR 생성 및 머지 전에는 로컬 또는 별도 검증 환경에서 `./gradlew test`를 반드시 통과시킵니다.
+dev 배포 워크플로는 배포 병목을 줄이기 위해 테스트를 실행하지 않고, Docker 이미지 빌드도 `bootJar -x test`로 수행합니다.
+
 ### Docker Compose
 
 로컬에서는 앱과 PostgreSQL을 함께 빌드해서 실행합니다.
@@ -112,6 +117,12 @@ docker builder prune -f
 docker login ghcr.io -u <github-username>
 docker build -t ghcr.io/geumjeongyahak/backend:dev-latest -f infra/app/Dockerfile .
 APP_IMAGE=ghcr.io/geumjeongyahak/backend:dev-latest make push
+```
+
+수동 build/push 전에 코드 검증이 필요하면 배포 명령과 분리해서 먼저 실행합니다.
+
+```bash
+./gradlew test
 ```
 
 ### 배포 구성

@@ -27,9 +27,6 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Build with Gradle (Run Tests)
-        run: ./gradlew test
-
       - name: Lowercase IMAGE_NAME
         run: |
           echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV

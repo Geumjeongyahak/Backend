@@ -6,8 +6,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
@@ -164,6 +163,11 @@ public class FileUploadTest extends BaseFileTest {
     }
 
     private byte[] readSampleImage() throws IOException {
-        return Files.readAllBytes(Path.of("src/test/resources/images/sample1.jpg"));
+        try (InputStream inputStream = getClass().getResourceAsStream("/images/sample1.jpg")) {
+            if (inputStream == null) {
+                throw new IOException("sample image resource not found: /images/sample1.jpg");
+            }
+            return inputStream.readAllBytes();
+        }
     }
 }
