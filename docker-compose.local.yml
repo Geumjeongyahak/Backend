@@ -4,6 +4,8 @@ services:
       - .env.local
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE_LOCAL:-dev}
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      MANAGEMENT_PORT: 9090
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
     depends_on:
@@ -13,9 +15,6 @@ services:
   db:
     env_file:
       - .env.local
-    build:
-      context: .
-      dockerfile: infra/db/Dockerfile
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
