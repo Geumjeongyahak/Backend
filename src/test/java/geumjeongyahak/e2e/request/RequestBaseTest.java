@@ -83,12 +83,12 @@ public abstract class RequestBaseTest extends BaseE2ETest {
     }
 
     protected Long createAbsenceRequest(String authHeader, Long lessonId, String title, String reason) {
-        Long dailyScheduleId = getDailyScheduleIdByLessonId(lessonId);
+        String lessonDate = lessonHelper.getLessonDate(getAuthHeader(adminToken), lessonId);
         return given()
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, authHeader)
             .contentType(ContentType.JSON)
-            .body(Map.of("dailyScheduleId", dailyScheduleId, "title", title, "reason", reason))
+            .body(Map.of("lessonDate", lessonDate, "title", title, "reason", reason))
             .post()
             .then()
             .statusCode(201)

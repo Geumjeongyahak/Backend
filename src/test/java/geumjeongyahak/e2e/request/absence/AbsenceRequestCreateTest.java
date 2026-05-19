@@ -107,8 +107,8 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("관리자가 타인 담당 수업으로 결석 요청 생성 → 403")
-    void createAbsenceRequest_asAdminForOthersLesson_returns403() {
+    @DisplayName("관리자가 본인 담당 DailySchedule이 없는 수업일로 결석 요청 생성 → 404")
+    void createAbsenceRequest_asAdminForOthersLessonDate_returns404() {
         createdSubjectId = lessonHelper.createSubjectAndGetId(
             getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID);
         createdLessonId = lessonHelper.createLessonAndGetId(
@@ -121,7 +121,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .body(absenceRequestBody(createdLessonId, "관리자 대리 결석", "관리자 대리 요청"))
             .post()
             .then()
-            .statusCode(403);
+            .statusCode(404);
     }
 
     // ── 인증 오류 ─────────────────────────────────────────
@@ -132,7 +132,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
         given()
             .basePath("/api/v1/absence-requests")
             .contentType(ContentType.JSON)
-            .body(Map.of("dailyScheduleId", 1, "title", "결석 요청", "reason", "사유"))
+            .body(Map.of("lessonDate", LocalDate.now().plusDays(7).toString(), "title", "결석 요청", "reason", "사유"))
             .post()
             .then()
             .statusCode(401);
@@ -145,7 +145,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(guestToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("dailyScheduleId", 1, "title", "결석 요청", "reason", "사유"))
+            .body(Map.of("lessonDate", LocalDate.now().plusDays(7).toString(), "title", "결석 요청", "reason", "사유"))
             .post()
             .then()
             .statusCode(403);
@@ -154,13 +154,13 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
     // ── 도메인 오류 ───────────────────────────────────────
 
     @Test
-    @DisplayName("존재하지 않는 하루 일정 ID로 결석 요청 → 404")
-    void createAbsenceRequest_nonExistentDailySchedule_returns404() {
+    @DisplayName("담당 DailySchedule이 없는 수업일로 결석 요청 → 404")
+    void createAbsenceRequest_nonExistentLessonDate_returns404() {
         given()
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("dailyScheduleId", 99999L, "title", "결석 요청", "reason", "사유"))
+            .body(Map.of("lessonDate", LocalDate.now().plusYears(10).toString(), "title", "결석 요청", "reason", "사유"))
             .post()
             .then()
             .statusCode(404);
@@ -192,8 +192,8 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("타인 담당 수업으로 결석 요청 생성 → 403")
-    void createAbsenceRequest_forOthersLesson_returns403() {
+    @DisplayName("본인 담당 DailySchedule이 없는 수업일로 결석 요청 생성 → 404")
+    void createAbsenceRequest_forOthersLessonDate_returns404() {
         createdSubjectId = lessonHelper.createSubjectAndGetId(
             getAuthHeader(adminToken), CLASSROOM_ID, TEACHER_ID);
         createdLessonId = lessonHelper.createLessonAndGetId(
@@ -206,7 +206,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .body(absenceRequestBody(createdLessonId, "타인 수업 결석", "타인 수업 결석 요청"))
             .post()
             .then()
-            .statusCode(403);
+            .statusCode(404);
     }
 
     @Test
@@ -329,7 +329,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("dailyScheduleId", 1, "title", "결석 요청", "reason", ""))
+            .body(Map.of("lessonDate", LocalDate.now().plusDays(7).toString(), "title", "결석 요청", "reason", ""))
             .post()
             .then()
             .statusCode(400);
@@ -342,15 +342,15 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("dailyScheduleId", 1, "title", "", "reason", "사유"))
+            .body(Map.of("lessonDate", LocalDate.now().plusDays(7).toString(), "title", "", "reason", "사유"))
             .post()
             .then()
             .statusCode(400);
     }
 
     @Test
-    @DisplayName("dailyScheduleId 가 null → 400")
-    void createAbsenceRequest_nullDailyScheduleId_returns400() {
+    @DisplayName("lessonDate 가 null → 400")
+    void createAbsenceRequest_nullLessonDate_returns400() {
         given()
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
@@ -366,6 +366,13 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
     }
 
     private Map<String, Object> absenceRequestBody(Long lessonId, String title, String reason) {
-        return Map.of("dailyScheduleId", getDailyScheduleIdByLessonId(lessonId), "title", title, "reason", reason);
+        return Map.of(
+            "lessonDate",
+            lessonHelper.getLessonDate(getAuthHeader(adminToken), lessonId),
+            "title",
+            title,
+            "reason",
+            reason
+        );
     }
 }

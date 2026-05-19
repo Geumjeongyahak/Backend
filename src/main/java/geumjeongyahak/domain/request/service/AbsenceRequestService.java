@@ -46,12 +46,15 @@ public class AbsenceRequestService {
     @Transactional
     public AbsenceRequestResponse createAbsenceRequest(Long requesterId, CreateAbsenceRequestRequest request) {
         log.debug(
-            "결석 요청 생성 (requesterId={}, dailyScheduleId={})",
+            "결석 요청 생성 (requesterId={}, lessonDate={})",
             requesterId,
-            request.dailyScheduleId()
+            request.lessonDate()
         );
 
-        DailySchedule dailySchedule = dailyScheduleProxyService.getActiveById(request.dailyScheduleId());
+        DailySchedule dailySchedule = dailyScheduleProxyService.getActiveByTeacherIdAndLessonDate(
+            requesterId,
+            request.lessonDate()
+        );
         User requester = userProxyService.getById(requesterId);
 
         validateRequesterIsDailyScheduleTeacher(dailySchedule, requesterId);
