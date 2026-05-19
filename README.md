@@ -78,6 +78,109 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 
 실행 후 API 문서는 http://localhost:8080/swagger-ui.html 에서 확인할 수 있습니다.
 
+### Docker Compose
+
+로컬에서는 앱과 PostgreSQL을 함께 빌드해서 실행합니다.
+
+```bash
+cp .env-example .env
+make up-local
+make logs-local
+make down-local
+```
+
+dev 서버 배포는 GHCR에 올라간 backend 이미지를 pull하고, 같은 GCE 인스턴스에서 앱, PostgreSQL, exporter, Alloy를 함께 올립니다.
+
+```bash
+APP_IMAGE=ghcr.io/geumjeongyahak/backend:dev-latest make deploy-dev
+make ps-dev
+make logs-dev
+```
+
+`make deploy-dev` 실행 순서:
+
+```bash
+docker compose pull app node-exporter cadvisor postgres-exporter alloy
+docker compose up -d --remove-orphans
+docker image prune -f
+docker builder prune -f
+```
+
+이미지를 직접 업로드할 때는 `APP_IMAGE`를 지정해서 push합니다.
+
+```bash
+docker login ghcr.io -u <github-username>
+docker build -t ghcr.io/geumjeongyahak/backend:dev-latest -f infra/app/Dockerfile .
+APP_IMAGE=ghcr.io/geumjeongyahak/backend:dev-latest make push
+```
+
+### 배포 구성
+
+현재 dev 배포는 두 개의 GCE 인스턴스를 전제로 합니다.
+
+```text
+App/DB GCE
+- app
+- postgres
+- node-exporter
+- cAdvisor
+- postgres-exporter
+- Grafana Alloy
+
+Monitoring GCE
+- Prometheus
+- Loki/Grafana는 다음 단계에서 추가 예정
+```
+
+App/DB GCE의 `.env`는 인스턴스 파일로 직접 관리합니다. GitHub Actions는 `.env`를 덮어쓰지 않고, compose/config 파일만 복사한 뒤 `APP_IMAGE=... make deploy-dev`를 실행합니다.
+
+필수 환경 변수 예시:
+
+```env
+SPRING_PROFILES_ACTIVE=dev
+APP_PORT=8080
+MANAGEMENT_PORT=9090
+DB_PORT=5432
+
+POSTGRES_DB=geumjeongyahak
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=change-me
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+
+NODE_EXPORTER_PORT=9100
+CADVISOR_PORT=8081
+POSTGRES_EXPORTER_PORT=9187
+ALLOY_PORT=12345
+DEPLOY_ENV=dev
+INSTANCE_NAME=app-dev-1
+LOKI_PUSH_URL=http://MONITORING_PRIVATE_IP:3100/loki/api/v1/push
+```
+
+### 관측성
+
+App/DB GCE는 메트릭 endpoint를 노출하고, Monitoring GCE의 Prometheus가 private IP로 scrape합니다.
+
+| 포트 | 대상 | 설명 |
+|------|------|------|
+| `9090` | Spring Actuator | `/actuator/prometheus` |
+| `9100` | node-exporter | VM CPU, memory, disk, network |
+| `8081` | cAdvisor | Docker container metrics |
+| `9187` | postgres-exporter | PostgreSQL metrics |
+| `12345` | Alloy | Alloy self metrics/status |
+
+Alloy는 App/DB GCE의 Docker 로그를 읽어 Loki로 push합니다. Loki/Grafana 구성은 monitoring 서버 구성 단계에서 추가합니다.
+
+Monitoring GCE에서 Prometheus만 먼저 올릴 수 있습니다. repository root에서 실행합니다.
+
+```bash
+make deploy-monitoring
+```
+
+`infra/monitoring/prometheus.yml`의 target IP는 App/DB GCE의 private IP로 바꿔야 합니다.
+
+관측성 포트는 외부 공개하지 않고, Monitoring GCE의 private IP에서만 접근 가능하게 방화벽을 제한합니다.
+
 ## 아키텍처
 
 모듈화된 도메인 기반 레이어드 아키텍처와 이벤트 기반 도메인 통신을 사용합니다.

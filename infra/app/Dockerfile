@@ -22,9 +22,9 @@ COPY --from=builder /workspace/build/libs/*.jar /app/app.jar
 
 USER spring:spring
 
-EXPOSE 8080
+EXPOSE 8080 9090
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=5 \
-    CMD wget -qO- http://127.0.0.1:8080/actuator/health >/dev/null || exit 1
+    CMD wget -qO- http://127.0.0.1:${MANAGEMENT_PORT:-9090}/actuator/health >/dev/null || exit 1
 
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

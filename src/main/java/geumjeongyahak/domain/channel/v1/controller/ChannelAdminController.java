@@ -22,8 +22,8 @@ import geumjeongyahak.domain.channel.v1.dto.response.ChannelResponse;
         name = "Channel",
         description = """
                 게시글이 소속되는 채널을 생성, 조회, 수정, 삭제하는 API입니다.
-                이 컨트롤러는 운영자가 수동으로 관리하는 USER_MANAGED 커스텀 채널만 다룹니다.
-                부서/분반/공지사항 같은 시스템 채널 생성은 이벤트 기반 SystemChannelService가 담당합니다.
+                이 컨트롤러는 운영자가 수동으로 관리하는 STANDALONE 채널만 다룹니다.
+                부서/분반 같은 도메인 연동 채널 생성은 이벤트 기반 SystemChannelService가 담당합니다.
                 """
 )
 public class ChannelAdminController {
@@ -33,14 +33,16 @@ public class ChannelAdminController {
     @Operation(
             summary = "채널 생성",
             description = """
-                    새로운 커스텀 채널을 생성합니다.
+                    새로운 독립 채널을 생성합니다.
 
                     사용 사례:
-                    - 운영자가 자유게시판, 자료실, 의견 수렴 게시판 같은 커스텀 채널 생성
+                    - 운영자가 공지사항, 자료실, 자유게시판, 의견 수렴 게시판 같은 독립 채널 생성
                     - 기본 접근 수준만 다르게 둔 별도 게시판 생성
 
                     요청 시 확인할 핵심 규칙:
-                    - 생성되는 채널은 항상 CUSTOM / USER_MANAGED / refId=null 입니다.
+                    - channelType은 NOTICE, EVENT, RESOURCE, CUSTOM만 허용됩니다.
+                    - channelType을 생략하면 CUSTOM으로 생성됩니다.
+                    - 생성되는 채널은 항상 STANDALONE / refId=null 입니다.
                     - accessLevel이 기본 읽기/댓글/글쓰기 허용 범위를 결정합니다.
 
                     사이드 이펙트:
@@ -53,7 +55,7 @@ public class ChannelAdminController {
     public ResponseEntity<ChannelResponse> createChannel(
             @Valid @RequestBody CreateChannelRequest request
     ) {
-        log.debug("POST /api/v1/channels - 커스텀 채널 생성 요청");
+        log.debug("POST /api/v1/channels - 채널 생성 요청");
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(channelCrudService.createChannel(request));
     }

@@ -85,6 +85,7 @@
 {
   "name": "운영 자료 공유",
   "description": "운영팀 내부 자료 공유 게시판",
+  "channelType": "RESOURCE",
   "isDefault": false,
   "isActive": true,
   "accessLevel": "READ_WRITE"
@@ -93,9 +94,11 @@
 
 ### 동작 규칙
 
-- 이 API는 기본적으로 `CUSTOM` 채널 생성용
+- 이 API는 독립 채널 생성용
+- `channelType`은 `NOTICE`, `EVENT`, `RESOURCE`, `CUSTOM`만 허용
+- `channelType` 생략 시 `CUSTOM`으로 생성
 - 생성 결과는:
-  - `channelType=CUSTOM`
+  - `channelType=요청값 또는 CUSTOM`
   - `bindingType=STANDALONE`
   - `refId=null`
 

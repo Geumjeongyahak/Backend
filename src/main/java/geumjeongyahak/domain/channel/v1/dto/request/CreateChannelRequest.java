@@ -9,8 +9,9 @@ import geumjeongyahak.common.validation.annotation.ValidChannelAccessLevel;
 @Schema(
         description = """
                 채널 생성 요청 DTO입니다.
-                관리자 수동 생성 대상인 커스텀 채널을 만들 때 사용합니다.
-                생성되는 채널은 항상 USER_MANAGED / CUSTOM / refId=null 규칙을 따릅니다.
+                관리자 수동 생성 대상인 독립 채널을 만들 때 사용합니다.
+                생성되는 채널은 USER_MANAGED / STANDALONE / refId=null 규칙을 따릅니다.
+                channelType을 생략하면 CUSTOM으로 생성합니다.
                 접근 수준(accessLevel)을 통해 기본 읽기/댓글/글쓰기 허용 범위를 결정합니다.
                 """
 )
@@ -32,6 +33,17 @@ public record CreateChannelRequest(
                 example = "기관 전체 운영 공지와 일정 변경 공지를 게시하는 기본 채널입니다."
         )
         String description,
+
+        @Schema(
+                description = """
+                        수동 생성 채널 유형입니다.
+                        NOTICE, EVENT, RESOURCE, CUSTOM만 허용하며 생략하면 CUSTOM으로 생성됩니다.
+                        CLASSROOM, DEPARTMENT는 도메인 연동 채널이므로 이 API로 만들 수 없습니다.
+                        """,
+                example = "CUSTOM",
+                allowableValues = {"NOTICE", "EVENT", "RESOURCE", "CUSTOM"}
+        )
+        String channelType,
 
         @Schema(
                 description = """
@@ -71,4 +83,14 @@ public record CreateChannelRequest(
         )
         Boolean allowGuestRead
 ) {
+        public CreateChannelRequest(
+                String name,
+                String description,
+                Boolean isDefault,
+                Boolean isActive,
+                String accessLevel,
+                Boolean allowGuestRead
+        ) {
+                this(name, description, null, isDefault, isActive, accessLevel, allowGuestRead);
+        }
 }

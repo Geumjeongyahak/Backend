@@ -48,7 +48,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=dev-latest
-            type=sha-${{ github.sha }}
+            type=sha,prefix=dev-
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -70,13 +70,13 @@ jobs:
         run: |
           echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
-      - name: Copy docker-compose.yml to GCE
+      - name: Copy deploy files to GCE
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.GCE_HOST }}
           username: ${{ secrets.GCE_USER }}
           key: ${{ secrets.GCE_SSH_KEY }}
-          source: "docker-compose.yml"
+          source: "docker-compose.yml,docker-compose.dev.yml,Makefile,src/main/resources/sql/init_scheme.sql,src/main/resources/sql/init_data.sql,infra/app-server"
           target: "~/app-dev/"
 
       - name: Deploy to GCE via SSH
@@ -91,17 +91,8 @@ jobs:
             
             mkdir -p ~/app-dev
             cd ~/app-dev
+
+            test -f .env
             
-            # Create .env file from Secret
-            echo "${{ secrets.GCE_ENV_DEV }}" > .env
-            
-            # Append/Override dynamic variables
-            echo "APP_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-latest" >> .env
-            echo "SPRING_PROFILES_ACTIVE=dev" >> .env
-            
-            # Pull and restart the app service
-            docker compose pull app
-            docker compose up -d app
-            
-            # Cleanup old images
-            docker image prune -f
+            # .env is managed on the instance. Override only the image selected by this workflow.
+            APP_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-latest make deploy-dev

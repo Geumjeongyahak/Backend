@@ -85,8 +85,11 @@ VALUES
     (16, '생활안전부', '생활안전부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 3, 'READ_WRITE', FALSE, FALSE, TRUE),
     (17, '총무부', '총무부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 4, 'READ_WRITE', FALSE, FALSE, TRUE),
     (18, '홍보부', '홍보부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 5, 'READ_WRITE', FALSE, FALSE, TRUE),
-    (19, '편집부', '편집부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 6, 'READ_WRITE', FALSE, FALSE, TRUE);
-ALTER SEQUENCE channels_id_seq RESTART WITH 20;
+    (19, '편집부', '편집부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 6, 'READ_WRITE', FALSE, FALSE, TRUE),
+    (20, '인수인계서', '교원 인수인계서 자료를 공유하는 채널', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', FALSE, FALSE, TRUE),
+    (21, '시험 문제 자료', '시험 문제와 평가 자료를 공유하는 채널', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', FALSE, FALSE, TRUE),
+    (22, '서류 양식', '운영에 필요한 각종 서류 양식을 공유하는 채널', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', FALSE, FALSE, TRUE);
+ALTER SEQUENCE channels_id_seq RESTART WITH 23;
 
 -- 8. Subjects
 INSERT INTO subjects (id, class_id, teacher_id, name, start_at, end_at, day_of_week, start_time, end_time, period, teacher_assigned_at, description)
@@ -210,4 +213,3 @@ VALUES
     (1, 6, 1, 'PRESENT', FALSE, '2026-05-13 22:00:00', '2026-05-13 22:00:00'),
     (2, 6, 2, 'LATE', FALSE, '2026-05-13 22:00:00', '2026-05-13 22:00:00');
 ALTER SEQUENCE daily_student_attendances_id_seq RESTART WITH 3;
-
