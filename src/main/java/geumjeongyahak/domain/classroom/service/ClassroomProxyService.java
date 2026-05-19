@@ -1,11 +1,14 @@
 package geumjeongyahak.domain.classroom.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.exception.ClassroomNotFoundException;
 import geumjeongyahak.domain.classroom.repository.ClassroomRepository;
+
+import java.util.List;
 
 /**
  * Classroom 도메인의 Proxy Service.
@@ -30,5 +33,13 @@ public class ClassroomProxyService {
         }
 
         return classroom;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Classroom> getActiveClassroomsOrderByName() {
+        return classroomRepository.findAll(Sort.by(Sort.Direction.ASC, "name"))
+            .stream()
+            .filter(classroom -> !classroom.isDeleted())
+            .toList();
     }
 }

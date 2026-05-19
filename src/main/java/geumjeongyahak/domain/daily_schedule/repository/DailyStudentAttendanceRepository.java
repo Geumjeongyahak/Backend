@@ -12,5 +12,7 @@ public interface DailyStudentAttendanceRepository extends JpaRepository<DailyStu
     @EntityGraph(attributePaths = {"student"})
     List<DailyStudentAttendance> findAllByDailyScheduleIdAndIsDeletedFalse(Long dailyScheduleId);
 
+    List<DailyStudentAttendance> findAllByDailySchedule_IdInAndIsDeletedFalse(List<Long> dailyScheduleIds);
+
     Optional<DailyStudentAttendance> findByDailyScheduleIdAndStudentId(Long dailyScheduleId, Long studentId);
 }
