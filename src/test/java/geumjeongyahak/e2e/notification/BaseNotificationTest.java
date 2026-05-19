@@ -39,8 +39,8 @@ public abstract class BaseNotificationTest extends BaseE2ETest {
         userTestHelper.createTestUser(TEST_NOTIFICATION_OTHER_USER, RoleType.VOLUNTEER);
         userTestHelper.createTestUser(TEST_NOTIFICATION_ADMIN, RoleType.ADMIN);
 
-        accessToken = userTestHelper.generateAccessTokenByNickname(TEST_NOTIFICATION_USER);
-        otherAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_NOTIFICATION_OTHER_USER);
+        accessToken = userTestHelper.generateAccessTokenByUserKey(TEST_NOTIFICATION_USER);
+        otherAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_NOTIFICATION_OTHER_USER);
         adminEmail = TEST_NOTIFICATION_ADMIN + "@test.com";
         adminPassword = userTestHelper.getDefaultPassword(TEST_NOTIFICATION_ADMIN);
         controlledPushNotificationSender.reset();
