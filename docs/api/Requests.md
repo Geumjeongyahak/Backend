@@ -41,18 +41,18 @@
 ### 2.3 하루 단위 교환 규칙
 
 - 요청과 제안은 교시 범위를 입력받지 않습니다.
-- 요청은 `dailyScheduleId`에 해당하는 하루 일정을 대상으로 삼습니다.
-- 교환형 제안은 `dailyScheduleId`에 해당하는 제안자 하루 일정을 대상으로 삼습니다.
-- 교환형 제안은 요청과 같은 `DailySchedule`로 생성하거나 수정할 수 없습니다.
+- 요청은 로그인 사용자와 `lessonDate`를 기준으로 조회한 하루 일정을 대상으로 삼습니다.
+- 교환형 제안은 로그인 사용자와 `lessonDate`를 기준으로 조회한 제안자 하루 일정을 대상으로 삼습니다.
+- 교환형 제안은 요청과 같은 수업일로 생성하거나 수정할 수 없습니다.
 - 제안 수락 시 `DailySchedule.teacher`를 변경하고, 해당 DailySchedule의 반/날짜에 연결된 `Lesson.teacher`도 함께 변경합니다.
-- 응답의 `lessonDate`는 기존 화면 호환과 이력 표시를 위한 snapshot 성격의 값이며, 요청/제안의 기준 식별자는 `dailyScheduleId`입니다.
+- 응답의 `dailyScheduleId`는 내부 연결된 하루 일정 식별자이며, 생성/수정 요청 입력은 `lessonDate`를 사용합니다.
 
 ### 2.4 제안 타입 규칙
 
 | 조건 | proposalType |
 |---|---|
-| `dailyScheduleId` 있음 | `EXCHANGE` |
-| `dailyScheduleId` 없음 | `SUBSTITUTION` |
+| `lessonDate` 있음 | `EXCHANGE` |
+| `lessonDate` 없음 | `SUBSTITUTION` |
 
 - `EXCHANGE`는 제안자가 자신의 다른 수업을 내놓는 교환형 제안입니다.
 - `SUBSTITUTION`은 제안 수업 없이 요청 수업을 대신 맡는 대체형 제안입니다.
@@ -125,7 +125,7 @@
 
 ## 5. 결석 요청 API
 
-결석 요청은 하루 단위 결강 요청입니다. 수업 결강 페이지는 `DailySchedule` 목록 또는 상세를 기준으로 요청 대상을 선택하고, 생성 API에는 `dailyScheduleId`를 전달합니다.
+결석 요청은 하루 단위 결강 요청입니다. 수업 결강 페이지는 사용자가 선택한 수업일을 기준으로 요청을 생성하며, 생성 API에는 `lessonDate`를 전달합니다. 백엔드는 로그인 사용자와 `lessonDate`로 대상 `DailySchedule`을 조회합니다.
 
 ## 5.1 결석 요청 생성
 
@@ -138,7 +138,7 @@
 ```json
 {
   "title": "개인 사정으로 결석합니다",
-  "dailyScheduleId": 1,
+  "lessonDate": "2026-05-12",
   "reason": "개인 사정으로 인한 결석"
 }
 ```
@@ -177,7 +177,7 @@
 
 | 상황 | HTTP |
 |---|---|
-| 대상 하루 일정 담당 교사가 아님 | 403 |
+| 로그인 사용자의 해당 수업일 DailySchedule 없음 | 404 |
 | 같은 하루 일정에 진행 중인 결석 요청 존재 | 409 |
 | 이미 만료된 하루 일정에 대한 요청 | 400 |
 
@@ -319,7 +319,7 @@
 
 ## 6. 수업 교환 요청 API
 
-수업 교환 요청은 `DailySchedule` 기반으로 동작합니다. API 입력은 `dailyScheduleId`이며, 서비스는 해당 DailySchedule의 담당 교사와 요청자를 검증한 뒤 하루 단위 교환 요청을 생성합니다. 제안 수락 시에는 DailySchedule의 담당 교사를 변경하고, 같은 반/날짜의 활성 Lesson 담당 교사도 함께 변경합니다.
+수업 교환 요청은 `DailySchedule` 기반으로 동작합니다. API 입력은 `lessonDate`이며, 서비스는 로그인 사용자와 수업일로 대상 DailySchedule을 조회한 뒤 하루 단위 교환 요청을 생성합니다. 제안 수락 시에는 DailySchedule의 담당 교사를 변경하고, 같은 반/날짜의 활성 Lesson 담당 교사도 함께 변경합니다.
 
 ## 6.1 요청 생성
 
@@ -331,7 +331,7 @@
 
 ```json
 {
-  "dailyScheduleId": 1,
+  "lessonDate": "2026-05-12",
   "title": "금요일 수업 교환 요청",
   "content": "개인 일정으로 인해 교환이 필요합니다.",
   "expiresAt": "2026-05-09T23:00:00"
@@ -347,7 +347,7 @@
 
 | 상황 | HTTP |
 |---|---|
-| 본인이 담당하지 않는 DailySchedule | 403 |
+| 로그인 사용자의 해당 수업일 DailySchedule 없음 | 404 |
 | 이미 같은 DailySchedule에 `PENDING`/`APPROVED` 요청 존재 | 409 |
 | 교환 요청 가능 기간(현재+4일) 이전 수업 | 400 |
 | 만료 시각 정책 위반 | 400 |
@@ -382,7 +382,7 @@
 
 - 요청 생성과 동일한 입력 정책을 사용합니다.
 - 수정 후 반 이름 snapshot도 함께 갱신됩니다.
-- `dailyScheduleId`를 변경하면 변경된 DailySchedule의 담당 교사와 정책을 다시 검증합니다.
+- `lessonDate`를 변경하면 변경된 수업일의 DailySchedule과 정책을 다시 검증합니다.
 
 ## 6.5 요청 취소
 
@@ -437,7 +437,7 @@
 
 ```json
 {
-  "dailyScheduleId": 2,
+  "lessonDate": "2026-05-13",
   "content": "수요일 수업으로 교환 가능합니다."
 }
 ```
@@ -453,8 +453,8 @@
 ### 구현 기준 동작
 
 - 같은 요청에 대해 동일 제안자는 `ACTIVE` 제안 1건만 가질 수 있습니다.
-- `EXCHANGE` 제안은 요청 DailySchedule과 같은 DailySchedule로 생성할 수 없습니다.
-- `EXCHANGE` 제안은 제안자가 담당하는 DailySchedule이어야 하며, 해당 DailySchedule의 반/날짜 수업 전체가 교환 대상입니다.
+- `EXCHANGE` 제안은 요청 수업일과 같은 수업일로 생성할 수 없습니다.
+- `EXCHANGE` 제안은 제안자가 해당 수업일에 담당하는 DailySchedule이어야 하며, 해당 DailySchedule의 반/날짜 수업 전체가 교환 대상입니다.
 - `SUBSTITUTION` 제안은 요청 수업 시간대에 제안자의 기존 수업이 충돌하면 생성할 수 없습니다.
 
 ## 7.2 제안 목록 조회
