@@ -81,8 +81,8 @@ public class ClassroomReadTest extends BaseClassroomTest {
     }
 
     @Test
-    @DisplayName("인증 없이 Classroom 단건 조회 실패(401 Unauthorized)")
-    void getClassroomById_Unauthenticated_Returns401() {
+    @DisplayName("인증 없이 Classroom 단건 조회 성공(200 OK)")
+    void getClassroomById_Success_Unauthenticated() {
         // Given: 테스트용 교실 생성
         Classroom classroom = testClassroomHelper.createTestClassroom(
             "Test Classroom 3",
@@ -96,7 +96,11 @@ public class ClassroomReadTest extends BaseClassroomTest {
         .when()
             .get("/{id}", classroomId)
         .then()
-            .statusCode(401)
+            .statusCode(200)
+            .body("id", equalTo(classroomId.intValue()))
+            .body("name", equalTo("Test Classroom 3"))
+            .body("type", equalTo("WEEKDAY"))
+            .body("description", equalTo("인증 없는 조회 테스트용 교실"))
             .log().all();
     }
 }
