@@ -5,10 +5,13 @@ import geumjeongyahak.domain.base.dto.response.AdminSorts;
 import geumjeongyahak.domain.classroom.service.ClassroomAdminViewService;
 import geumjeongyahak.domain.file.service.ImageUploadService;
 import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
+import geumjeongyahak.domain.vendor.service.VendorService;
+import geumjeongyahak.domain.vendor.v1.dto.response.VendorResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +32,7 @@ public class PurchaseRequestAdminViewService {
     private final PurchaseRequestService purchaseRequestService;
     private final ClassroomAdminViewService classroomAdminViewService;
     private final ImageUploadService imageUploadService;
+    private final VendorService vendorService;
 
     public AdminPage<PurchaseRequestSummaryResponse> getPurchaseRequests(PurchaseRequestFilter filter) {
         List<PurchaseRequestSummaryResponse> rows = purchaseRequestService.getAllPurchaseRequests(filter.status())
@@ -87,12 +91,13 @@ public class PurchaseRequestAdminViewService {
         Long classroomId,
         String title,
         String content,
-        Long advancePaymentRequestedAmount,
+        PurchasePaymentMethod paymentMethod,
+        Long vendorId,
         List<CreatePurchaseRequestRequest.Item> items
     ) {
         return purchaseRequestService.createPurchaseRequest(
             requesterId,
-            new CreatePurchaseRequestRequest(title, content, classroomId, advancePaymentRequestedAmount, items, List.of())
+            new CreatePurchaseRequestRequest(title, content, classroomId, paymentMethod, vendorId, items)
         ).id();
     }
 
@@ -102,13 +107,14 @@ public class PurchaseRequestAdminViewService {
         Long requestId,
         String title,
         String content,
-        Long advancePaymentRequestedAmount,
+        PurchasePaymentMethod paymentMethod,
+        Long vendorId,
         List<CreatePurchaseRequestRequest.Item> items
     ) {
         purchaseRequestService.updatePurchaseRequest(
             requesterId,
             requestId,
-            new CreatePurchaseRequestRequest(title, content, null, advancePaymentRequestedAmount, items, List.of()),
+            new CreatePurchaseRequestRequest(title, content, null, paymentMethod, vendorId, items),
             true
         );
     }
@@ -122,9 +128,13 @@ public class PurchaseRequestAdminViewService {
         return classroomAdminViewService.getClassrooms(new ClassroomAdminViewService.ClassroomFilter(null, null, "name,ASC"));
     }
 
+    public List<VendorResponse> getAllVendors() {
+        return vendorService.getVendors(null);
+    }
+
     @Transactional
-    public void approve(Long approverId, Long requestId, String note, Long advancePaymentApprovedAmount) {
-        purchaseRequestService.approvePurchaseRequest(approverId, requestId, note, advancePaymentApprovedAmount);
+    public void approve(Long approverId, Long requestId, String note) {
+        purchaseRequestService.approvePurchaseRequest(approverId, requestId, note);
     }
 
     @Transactional

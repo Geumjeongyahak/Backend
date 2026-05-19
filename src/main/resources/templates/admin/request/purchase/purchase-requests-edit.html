@@ -13,7 +13,7 @@
     <div class="panel" style="background: #f8faf9; border-left: 4px solid var(--green); margin-bottom: 24px;" th:if="${request.status.name() == 'APPROVED'}">
         <h3 style="margin-top: 0;">구매 결과 보고 단계</h3>
         <p style="margin-bottom: 0; color: #566059; font-size: 14px; line-height: 1.6;">
-            관리자가 요청을 승인했습니다. 물품 구매를 완료하셨다면 각 항목의 <strong>실제 구매 가격</strong>을 입력하고 <strong>영수증 사진</strong>을 업로드해 주세요.<br>
+            관리자가 요청을 승인했습니다. 필요하면 품목별 <strong>영수증 사진</strong>을 교체해 주세요.<br>
             보고가 완료되면 관리자의 최종 확인 후 프로세스가 종료됩니다.
         </p>
     </div>
@@ -30,32 +30,32 @@
         </label>
         <label>제목 <input th:field="*{title}" th:readonly="${request.status.name() != 'PENDING'}" required></label>
         <label>내용 <textarea th:field="*{content}" th:readonly="${request.status.name() != 'PENDING'}" required></textarea></label>
-        <label>선금 요청 금액
-            <input type="number" th:field="*{advancePaymentRequestedAmount}" min="0" th:readonly="${request.status.name() != 'PENDING'}">
+        <label>결제 방식
+            <select th:field="*{paymentMethod}" th:disabled="${request.status.name() != 'PENDING'}">
+                <option value="NORMAL">일반 결제</option>
+                <option value="VENDOR_PREPAID">거래처 선결제</option>
+            </select>
         </label>
-        <label th:if="${request.status.name() != 'PENDING'}">선금 승인 금액
-            <input type="number" th:field="*{advancePaymentApprovedAmount}" readonly>
+        <label>거래처
+            <select th:field="*{vendorId}" th:disabled="${request.status.name() != 'PENDING'}">
+                <option value="">선택 안 함</option>
+                <option th:each="vendor : ${vendors}" th:value="${vendor.id}" th:text="|${vendor.name} (${vendor.balance}원)|">거래처</option>
+            </select>
         </label>
         
         <div class="stack" style="--gap: 1rem;">
             <h3>구매 항목</h3>
             <div id="items-container" class="stack" style="--gap: 0.5rem;">
-                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: 1fr 1.4fr 1fr 1fr auto; gap: 1rem; align-items: end;">
+                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: 1fr 1.4fr 1fr auto; gap: 1rem; align-items: end;">
                     <input type="hidden" th:field="*{items[__${stat.index}__].id}">
                     <label>품명 <input th:field="*{items[__${stat.index}__].name}" th:readonly="${request.status.name() != 'PENDING'}" required></label>
                     <label>사유 <input th:field="*{items[__${stat.index}__].reason}" th:readonly="${request.status.name() != 'PENDING'}"></label>
                     
-                    <label>예상 가격
-                        <input type="number" th:field="*{items[__${stat.index}__].expectedPrice}"
+                    <label>결제 금액
+                        <input type="number" th:field="*{items[__${stat.index}__].price}"
                                min="0"
                                th:readonly="${request.status.name() != 'PENDING'}"
-                               placeholder="예상 가격">
-                    </label>
-                    <label>실제 가격
-                        <input type="number" th:field="*{items[__${stat.index}__].actualPrice}"
-                               min="0"
-                               th:disabled="${request.status.name() != 'APPROVED'}"
-                               th:placeholder="${request.status.name() == 'APPROVED'} ? '가격 입력' : '구매 후 입력'">
+                               placeholder="결제 금액">
                     </label>
                     <button type="button" class="button danger" th:if="${stat.index > 0 && request.status.name() == 'PENDING'}" onclick="removeRow(this)">삭제</button>
                 </div>
@@ -136,12 +136,11 @@
             const container = document.getElementById('items-container');
             const newRow = document.createElement('div');
             newRow.className = 'panel item-row';
-            newRow.style.cssText = 'display: grid; grid-template-columns: 1fr 1.4fr 1fr 1fr auto; gap: 1rem; align-items: end;';
+            newRow.style.cssText = 'display: grid; grid-template-columns: 1fr 1.4fr 1fr auto; gap: 1rem; align-items: end;';
             newRow.innerHTML = `
                 <label>품명 <input name="items[${itemIndex}].name" required></label>
                 <label>사유 <input name="items[${itemIndex}].reason"></label>
-                <label>예상 가격 <input type="number" name="items[${itemIndex}].expectedPrice" min="0" placeholder="예상 가격"></label>
-                <label>실제 가격 <input type="number" name="items[${itemIndex}].actualPrice" disabled placeholder="구매 후 입력"></label>
+                <label>결제 금액 <input type="number" name="items[${itemIndex}].price" min="0" required placeholder="결제 금액"></label>
                 <button type="button" class="button danger" onclick="removeRow(this)">삭제</button>
             `;
             container.appendChild(newRow);
@@ -160,14 +159,12 @@
                 const idInput = row.querySelector('input[name*=".id"]');
                 const nameInput = row.querySelector('input[name*=".name"]');
                 const reasonInput = row.querySelector('input[name*=".reason"]');
-                const expectedPriceInput = row.querySelector('input[name*=".expectedPrice"]');
-                const actualPriceInput = row.querySelector('input[name*=".actualPrice"]');
+                const priceInput = row.querySelector('input[name*=".price"]');
                 
                 if (idInput) idInput.name = `items[${index}].id`;
                 if (nameInput) nameInput.name = `items[${index}].name`;
                 if (reasonInput) reasonInput.name = `items[${index}].reason`;
-                if (expectedPriceInput) expectedPriceInput.name = `items[${index}].expectedPrice`;
-                if (actualPriceInput) actualPriceInput.name = `items[${index}].actualPrice`;
+                if (priceInput) priceInput.name = `items[${index}].price`;
             });
             itemIndex = rows.length;
         }

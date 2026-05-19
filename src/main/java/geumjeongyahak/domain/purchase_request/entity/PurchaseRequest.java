@@ -6,8 +6,10 @@ import java.util.List;
 
 import geumjeongyahak.domain.base.entity.BaseEntity;
 import geumjeongyahak.domain.classroom.entity.Classroom;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.vendor.entity.Vendor;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -53,11 +55,13 @@ public class PurchaseRequest extends BaseEntity {
     @Column(name = "total_price")
     private Long totalPrice;
 
-    @Column(name = "advance_payment_requested_amount")
-    private Long advancePaymentRequestedAmount;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", nullable = false, length = 30)
+    private PurchasePaymentMethod paymentMethod;
 
-    @Column(name = "advance_payment_approved_amount")
-    private Long advancePaymentApprovedAmount;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vendor_id")
+    private Vendor vendor;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -85,7 +89,8 @@ public class PurchaseRequest extends BaseEntity {
         User requestedBy,
         String title,
         String content,
-        Long advancePaymentRequestedAmount,
+        PurchasePaymentMethod paymentMethod,
+        Vendor vendor,
         List<PurchaseRequestItem> items,
         List<PurchaseRequestReceipt> receipts
     ) {
@@ -93,7 +98,9 @@ public class PurchaseRequest extends BaseEntity {
         this.requestedBy = requestedBy;
         this.title = title;
         this.content = content;
-        this.advancePaymentRequestedAmount = advancePaymentRequestedAmount;
+        this.paymentMethod = paymentMethod;
+        this.vendor = vendor;
+        this.totalPrice = calculateTotalPrice(items);
         this.status = PurchaseRequestStatus.PENDING;
         items.forEach(item -> item.assignRequest(this));
         this.items.addAll(items);
@@ -101,17 +108,15 @@ public class PurchaseRequest extends BaseEntity {
         this.receipts.addAll(receipts);
     }
 
-    public void approve(User approver, String note, Long advancePaymentApprovedAmount) {
+    public void approve(User approver, String note) {
         this.status = PurchaseRequestStatus.APPROVED;
         this.approvalBy = approver;
         this.approvalAt = LocalDateTime.now();
         this.note = note;
-        this.advancePaymentApprovedAmount = advancePaymentApprovedAmount;
     }
 
-    public void reportPurchase(long totalPrice, List<PurchaseRequestReceipt> receipts) {
+    public void reportPurchase(List<PurchaseRequestReceipt> receipts) {
         this.status = PurchaseRequestStatus.PURCHASED;
-        this.totalPrice = totalPrice;
         this.purchasedAt = LocalDateTime.now();
         this.receipts.clear();
         receipts.forEach(receipt -> receipt.assignRequest(this));
@@ -129,12 +134,26 @@ public class PurchaseRequest extends BaseEntity {
         this.note = note;
     }
 
-    public void update(String title, String content, Long advancePaymentRequestedAmount, List<PurchaseRequestItem> items) {
+    public void update(
+        String title,
+        String content,
+        PurchasePaymentMethod paymentMethod,
+        Vendor vendor,
+        List<PurchaseRequestItem> items
+    ) {
         this.title = title;
         this.content = content;
-        this.advancePaymentRequestedAmount = advancePaymentRequestedAmount;
+        this.paymentMethod = paymentMethod;
+        this.vendor = vendor;
+        this.totalPrice = calculateTotalPrice(items);
         this.items.clear();
         items.forEach(item -> item.assignRequest(this));
         this.items.addAll(items);
+    }
+
+    private long calculateTotalPrice(List<PurchaseRequestItem> items) {
+        return items.stream()
+            .mapToLong(PurchaseRequestItem::getPrice)
+            .sum();
     }
 }

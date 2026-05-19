@@ -60,9 +60,9 @@
                         <th>제목</th>
                         <th>분반</th>
                         <th>요청자</th>
-                        <th>선금 요청</th>
-                        <th>선금 승인</th>
-                        <th>실 결제</th>
+                        <th>결제 방식</th>
+                        <th>거래처</th>
+                        <th>결제 금액</th>
                         <th>상태</th>
                         <th>생성일</th>
                         <th>처리</th>
@@ -74,15 +74,14 @@
                         <td><a class="link" th:href="@{/admin/request/purchase/purchase-requests/{requestId}(requestId=${request.id})}" th:text="${request.title}">교재 구입</a></td>
                         <td th:text="${request.classroomName}">벚꽃반</td>
                         <td th:text="${request.requestedByName}">홍길동</td>
-                        <td th:text="${request.advancePaymentRequestedAmount != null ? request.advancePaymentRequestedAmount : '-'}">-</td>
-                        <td th:text="${request.advancePaymentApprovedAmount != null ? request.advancePaymentApprovedAmount : '-'}">-</td>
+                        <td th:text="${request.paymentMethod.name()}">NORMAL</td>
+                        <td th:text="${request.vendorName ?: '-'}">-</td>
                         <td th:text="${request.totalPrice != null ? request.totalPrice : '-'}">-</td>
                         <td><span class="pill" th:classappend="'status-' + ${request.status.name()}" th:text="${request.status.name()}">PENDING</span></td>
                         <td th:text="${#temporals.format(request.createdAt, 'yyyy.MM.dd')}">2026.01.01</td>
                         <td>
                             <form class="inline-form" th:if="${request.status.name() == 'PENDING'}" th:action="@{/admin/request/purchase/purchase-requests/{requestId}/approve(requestId=${request.id})}" method="post">
                                 <input name="note" placeholder="승인 사유" required>
-                                <input type="number" name="advancePaymentApprovedAmount" min="0" placeholder="선금 승인 금액">
                                 <button class="button" type="submit">승인</button>
                             </form>
                             <form class="inline-form" th:if="${request.status.name() == 'PENDING'}" th:action="@{/admin/request/purchase/purchase-requests/{requestId}/reject(requestId=${request.id})}" method="post">

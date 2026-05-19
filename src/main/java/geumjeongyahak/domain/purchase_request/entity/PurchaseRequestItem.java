@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.purchase_request.entity;
 
+import geumjeongyahak.domain.file.entity.File;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -33,26 +34,30 @@ public class PurchaseRequestItem {
     @Column(columnDefinition = "TEXT")
     private String reason;
 
-    private Long expectedPrice;
+    @Column(nullable = false)
+    private Long price;
 
-    private Long actualPrice;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "receipt_file_id")
+    private File receiptFile;
 
     public PurchaseRequestItem(String name, String reason) {
         this.name = name;
         this.reason = reason;
     }
 
-    public PurchaseRequestItem(String name, String reason, Long expectedPrice) {
+    public PurchaseRequestItem(String name, String reason, Long price, File receiptFile) {
         this.name = name;
         this.reason = reason;
-        this.expectedPrice = expectedPrice;
+        this.price = price;
+        this.receiptFile = receiptFile;
     }
 
     void assignRequest(PurchaseRequest purchaseRequest) {
         this.purchaseRequest = purchaseRequest;
     }
 
-    public void updatePurchaseDetails(Long price) {
-        this.actualPrice = price;
+    public void updateReceipt(File receiptFile) {
+        this.receiptFile = receiptFile;
     }
 }

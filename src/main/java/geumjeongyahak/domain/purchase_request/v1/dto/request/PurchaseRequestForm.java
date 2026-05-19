@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Getter;
@@ -25,9 +26,9 @@ public class PurchaseRequestForm {
     @NotBlank(message = "내용은 필수입니다.")
     private String content;
 
-    private Long advancePaymentRequestedAmount;
+    private PurchasePaymentMethod paymentMethod = PurchasePaymentMethod.NORMAL;
 
-    private Long advancePaymentApprovedAmount;
+    private Long vendorId;
 
     @NotEmpty(message = "최소 하나 이상의 항목이 필요합니다.")
     private List<ItemForm> items = new ArrayList<>();
@@ -45,7 +46,8 @@ public class PurchaseRequestForm {
         @NotBlank(message = "품명은 필수입니다.")
         private String name;
         private String reason;
-        private Long expectedPrice;
-        private Long actualPrice;
+        private Long price;
+        private UUID receiptFileId;
+        private String receiptFileUrl;
     }
 }

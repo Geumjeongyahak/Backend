@@ -77,6 +77,7 @@ public class PurchaseRequestViewController {
         model.addAttribute("active", "purchaseRequests");
         model.addAttribute("adminName", authentication.getName());
         model.addAttribute("classrooms", purchaseRequestAdminViewService.getAllClassrooms());
+        model.addAttribute("vendors", purchaseRequestAdminViewService.getAllVendors());
 
         PurchaseRequestForm form = new PurchaseRequestForm();
         form.getItems().add(new PurchaseRequestForm.ItemForm());
@@ -98,11 +99,12 @@ public class PurchaseRequestViewController {
             model.addAttribute("active", "purchaseRequests");
             model.addAttribute("adminName", authentication.getName());
             model.addAttribute("classrooms", purchaseRequestAdminViewService.getAllClassrooms());
+            model.addAttribute("vendors", purchaseRequestAdminViewService.getAllVendors());
             return "admin/request/purchase/purchase-requests-form";
         }
 
         List<CreatePurchaseRequestRequest.Item> items = form.getItems().stream()
-            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getExpectedPrice()))
+            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getPrice(), i.getReceiptFileId()))
             .toList();
 
         Long requestId = purchaseRequestAdminViewService.createPurchaseRequest(
@@ -110,7 +112,8 @@ public class PurchaseRequestViewController {
             form.getClassroomId(),
             form.getTitle(),
             form.getContent(),
-            form.getAdvancePaymentRequestedAmount(),
+            form.getPaymentMethod(),
+            form.getVendorId(),
             items);
 
         redirectAttributes.addFlashAttribute("message", "구매 요청이 생성되었습니다.");
@@ -130,16 +133,17 @@ public class PurchaseRequestViewController {
         form.setClassroomId(response.classroomId());
         form.setTitle(response.title());
         form.setContent(response.content());
-        form.setAdvancePaymentRequestedAmount(response.advancePaymentRequestedAmount());
-        form.setAdvancePaymentApprovedAmount(response.advancePaymentApprovedAmount());
+        form.setPaymentMethod(response.paymentMethod());
+        form.setVendorId(response.vendorId());
         form.setItems(response.items().stream()
             .map(i -> {
                 PurchaseRequestForm.ItemForm item = new PurchaseRequestForm.ItemForm();
                 item.setId(i.id());
                 item.setName(i.name());
                 item.setReason(i.reason());
-                item.setExpectedPrice(i.expectedPrice());
-                item.setActualPrice(i.actualPrice());
+                item.setPrice(i.price());
+                item.setReceiptFileId(i.receiptFileId());
+                item.setReceiptFileUrl(i.receiptFileUrl());
                 return item;
             })
             .collect(java.util.stream.Collectors.toList()));
@@ -155,6 +159,7 @@ public class PurchaseRequestViewController {
         model.addAttribute("request", response);
         model.addAttribute("form", form);
         model.addAttribute("classrooms", purchaseRequestAdminViewService.getAllClassrooms());
+        model.addAttribute("vendors", purchaseRequestAdminViewService.getAllVendors());
         return "admin/request/purchase/purchase-requests-edit";
     }
 
@@ -172,12 +177,13 @@ public class PurchaseRequestViewController {
             model.addAttribute("active", "purchaseRequests");
             model.addAttribute("adminName", authentication.getName());
             model.addAttribute("classrooms", purchaseRequestAdminViewService.getAllClassrooms());
+            model.addAttribute("vendors", purchaseRequestAdminViewService.getAllVendors());
             model.addAttribute("request", purchaseRequestAdminViewService.getPurchaseRequest(userDetails.getUserId(), requestId));
             return "admin/request/purchase/purchase-requests-edit";
         }
 
         List<CreatePurchaseRequestRequest.Item> items = form.getItems().stream()
-            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getExpectedPrice()))
+            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getPrice(), i.getReceiptFileId()))
             .toList();
 
         purchaseRequestAdminViewService.updatePurchaseRequest(
@@ -185,7 +191,8 @@ public class PurchaseRequestViewController {
             requestId,
             form.getTitle(),
             form.getContent(),
-            form.getAdvancePaymentRequestedAmount(),
+            form.getPaymentMethod(),
+            form.getVendorId(),
             items);
 
         redirectAttributes.addFlashAttribute("message", "구매 요청이 수정되었습니다.");
@@ -220,7 +227,7 @@ public class PurchaseRequestViewController {
 
         List<geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.ItemReport> itemReports = form.getItems().stream()
             .filter(i -> i.getId() != null)
-            .map(i -> new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.ItemReport(i.getId(), i.getActualPrice() != null ? i.getActualPrice() : 0L))
+            .map(i -> new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.ItemReport(i.getId(), i.getReceiptFileId()))
             .toList();
 
         purchaseRequestAdminViewService.report(userDetails.getUserId(), requestId, itemReports, form.getReceiptFileIds());
@@ -233,11 +240,10 @@ public class PurchaseRequestViewController {
     public String approve(
         @PathVariable Long requestId,
         @RequestParam String note,
-        @RequestParam(required = false) Long advancePaymentApprovedAmount,
         @AuthenticationPrincipal CustomUserDetails userDetails,
         RedirectAttributes redirectAttributes
     ) {
-        purchaseRequestAdminViewService.approve(userDetails.getUserId(), requestId, note, advancePaymentApprovedAmount);
+        purchaseRequestAdminViewService.approve(userDetails.getUserId(), requestId, note);
         redirectAttributes.addFlashAttribute("message", "구매 요청을 승인했습니다.");
         return "redirect:/admin/request/purchase/purchase-requests/" + requestId;
     }

@@ -9,6 +9,8 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
 
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
+
 public record CreatePurchaseRequestRequest(
 
     @NotBlank
@@ -23,17 +25,17 @@ public record CreatePurchaseRequestRequest(
     @Schema(description = "구입 요청 대상 분반 ID", example = "1")
     Long classroomId,
 
-    @Min(0)
-    @Schema(description = "요청 전체 선금 요청 금액 (원, 선택)", example = "50000")
-    Long advancePaymentRequestedAmount,
+    @NotNull
+    @Schema(description = "결제 방식", example = "NORMAL")
+    PurchasePaymentMethod paymentMethod,
+
+    @Schema(description = "거래처 ID. VENDOR_PREPAID 방식일 때 필수", example = "1")
+    Long vendorId,
 
     @Valid
     @NotEmpty
-    @Schema(description = "구입 항목 목록")
-    List<Item> items,
-
-    @Schema(description = "구입 요청에 첨부할 영수증 파일 ID 목록")
-    List<UUID> receiptFileIds
+    @Schema(description = "결제 항목 목록")
+    List<Item> items
 ) {
     public record Item(
 
@@ -44,8 +46,12 @@ public record CreatePurchaseRequestRequest(
         @Schema(description = "구입 사유", example = "수업 교재 부족")
         String reason,
 
+        @NotNull
         @Min(0)
-        @Schema(description = "예상 가격 (원, 선택)", example = "15000")
-        Long expectedPrice
+        @Schema(description = "확정 결제 금액 (원)", example = "15000")
+        Long price,
+
+        @Schema(description = "품목 영수증 파일 ID")
+        UUID receiptFileId
     ) {}
 }

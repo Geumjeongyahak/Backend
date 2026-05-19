@@ -18,6 +18,7 @@ import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
+import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.file.service.FileProxyService;
 import geumjeongyahak.domain.notification.enums.PushRequestType;
 import geumjeongyahak.domain.notification.event.PurchaseStatusChangedPushEvent;
@@ -25,6 +26,7 @@ import geumjeongyahak.domain.notification.event.RequestReviewedPushEvent;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestReceipt;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.exception.PurchaseRequestErrorCode;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
@@ -34,6 +36,8 @@ import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDet
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
+import geumjeongyahak.domain.vendor.entity.Vendor;
+import geumjeongyahak.domain.vendor.service.VendorService;
 
 @Slf4j
 @Service
@@ -45,6 +49,7 @@ public class PurchaseRequestService {
     private final FileProxyService fileProxyService;
     private final ClassroomProxyService classroomProxyService;
     private final UserProxyService userProxyService;
+    private final VendorService vendorService;
     private final EventPublisher eventPublisher;
 
     @Transactional
@@ -56,11 +61,16 @@ public class PurchaseRequestService {
         Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
         User requester = userProxyService.getById(requesterId);
 
-        List<PurchaseRequestItem> items = request.items().stream()
-            .map(item -> new PurchaseRequestItem(item.name(), item.reason(), item.expectedPrice()))
-            .toList();
+        Vendor vendor = resolveVendor(request.paymentMethod(), request.vendorId());
 
-        List<PurchaseRequestReceipt> receipts = toReceipts(request.receiptFileIds());
+        List<PurchaseRequestItem> items = request.items().stream()
+            .map(item -> new PurchaseRequestItem(
+                item.name(),
+                item.reason(),
+                item.price(),
+                getFileOrNull(item.receiptFileId())
+            ))
+            .toList();
 
         PurchaseRequest saved = purchaseRequestRepository.save(
             new PurchaseRequest(
@@ -68,9 +78,10 @@ public class PurchaseRequestService {
                 requester,
                 request.title(),
                 request.content(),
-                request.advancePaymentRequestedAmount(),
+                request.paymentMethod(),
+                vendor,
                 items,
-                receipts
+                List.of()
             )
         );
 
@@ -112,18 +123,28 @@ public class PurchaseRequestService {
         PurchaseRequest purchaseRequest = findById(requestId);
         checkAccess(purchaseRequest, requesterId, isAdmin);
 
+        if (purchaseRequest.getStatus() != PurchaseRequestStatus.PENDING) {
+            throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
+        }
+
+        Vendor vendor = resolveVendor(request.paymentMethod(), request.vendorId());
         List<PurchaseRequestItem> items = request.items().stream()
-            .map(item -> new PurchaseRequestItem(item.name(), item.reason(), item.expectedPrice()))
+            .map(item -> new PurchaseRequestItem(
+                item.name(),
+                item.reason(),
+                item.price(),
+                getFileOrNull(item.receiptFileId())
+            ))
             .toList();
 
-        purchaseRequest.update(request.title(), request.content(), request.advancePaymentRequestedAmount(), items);
+        purchaseRequest.update(request.title(), request.content(), request.paymentMethod(), vendor, items);
 
         log.debug("구입 요청 수정 완료 (id={})", purchaseRequest.getId());
         return PurchaseRequestDetailResponse.from(purchaseRequest);
     }
 
     @Transactional
-    public PurchaseRequestDetailResponse approvePurchaseRequest(Long approverId, Long requestId, String note, Long advancePaymentApprovedAmount) {
+    public PurchaseRequestDetailResponse approvePurchaseRequest(Long approverId, Long requestId, String note) {
         log.debug("구입 요청 승인 (requestId={})", requestId);
         PurchaseRequest purchaseRequest = findById(requestId);
         String processedNote = requireNote(note);
@@ -132,7 +153,11 @@ public class PurchaseRequestService {
             throw new BusinessException(PurchaseRequestErrorCode.ALREADY_PROCESSED);
         }
 
-        purchaseRequest.approve(userProxyService.getById(approverId), processedNote, advancePaymentApprovedAmount);
+        User approver = userProxyService.getById(approverId);
+        if (purchaseRequest.getPaymentMethod() == PurchasePaymentMethod.VENDOR_PREPAID) {
+            vendorService.deductForPurchaseRequest(purchaseRequest.getVendor(), purchaseRequest, approver);
+        }
+        purchaseRequest.approve(approver, processedNote);
         eventPublisher.publish(RequestReviewedPushEvent.approved(
             purchaseRequest.getRequestedBy().getId(),
             purchaseRequest.getId(),
@@ -191,21 +216,45 @@ public class PurchaseRequestService {
         Map<Long, PurchaseRequestItem> itemMap = purchaseRequest.getItems().stream()
             .collect(Collectors.toMap(PurchaseRequestItem::getId, i -> i));
 
-        long totalPrice = 0;
         for (ReportPurchaseRequest.ItemReport itemReport : request.items()) {
             PurchaseRequestItem item = itemMap.get(itemReport.itemId());
             if (item == null) {
                 throw new ResourceNotFoundException(PurchaseRequestErrorCode.ITEM_NOT_FOUND, itemReport.itemId());
             }
-            item.updatePurchaseDetails(itemReport.price());
-            totalPrice += itemReport.price();
+            item.updateReceipt(getFileOrNull(itemReport.receiptFileId()));
         }
 
         List<PurchaseRequestReceipt> receipts = toReceipts(request.receiptFileIds());
 
-        purchaseRequest.reportPurchase(totalPrice, receipts);
+        purchaseRequest.reportPurchase(receipts);
 
-        log.debug("구매 완료 보고 완료 (requestId={}, totalPrice={})", requestId, totalPrice);
+        log.debug("구매 완료 보고 완료 (requestId={}, totalPrice={})", requestId, purchaseRequest.getTotalPrice());
+        return PurchaseRequestDetailResponse.from(purchaseRequest);
+    }
+
+    @Transactional
+    public PurchaseRequestDetailResponse updateItemReceipts(
+        Long requesterId, Long requestId, ReportPurchaseRequest request, boolean isAdmin
+    ) {
+        PurchaseRequest purchaseRequest = findById(requestId);
+        checkAccess(purchaseRequest, requesterId, isAdmin);
+
+        if (purchaseRequest.getStatus() == PurchaseRequestStatus.PENDING
+            || purchaseRequest.getStatus() == PurchaseRequestStatus.REJECTED) {
+            throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
+        }
+
+        Map<Long, PurchaseRequestItem> itemMap = purchaseRequest.getItems().stream()
+            .collect(Collectors.toMap(PurchaseRequestItem::getId, i -> i));
+
+        for (ReportPurchaseRequest.ItemReport itemReport : request.items()) {
+            PurchaseRequestItem item = itemMap.get(itemReport.itemId());
+            if (item == null) {
+                throw new ResourceNotFoundException(PurchaseRequestErrorCode.ITEM_NOT_FOUND, itemReport.itemId());
+            }
+            item.updateReceipt(getFileOrNull(itemReport.receiptFileId()));
+        }
+
         return PurchaseRequestDetailResponse.from(purchaseRequest);
     }
 
@@ -256,6 +305,23 @@ public class PurchaseRequestService {
             .map(fileProxyService::getReferenceById)
             .map(PurchaseRequestReceipt::new)
             .toList();
+    }
+
+    private File getFileOrNull(UUID fileId) {
+        return fileId != null ? fileProxyService.getReferenceById(fileId) : null;
+    }
+
+    private Vendor resolveVendor(PurchasePaymentMethod paymentMethod, Long vendorId) {
+        if (paymentMethod == PurchasePaymentMethod.VENDOR_PREPAID) {
+            if (vendorId == null) {
+                throw new BadRequestException(PurchaseRequestErrorCode.INVALID_PAYMENT_METHOD, "선결제 방식은 거래처 선택이 필수입니다.");
+            }
+            return vendorService.getActiveById(vendorId);
+        }
+        if (vendorId != null) {
+            throw new BadRequestException(PurchaseRequestErrorCode.INVALID_PAYMENT_METHOD, "일반 결제 방식은 거래처를 지정할 수 없습니다.");
+        }
+        return null;
     }
 
     private void checkAccess(PurchaseRequest purchaseRequest, Long requesterId, boolean isAdmin) {

@@ -6,6 +6,7 @@ import java.util.List;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestReceipt;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 
 public record PurchaseRequestDetailResponse(
@@ -34,11 +35,14 @@ public record PurchaseRequestDetailResponse(
     @Schema(description = "총 구매 금액 (원) - 구매 보고 이후 확정", example = "45000")
     Long totalPrice,
 
-    @Schema(description = "요청 전체 선금 요청 금액 (원)", example = "50000")
-    Long advancePaymentRequestedAmount,
+    @Schema(description = "결제 방식", example = "NORMAL")
+    PurchasePaymentMethod paymentMethod,
 
-    @Schema(description = "승인된 선금 금액 (원)", example = "50000")
-    Long advancePaymentApprovedAmount,
+    @Schema(description = "거래처 ID", example = "1")
+    Long vendorId,
+
+    @Schema(description = "거래처명", example = "예소디자인")
+    String vendorName,
 
     @Schema(description = "요청 상태", example = "PENDING")
     PurchaseRequestStatus status,
@@ -68,16 +72,18 @@ public record PurchaseRequestDetailResponse(
         Long id,
         String name,
         String reason,
-        Long expectedPrice,
-        Long actualPrice
+        Long price,
+        java.util.UUID receiptFileId,
+        String receiptFileUrl
     ) {
         static ItemResponse from(PurchaseRequestItem item) {
             return new ItemResponse(
                 item.getId(),
                 item.getName(),
                 item.getReason(),
-                item.getExpectedPrice(),
-                item.getActualPrice()
+                item.getPrice(),
+                item.getReceiptFile() != null ? item.getReceiptFile().getId() : null,
+                item.getReceiptFile() != null ? item.getReceiptFile().getPublicUrl() : null
             );
         }
     }
@@ -106,8 +112,9 @@ public record PurchaseRequestDetailResponse(
             r.getTitle(),
             r.getContent(),
             r.getTotalPrice(),
-            r.getAdvancePaymentRequestedAmount(),
-            r.getAdvancePaymentApprovedAmount(),
+            r.getPaymentMethod(),
+            r.getVendor() != null ? r.getVendor().getId() : null,
+            r.getVendor() != null ? r.getVendor().getName() : null,
             r.getStatus(),
             r.getApprovalAt(),
             r.getApprovalBy() != null ? r.getApprovalBy().getName() : null,

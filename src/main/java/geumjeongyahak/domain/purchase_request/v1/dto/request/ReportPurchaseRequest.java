@@ -12,7 +12,7 @@ public record ReportPurchaseRequest(
 
     @Valid
     @NotEmpty
-    @Schema(description = "구매 완료 항목 목록")
+    @Schema(description = "영수증을 등록 또는 교체할 항목 목록")
     List<ItemReport> items,
 
     @Schema(description = "구매 요청 단위 영수증 파일 ID 목록")
@@ -24,9 +24,7 @@ public record ReportPurchaseRequest(
         @Schema(description = "항목 ID", example = "1")
         Long itemId,
 
-        @NotNull
-        @Min(0)
-        @Schema(description = "실 구매 단가 (원)", example = "15000")
-        Long price
+        @Schema(description = "품목 영수증 파일 ID")
+        UUID receiptFileId
     ) {}
 }
