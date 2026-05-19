@@ -25,7 +25,13 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
 
 management:
+  server:
+    port: ${MANAGEMENT_PORT:9090}
   endpoints:
     web:
       exposure:
-        include: "health,info,metrics"
+        include: "health,info,metrics,prometheus"
+  prometheus:
+    metrics:
+      export:
+        enabled: true
