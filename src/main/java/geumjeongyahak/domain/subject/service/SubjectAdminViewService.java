@@ -2,11 +2,15 @@ package geumjeongyahak.domain.subject.service;
 
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
+import geumjeongyahak.domain.subject.v1.dto.request.CreateSubjectRequest;
 import geumjeongyahak.domain.subject.v1.dto.response.SubjectDetailResponse;
+import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.users.service.UserProxyService;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +28,7 @@ public class SubjectAdminViewService {
 
     private final SubjectService subjectService;
     private final ClassroomProxyService classroomProxyService;
+    private final UserProxyService userProxyService;
 
     public SubjectAdminPage getSubjects(SubjectFilter filter) {
         List<SubjectRow> rows = subjectService.getAllSubjects(filter.classroomId())
@@ -45,6 +50,47 @@ public class SubjectAdminViewService {
             .stream()
             .map(ClassroomOption::from)
             .toList();
+    }
+
+    public List<TeacherOption> getTeacherOptions() {
+        return userProxyService.getTeacherCandidatesOrderByName()
+            .stream()
+            .map(TeacherOption::from)
+            .toList();
+    }
+
+    public List<DayOfWeekOption> getDayOfWeekOptions() {
+        return Arrays.stream(DayOfWeek.values())
+            .map(dayOfWeek -> new DayOfWeekOption(dayOfWeek, getDayOfWeekLabel(dayOfWeek)))
+            .toList();
+    }
+
+    @Transactional
+    public Long createSubject(
+        Long classroomId,
+        Long teacherId,
+        String name,
+        LocalDate startAt,
+        LocalDate endAt,
+        DayOfWeek dayOfWeek,
+        LocalTime startTime,
+        LocalTime endTime,
+        Integer period,
+        String description
+    ) {
+        SubjectDetailResponse response = subjectService.createSubject(new CreateSubjectRequest(
+            classroomId,
+            teacherId,
+            name,
+            startAt,
+            endAt,
+            dayOfWeek,
+            startTime,
+            endTime,
+            period,
+            normalizeDescription(description)
+        ));
+        return response.id();
     }
 
     private Comparator<SubjectDetailResponse> subjectComparator() {
@@ -80,6 +126,13 @@ public class SubjectAdminViewService {
             case SATURDAY -> "토요일";
             case SUNDAY -> "일요일";
         };
+    }
+
+    private static String normalizeDescription(String description) {
+        if (description == null || description.isBlank()) {
+            return null;
+        }
+        return description.trim();
     }
 
     public record SubjectFilter(
@@ -190,5 +243,20 @@ public class SubjectAdminViewService {
         private static ClassroomOption from(Classroom classroom) {
             return new ClassroomOption(classroom.getId(), classroom.getName());
         }
+    }
+
+    public record TeacherOption(
+        Long id,
+        String name
+    ) {
+        private static TeacherOption from(User user) {
+            return new TeacherOption(user.getId(), user.getName());
+        }
+    }
+
+    public record DayOfWeekOption(
+        DayOfWeek value,
+        String label
+    ) {
     }
 }

@@ -2,6 +2,9 @@ package geumjeongyahak.domain.subject.v1.controller;
 
 import geumjeongyahak.domain.subject.service.SubjectAdminViewService;
 import geumjeongyahak.domain.subject.service.SubjectAdminViewService.SubjectFilter;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -9,8 +12,10 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/admin/subject/subjects")
@@ -19,6 +24,8 @@ public class SubjectViewController {
 
     private static final String SUBJECT_READ_ACCESS =
         "hasRole('ADMIN') or hasAuthority('subject:read:*')";
+    private static final String SUBJECT_WRITE_ACCESS =
+        "hasRole('ADMIN') or hasAuthority('subject:write:*')";
 
     private final SubjectAdminViewService subjectAdminViewService;
 
@@ -54,5 +61,51 @@ public class SubjectViewController {
         model.addAttribute("filter", filter);
         model.addAttribute("subject", subjectAdminViewService.getSubject(subjectId));
         return "admin/subject/subjects-detail";
+    }
+
+    @PreAuthorize(SUBJECT_WRITE_ACCESS)
+    @GetMapping("/new")
+    public String newSubject(Model model, Authentication authentication) {
+        addSubjectFormAttributes(model, authentication);
+        return "admin/subject/subjects-form";
+    }
+
+    @PreAuthorize(SUBJECT_WRITE_ACCESS)
+    @PostMapping
+    public String createSubject(
+            @RequestParam Long classroomId,
+            @RequestParam(required = false) Long teacherId,
+            @RequestParam String name,
+            @RequestParam LocalDate startAt,
+            @RequestParam LocalDate endAt,
+            @RequestParam DayOfWeek dayOfWeek,
+            @RequestParam LocalTime startTime,
+            @RequestParam LocalTime endTime,
+            @RequestParam Integer period,
+            @RequestParam(required = false) String description,
+            RedirectAttributes redirectAttributes
+    ) {
+        Long subjectId = subjectAdminViewService.createSubject(
+                classroomId,
+                teacherId,
+                name,
+                startAt,
+                endAt,
+                dayOfWeek,
+                startTime,
+                endTime,
+                period,
+                description
+        );
+        redirectAttributes.addFlashAttribute("message", "과목을 등록했습니다.");
+        return "redirect:/admin/subject/subjects/" + subjectId;
+    }
+
+    private void addSubjectFormAttributes(Model model, Authentication authentication) {
+        model.addAttribute("active", "subjects");
+        model.addAttribute("adminName", authentication.getName());
+        model.addAttribute("classrooms", subjectAdminViewService.getClassroomOptions());
+        model.addAttribute("teachers", subjectAdminViewService.getTeacherOptions());
+        model.addAttribute("dayOfWeeks", subjectAdminViewService.getDayOfWeekOptions());
     }
 }
