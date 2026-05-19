@@ -26,6 +26,8 @@ public class SubjectViewController {
         "hasRole('ADMIN') or hasAuthority('subject:read:*')";
     private static final String SUBJECT_WRITE_ACCESS =
         "hasRole('ADMIN') or hasAuthority('subject:write:*')";
+    private static final String SUBJECT_MANAGE_ACCESS =
+        "hasRole('ADMIN') or hasAuthority('subject:manage:*')";
 
     private final SubjectAdminViewService subjectAdminViewService;
 
@@ -101,11 +103,51 @@ public class SubjectViewController {
         return "redirect:/admin/subject/subjects/" + subjectId;
     }
 
+    @PreAuthorize(SUBJECT_MANAGE_ACCESS)
+    @GetMapping("/{subjectId}/edit")
+    public String editSubject(
+            @PathVariable Long subjectId,
+            @RequestParam(required = false) Long classroomId,
+            @RequestParam(required = false) Boolean active,
+            Model model,
+            Authentication authentication
+    ) {
+        SubjectFilter filter = new SubjectFilter(classroomId, active);
+        model.addAttribute("active", "subjects");
+        model.addAttribute("adminName", authentication.getName());
+        model.addAttribute("filter", filter);
+        model.addAttribute("subject", subjectAdminViewService.getSubject(subjectId));
+        return "admin/subject/subjects-edit";
+    }
+
+    @PreAuthorize(SUBJECT_MANAGE_ACCESS)
+    @PostMapping("/{subjectId}")
+    public String updateSubject(
+        @PathVariable Long subjectId,
+        @RequestParam String name,
+        @RequestParam(required = false) String description,
+        @RequestParam(required = false) Long classroomId,
+        @RequestParam(required = false) Boolean active,
+        RedirectAttributes redirectAttributes
+    ) {
+        subjectAdminViewService.updateSubject(subjectId, name, description);
+        redirectAttributes.addFlashAttribute("message", "과목 기본 정보를 수정했습니다.");
+        addRedirectAttributeIfPresent(redirectAttributes, "classroomId", classroomId);
+        addRedirectAttributeIfPresent(redirectAttributes, "active", active);
+        return "redirect:/admin/subject/subjects/" + subjectId;
+    }
+
     private void addSubjectFormAttributes(Model model, Authentication authentication) {
         model.addAttribute("active", "subjects");
         model.addAttribute("adminName", authentication.getName());
         model.addAttribute("classrooms", subjectAdminViewService.getClassroomOptions());
         model.addAttribute("teachers", subjectAdminViewService.getTeacherOptions());
         model.addAttribute("dayOfWeeks", subjectAdminViewService.getDayOfWeekOptions());
+    }
+
+    private void addRedirectAttributeIfPresent(RedirectAttributes redirectAttributes, String name, Object value) {
+        if (value != null) {
+            redirectAttributes.addAttribute(name, value.toString());
+        }
     }
 }

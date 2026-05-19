@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('과목 기본 정보 수정')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>과목 기본 정보 수정</h1>
+                <p th:text="|${subject.classroomName} ${subject.name}의 이름과 설명을 수정합니다.|">
+                    벚꽃반 한글 기초의 이름과 설명을 수정합니다.
+                </p>
+            </div>
+            <a class="reset-link"
+               th:href="@{/admin/subject/subjects/{subjectId}(subjectId=${subject.id},classroomId=${filter.classroomId},active=${filter.active})}">
+                상세로
+            </a>
+        </div>
+
+        <form class="panel form-grid"
+              th:action="@{/admin/subject/subjects/{subjectId}(subjectId=${subject.id})}"
+              method="post">
+            <input type="hidden" name="classroomId" th:value="${filter.classroomId}">
+            <input type="hidden" name="active" th:value="${filter.active}">
+            <label>과목명
+                <input name="name" maxlength="50" required th:value="${subject.name}">
+            </label>
+            <label>설명
+                <textarea name="description" th:text="${subject.description}"></textarea>
+            </label>
+            <button class="button" type="submit">기본 정보 저장</button>
+        </form>
+    </main>
+</div>
+</body>
+</html>

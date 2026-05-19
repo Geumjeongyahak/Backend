@@ -15,6 +15,10 @@
                th:href="@{/admin/subject/subjects(classroomId=${filter.classroomId},active=${filter.active})}">
                 목록으로
             </a>
+            <a class="button"
+               th:href="@{/admin/subject/subjects/{subjectId}/edit(subjectId=${subject.id},classroomId=${filter.classroomId},active=${filter.active})}">
+                기본 정보 수정
+            </a>
         </div>
 
         <section class="panel">
