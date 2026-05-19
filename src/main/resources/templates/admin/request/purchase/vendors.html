@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('거래처 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>거래처</h1>
+                <p>선결제 거래처와 잔액을 관리합니다.</p>
+            </div>
+            <a class="button" th:href="@{/admin/request/purchase/vendors/new}">거래처 등록</a>
+        </div>
+
+        <form class="panel filter-grid" th:action="@{/admin/request/purchase/vendors}" method="get">
+            <label>검색어
+                <input name="keyword" th:value="${keyword}" placeholder="거래처명">
+            </label>
+            <button class="button" type="submit">조회</button>
+            <a class="reset-link" th:href="@{/admin/request/purchase/vendors}">초기화</a>
+        </form>
+
+        <section class="panel table-panel">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>거래처</th>
+                        <th>설명</th>
+                        <th>잔액</th>
+                        <th>상태</th>
+                        <th>생성일</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="vendor : ${vendors}">
+                        <td th:text="${vendor.id}">1</td>
+                        <td><a class="link" th:href="@{/admin/request/purchase/vendors/{vendorId}(vendorId=${vendor.id})}" th:text="${vendor.name}">거래처</a></td>
+                        <td th:text="${vendor.description ?: '-'}">-</td>
+                        <td th:text="${vendor.balance}">0</td>
+                        <td><span class="pill" th:text="${vendor.isActive ? 'ACTIVE' : 'INACTIVE'}">ACTIVE</span></td>
+                        <td th:text="${#temporals.format(vendor.createdAt, 'yyyy.MM.dd')}">2026.01.01</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(vendors)}">
+                        <td colspan="6" class="empty">거래처가 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>
