@@ -44,10 +44,10 @@ public class LessonBaseTest extends BaseE2ETest {
     protected void setUp() {
         super.setUp();
         RestAssured.basePath = "/api/v1/lessons";
-        this.adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
+        this.adminAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_ADMIN_USERNAME);
         userTestHelper.createTestUser(TEST_MANAGER_USERNAME, RoleType.MANAGER);
-        this.managerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_MANAGER_USERNAME);
-        this.volunteerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_VOLUNTEER_USERNAME);
+        this.managerAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_MANAGER_USERNAME);
+        this.volunteerAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_VOLUNTEER_USERNAME);
     }
 
     @AfterEach
@@ -191,14 +191,14 @@ public class LessonBaseTest extends BaseE2ETest {
     }
 
     protected String createAccessTokenWithPermission(
-        String nicknamePrefix,
+        String userKeyPrefix,
         RoleType role,
         String permissionCode
     ) {
-        String nickname = nicknamePrefix + System.nanoTime();
-        User user = userTestHelper.createTestUser(nickname, role);
+        String userKey = userKeyPrefix + System.nanoTime();
+        User user = userTestHelper.createTestUser(userKey, role);
         userPermissionRepository.save(new UserPermission(user, permissionCode));
-        return userTestHelper.generateAccessTokenByNickname(nickname);
+        return userTestHelper.generateAccessTokenByUserKey(userKey);
     }
 
     protected void deleteLesson(Long lessonId, String token) {

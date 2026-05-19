@@ -27,7 +27,7 @@ public abstract class BaseFileTest extends BaseE2ETest {
         RestAssured.basePath = "/api/v1/files";
 
         userTestHelper.createTestUser(TEST_FILE_USER, RoleType.VOLUNTEER);
-        userAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_FILE_USER);
+        userAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_FILE_USER);
     }
 
     @AfterEach

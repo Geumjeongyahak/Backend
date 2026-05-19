@@ -51,7 +51,6 @@ public class UserAdminViewService {
         return AdminSorts.sort(rows, sort, Map.of(
             "id", Comparator.comparing(AdminUserRow::id),
             "name", Comparator.comparing(AdminUserRow::name, Comparator.nullsLast(String::compareToIgnoreCase)),
-            "nickname", Comparator.comparing(AdminUserRow::nickname, Comparator.nullsLast(String::compareToIgnoreCase)),
             "email", Comparator.comparing(AdminUserRow::email, Comparator.nullsLast(String::compareToIgnoreCase)),
             "role", Comparator.comparing(AdminUserRow::role, Comparator.nullsLast(String::compareToIgnoreCase)),
             "departmentName", Comparator.comparing(AdminUserRow::departmentName, Comparator.nullsLast(String::compareToIgnoreCase)),
@@ -65,7 +64,6 @@ public class UserAdminViewService {
         }
         String normalized = keyword.trim().toLowerCase(Locale.ROOT);
         return contains(user.getName(), normalized)
-            || contains(user.getNickname(), normalized)
             || contains(user.getEmail(), normalized)
             || contains(user.getPhoneNumber(), normalized);
     }
@@ -92,7 +90,6 @@ public class UserAdminViewService {
     @Transactional
     public Long createUser(
         String email,
-        String nickname,
         String name,
         String password,
         String phoneNumber,
@@ -101,7 +98,6 @@ public class UserAdminViewService {
     ) {
         return userCrudService.createUser(new CreateUserRequest(
             email,
-            nickname,
             name,
             password,
             phoneNumber,
@@ -114,7 +110,6 @@ public class UserAdminViewService {
     public void updateUser(
         Long userId,
         String email,
-        String nickname,
         String name,
         String phoneNumber,
         String role,
@@ -122,7 +117,6 @@ public class UserAdminViewService {
     ) {
         userCrudService.updateUser(userId, new UpdateUserRequest(
             name,
-            nickname,
             phoneNumber,
             email,
             null,
@@ -138,7 +132,6 @@ public class UserAdminViewService {
             null,
             null,
             null,
-            null,
             role,
             null
         ));
@@ -147,7 +140,6 @@ public class UserAdminViewService {
     @Transactional
     public void updateDepartment(Long userId, Long departmentId) {
         userCrudService.updateUser(userId, new UpdateUserRequest(
-            null,
             null,
             null,
             null,
@@ -185,7 +177,6 @@ public class UserAdminViewService {
     public record AdminUserRow(
         Long id,
         String name,
-        String nickname,
         String email,
         String phoneNumber,
         String role,
@@ -198,7 +189,6 @@ public class UserAdminViewService {
             return new AdminUserRow(
                 user.getId(),
                 user.getName(),
-                user.getNickname(),
                 user.getEmail(),
                 user.getPhoneNumber(),
                 user.getRole().name(),

@@ -83,7 +83,7 @@ public class RefreshTokenService {
      */
     @Transactional(readOnly = true)
     public Optional<Long> getCredentialIdFromRefreshToken(String token) {
-        log.debug("Refresh Token에서 credential ID 조회: token={}", token);
+        log.debug("Refresh Token에서 credential ID 조회 요청");
 
         return refreshTokenRepository.findById(token)
                 .filter(rt -> !rt.isExpired())
@@ -96,7 +96,7 @@ public class RefreshTokenService {
      */
     @Transactional
     public void deleteRefreshToken(String token) {
-        log.debug("Refresh Token 삭제 요청: token={}", token);
+        log.debug("Refresh Token 삭제 요청");
 
         if (StringUtils.hasText(token)) {
             refreshTokenRepository.deleteById(token);

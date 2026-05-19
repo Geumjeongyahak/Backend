@@ -48,8 +48,8 @@ public abstract class BasePostTest extends BaseE2ETest {
         userTestHelper.createTestUser(TEST_POST_ADMIN_USERNAME, RoleType.ADMIN);
         userTestHelper.createTestUser(TEST_POST_GUEST_USERNAME, RoleType.GUEST);
 
-        adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_POST_ADMIN_USERNAME);
-        guestAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_POST_GUEST_USERNAME);
+        adminAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_POST_ADMIN_USERNAME);
+        guestAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_POST_GUEST_USERNAME);
 
         Channel channel = channelRepository.save(Channel.builder()
                 .name("테스트 공지 채널")

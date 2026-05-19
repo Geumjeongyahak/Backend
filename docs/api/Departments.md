@@ -55,7 +55,6 @@
       {
         "id": 1,
         "name": "관리자",
-        "nickname": "admin1234",
         "email": "admin@test.com",
         "role": "ADMIN",
         "departmentId": 1

@@ -103,7 +103,7 @@ class CommentLifecycleTest extends BasePostTest {
 
     private String createToken(String username) {
         userTestHelper.createTestUser(username, RoleType.GUEST);
-        return userTestHelper.generateAccessTokenByNickname(username);
+        return userTestHelper.generateAccessTokenByUserKey(username);
     }
 
     private Long createAllAuthenticatedChannel() {

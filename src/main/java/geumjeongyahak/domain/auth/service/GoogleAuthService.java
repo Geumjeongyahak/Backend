@@ -96,7 +96,7 @@ public class GoogleAuthService {
     }
 
     @Transactional
-    public TokenResponse signup(String tempToken, String name, String nickname, String phoneNumber) {
+    public TokenResponse signup(String tempToken, String name, String phoneNumber) {
         String[] parts = extractTempToken(tempToken);
         String googleSub = parts[0];
         String email = parts[1];
@@ -106,7 +106,6 @@ public class GoogleAuthService {
             .map(UserCredential::getUser)
             .orElseGet(() -> userProxyService.save(User.builder()
                 .name(name)
-                .nickname(nickname)
                 .email(email)
                 .phoneNumber(phoneNumber)
                 .role(RoleType.GUEST)

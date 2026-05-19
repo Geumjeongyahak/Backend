@@ -16,7 +16,6 @@ class UserDeleteTest extends UserBaseTest {
     void deleteUser_Success() {
         CreateUserRequest createReq = new CreateUserRequest(
                 "deletetest@test.com",
-                "deletetest",
                 "Delete Test User",
                 "pw_deletetest",
                 "010-3333-4444",
@@ -35,7 +34,7 @@ class UserDeleteTest extends UserBaseTest {
             .extract()
             .as(UserDetailResponse.class);
 
-        userTestHelper.setUser(createdUser.nickname());
+        userTestHelper.setUser(createdUser.email());
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -94,7 +93,6 @@ class UserDeleteTest extends UserBaseTest {
     void deleteUser_AlreadyDeleted() {
         CreateUserRequest createReq = new CreateUserRequest(
                 "doubledelete@test.com",
-                "doubledelete",
                 "Double Delete Test",
                 "pw_doubledelete",
                 "010-5555-6666",
@@ -113,7 +111,7 @@ class UserDeleteTest extends UserBaseTest {
             .extract()
             .as(UserDetailResponse.class);
 
-        userTestHelper.setUser(createdUser.nickname());
+        userTestHelper.setUser(createdUser.email());
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))

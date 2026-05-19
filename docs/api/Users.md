@@ -22,7 +22,6 @@
       {
         "id": 1,
         "name": "홍길동",
-        "nickname": "까치",
         "email": "user@example.com",
         "phoneNumber": "010-1234-5678",
         "role": "VOLUNTEER",
@@ -49,7 +48,6 @@
   {
     "id": 1,
     "name": "홍길동",
-    "nickname": "까치",
     "email": "user@example.com",
     "phoneNumber": "010-1234-5678",
     "role": "VOLUNTEER",
@@ -80,7 +78,6 @@
   ```json
   {
     "email": "newuser@test.com",
-    "nickname": "새닉네임",
     "name": "신규사용자",
     "password": "password123!",
     "phoneNumber": "010-1111-2222",
@@ -115,7 +112,6 @@
 - **Request Body**: (UpdateSelfRequest)
   ```json
   {
-    "nickname": "변경한닉네임",
     "password": "newpassword123!"
   }
   ```

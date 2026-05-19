@@ -38,18 +38,18 @@ public abstract class StudentBaseTest extends BaseE2ETest {
     protected void setUp() {
         super.setUp();
         RestAssured.basePath = "/api/v1/students";
-        this.adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
+        this.adminAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_ADMIN_USERNAME);
 
         this.userTestHelper.createTestUser(TEST_VOLUNTEER_USERNAME, RoleType.VOLUNTEER);
-        this.volunteerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_VOLUNTEER_USERNAME);
+        this.volunteerAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_VOLUNTEER_USERNAME);
 
         this.userTestHelper.createTestUser(TEST_GUEST_USERNAME, RoleType.GUEST);
-        this.guestAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_GUEST_USERNAME);
+        this.guestAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_GUEST_USERNAME);
 
         User studentWriter = this.userTestHelper.createTestUser(TEST_STUDENT_WRITER_USERNAME, RoleType.GUEST);
         userPermissionRepository.findByUserIdAndPermissionCode(studentWriter.getId(), STUDENT_WRITE_PERMISSION)
             .orElseGet(() -> userPermissionRepository.save(new UserPermission(studentWriter, STUDENT_WRITE_PERMISSION)));
-        this.studentWriteAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_STUDENT_WRITER_USERNAME);
+        this.studentWriteAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_STUDENT_WRITER_USERNAME);
     }
 
     protected StudentResponse createStudent(String name, String phoneNumber) {

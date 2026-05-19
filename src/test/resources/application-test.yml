@@ -24,6 +24,8 @@ spring:
       mode: always
       schema-locations: classpath:sql/init_scheme.sql
       data-locations: classpath:sql/init_data.sql
+  flyway:
+    enabled: false
   servlet:
     multipart:
       max-file-size: 50MB

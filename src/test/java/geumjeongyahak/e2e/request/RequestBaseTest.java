@@ -66,12 +66,12 @@ public abstract class RequestBaseTest extends BaseE2ETest {
     @Override
     protected void setUp() {
         super.setUp();
-        adminToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
+        adminToken = userTestHelper.generateAccessTokenByUserKey(TEST_ADMIN_USERNAME);
         userTestHelper.createTestUser("manager01", RoleType.MANAGER);
-        managerToken = userTestHelper.generateAccessTokenByNickname("manager01");
-        guestToken = userTestHelper.generateAccessTokenByNickname(GUEST_USERNAME);
-        volunteerToken = userTestHelper.generateAccessTokenByNickname(VOLUNTEER_USERNAME);
-        volunteer2Token = userTestHelper.generateAccessTokenByNickname(VOLUNTEER2_USERNAME);
+        managerToken = userTestHelper.generateAccessTokenByUserKey("manager01");
+        guestToken = userTestHelper.generateAccessTokenByUserKey(GUEST_USERNAME);
+        volunteerToken = userTestHelper.generateAccessTokenByUserKey(VOLUNTEER_USERNAME);
+        volunteer2Token = userTestHelper.generateAccessTokenByUserKey(VOLUNTEER2_USERNAME);
     }
 
     // ──────────────────────────────────────────────────────
@@ -182,14 +182,14 @@ public abstract class RequestBaseTest extends BaseE2ETest {
     }
 
     protected String createAccessTokenWithPermission(
-        String nicknamePrefix,
+        String userKeyPrefix,
         RoleType role,
         String permissionCode
     ) {
-        String nickname = nicknamePrefix + System.nanoTime();
-        User user = userTestHelper.createTestUser(nickname, role);
+        String userKey = userKeyPrefix + System.nanoTime();
+        User user = userTestHelper.createTestUser(userKey, role);
         userPermissionRepository.save(new UserPermission(user, permissionCode));
-        return userTestHelper.generateAccessTokenByNickname(nickname);
+        return userTestHelper.generateAccessTokenByUserKey(userKey);
     }
 
 }

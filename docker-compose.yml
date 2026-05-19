@@ -20,8 +20,10 @@ services:
       - "${MANAGEMENT_PORT:-9090}:9090"
 
   db:
-    image: postgres:16-alpine
+    image: postgres:${POSTGRES_VERSION:-16-alpine}
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -31,12 +33,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    ports:
-      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./src/main/resources/sql/init_scheme.sql:/docker-entrypoint-initdb.d/01-init_schema.sql:ro
-      - ./src/main/resources/sql/init_data.sql:/docker-entrypoint-initdb.d/02-init_data.sql:ro
 
 volumes:
   postgres-data:

@@ -37,18 +37,18 @@ public class SubjectBaseTest extends BaseE2ETest {
         super.setUp();
         RestAssured.basePath = "/api/v1/subjects";
         cleanSubjectTables();
-        this.adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
-        this.volunteerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_VOLUNTEER_USERNAME);
+        this.adminAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_ADMIN_USERNAME);
+        this.volunteerAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_VOLUNTEER_USERNAME);
 
         User subjectWriter = userTestHelper.createTestUser(TEST_SUBJECT_WRITER_USERNAME, RoleType.GUEST);
         userPermissionRepository.findByUserIdAndPermissionCode(subjectWriter.getId(), SUBJECT_WRITE_PERMISSION)
             .orElseGet(() -> userPermissionRepository.save(new UserPermission(subjectWriter, SUBJECT_WRITE_PERMISSION)));
-        this.subjectWriteAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_SUBJECT_WRITER_USERNAME);
+        this.subjectWriteAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_SUBJECT_WRITER_USERNAME);
 
         User subjectManager = userTestHelper.createTestUser(TEST_SUBJECT_MANAGER_USERNAME, RoleType.GUEST);
         userPermissionRepository.findByUserIdAndPermissionCode(subjectManager.getId(), SUBJECT_MANAGE_PERMISSION)
             .orElseGet(() -> userPermissionRepository.save(new UserPermission(subjectManager, SUBJECT_MANAGE_PERMISSION)));
-        this.subjectManageAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_SUBJECT_MANAGER_USERNAME);
+        this.subjectManageAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_SUBJECT_MANAGER_USERNAME);
     }
 
     private void cleanSubjectTables() {

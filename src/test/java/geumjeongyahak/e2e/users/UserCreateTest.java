@@ -18,7 +18,6 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "manager" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                uniqueUsername,
                 "Manager User",
                 "password123!",
                 "010-1234-5678",
@@ -36,14 +35,13 @@ class UserCreateTest extends UserBaseTest {
             .statusCode(201)
             .body("id", notNullValue())
             .body("email", equalTo(uniqueUsername + "@test.com"))
-            .body("nickname", equalTo(uniqueUsername))
-            .body("name", equalTo("Manager User"))
+                        .body("name", equalTo("Manager User"))
             .body("role", equalTo("MANAGER"))
             .log().all()
             .extract()
             .as(UserDetailResponse.class);
 
-        userTestHelper.setUser(res.nickname());
+        userTestHelper.setUser(res.email());
     }
 
     @Test
@@ -52,7 +50,6 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "volunteer" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                uniqueUsername,
                 "Volunteer User",
                 "password123!",
                 "010-2222-3333",
@@ -73,7 +70,7 @@ class UserCreateTest extends UserBaseTest {
             .extract()
             .as(UserDetailResponse.class);
 
-        userTestHelper.setUser(res.nickname());
+        userTestHelper.setUser(res.email());
     }
 
     @Test
@@ -82,7 +79,6 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "guest" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                uniqueUsername,
                 "Guest User",
                 "password123!",
                 "010-3333-4444",
@@ -103,7 +99,7 @@ class UserCreateTest extends UserBaseTest {
             .extract()
             .as(UserDetailResponse.class);
 
-        userTestHelper.setUser(res.nickname());
+        userTestHelper.setUser(res.email());
     }
 
     @Test
@@ -112,7 +108,6 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "minimal" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                uniqueUsername,
                 "Minimal User",
                 "password123!",
                 null,  // phoneNumber optional
@@ -134,7 +129,7 @@ class UserCreateTest extends UserBaseTest {
             .extract()
             .as(UserDetailResponse.class);
 
-        userTestHelper.setUser(res.nickname());
+        userTestHelper.setUser(res.email());
     }
 
     @Test
@@ -143,7 +138,6 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "forbidden" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                uniqueUsername,
                 "Forbidden User",
                 "password123!",
                 "010-1234-5678",
@@ -169,7 +163,6 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "unauthorized" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                uniqueUsername,
                 "Unauthorized User",
                 "password123!",
                 "010-1234-5678",
@@ -188,12 +181,10 @@ class UserCreateTest extends UserBaseTest {
     }
 
     @Test
-    @DisplayName("중복된 username으로 User 생성 실패(409 Conflict)")
-    void createUser_DuplicateUsername() {
-        // 기존 admin 사용자와 동일한 nickname 사용
+    @DisplayName("중복된 이메일로 User 생성 실패(409 Conflict)")
+    void createUser_DuplicateEmail() {
         CreateUserRequest req = new CreateUserRequest(
-                "duplicate@test.com",
-                TEST_ADMIN_USERNAME,  // 이미 존재하는 nickname
+                "admin@test.com",
                 "Duplicate User",
                 "password123!",
                 "010-1234-5678",
@@ -209,7 +200,7 @@ class UserCreateTest extends UserBaseTest {
             .post()
         .then()
             .statusCode(409)
-            .body("code", equalTo("BIZ-01-001"))  // DUPLICATE_USERNAME
+            .body("code", equalTo("BIZ-01-002"))  // DUPLICATE_EMAIL
             .log().all();
     }
 
@@ -240,7 +231,6 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "shortpw" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                uniqueUsername,
                 "Short Password User",
                 "short",  // 8자 미만
                 "010-1234-5678",
@@ -266,7 +256,6 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "invalidemail" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 "invalid-email-format",  // 잘못된 이메일 형식
-                uniqueUsername,
                 "Invalid Email User",
                 "password123!",
                 "010-1234-5678",
@@ -292,7 +281,6 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "invalidphone" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                uniqueUsername,
                 "Invalid Phone User",
                 "password123!",
                 "invalid-phone",  // 잘못된 전화번호 형식
@@ -318,7 +306,6 @@ class UserCreateTest extends UserBaseTest {
         String uniqueUsername = "invalidrole" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
                 uniqueUsername + "@test.com",
-                uniqueUsername,
                 "Invalid Role User",
                 "password123!",
                 "010-1234-5678",

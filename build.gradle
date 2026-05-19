@@ -32,6 +32,7 @@ ext {
 	REST_ASSURED_VERSION = '6.0.0'
 	GCP_SDK_VERSION = '7.4.5'
 	FIREBASE_ADMIN_VERSION = '9.8.0'
+	LOGSTASH_LOGBACK_ENCODER_VERSION = '8.0'
 }
 
 dependencies {
@@ -51,6 +52,8 @@ dependencies {
 
 	// Database
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.flywaydb:flyway-core'
+	implementation 'org.flywaydb:flyway-database-postgresql'
 	runtimeOnly 'org.postgresql:postgresql'
 
 	// google cloud storage
@@ -70,6 +73,7 @@ dependencies {
 	// Monitoring and Actuator
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+	implementation "net.logstash.logback:logstash-logback-encoder:${LOGSTASH_LOGBACK_ENCODER_VERSION}"
 
 	// Test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
