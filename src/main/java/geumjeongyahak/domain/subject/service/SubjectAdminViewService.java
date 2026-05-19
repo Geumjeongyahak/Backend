@@ -5,6 +5,7 @@ import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
 import geumjeongyahak.domain.subject.v1.dto.request.AssignSubjectTeacherRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.CreateSubjectRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectBasicRequest;
+import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectScheduleRequest;
 import geumjeongyahak.domain.subject.v1.dto.response.SubjectDetailResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
@@ -106,6 +107,22 @@ public class SubjectAdminViewService {
     @Transactional
     public void assignTeacher(Long subjectId, Long teacherId) {
         subjectService.assignTeacher(subjectId, new AssignSubjectTeacherRequest(teacherId));
+    }
+
+    @Transactional
+    public void updateSchedule(
+        Long subjectId,
+        LocalDate startAt,
+        LocalDate endAt,
+        DayOfWeek dayOfWeek,
+        LocalTime startTime,
+        LocalTime endTime,
+        Integer period
+    ) {
+        subjectService.updateSchedule(
+            subjectId,
+            new UpdateSubjectScheduleRequest(startAt, endAt, dayOfWeek, startTime, endTime, period)
+        );
     }
 
     private Comparator<SubjectDetailResponse> subjectComparator() {

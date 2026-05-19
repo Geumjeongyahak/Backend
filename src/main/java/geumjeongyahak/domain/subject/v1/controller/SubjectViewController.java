@@ -64,6 +64,7 @@ public class SubjectViewController {
         model.addAttribute("filter", filter);
         model.addAttribute("subject", subjectAdminViewService.getSubject(subjectId));
         model.addAttribute("teachers", subjectAdminViewService.getTeacherOptions());
+        model.addAttribute("dayOfWeeks", subjectAdminViewService.getDayOfWeekOptions());
         return "admin/subject/subjects-detail";
     }
 
@@ -151,6 +152,39 @@ public class SubjectViewController {
         try {
             subjectAdminViewService.assignTeacher(subjectId, teacherId);
             redirectAttributes.addFlashAttribute("message", "담당 교사를 변경했습니다.");
+        } catch (BusinessException exception) {
+            redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
+        }
+        addRedirectAttributeIfPresent(redirectAttributes, "classroomId", classroomId);
+        addRedirectAttributeIfPresent(redirectAttributes, "active", active);
+        return "redirect:/admin/subject/subjects/" + subjectId;
+    }
+
+    @PreAuthorize(SUBJECT_MANAGE_ACCESS)
+    @PostMapping("/{subjectId}/schedule")
+    public String updateSchedule(
+        @PathVariable Long subjectId,
+        @RequestParam LocalDate startAt,
+        @RequestParam LocalDate endAt,
+        @RequestParam DayOfWeek dayOfWeek,
+        @RequestParam LocalTime startTime,
+        @RequestParam LocalTime endTime,
+        @RequestParam Integer period,
+        @RequestParam(required = false) Long classroomId,
+        @RequestParam(required = false) Boolean active,
+        RedirectAttributes redirectAttributes
+    ) {
+        try {
+            subjectAdminViewService.updateSchedule(
+                subjectId,
+                startAt,
+                endAt,
+                dayOfWeek,
+                startTime,
+                endTime,
+                period
+            );
+            redirectAttributes.addFlashAttribute("message", "과목 일정을 수정했습니다.");
         } catch (BusinessException exception) {
             redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
         }

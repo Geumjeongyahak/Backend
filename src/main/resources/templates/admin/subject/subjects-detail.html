@@ -21,6 +21,13 @@
             </a>
         </div>
 
+        <p class="flash"
+           style="margin: 0; background: #fff0ed; color: var(--danger);"
+           th:if="${errorMessage}"
+           th:text="${errorMessage}">
+            요청을 처리할 수 없습니다.
+        </p>
+
         <section class="panel">
             <h2>기본 정보</h2>
             <div class="detail-grid">
@@ -87,12 +94,6 @@
 
         <section class="panel">
             <h2>담당 교사</h2>
-            <p class="flash"
-               style="margin: 0 0 16px; background: #fff0ed; color: var(--danger);"
-               th:if="${errorMessage}"
-               th:text="${errorMessage}">
-                담당 교사를 변경할 수 없습니다.
-            </p>
             <form class="filter-grid"
                   th:action="@{/admin/subject/subjects/{subjectId}/teacher(subjectId=${subject.id})}"
                   method="post">
@@ -108,6 +109,40 @@
                     </select>
                 </label>
                 <button class="button" type="submit">담당 교사 저장</button>
+            </form>
+        </section>
+
+        <section class="panel">
+            <h2>일정</h2>
+            <form class="filter-grid"
+                  th:action="@{/admin/subject/subjects/{subjectId}/schedule(subjectId=${subject.id})}"
+                  method="post">
+                <input type="hidden" name="classroomId" th:value="${filter.classroomId}">
+                <input type="hidden" name="active" th:value="${filter.active}">
+                <label>운영 시작일
+                    <input name="startAt" type="date" required th:value="${subject.startAt}">
+                </label>
+                <label>운영 종료일
+                    <input name="endAt" type="date" required th:value="${subject.endAt}">
+                </label>
+                <label>요일
+                    <select name="dayOfWeek" required>
+                        <option th:each="dayOfWeek : ${dayOfWeeks}"
+                                th:value="${dayOfWeek.value.name()}"
+                                th:text="${dayOfWeek.label}"
+                                th:selected="${subject.dayOfWeek == dayOfWeek.value}">월요일</option>
+                    </select>
+                </label>
+                <label>교시
+                    <input name="period" type="number" min="1" required th:value="${subject.period}">
+                </label>
+                <label>시작 시간
+                    <input name="startTime" type="time" required th:value="${subject.startTime}">
+                </label>
+                <label>종료 시간
+                    <input name="endTime" type="time" required th:value="${subject.endTime}">
+                </label>
+                <button class="button" type="submit">일정 저장</button>
             </form>
         </section>
     </main>
