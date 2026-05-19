@@ -53,10 +53,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "교재 구입 요청"),
                 entry("content", "한글 기초 교재가 필요합니다."),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "한글 기초 교재"),
                     entry("reason", "수업 교재 부족"),
-                    entry("expectedPrice", 15000L)
+                    entry("price", 15000L)
                 )))
             ))
             .post()
@@ -65,12 +66,13 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .body("id", notNullValue())
             .body("classroomId", equalTo((int) CLASSROOM_ID))
             .body("title", equalTo("교재 구입 요청"))
-            .body("totalPrice", equalTo(null))
+            .body("totalPrice", equalTo(15000))
+            .body("paymentMethod", equalTo("NORMAL"))
             .body("status", equalTo("PENDING"))
             .body("requestedByName", equalTo("홍길동"))
             .body("items", hasSize(1))
             .body("items[0].name", equalTo("한글 기초 교재"))
-            .body("items[0].expectedPrice", equalTo(15000))
+            .body("items[0].price", equalTo(15000))
             .extract()
             .jsonPath()
             .getLong("id");
@@ -87,10 +89,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "칠판 구입"),
                 entry("content", "교실용 칠판"),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "칠판"),
                     entry("reason", "교실 비품 교체"),
-                    entry("expectedPrice", 50000L)
+                    entry("price", 50000L)
                 )))
             ))
             .post()
@@ -102,10 +105,9 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("구입 요청 생성 시 영수증 파일 ID 전달 → 상세 응답 receipts 포함")
-    void createRequest_withReceiptFileIds_returnsReceipts() {
-        String receiptFileId1 = uploadPurchaseReceipt();
-        String receiptFileId2 = uploadPurchaseReceipt();
+    @DisplayName("구입 요청 생성 시 품목 영수증 파일 ID 전달 → 상세 응답 item receipt 포함")
+    void createRequest_withItemReceiptFileId_returnsReceipt() {
+        String receiptFileId = uploadPurchaseReceipt();
 
         createdRequestId = given()
             .basePath("/api/v1/purchase-requests")
@@ -115,19 +117,19 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "영수증 포함 구입 요청"),
                 entry("content", "구입 요청 생성 시 영수증을 함께 첨부합니다."),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "복사용지"),
                     entry("reason", "수업 자료 출력"),
-                    entry("expectedPrice", 10000L)
-                ))),
-                entry("receiptFileIds", List.of(receiptFileId1, receiptFileId2))
+                    entry("price", 10000L),
+                    entry("receiptFileId", receiptFileId)
+                )))
             ))
             .post()
             .then()
             .statusCode(201)
             .body("status", equalTo("PENDING"))
-            .body("receipts", hasSize(2))
-            .body("receipts[0].fileUrl", containsString("/documents/purchase-items/"))
+            .body("items[0].receiptFileUrl", containsString("/documents/purchase-items/"))
             .extract()
             .jsonPath()
             .getLong("id");
@@ -138,7 +140,7 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .get("/{requestId}", createdRequestId)
             .then()
             .statusCode(200)
-            .body("receipts", hasSize(2));
+            .body("items[0].receiptFileUrl", containsString("/documents/purchase-items/"));
     }
 
     // ── 인증 오류 ─────────────────────────────────────────
@@ -153,10 +155,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
                     entry("reason", "사유"),
-                    entry("expectedPrice", 1000L)
+                    entry("price", 1000L)
                 )))
             ))
             .post()
@@ -177,10 +180,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", 99999L),
+                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
                     entry("reason", "사유"),
-                    entry("expectedPrice", 1000L)
+                    entry("price", 1000L)
                 )))
             ))
             .post()
@@ -201,10 +205,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", ""),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
                     entry("reason", "사유"),
-                    entry("expectedPrice", 1000L)
+                    entry("price", 1000L)
                 )))
             ))
             .post()
@@ -223,6 +228,7 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of())
             ))
             .post()
@@ -231,7 +237,7 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("expectedPrice 가 음수 → 400")
+    @DisplayName("price 가 음수 → 400")
     void createRequest_negativePrice_returns400() {
         given()
             .basePath("/api/v1/purchase-requests")
@@ -241,10 +247,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
                     entry("reason", "사유"),
-                    entry("expectedPrice", -100L)
+                    entry("price", -100L)
                 )))
             ))
             .post()
@@ -263,10 +270,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", ""),
                     entry("reason", "사유"),
-                    entry("expectedPrice", 1000L)
+                    entry("price", 1000L)
                 )))
             ))
             .post()

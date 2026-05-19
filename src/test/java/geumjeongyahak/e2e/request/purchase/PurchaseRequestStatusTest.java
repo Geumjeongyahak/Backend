@@ -16,6 +16,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
+import geumjeongyahak.domain.vendor.repository.VendorBalanceHistoryRepository;
+import geumjeongyahak.domain.vendor.repository.VendorRepository;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 
 /**
@@ -29,15 +31,31 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     @Autowired
     private PurchaseRequestRepository purchaseRequestRepository;
 
+    @Autowired
+    private VendorRepository vendorRepository;
+
+    @Autowired
+    private VendorBalanceHistoryRepository vendorBalanceHistoryRepository;
+
     private Long currentRequestId;
+    private Long createdVendorId;
 
     @AfterEach
     void cleanup() {
+        if (createdVendorId != null) {
+            vendorBalanceHistoryRepository.deleteAllByVendor_Id(createdVendorId);
+        }
         if (currentRequestId != null) {
             if (purchaseRequestRepository.existsById(currentRequestId)) {
                 purchaseRequestRepository.deleteById(currentRequestId);
             }
             currentRequestId = null;
+        }
+        if (createdVendorId != null) {
+            if (vendorRepository.existsById(createdVendorId)) {
+                vendorRepository.deleteById(createdVendorId);
+            }
+            createdVendorId = null;
         }
     }
 
@@ -115,6 +133,55 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .patch("/{requestId}/approve", currentRequestId)
             .then()
             .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("거래처 선결제 요청 승인 → 거래처 잔액 차감")
+    void approve_vendorPrepaid_deductsVendorBalance() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = createVendorPrepaidPurchaseRequest(createdVendorId, 20000L);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "거래처 잔액으로 승인"))
+            .patch("/{requestId}/approve", currentRequestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("APPROVED"));
+
+        given()
+            .basePath("/api/v1/admin/vendors")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .get("/{vendorId}", createdVendorId)
+            .then()
+            .statusCode(200)
+            .body("balance", equalTo(80000));
+    }
+
+    @Test
+    @DisplayName("거래처 선결제 요청 승인 시 잔액 부족 → 409")
+    void approve_vendorPrepaidWithInsufficientBalance_returns409() {
+        createdVendorId = createVendorAndCharge(1000L);
+        currentRequestId = createVendorPrepaidPurchaseRequest(createdVendorId, 20000L);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "잔액 부족 승인 시도"))
+            .patch("/{requestId}/approve", currentRequestId)
+            .then()
+            .statusCode(409);
+
+        given()
+            .basePath("/api/v1/admin/vendors")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .get("/{vendorId}", createdVendorId)
+            .then()
+            .statusCode(200)
+            .body("balance", equalTo(1000));
     }
 
     @Test
@@ -315,13 +382,14 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "items", List.of(Map.of("itemId", itemId, "price", 20000L)),
+                "items", List.of(Map.of("itemId", itemId, "receiptFileId", receiptFileId1)),
                 "receiptFileIds", List.of(receiptFileId1, receiptFileId2)
             ))
             .post("/{requestId}/report", currentRequestId)
             .then()
             .statusCode(200)
             .body("status", equalTo("PURCHASED"))
+            .body("items[0].receiptFileUrl", containsString("/documents/purchase-items/"))
             .body("receipts", hasSize(2))
             .body("receipts[0].fileUrl", containsString("/documents/purchase-items/"));
     }
@@ -511,8 +579,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of("items", List.of(Map.of(
-                "itemId", itemId,
-                "price", 20000L
+                "itemId", itemId
             ))))
             .post("/{requestId}/report", requestId)
             .then()
@@ -520,6 +587,56 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .body("status", equalTo("PURCHASED"));
 
         return requestId;
+    }
+
+    private Long createVendorAndCharge(long amount) {
+        Long vendorId = given()
+            .basePath("/api/v1/admin/vendors")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("name", "선결제 테스트 거래처"))
+            .post()
+            .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
+
+        given()
+            .basePath("/api/v1/admin/vendors")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("amount", amount, "memo", "테스트 충전"))
+            .post("/{vendorId}/charges", vendorId)
+            .then()
+            .statusCode(200);
+
+        return vendorId;
+    }
+
+    private Long createVendorPrepaidPurchaseRequest(Long vendorId, long price) {
+        return given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "title", "거래처 선결제 요청",
+                "content", "거래처 잔액에서 차감합니다.",
+                "classroomId", CLASSROOM_ID,
+                "paymentMethod", "VENDOR_PREPAID",
+                "vendorId", vendorId,
+                "items", List.of(Map.of(
+                    "name", "거래처 품목",
+                    "reason", "선결제 테스트",
+                    "price", price
+                ))
+            ))
+            .post()
+            .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
     }
 
     private String uploadPurchaseReceipt() {

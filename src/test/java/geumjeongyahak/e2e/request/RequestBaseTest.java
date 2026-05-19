@@ -162,12 +162,12 @@ public abstract class RequestBaseTest extends BaseE2ETest {
                 entry("title", title),
                 entry("content", content),
                 entry("classroomId", classroomId),
+                entry("paymentMethod", "NORMAL"),
                 entry("items", java.util.List.of(Map.ofEntries(
                     entry("name", title + " 품목"),
                     entry("reason", content),
-                    entry("expectedPrice", price)
-                ))),
-                entry("receiptFileIds", java.util.List.of())
+                    entry("price", price)
+                )))
             ))
             .post()
             .then()
