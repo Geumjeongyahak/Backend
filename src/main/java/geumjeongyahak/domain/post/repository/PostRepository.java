@@ -13,7 +13,6 @@ import geumjeongyahak.domain.post.entity.Post;
 import geumjeongyahak.domain.post.enums.PostStatus;
 
 import java.util.Optional;
-import org.springframework.data.domain.Pageable;
 
 public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificationExecutor<Post> {
 

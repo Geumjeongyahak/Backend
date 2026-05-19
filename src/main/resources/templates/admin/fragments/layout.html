@@ -83,10 +83,73 @@
         }
         .topline {
             display: flex;
-            justify-content: flex-end;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
             margin-bottom: 20px;
             color: var(--muted);
             font-size: 14px;
+        }
+        .push-toggle {
+            min-height: 34px;
+            padding: 7px 11px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: #4f5953;
+            font-size: 13px;
+            font-weight: 900;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .push-toggle.active {
+            border-color: #cfe8c4;
+            background: #edf8e8;
+            color: var(--green-dark);
+        }
+        .push-toggle:disabled {
+            cursor: default;
+            opacity: .55;
+        }
+        .push-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            background: rgba(21, 26, 24, .38);
+        }
+        .push-toggle[hidden], .push-modal-backdrop[hidden] {
+            display: none !important;
+        }
+        .push-modal {
+            width: min(420px, 100%);
+            padding: 20px;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 18px 50px rgba(21, 26, 24, .18);
+        }
+        .push-modal h2 {
+            margin-bottom: 8px;
+            font-size: 19px;
+        }
+        .push-modal p {
+            line-height: 1.55;
+        }
+        .push-modal-status {
+            min-height: 20px;
+            margin-top: 10px;
+            color: var(--danger);
+            font-size: 13px;
+            font-weight: 800;
+        }
+        .push-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 18px;
         }
         .page-title {
             display: flex;
@@ -415,7 +478,7 @@
     </style>
 </head>
 <body>
-<div class="shell" th:fragment="shell(content)">
+<div class="shell" th:fragment="shell(content)" th:data-admin-active="${active}">
     <aside>
         <a class="brand" th:href="@{/admin}">
             <img class="mark" th:src="@{/icons/geumjeongyahak-icon.svg}" alt="금정열린배움터">
@@ -448,10 +511,22 @@
     </aside>
     <div class="content">
         <div class="topline">
+            <button class="push-toggle" type="button" data-push-toggle hidden>알림 켜기</button>
             <span th:text="${adminName}">admin@example.com</span>
         </div>
         <div class="flash" th:if="${message}" th:text="${message}">완료되었습니다.</div>
         <th:block th:replace="${content}"></th:block>
+    </div>
+    <div class="push-modal-backdrop" data-push-prompt hidden>
+        <section class="push-modal" role="dialog" aria-modal="true" aria-labelledby="pushPromptTitle">
+            <h2 id="pushPromptTitle">알림 구독</h2>
+            <p>요청 처리 결과와 운영 알림을 이 브라우저에서 받을 수 있습니다.</p>
+            <p class="push-modal-status" data-push-status></p>
+            <div class="push-modal-actions">
+                <button class="button secondary" type="button" data-push-prompt-later>나중에</button>
+                <button class="button" type="button" data-push-prompt-enable>알림 켜기</button>
+            </div>
+        </section>
     </div>
     <script>
 if ('serviceWorker' in navigator) {
@@ -459,6 +534,216 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     });
 }
+
+const pushToggle = document.querySelector('[data-push-toggle]');
+const pushPrompt = document.querySelector('[data-push-prompt]');
+const pushPromptEnable = document.querySelector('[data-push-prompt-enable]');
+const pushPromptLater = document.querySelector('[data-push-prompt-later]');
+const pushStatus = document.querySelector('[data-push-status]');
+const pushState = {
+    config: null,
+    firebaseLoaded: false,
+    subscriptionIdKey: 'sonmoum.admin.push.subscriptionId',
+    promptDismissedKey: 'sonmoum.admin.push.promptDismissed'
+};
+
+const setPushToggle = (label, active = false, disabled = false) => {
+    if (!pushToggle) {
+        return;
+    }
+    pushToggle.textContent = label;
+    pushToggle.classList.toggle('active', active);
+    pushToggle.disabled = disabled;
+};
+
+const setPushStatus = (message = '') => {
+    if (pushStatus) {
+        pushStatus.textContent = message;
+    }
+};
+
+const reportPushStep = (step, message = '') => {
+    return fetch('/admin/push/diagnostics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ step, message })
+    }).catch(() => {});
+};
+
+const closePushPrompt = () => {
+    if (!pushPrompt) {
+        return;
+    }
+    pushPrompt.hidden = true;
+    pushPrompt.style.display = 'none';
+};
+
+const openPushPrompt = () => {
+    if (!pushPrompt) {
+        return;
+    }
+    pushPrompt.hidden = false;
+    pushPrompt.style.display = 'flex';
+    setPushStatus('');
+};
+
+document.addEventListener('click', (event) => {
+    if (event.target.closest('[data-push-prompt-later]')) {
+        localStorage.setItem(pushState.promptDismissedKey, 'true');
+        closePushPrompt();
+    }
+});
+
+const loadScriptOnce = (src) => new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+        resolve();
+        return;
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+});
+
+const loadFirebaseMessaging = async () => {
+    if (pushState.firebaseLoaded) {
+        return;
+    }
+    await loadScriptOnce('https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js');
+    await loadScriptOnce('https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js');
+    if (!firebase.apps.length) {
+        firebase.initializeApp({
+            apiKey: pushState.config.apiKey,
+            authDomain: pushState.config.authDomain,
+            projectId: pushState.config.projectId,
+            storageBucket: pushState.config.storageBucket,
+            messagingSenderId: pushState.config.messagingSenderId,
+            appId: pushState.config.appId
+        });
+    }
+    pushState.firebaseLoaded = true;
+};
+
+const resolveDeviceType = () => {
+    const ua = navigator.userAgent || '';
+    if (/iPad|iPhone|iPod/.test(ua)) {
+        return 'IOS';
+    }
+    if (/Android/.test(ua)) {
+        return 'ANDROID';
+    }
+    return 'WEB';
+};
+
+const subscribeAdminPush = async () => {
+    setPushToggle('처리 중', false, true);
+    setPushStatus('');
+    try {
+        await reportPushStep('subscribe-clicked');
+        await loadFirebaseMessaging();
+        await reportPushStep('firebase-loaded');
+        const permission = await Notification.requestPermission();
+        await reportPushStep('permission-result', permission);
+        if (permission !== 'granted') {
+            localStorage.removeItem(pushState.subscriptionIdKey);
+            setPushToggle('알림 켜기');
+            setPushStatus('브라우저 알림 권한이 허용되지 않았습니다.');
+            return;
+        }
+        const registration = await navigator.serviceWorker.ready;
+        await reportPushStep('service-worker-ready');
+        const messaging = firebase.messaging();
+        const token = await messaging.getToken({
+            vapidKey: pushState.config.vapidKey,
+            serviceWorkerRegistration: registration
+        });
+        if (!token) {
+            throw new Error('FCM token is empty');
+        }
+        await reportPushStep('fcm-token-issued');
+        const response = await fetch('/admin/push/subscriptions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, deviceType: resolveDeviceType() })
+        });
+        if (!response.ok) {
+            throw new Error(`Push subscribe failed: ${response.status}`);
+        }
+        const subscription = await response.json();
+        localStorage.setItem(pushState.subscriptionIdKey, subscription.id);
+        localStorage.removeItem(pushState.promptDismissedKey);
+        setPushToggle('알림 켜짐', true);
+        closePushPrompt();
+    } catch (error) {
+        console.error(error);
+        await reportPushStep('subscribe-failed', error?.message || String(error));
+        localStorage.removeItem(pushState.subscriptionIdKey);
+        setPushToggle('알림 켜기');
+        setPushStatus('알림 구독 저장에 실패했습니다. Firebase 설정과 브라우저 권한을 확인해주세요.');
+        throw error;
+    }
+};
+
+const unsubscribeAdminPush = async () => {
+    setPushToggle('처리 중', true, true);
+    await loadFirebaseMessaging();
+    const messaging = firebase.messaging();
+    const currentToken = await messaging.getToken({
+        vapidKey: pushState.config.vapidKey,
+        serviceWorkerRegistration: await navigator.serviceWorker.ready
+    }).catch(() => null);
+    if (currentToken) {
+        await messaging.deleteToken(currentToken).catch(() => {});
+    }
+    const subscriptionId = localStorage.getItem(pushState.subscriptionIdKey);
+    if (subscriptionId) {
+        await fetch(`/admin/push/subscriptions/${subscriptionId}`, { method: 'DELETE' }).catch(() => {});
+    }
+    localStorage.removeItem(pushState.subscriptionIdKey);
+    setPushToggle('알림 켜기');
+};
+
+const shouldShowPushPrompt = () => {
+    const shell = document.querySelector('.shell');
+    return shell?.dataset.adminActive === 'dashboard'
+        && !localStorage.getItem(pushState.subscriptionIdKey)
+        && !localStorage.getItem(pushState.promptDismissedKey)
+        && Notification.permission !== 'denied';
+};
+
+const initAdminPush = async () => {
+    if (!pushToggle || !('Notification' in window) || !('serviceWorker' in navigator)) {
+        return;
+    }
+    const configResponse = await fetch('/admin/push/config').catch(() => null);
+    if (!configResponse?.ok) {
+        return;
+    }
+    pushState.config = await configResponse.json();
+    if (!pushState.config.enabled) {
+        return;
+    }
+    pushToggle.hidden = false;
+    setPushToggle(localStorage.getItem(pushState.subscriptionIdKey) ? '알림 켜짐' : '알림 켜기', Boolean(localStorage.getItem(pushState.subscriptionIdKey)));
+    pushToggle.addEventListener('click', () => {
+        const enabled = Boolean(localStorage.getItem(pushState.subscriptionIdKey));
+        (enabled ? unsubscribeAdminPush() : subscribeAdminPush()).catch(() => {
+            setPushToggle(enabled ? '알림 켜짐' : '알림 켜기', enabled);
+        });
+    });
+    if (pushPrompt && shouldShowPushPrompt()) {
+        openPushPrompt();
+    }
+    pushPromptEnable?.addEventListener('click', () => {
+        subscribeAdminPush().catch(() => {});
+    });
+};
+
+window.addEventListener('load', () => {
+    initAdminPush().catch(() => {});
+});
 
 document.querySelectorAll('.permission-form').forEach((form) => {
     const permissionSelect = form.querySelector('select[name="permissionKey"]');

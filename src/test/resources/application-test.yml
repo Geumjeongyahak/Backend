@@ -5,6 +5,7 @@ spring:
     exclude:
       - com.google.cloud.spring.autoconfigure.storage.GcpStorageAutoConfiguration
       - com.google.cloud.spring.autoconfigure.core.GcpContextAutoConfiguration
+      - com.google.cloud.spring.autoconfigure.firestore.GcpFirestoreAutoConfiguration
 
   datasource:
     driver-class-name: org.h2.Driver

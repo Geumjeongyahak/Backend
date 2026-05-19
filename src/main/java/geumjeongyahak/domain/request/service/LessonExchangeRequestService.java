@@ -1,8 +1,11 @@
 package geumjeongyahak.domain.request.service;
 
+import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleProxyService;
+import geumjeongyahak.domain.notification.enums.PushRequestType;
+import geumjeongyahak.domain.notification.event.RequestReviewedPushEvent;
 import geumjeongyahak.domain.request.entity.LessonExchangeProposal;
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
 import geumjeongyahak.domain.request.enums.LessonExchangeProposalStatus;
@@ -47,6 +50,7 @@ public class LessonExchangeRequestService {
     private final LessonExchangeRequestRepository lessonExchangeRequestRepository;
     private final DailyScheduleProxyService dailyScheduleProxyService;
     private final UserProxyService userProxyService;
+    private final EventPublisher eventPublisher;
 
     @Transactional
     public LessonExchangeRequestDetailResponse createLessonExchangeRequest(
@@ -129,6 +133,15 @@ public class LessonExchangeRequestService {
 
         User approver = userProxyService.getById(approverId);
         exchangeRequest.approve(approver);
+        eventPublisher.publish(RequestReviewedPushEvent.approved(
+            exchangeRequest.getRequestedBy().getId(),
+            exchangeRequest.getId(),
+            PushRequestType.LESSON_EXCHANGE,
+            approverId,
+            "수업 교환 요청이 승인되었습니다.",
+            "수업 교환 요청이 승인되었습니다. 교환 제안을 받을 수 있습니다.",
+            null
+        ));
 
         log.debug("수업 교환 요청 승인 완료 (requestId={}, approverId={})", requestId, approverId);
         return LessonExchangeRequestDetailResponse.from(exchangeRequest);
@@ -217,6 +230,15 @@ public class LessonExchangeRequestService {
 
         User approver = userProxyService.getById(approverId);
         exchangeRequest.reject(approver, note);
+        eventPublisher.publish(RequestReviewedPushEvent.rejected(
+            exchangeRequest.getRequestedBy().getId(),
+            exchangeRequest.getId(),
+            PushRequestType.LESSON_EXCHANGE,
+            approverId,
+            "수업 교환 요청이 반려되었습니다.",
+            "수업 교환 요청이 반려되었습니다. 반려 사유를 확인해주세요.",
+            note
+        ));
 
         log.debug("수업 교환 요청 반려 완료 (requestId={}, approverId={})", requestId, approverId);
         return LessonExchangeRequestDetailResponse.from(exchangeRequest);
