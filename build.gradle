@@ -69,6 +69,7 @@ dependencies {
 
 	// Monitoring and Actuator
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 
 	// Test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'

@@ -1,0 +1,51 @@
+logging {
+	level  = "info"
+	format = "logfmt"
+}
+
+discovery.docker "containers" {
+	host             = "unix:///var/run/docker.sock"
+	refresh_interval = "10s"
+}
+
+discovery.relabel "docker" {
+	targets = discovery.docker.containers.targets
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "container"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+		target_label  = "service"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_image"]
+		target_label  = "image"
+	}
+
+	rule {
+		target_label = "env"
+		replacement  = env("DEPLOY_ENV")
+	}
+
+	rule {
+		target_label = "instance"
+		replacement  = env("INSTANCE_NAME")
+	}
+}
+
+loki.source.docker "containers" {
+	host       = "unix:///var/run/docker.sock"
+	targets    = discovery.relabel.docker.output
+	forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+	endpoint {
+		url = env("LOKI_PUSH_URL")
+	}
+}
