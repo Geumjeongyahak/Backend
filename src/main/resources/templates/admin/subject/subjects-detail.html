@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('과목 상세')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>과목 상세</h1>
+                <p th:text="|${subject.classroomName} ${subject.name} 편성 정보입니다.|">
+                    벚꽃반 한글 기초 편성 정보입니다.
+                </p>
+            </div>
+            <a class="reset-link"
+               th:href="@{/admin/subject/subjects(classroomId=${filter.classroomId},active=${filter.active})}">
+                목록으로
+            </a>
+        </div>
+
+        <section class="panel">
+            <h2>기본 정보</h2>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span>ID</span>
+                    <strong th:text="${subject.id}">1</strong>
+                </div>
+                <div class="detail-item">
+                    <span>상태</span>
+                    <strong>
+                        <span class="pill" th:text="${subject.activeLabel}">활성</span>
+                    </strong>
+                </div>
+                <div class="detail-item">
+                    <span>과목명</span>
+                    <strong th:text="${subject.name}">한글 기초</strong>
+                </div>
+                <div class="detail-item">
+                    <span>분반</span>
+                    <strong th:text="|${subject.classroomName} (#${subject.classroomId})|">벚꽃반 (#1)</strong>
+                </div>
+                <div class="detail-item">
+                    <span>담당 교사</span>
+                    <strong th:text="${subject.teacherId != null ? subject.teacherLabel + ' (#' + subject.teacherId + ')' : subject.teacherLabel}">
+                        홍길동 (#2)
+                    </strong>
+                </div>
+                <div class="detail-item">
+                    <span>교사 배정 시각</span>
+                    <strong th:text="${subject.teacherAssignedAt != null ? subject.teacherAssignedAt : '-'}">
+                        2026-05-01T10:00
+                    </strong>
+                </div>
+                <div class="detail-item">
+                    <span>운영 기간</span>
+                    <strong th:text="|${subject.startAt} ~ ${subject.endAt}|">2026-03-01 ~ 2026-08-31</strong>
+                </div>
+                <div class="detail-item">
+                    <span>요일</span>
+                    <strong th:text="${subject.dayOfWeekLabel}">월요일</strong>
+                </div>
+                <div class="detail-item">
+                    <span>교시</span>
+                    <strong th:text="${subject.period}">1</strong>
+                </div>
+                <div class="detail-item">
+                    <span>수업 시간</span>
+                    <strong th:text="${subject.startTime != null && subject.endTime != null ? subject.startTime + ' - ' + subject.endTime : '-'}">
+                        19:20 - 20:00
+                    </strong>
+                </div>
+                <div class="detail-item">
+                    <span>수업 횟수</span>
+                    <strong th:text="${subject.times}">12</strong>
+                </div>
+                <div class="detail-item">
+                    <span>설명</span>
+                    <strong th:text="${subject.description != null && !subject.description.isBlank() ? subject.description : '-'}">
+                        과목 설명
+                    </strong>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>
