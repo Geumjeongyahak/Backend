@@ -28,6 +28,10 @@
                 <span>분반</span>
                 <strong th:text="${summary.classroomCount}">0</strong>
             </a>
+            <a class="metric" th:href="@{/admin/subject/subjects(active=true)}">
+                <span>활성 과목</span>
+                <strong th:text="${summary.subjectCount}">0</strong>
+            </a>
             <a class="metric" th:href="@{/admin/request/purchase/purchase-requests(status='PENDING')}">
                 <span>대기 중 구매 요청</span>
                 <strong th:text="${summary.pendingPurchaseRequestCount}">0</strong>
@@ -87,6 +91,10 @@
                     <a class="metric" th:href="@{/admin/classroom/classrooms}">
                         <span>분반 관리</span>
                         <p style="font-size: 13px; margin: 4px 0 0;">분반 및 교육 과정 운영</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/subject/subjects}">
+                        <span>과목 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">정기 수업 편성과 담당 교사 관리</p>
                     </a>
                     <a class="metric" th:href="@{/admin/lesson/lessons}">
                         <span>수업 관리</span>
