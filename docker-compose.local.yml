@@ -1,7 +1,7 @@
 services:
   app:
     env_file:
-      - .env
+      - .env.local
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE_LOCAL:-dev}
       POSTGRES_HOST: db
@@ -12,7 +12,7 @@ services:
 
   db:
     env_file:
-      - .env
+      - .env.local
     build:
       context: .
       dockerfile: infra/db/Dockerfile

@@ -3,7 +3,7 @@ COMPOSE := docker compose
 APP_IMAGE ?= ghcr.io/geumjeongyahak/backend:latest
 
 BASE_FILES := -f docker-compose.yml
-LOCAL_FILES := $(BASE_FILES) -f docker-compose.local.yml
+LOCAL_FILES := --env-file .env.local $(BASE_FILES) -f docker-compose.local.yml
 DEV_FILES := $(BASE_FILES) -f docker-compose.dev.yml -f infra/app-server/docker-compose.observability.yml
 MONITORING_FILES := -f infra/monitoring/docker-compose.prometheus.yml
 
