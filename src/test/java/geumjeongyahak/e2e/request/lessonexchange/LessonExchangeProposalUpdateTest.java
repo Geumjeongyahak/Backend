@@ -67,7 +67,7 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
         Long proposalId = createProposal(
             requestId,
             getAuthHeader(volunteer2Token),
-            Map.of("dailyScheduleId", getDailyScheduleIdByLessonDate(originalProposalDate), "content", "기존 제안 내용")
+            Map.of("lessonDate", originalProposalDate.toString(), "content", "기존 제안 내용")
         );
         proposalIds.add(proposalId);
 
@@ -76,7 +76,7 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "dailyScheduleId", getDailyScheduleIdByLessonDate(updatedProposalDate),
+                "lessonDate", updatedProposalDate.toString(),
                 "content", "수정된 제안 내용"
             ))
             .patch("/{requestId}/proposals/{proposalId}", requestId, proposalId)
@@ -105,7 +105,7 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
         Long proposalId = createProposal(
             requestId,
             getAuthHeader(volunteer2Token),
-            Map.of("dailyScheduleId", getDailyScheduleIdByLessonDate(proposalDate), "content", "교환형 제안")
+            Map.of("lessonDate", proposalDate.toString(), "content", "교환형 제안")
         );
         proposalIds.add(proposalId);
 
@@ -148,7 +148,7 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "dailyScheduleId", getDailyScheduleIdByLessonDate(proposalDate),
+                "lessonDate", proposalDate.toString(),
                 "content", "교환형 제안으로 수정"
             ))
             .patch("/{requestId}/proposals/{proposalId}", requestId, proposalId)
@@ -245,8 +245,8 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("교환형 제안 수정 시 요청 날짜와 같으면 -> 400")
-    void updateProposal_sameDateWithRequest_returns400() {
+    @DisplayName("요청과 같은 날짜에 본인 DailySchedule이 없으면 교환형 제안 수정 -> 404")
+    void updateProposal_sameDateWithoutOwnDailySchedule_returns404() {
         LocalDate requestDate = LocalDate.now().plusDays(14);
         Long requestId = createApprovedRequest(requestDate);
 
@@ -258,7 +258,7 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
             requestId,
             getAuthHeader(volunteer2Token),
             Map.of(
-                "dailyScheduleId", getDailyScheduleIdByLessonDate(LocalDate.now().plusDays(15)),
+                "lessonDate", LocalDate.now().plusDays(15).toString(),
                 "content", "겹치지 않는 제안"
             )
         );
@@ -269,17 +269,17 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "dailyScheduleId", getDailyScheduleIdByLessonDate(requestDate),
+                "lessonDate", requestDate.toString(),
                 "content", "같은 날짜 제안으로 수정"
             ))
             .patch("/{requestId}/proposals/{proposalId}", requestId, proposalId)
             .then()
-            .statusCode(400);
+            .statusCode(404);
     }
 
     @Test
-    @DisplayName("존재하지 않는 DailySchedule으로 교환형 제안 수정 -> 404")
-    void updateProposal_withoutDailySchedule_returns404() {
+    @DisplayName("본인 DailySchedule이 없는 수업일로 교환형 제안 수정 -> 404")
+    void updateProposal_withoutOwnDailySchedule_returns404() {
         Long requestId = createApprovedRequest(LocalDate.now().plusDays(15));
         Long proposalId = createProposal(
             requestId,
@@ -293,7 +293,7 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "dailyScheduleId", 99999L,
+                "lessonDate", LocalDate.now().plusYears(10).toString(),
                 "content", "수업이 없는 날짜로 수정"
             ))
             .patch("/{requestId}/proposals/{proposalId}", requestId, proposalId)

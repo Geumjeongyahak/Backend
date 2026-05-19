@@ -65,8 +65,8 @@ public class AbsenceRequestController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug(
-            "POST /api/v1/absence-requests - 결석 요청 생성 (dailyScheduleId={})",
-            request.dailyScheduleId()
+            "POST /api/v1/absence-requests - 결석 요청 생성 (lessonDate={})",
+            request.lessonDate()
         );
         AbsenceRequestResponse response = absenceRequestService.createAbsenceRequest(
             userDetails.getUserId(), request

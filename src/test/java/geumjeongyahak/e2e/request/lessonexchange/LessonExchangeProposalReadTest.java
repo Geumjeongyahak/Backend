@@ -64,7 +64,7 @@ class LessonExchangeProposalReadTest extends RequestBaseTest {
             requestId,
             getAuthHeader(volunteer2Token),
             Map.of(
-                "dailyScheduleId", getDailyScheduleIdByLessonDate(proposalDate),
+                "lessonDate", proposalDate.toString(),
                 "content", "다음 날 전체 수업으로 교환 가능합니다."
             )
         );

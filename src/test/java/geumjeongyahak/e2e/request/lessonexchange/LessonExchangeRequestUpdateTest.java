@@ -149,8 +149,8 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 DailySchedule로 수정하면 -> 404")
-    void updateRequest_toMissingDailySchedule_returns404() {
+    @DisplayName("본인 DailySchedule이 없는 수업일로 수정하면 -> 404")
+    void updateRequest_toMissingLessonDate_returns404() {
         LocalDate lessonDate = LocalDate.now().plusDays(13);
         LocalDate emptyDate = LocalDate.now().plusDays(14);
         createLessons(TEACHER_ID, lessonDate, 1);
@@ -169,7 +169,7 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "dailyScheduleId", 99999L,
+                "lessonDate", emptyDate.toString(),
                 "title", "수업 없는 날짜로 수정",
                 "content", "수업이 없는 날짜",
                 "expiresAt", emptyDate.minusDays(3).atTime(21, 0).toString()
