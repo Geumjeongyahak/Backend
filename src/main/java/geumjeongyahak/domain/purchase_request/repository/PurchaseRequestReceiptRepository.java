@@ -2,16 +2,15 @@ package geumjeongyahak.domain.purchase_request.repository;
 
 import java.util.UUID;
 
+import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestReceipt;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
-
-public interface PurchaseRequestItemRepository extends JpaRepository<PurchaseRequestItem, Long> {
+public interface PurchaseRequestReceiptRepository extends JpaRepository<PurchaseRequestReceipt, Long> {
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("update PurchaseRequestItem item set item.receiptFile = null where item.receiptFile.id = :fileId")
-    void clearReceiptFileByFileId(@Param("fileId") UUID fileId);
+    @Query("delete from PurchaseRequestReceipt receipt where receipt.file.id = :fileId")
+    void deleteByFileId(@Param("fileId") UUID fileId);
 }

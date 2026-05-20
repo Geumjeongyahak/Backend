@@ -5,6 +5,8 @@ import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.file.repository.FileRepository;
 import geumjeongyahak.domain.post.repository.PostAttachmentRepository;
 import geumjeongyahak.domain.post.repository.PostFileRepository;
+import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestItemRepository;
+import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestReceiptRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,15 +21,21 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FileCleanupScheduler {
 
+    private static final String PURCHASE_ITEM_STORAGE_PREFIX = "documents/purchase-items/";
+
     private final FileRepository fileRepository;
     private final PostFileRepository postFileRepository;
     private final PostAttachmentRepository postAttachmentRepository;
+    private final PurchaseRequestItemRepository purchaseRequestItemRepository;
+    private final PurchaseRequestReceiptRepository purchaseRequestReceiptRepository;
     private final StorageService storageService;
     private final FileCleanupProperties fileCleanupProperties;
 
     @Scheduled(cron = "${app.file.cleanup.cron}")
     @Transactional
     public void cleanupDeletedFiles() {
+        markStaleUnlinkedPurchaseItemFiles();
+
         LocalDateTime threshold = LocalDateTime.now().minusDays(fileCleanupProperties.getRetentionDays());
         List<File> candidates = fileRepository.findByIsDeletedTrueAndDeletedAtBefore(threshold);
 
@@ -46,6 +54,17 @@ public class FileCleanupScheduler {
         log.info("파일 Hard Delete 스케줄러 실행 완료 (count={})", processed);
     }
 
+    private void markStaleUnlinkedPurchaseItemFiles() {
+        LocalDateTime threshold = LocalDateTime.now().minusHours(fileCleanupProperties.getTemporaryRetentionHours());
+        List<File> candidates = fileRepository.findUnlinkedPurchaseItemFilesBefore(PURCHASE_ITEM_STORAGE_PREFIX, threshold);
+
+        candidates.forEach(File::delete);
+
+        if (!candidates.isEmpty()) {
+            log.info("미연동 구매 영수증 파일 Soft Delete 완료 (count={})", candidates.size());
+        }
+    }
+
     private int processChunk(List<File> files) {
         int count = 0;
         for (File file : files) {
@@ -56,6 +75,8 @@ public class FileCleanupScheduler {
             }
             postFileRepository.deleteByFileId(file.getId());
             postAttachmentRepository.deleteByFileId(file.getId());
+            purchaseRequestItemRepository.clearReceiptFileByFileId(file.getId());
+            purchaseRequestReceiptRepository.deleteByFileId(file.getId());
             fileRepository.delete(file);
             count++;
         }
