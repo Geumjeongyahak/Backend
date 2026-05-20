@@ -11,6 +11,7 @@
 - [Lessons](./Lessons.md)
 - [DailySchedules](./DailySchedules.md)
 - [Requests](./Requests.md)
+- [PurchaseRequests](./PurchaseRequests.md)
 - [Channels](./Channels.md)
 - [Posts](./Posts.md)
 - [Comments](./Comments.md)
