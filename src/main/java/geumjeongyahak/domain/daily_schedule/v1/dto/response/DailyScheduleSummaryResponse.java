@@ -7,6 +7,7 @@ import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 public record DailyScheduleSummaryResponse(
     @Schema(description = "하루 일정 식별자", example = "1")
@@ -51,13 +52,16 @@ public record DailyScheduleSummaryResponse(
     DailyTeacherAttendanceStatus teacherAttendanceStatus,
 
     @Schema(description = "연결된 수업 수", example = "3")
-    int lessonCount
+    int lessonCount,
+
+    @Schema(description = "하루 일정에 연결된 교시별 수업 일지 요약")
+    List<DailyScheduleLessonResponse> lessons
 ) {
 
     public static DailyScheduleSummaryResponse of(
         DailySchedule dailySchedule,
         DailyTeacherAttendance teacherAttendance,
-        int lessonCount
+        List<DailyScheduleLessonResponse> lessons
     ) {
         return new DailyScheduleSummaryResponse(
             dailySchedule.getId(),
@@ -71,7 +75,8 @@ public record DailyScheduleSummaryResponse(
             teacherAttendance != null ? teacherAttendance.getVolunteerServiceMinutes() : null,
             dailySchedule.getStatus(),
             teacherAttendance != null ? teacherAttendance.getStatus() : null,
-            lessonCount
+            lessons.size(),
+            lessons
         );
     }
 }
