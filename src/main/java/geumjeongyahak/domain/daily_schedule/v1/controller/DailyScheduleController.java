@@ -1,8 +1,9 @@
 package geumjeongyahak.domain.daily_schedule.v1.controller;
 
 import geumjeongyahak.common.security.service.CustomUserDetails;
+import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleService;
-import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailySchedulePaginationRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleVolunteerHoursRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendancesRequest;
@@ -50,18 +51,18 @@ public class DailyScheduleController {
         description = "수업 일지 목록 화면에서 사용할 하루 단위 일정을 조회합니다. 캘린더 교시 조회는 Lesson API를 사용합니다."
     )
     @GetMapping
-    public ResponseEntity<List<DailyScheduleSummaryResponse>> getDailySchedules(
-        @ParameterObject @Valid @ModelAttribute DailyScheduleListRequest request
+    public ResponseEntity<PaginationResponse<DailyScheduleSummaryResponse>> getDailySchedules(
+        @ParameterObject @Valid @ModelAttribute DailySchedulePaginationRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug(
-            "GET /api/v1/daily-schedules - 하루 일정 목록 조회 요청 (from={}, to={}, classroomId={}, teacherId={}, status={})",
-            request.from(),
-            request.to(),
-            request.classroomId(),
-            request.teacherId(),
-            request.status()
+            "GET /api/v1/daily-schedules - 수업 일지 목록 조회 요청 (keyword={}, mine={}, page={}, size={})",
+            request.getKeyword(),
+            request.getMine(),
+            request.getPage(),
+            request.getSize()
         );
-        return ResponseEntity.ok(dailyScheduleService.getDailySchedules(request));
+        return ResponseEntity.ok(dailyScheduleService.getJournalDailySchedules(request, userDetails.getUserId()));
     }
 
     @PreAuthorize(DAILY_SCHEDULE_READ_ACCESS)

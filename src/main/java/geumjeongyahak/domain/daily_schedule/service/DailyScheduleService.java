@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.daily_schedule.service;
 
 import geumjeongyahak.domain.classroom.entity.Classroom;
+import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.entity.DailyStudentAttendance;
 import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
@@ -19,12 +20,14 @@ import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyStudentAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyTeacherAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailySchedulePaginationRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleVolunteerHoursRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendanceItemRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendancesRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyTeacherAttendanceRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleLessonResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleVolunteerHoursResponse;
 import geumjeongyahak.domain.lesson.entity.Lesson;
@@ -44,8 +47,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -122,7 +128,7 @@ public class DailyScheduleService {
             request.status()
         );
 
-        List<DailyScheduleSummaryResponse> responses = dailyScheduleRepository
+        List<DailySchedule> dailySchedules = dailyScheduleRepository
             .findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(request.from(), request.to())
             .stream()
             .filter(dailySchedule -> request.classroomId() == null
@@ -130,10 +136,49 @@ public class DailyScheduleService {
             .filter(dailySchedule -> request.teacherId() == null
                 || dailySchedule.getTeacher().getId().equals(request.teacherId()))
             .filter(dailySchedule -> request.status() == null || dailySchedule.getStatus() == request.status())
+            .toList();
+        Map<DailyScheduleLessonKey, List<Lesson>> lessonsByScheduleKey = getLessonsByScheduleKey(dailySchedules);
+        List<DailyScheduleSummaryResponse> responses = dailySchedules
+            .stream()
+            .map(dailySchedule -> new DailyScheduleWithLessons(
+                dailySchedule,
+                lessonsByScheduleKey.getOrDefault(DailyScheduleLessonKey.from(dailySchedule), List.of())
+            ))
             .map(this::toSummaryResponse)
             .toList();
         log.debug("DailySchedule 목록 조회 완료 - 총 {}건", responses.size());
         return responses;
+    }
+
+    public PaginationResponse<DailyScheduleSummaryResponse> getJournalDailySchedules(
+        DailySchedulePaginationRequest request,
+        Long requesterId
+    ) {
+        List<DailySchedule> dailySchedules = dailyScheduleRepository
+            .findAllByIsDeletedFalseOrderByLessonDateDescIdDesc()
+            .stream()
+            .filter(dailySchedule -> !Boolean.TRUE.equals(request.getMine())
+                || dailySchedule.getTeacher().getId().equals(requesterId))
+            .toList();
+        Map<DailyScheduleLessonKey, List<Lesson>> lessonsByScheduleKey = getLessonsByScheduleKey(dailySchedules);
+        List<DailyScheduleSummaryResponse> responses = dailySchedules
+            .stream()
+            .map(dailySchedule -> new DailyScheduleWithLessons(
+                dailySchedule,
+                lessonsByScheduleKey.getOrDefault(DailyScheduleLessonKey.from(dailySchedule), List.of())
+            ))
+            .filter(dailyScheduleWithLessons -> hasWrittenJournal(dailyScheduleWithLessons.lessons()))
+            .filter(dailyScheduleWithLessons -> matchesKeyword(dailyScheduleWithLessons, request.getKeyword()))
+            .map(this::toSummaryResponse)
+            .toList();
+        PageRequest pageRequest = request.toRequest();
+        int start = Math.min((int) pageRequest.getOffset(), responses.size());
+        int end = Math.min(start + pageRequest.getPageSize(), responses.size());
+        return new PaginationResponse<>(new PageImpl<>(
+            responses.subList(start, end),
+            pageRequest,
+            responses.size()
+        ));
     }
 
     public DailyScheduleDetailResponse getDailySchedule(
@@ -563,14 +608,79 @@ public class DailyScheduleService {
             });
     }
 
-    private DailyScheduleSummaryResponse toSummaryResponse(DailySchedule dailySchedule) {
+    private boolean hasWrittenJournal(List<Lesson> lessons) {
+        return lessons.stream().anyMatch(lesson -> hasText(lesson.getNote()));
+    }
+
+    private boolean matchesKeyword(DailyScheduleWithLessons dailyScheduleWithLessons, String keyword) {
+        if (!hasText(keyword)) {
+            return true;
+        }
+
+        String normalizedKeyword = keyword.trim().toLowerCase();
+        DailySchedule dailySchedule = dailyScheduleWithLessons.dailySchedule();
+        return containsIgnoreCase(dailySchedule.getClassroom().getName(), normalizedKeyword)
+            || containsIgnoreCase(dailySchedule.getTeacher().getName(), normalizedKeyword)
+            || dailyScheduleWithLessons.lessons().stream()
+                .anyMatch(lesson -> containsIgnoreCase(lesson.getSubject().getName(), normalizedKeyword)
+                    || containsIgnoreCase(lesson.getNote(), normalizedKeyword));
+    }
+
+    private boolean containsIgnoreCase(String value, String normalizedKeyword) {
+        return value != null && value.toLowerCase().contains(normalizedKeyword);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private Map<DailyScheduleLessonKey, List<Lesson>> getLessonsByScheduleKey(List<DailySchedule> dailySchedules) {
+        Set<Long> classroomIds = dailySchedules.stream()
+            .map(dailySchedule -> dailySchedule.getClassroom().getId())
+            .collect(Collectors.toSet());
+        Set<LocalDate> lessonDates = dailySchedules.stream()
+            .map(DailySchedule::getLessonDate)
+            .collect(Collectors.toSet());
+
+        return lessonProxyService.getActiveLessonsByClassroomIdsAndDates(classroomIds, lessonDates)
+            .stream()
+            .collect(Collectors.groupingBy(DailyScheduleLessonKey::from));
+    }
+
+    private DailyScheduleSummaryResponse toSummaryResponse(DailyScheduleWithLessons dailyScheduleWithLessons) {
+        DailySchedule dailySchedule = dailyScheduleWithLessons.dailySchedule();
         DailyTeacherAttendance teacherAttendance = dailyTeacherAttendanceRepository
             .findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId())
             .orElse(null);
-        int lessonCount = lessonProxyService.getActiveLessonsByClassroomAndDate(
-            dailySchedule.getClassroom().getId(),
-            dailySchedule.getLessonDate()
-        ).size();
-        return DailyScheduleSummaryResponse.of(dailySchedule, teacherAttendance, lessonCount);
+        List<DailyScheduleLessonResponse> lessons = dailyScheduleWithLessons.lessons()
+            .stream()
+            .map(DailyScheduleLessonResponse::from)
+            .toList();
+        return DailyScheduleSummaryResponse.of(dailySchedule, teacherAttendance, lessons);
+    }
+
+    private record DailyScheduleWithLessons(
+        DailySchedule dailySchedule,
+        List<Lesson> lessons
+    ) {
+    }
+
+    private record DailyScheduleLessonKey(
+        Long classroomId,
+        LocalDate lessonDate
+    ) {
+        private static DailyScheduleLessonKey from(DailySchedule dailySchedule) {
+            return new DailyScheduleLessonKey(
+                dailySchedule.getClassroom().getId(),
+                dailySchedule.getLessonDate()
+            );
+        }
+
+        private static DailyScheduleLessonKey from(Lesson lesson) {
+            return new DailyScheduleLessonKey(
+                lesson.getSubject().getClassroom().getId(),
+                lesson.getDate()
+            );
+        }
     }
 }

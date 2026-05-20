@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
 import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.enums.ClassroomType;
 import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
@@ -25,6 +26,7 @@ import geumjeongyahak.domain.daily_schedule.repository.DailyStudentAttendanceRep
 import geumjeongyahak.domain.daily_schedule.repository.DailyTeacherAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleService;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailySchedulePaginationRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendanceItemRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendancesRequest;
@@ -44,6 +46,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -83,7 +86,7 @@ class DailyScheduleServiceReadTest {
         )).willReturn(List.of(dailySchedule));
         given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
             .willReturn(Optional.of(teacherAttendance));
-        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+        given(lessonProxyService.getActiveLessonsByClassroomIdsAndDates(Set.of(classroom.getId()), Set.of(lessonDate)))
             .willReturn(List.of(lesson(subject(classroom, teacher, lessonDate), teacher, lessonDate, 1)));
 
         List<DailyScheduleSummaryResponse> responses = dailyScheduleService.getDailySchedules(
@@ -94,6 +97,40 @@ class DailyScheduleServiceReadTest {
         assertThat(responses.get(0).dailyScheduleId()).isEqualTo(dailySchedule.getId());
         assertThat(responses.get(0).volunteerServiceMinutes()).isEqualTo(120);
         assertThat(responses.get(0).lessonCount()).isEqualTo(1);
+    }
+
+    @Test
+    void getJournalDailySchedules_returnsPagedWrittenJournals() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule writtenSchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        DailySchedule emptySchedule = dailySchedule(101L, classroom, teacher, lessonDate.plusDays(1));
+        Subject subject = subject(classroom, teacher, lessonDate);
+        Lesson writtenLesson = lesson(subject, teacher, lessonDate, 1);
+        writtenLesson.updateNote("수학 수업 내용");
+        Lesson emptyLesson = lesson(subject, teacher, lessonDate.plusDays(1), 1);
+
+        given(dailyScheduleRepository.findAllByIsDeletedFalseOrderByLessonDateDescIdDesc())
+            .willReturn(List.of(writtenSchedule, emptySchedule));
+        given(lessonProxyService.getActiveLessonsByClassroomIdsAndDates(
+            Set.of(classroom.getId()),
+            Set.of(lessonDate, lessonDate.plusDays(1))
+        )).willReturn(List.of(writtenLesson, emptyLesson));
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(writtenSchedule.getId()))
+            .willReturn(Optional.empty());
+
+        PaginationResponse<DailyScheduleSummaryResponse> response = dailyScheduleService.getJournalDailySchedules(
+            journalPaginationRequest("수학", true, 0, 1),
+            teacher.getId()
+        );
+
+        assertThat(response.getContent()).hasSize(1);
+        assertThat(response.getTotalElements()).isEqualTo(1);
+        assertThat(response.getTotalPages()).isEqualTo(1);
+        assertThat(response.getContent().get(0).dailyScheduleId()).isEqualTo(writtenSchedule.getId());
+        assertThat(response.getContent().get(0).lessons()).hasSize(1);
+        assertThat(response.getContent().get(0).lessons().get(0).note()).isEqualTo("수학 수업 내용");
     }
 
     @Test
@@ -584,6 +621,24 @@ class DailyScheduleServiceReadTest {
         );
         ReflectionTestUtils.setField(dailySchedule, "id", id);
         return dailySchedule;
+    }
+
+    private DailySchedulePaginationRequest journalPaginationRequest(
+        String keyword,
+        Boolean mine,
+        Integer page,
+        Integer size
+    ) {
+        DailySchedulePaginationRequest request = new DailySchedulePaginationRequest();
+        request.setKeyword(keyword);
+        request.setMine(mine);
+        if (page != null) {
+            request.setPage(page);
+        }
+        if (size != null) {
+            request.setSize(size);
+        }
+        return request;
     }
 
     private Classroom classroom(Long id) {
