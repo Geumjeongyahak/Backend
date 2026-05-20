@@ -5,7 +5,6 @@ import static java.util.Map.entry;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.containsString;
 
 import io.restassured.http.ContentType;
 import java.util.List;
@@ -53,11 +52,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "교재 구입 요청"),
                 entry("content", "한글 기초 교재가 필요합니다."),
                 entry("classroomId", CLASSROOM_ID),
-                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "한글 기초 교재"),
                     entry("reason", "수업 교재 부족"),
-                    entry("price", 15000L)
+                    entry("quantity", 2),
+                    entry("paymentType", "PREPAID")
                 )))
             ))
             .post()
@@ -66,13 +65,13 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .body("id", notNullValue())
             .body("classroomId", equalTo((int) CLASSROOM_ID))
             .body("title", equalTo("교재 구입 요청"))
-            .body("totalPrice", equalTo(15000))
-            .body("paymentMethod", equalTo("NORMAL"))
+            .body("totalPrice", equalTo(0))
             .body("status", equalTo("PENDING"))
             .body("requestedByName", equalTo("홍길동"))
             .body("items", hasSize(1))
             .body("items[0].name", equalTo("한글 기초 교재"))
-            .body("items[0].price", equalTo(15000))
+            .body("items[0].quantity", equalTo(2))
+            .body("items[0].paymentType", equalTo("PREPAID"))
             .extract()
             .jsonPath()
             .getLong("id");
@@ -89,11 +88,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "칠판 구입"),
                 entry("content", "교실용 칠판"),
                 entry("classroomId", CLASSROOM_ID),
-                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "칠판"),
                     entry("reason", "교실 비품 교체"),
-                    entry("price", 50000L)
+                    entry("quantity", 1),
+                    entry("paymentType", "ACTUAL")
                 )))
             ))
             .post()
@@ -102,45 +101,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .extract()
             .jsonPath()
             .getLong("id");
-    }
-
-    @Test
-    @DisplayName("구입 요청 생성 시 품목 영수증 파일 ID 전달 → 상세 응답 item receipt 포함")
-    void createRequest_withItemReceiptFileId_returnsReceipt() {
-        String receiptFileId = uploadPurchaseReceipt();
-
-        createdRequestId = given()
-            .basePath("/api/v1/purchase-requests")
-            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
-            .contentType(ContentType.JSON)
-            .body(Map.ofEntries(
-                entry("title", "영수증 포함 구입 요청"),
-                entry("content", "구입 요청 생성 시 영수증을 함께 첨부합니다."),
-                entry("classroomId", CLASSROOM_ID),
-                entry("paymentMethod", "NORMAL"),
-                entry("items", List.of(Map.ofEntries(
-                    entry("name", "복사용지"),
-                    entry("reason", "수업 자료 출력"),
-                    entry("price", 10000L),
-                    entry("receiptFileId", receiptFileId)
-                )))
-            ))
-            .post()
-            .then()
-            .statusCode(201)
-            .body("status", equalTo("PENDING"))
-            .body("items[0].receiptFileUrl", containsString("/documents/purchase-items/"))
-            .extract()
-            .jsonPath()
-            .getLong("id");
-
-        given()
-            .basePath("/api/v1/purchase-requests")
-            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
-            .get("/{requestId}", createdRequestId)
-            .then()
-            .statusCode(200)
-            .body("items[0].receiptFileUrl", containsString("/documents/purchase-items/"));
     }
 
     // ── 인증 오류 ─────────────────────────────────────────
@@ -155,11 +115,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
-                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
                     entry("reason", "사유"),
-                    entry("price", 1000L)
+                    entry("quantity", 1),
+                    entry("paymentType", "ACTUAL")
                 )))
             ))
             .post()
@@ -180,11 +140,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", 99999L),
-                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
                     entry("reason", "사유"),
-                    entry("price", 1000L)
+                    entry("quantity", 1),
+                    entry("paymentType", "ACTUAL")
                 )))
             ))
             .post()
@@ -205,11 +165,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", ""),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
-                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
                     entry("reason", "사유"),
-                    entry("price", 1000L)
+                    entry("quantity", 1),
+                    entry("paymentType", "ACTUAL")
                 )))
             ))
             .post()
@@ -228,7 +188,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
-                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of())
             ))
             .post()
@@ -237,8 +196,8 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("price 가 음수 → 400")
-    void createRequest_negativePrice_returns400() {
+    @DisplayName("quantity 가 0 → 400")
+    void createRequest_zeroQuantity_returns400() {
         given()
             .basePath("/api/v1/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
@@ -247,11 +206,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
-                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
                     entry("reason", "사유"),
-                    entry("price", -100L)
+                    entry("quantity", 0),
+                    entry("paymentType", "ACTUAL")
                 )))
             ))
             .post()
@@ -270,11 +229,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
-                entry("paymentMethod", "NORMAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", ""),
                     entry("reason", "사유"),
-                    entry("price", 1000L)
+                    entry("quantity", 1),
+                    entry("paymentType", "ACTUAL")
                 )))
             ))
             .post()
@@ -282,16 +241,4 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .statusCode(400);
     }
 
-    private String uploadPurchaseReceipt() {
-        return given()
-            .basePath("/api/v1/files")
-            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
-            .contentType(ContentType.MULTIPART)
-            .multiPart("file", "receipt.png", "receipt".getBytes(), "image/png")
-            .post("/images/purchase-items")
-            .then()
-            .statusCode(201)
-            .extract()
-            .path("fileId");
-    }
 }

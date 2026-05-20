@@ -104,6 +104,53 @@ class VendorAdminTest extends RequestBaseTest {
             .body("[0].amount", equalTo(100000));
     }
 
+    @Test
+    @DisplayName("거래처 삭제 → 거래처와 장부 soft delete, 목록/상세/장부 조회 제외")
+    void deleteVendor_softDeletesVendorAndHistories() {
+        createdVendorId = createVendor("삭제 거래처");
+
+        given()
+            .basePath("/api/v1/admin/vendors")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("amount", 100000L, "memo", "삭제 전 충전"))
+            .post("/{vendorId}/charges", createdVendorId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .basePath("/api/v1/admin/vendors")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .delete("/{vendorId}", createdVendorId)
+            .then()
+            .statusCode(204);
+
+        assertThat(vendorRepository.findById(createdVendorId)).isPresent()
+            .get()
+            .satisfies(vendor -> assertThat(vendor.isDeleted()).isTrue());
+
+        assertThat(vendorBalanceHistoryRepository.findAllByVendor_IdAndIsDeletedFalseOrderByOccurredAtDesc(createdVendorId))
+            .isEmpty();
+
+        var ids = given()
+            .basePath("/api/v1/admin/vendors")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .get()
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getList("id", Long.class);
+        assertThat(ids).doesNotContain(createdVendorId);
+
+        given()
+            .basePath("/api/v1/admin/vendors")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .get("/{vendorId}", createdVendorId)
+            .then()
+            .statusCode(404);
+    }
+
     private Long createVendor(String name) {
         return given()
             .basePath("/api/v1/admin/vendors")
