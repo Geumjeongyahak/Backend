@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
-import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestReceipt;
 import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 
@@ -62,9 +61,6 @@ public record PurchaseRequestDetailResponse(
     @Schema(description = "구입 항목 목록")
     List<ItemResponse> items,
 
-    @Schema(description = "영수증 목록")
-    List<ReceiptResponse> receipts,
-
     @Schema(description = "생성 시각")
     LocalDateTime createdAt
 ) {
@@ -88,20 +84,6 @@ public record PurchaseRequestDetailResponse(
         }
     }
 
-    public record ReceiptResponse(
-        Long id,
-        java.util.UUID fileId,
-        String fileUrl
-    ) {
-        static ReceiptResponse from(PurchaseRequestReceipt receipt) {
-            return new ReceiptResponse(
-                receipt.getId(),
-                receipt.getFile().getId(),
-                receipt.getFile().getPublicUrl()
-            );
-        }
-    }
-
     public static PurchaseRequestDetailResponse from(PurchaseRequest r) {
         return new PurchaseRequestDetailResponse(
             r.getId(),
@@ -121,7 +103,6 @@ public record PurchaseRequestDetailResponse(
             r.getPurchasedAt(),
             r.getNote(),
             r.getItems().stream().map(ItemResponse::from).toList(),
-            r.getReceipts().stream().map(ReceiptResponse::from).toList(),
             r.getCreatedAt()
         );
     }

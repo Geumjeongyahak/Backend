@@ -1,6 +1,9 @@
 package geumjeongyahak.domain.vendor.service;
 
+import geumjeongyahak.domain.base.dto.response.AdminSorts;
 import java.util.List;
+import java.util.Comparator;
+import java.util.Map;
 import java.util.UUID;
 
 import geumjeongyahak.domain.vendor.v1.dto.request.ChargeVendorRequest;
@@ -19,8 +22,18 @@ public class VendorAdminViewService {
 
     private final VendorService vendorService;
 
-    public List<VendorResponse> getVendors(String keyword) {
-        return vendorService.getVendors(keyword);
+    public List<VendorResponse> getVendors(String keyword, boolean activeOnly, String sort) {
+        List<VendorResponse> vendors = vendorService.getVendors(keyword).stream()
+            .filter(vendor -> !activeOnly || vendor.isActive())
+            .toList();
+
+        return AdminSorts.sort(vendors, sort, Map.of(
+            "id", Comparator.comparing(VendorResponse::id),
+            "name", Comparator.comparing(VendorResponse::name, Comparator.nullsLast(String::compareToIgnoreCase)),
+            "balance", Comparator.comparing(VendorResponse::balance, Comparator.nullsLast(Long::compareTo)),
+            "status", Comparator.comparing(VendorResponse::isActive),
+            "createdAt", Comparator.comparing(VendorResponse::createdAt, Comparator.nullsLast(java.time.LocalDateTime::compareTo))
+        ), "name,ASC");
     }
 
     public VendorResponse getVendor(Long vendorId) {

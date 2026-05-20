@@ -4,7 +4,6 @@ import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 
 import io.restassured.http.ContentType;
@@ -351,8 +350,8 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     // ── 구매 보고 (report) ────────────────────────────────
 
     @Test
-    @DisplayName("구매 완료 보고 시 요청 단위 영수증 여러 장 저장 → 200")
-    void report_withRequestReceipts_returns200() {
+    @DisplayName("구매 완료 보고 시 품목별 영수증 저장 → 200")
+    void report_withItemReceipt_returns200() {
         currentRequestId = setupPendingRequest();
 
         given()
@@ -374,24 +373,20 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .jsonPath()
             .getLong("items[0].id");
 
-        String receiptFileId1 = uploadPurchaseReceipt();
-        String receiptFileId2 = uploadPurchaseReceipt();
+        String receiptFileId = uploadPurchaseReceipt();
 
         given()
             .basePath("/api/v1/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "items", List.of(Map.of("itemId", itemId, "receiptFileId", receiptFileId1)),
-                "receiptFileIds", List.of(receiptFileId1, receiptFileId2)
+                "items", List.of(Map.of("itemId", itemId, "receiptFileId", receiptFileId))
             ))
             .post("/{requestId}/report", currentRequestId)
             .then()
             .statusCode(200)
             .body("status", equalTo("PURCHASED"))
-            .body("items[0].receiptFileUrl", containsString("/documents/purchase-items/"))
-            .body("receipts", hasSize(2))
-            .body("receipts[0].fileUrl", containsString("/documents/purchase-items/"));
+            .body("items[0].receiptFileUrl", containsString("/documents/purchase-items/"));
     }
 
     // ── 재확인 요청 (reconfirmation) ───────────────────────

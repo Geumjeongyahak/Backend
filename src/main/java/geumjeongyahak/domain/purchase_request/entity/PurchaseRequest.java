@@ -81,9 +81,6 @@ public class PurchaseRequest extends BaseEntity {
     @OneToMany(mappedBy = "purchaseRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PurchaseRequestItem> items = new ArrayList<>();
 
-    @OneToMany(mappedBy = "purchaseRequest", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PurchaseRequestReceipt> receipts = new ArrayList<>();
-
     public PurchaseRequest(
         Classroom classroom,
         User requestedBy,
@@ -91,8 +88,7 @@ public class PurchaseRequest extends BaseEntity {
         String content,
         PurchasePaymentMethod paymentMethod,
         Vendor vendor,
-        List<PurchaseRequestItem> items,
-        List<PurchaseRequestReceipt> receipts
+        List<PurchaseRequestItem> items
     ) {
         this.classroom = classroom;
         this.requestedBy = requestedBy;
@@ -104,8 +100,6 @@ public class PurchaseRequest extends BaseEntity {
         this.status = PurchaseRequestStatus.PENDING;
         items.forEach(item -> item.assignRequest(this));
         this.items.addAll(items);
-        receipts.forEach(receipt -> receipt.assignRequest(this));
-        this.receipts.addAll(receipts);
     }
 
     public void approve(User approver, String note) {
@@ -115,12 +109,9 @@ public class PurchaseRequest extends BaseEntity {
         this.note = note;
     }
 
-    public void reportPurchase(List<PurchaseRequestReceipt> receipts) {
+    public void reportPurchase() {
         this.status = PurchaseRequestStatus.PURCHASED;
         this.purchasedAt = LocalDateTime.now();
-        this.receipts.clear();
-        receipts.forEach(receipt -> receipt.assignRequest(this));
-        this.receipts.addAll(receipts);
     }
 
     public void confirm() {

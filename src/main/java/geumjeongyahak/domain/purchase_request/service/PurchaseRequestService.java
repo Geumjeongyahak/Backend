@@ -1,7 +1,6 @@
 package geumjeongyahak.domain.purchase_request.service;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -25,7 +24,6 @@ import geumjeongyahak.domain.notification.event.PurchaseStatusChangedPushEvent;
 import geumjeongyahak.domain.notification.event.RequestReviewedPushEvent;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
-import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestReceipt;
 import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.exception.PurchaseRequestErrorCode;
@@ -80,8 +78,7 @@ public class PurchaseRequestService {
                 request.content(),
                 request.paymentMethod(),
                 vendor,
-                items,
-                List.of()
+                items
             )
         );
 
@@ -224,9 +221,7 @@ public class PurchaseRequestService {
             item.updateReceipt(getFileOrNull(itemReport.receiptFileId()));
         }
 
-        List<PurchaseRequestReceipt> receipts = toReceipts(request.receiptFileIds());
-
-        purchaseRequest.reportPurchase(receipts);
+        purchaseRequest.reportPurchase();
 
         log.debug("구매 완료 보고 완료 (requestId={}, totalPrice={})", requestId, purchaseRequest.getTotalPrice());
         return PurchaseRequestDetailResponse.from(purchaseRequest);
@@ -298,13 +293,6 @@ public class PurchaseRequestService {
     private PurchaseRequest findById(Long requestId) {
         return purchaseRequestRepository.findById(requestId)
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));
-    }
-
-    private List<PurchaseRequestReceipt> toReceipts(List<UUID> receiptFileIds) {
-        return (receiptFileIds == null ? Collections.<UUID>emptyList() : receiptFileIds).stream()
-            .map(fileProxyService::getReferenceById)
-            .map(PurchaseRequestReceipt::new)
-            .toList();
     }
 
     private File getFileOrNull(UUID fileId) {

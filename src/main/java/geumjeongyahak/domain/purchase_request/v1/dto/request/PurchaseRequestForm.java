@@ -33,10 +33,6 @@ public class PurchaseRequestForm {
     @NotEmpty(message = "최소 하나 이상의 항목이 필요합니다.")
     private List<ItemForm> items = new ArrayList<>();
 
-    private List<UUID> receiptFileIds = new ArrayList<>();
-
-    private List<String> receiptFileUrls = new ArrayList<>();
-
     @Getter
     @Setter
     @NoArgsConstructor

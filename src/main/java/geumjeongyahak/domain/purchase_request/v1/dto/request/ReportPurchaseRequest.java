@@ -12,10 +12,7 @@ public record ReportPurchaseRequest(
     @Valid
     @NotEmpty
     @Schema(description = "영수증을 등록 또는 교체할 항목 목록")
-    List<ItemReport> items,
-
-    @Schema(description = "구매 요청 단위 영수증 파일 ID 목록")
-    List<UUID> receiptFileIds
+    List<ItemReport> items
 ) {
     public record ItemReport(
 

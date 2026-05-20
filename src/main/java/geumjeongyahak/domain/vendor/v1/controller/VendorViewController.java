@@ -32,13 +32,17 @@ public class VendorViewController {
     @GetMapping
     public String vendors(
         @RequestParam(required = false) String keyword,
+        @RequestParam(defaultValue = "false") boolean activeOnly,
+        @RequestParam(required = false) String sort,
         Model model,
         Authentication authentication
     ) {
         model.addAttribute("active", "vendors");
         model.addAttribute("adminName", authentication.getName());
         model.addAttribute("keyword", keyword);
-        model.addAttribute("vendors", vendorAdminViewService.getVendors(keyword));
+        model.addAttribute("activeOnly", activeOnly);
+        model.addAttribute("sort", sort);
+        model.addAttribute("vendors", vendorAdminViewService.getVendors(keyword, activeOnly, sort));
         return "admin/request/purchase/vendors";
     }
 

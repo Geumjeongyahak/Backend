@@ -22,7 +22,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -146,10 +145,9 @@ public class PurchaseRequestAdminViewService {
     public void report(
         Long requesterId,
         Long requestId,
-        List<geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.ItemReport> items,
-        List<UUID> receiptFileIds
+        List<geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.ItemReport> items
     ) {
-        purchaseRequestService.reportPurchase(requesterId, requestId, new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest(items, receiptFileIds), true);
+        purchaseRequestService.reportPurchase(requesterId, requestId, new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest(items), true);
     }
 
     @Transactional

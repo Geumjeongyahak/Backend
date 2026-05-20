@@ -31,11 +31,6 @@ public interface FileRepository extends JpaRepository<File, UUID> {
               from PurchaseRequestItem item
               where item.receiptFile = f
           )
-          and not exists (
-              select 1
-              from PurchaseRequestReceipt receipt
-              where receipt.file = f
-          )
         """)
     List<File> findUnlinkedPurchaseItemFilesBefore(
         @Param("storageKeyPrefix") String storageKeyPrefix,

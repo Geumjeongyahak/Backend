@@ -13,8 +13,8 @@
         </div>
 
         <section class="panel detail-grid">
-            <div class="detail-item"><span>상태</span><strong th:text="${vendor.isActive ? 'ACTIVE' : 'INACTIVE'}">ACTIVE</strong></div>
-            <div class="detail-item"><span>잔액</span><strong th:text="${vendor.balance}">0</strong></div>
+            <div class="detail-item"><span>상태</span><strong><span class="pill" th:classappend="${vendor.isActive} ? 'status-APPROVED' : 'status-REJECTED'" th:text="${vendor.isActive ? '활성' : '비활성'}">활성</span></strong></div>
+            <div class="detail-item"><span>잔액</span><strong class="money" th:text="${#numbers.formatInteger(vendor.balance, 0, 'COMMA')}">0</strong></div>
             <div class="detail-item"><span>설명</span><strong th:text="${vendor.description ?: '-'}">-</strong></div>
             <div class="detail-item"><span>생성일</span><strong th:text="${#temporals.format(vendor.createdAt, 'yyyy.MM.dd HH:mm')}">2026.01.01</strong></div>
         </section>
@@ -28,7 +28,7 @@
                 <label>설명
                     <textarea name="description" th:text="${vendor.description}"></textarea>
                 </label>
-                <label style="display: flex; align-items: center; gap: 8px;">
+                <label class="check-label vendor-check">
                     <input type="checkbox" name="isActive" value="true" th:checked="${vendor.isActive}">
                     활성
                 </label>
@@ -46,7 +46,7 @@
                     <input name="memo" placeholder="예: 5월 선결제 충전">
                 </label>
                 <input id="charge-receipt-id" type="hidden" name="receiptFileId">
-                <label>충전 영수증
+                <label class="file-button">충전 영수증
                     <input type="file" accept="image/*" onchange="uploadChargeReceipt(this)">
                 </label>
                 <div id="charge-receipt-preview" class="inline-form"></div>
@@ -72,8 +72,8 @@
                     <tr th:each="history : ${histories}">
                         <td th:text="${#temporals.format(history.occurredAt, 'yyyy.MM.dd HH:mm')}">2026.01.01</td>
                         <td th:text="${history.type.name()}">CHARGE</td>
-                        <td th:text="${history.amount}">0</td>
-                        <td th:text="${history.balanceAfter}">0</td>
+                        <td class="money" th:text="${#numbers.formatInteger(history.amount, 0, 'COMMA')}">0</td>
+                        <td class="money" th:text="${#numbers.formatInteger(history.balanceAfter, 0, 'COMMA')}">0</td>
                         <td th:text="${history.memo ?: '-'}">-</td>
                         <td><a class="link" th:if="${history.receiptFileUrl != null}" th:href="${history.receiptFileUrl}" target="_blank">보기</a><span th:if="${history.receiptFileUrl == null}">-</span></td>
                     </tr>
@@ -112,6 +112,41 @@
                 `<a class="button secondary" href="${data.url}" target="_blank">영수증 보기</a>`;
         }
     </script>
+    <style>
+        .vendor-check {
+            min-height: 40px;
+            align-self: end;
+        }
+        .money {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .detail-item .money {
+            text-align: left;
+        }
+        .file-button {
+            width: fit-content;
+            min-height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: #4f5953;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 900;
+        }
+        .file-button input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
 </div>
 </body>
 </html>

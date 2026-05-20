@@ -147,12 +147,6 @@ public class PurchaseRequestViewController {
                 return item;
             })
             .collect(java.util.stream.Collectors.toList()));
-        form.setReceiptFileIds(response.receipts().stream()
-            .map(PurchaseRequestDetailResponse.ReceiptResponse::fileId)
-            .collect(java.util.stream.Collectors.toList()));
-        form.setReceiptFileUrls(response.receipts().stream()
-            .map(PurchaseRequestDetailResponse.ReceiptResponse::fileUrl)
-            .collect(java.util.stream.Collectors.toList()));
 
         model.addAttribute("active", "purchaseRequests");
         model.addAttribute("adminName", authentication.getName());
@@ -230,7 +224,7 @@ public class PurchaseRequestViewController {
             .map(i -> new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.ItemReport(i.getId(), i.getReceiptFileId()))
             .toList();
 
-        purchaseRequestAdminViewService.report(userDetails.getUserId(), requestId, itemReports, form.getReceiptFileIds());
+        purchaseRequestAdminViewService.report(userDetails.getUserId(), requestId, itemReports);
 
         redirectAttributes.addFlashAttribute("message", "구매 보고가 완료되었습니다.");
         return "redirect:/admin/request/purchase/purchase-requests/" + requestId;

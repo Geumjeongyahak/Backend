@@ -39,14 +39,16 @@
         <div class="stack" style="--gap: 1rem;">
             <h3>구매 항목</h3>
             <div id="items-container" class="stack" style="--gap: 0.5rem;">
-                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: 1fr 1.4fr 1fr 1.2fr auto; gap: 1rem; align-items: end;">
+                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(120px, .8fr) minmax(220px, 1.1fr) auto; gap: 1rem; align-items: end;">
                     <label>품명 <input th:field="*{items[__${stat.index}__].name}" required></label>
                     <label>사유 <input th:field="*{items[__${stat.index}__].reason}"></label>
                     <label>결제 금액 <input type="number" th:field="*{items[__${stat.index}__].price}" min="0" required placeholder="예: 15000"></label>
-                    <div class="stack" style="--gap: 0.35rem;">
+                    <div class="receipt-field">
+                        <span class="field-label">품목 영수증</span>
                         <input type="hidden" th:field="*{items[__${stat.index}__].receiptFileId}">
-                        <div class="receipt-preview"></div>
-                        <label>영수증
+                        <div class="receipt-preview"><span class="receipt-empty">미첨부</span></div>
+                        <label class="file-button">
+                            <span>파일 선택</span>
                             <input type="file" accept="image/*" onchange="uploadItemReceipt(this)">
                         </label>
                     </div>
@@ -85,7 +87,7 @@
 
                 const data = await response.json();
                 hidden.value = data.fileId;
-                preview.innerHTML = `<a class="link" href="${data.url}" target="_blank">첨부됨</a>`;
+                preview.innerHTML = `<a class="receipt-chip" href="${data.url}" target="_blank">보기</a>`;
             } catch (error) {
                 console.error(error);
                 alert(`이미지 업로드 중 오류가 발생했습니다. ${error.message}`);
@@ -98,15 +100,16 @@
             const container = document.getElementById('items-container');
             const newRow = document.createElement('div');
             newRow.className = 'panel item-row';
-            newRow.style.cssText = 'display: grid; grid-template-columns: 1fr 1.4fr 1fr 1.2fr auto; gap: 1rem; align-items: end;';
+            newRow.style.cssText = 'display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(120px, .8fr) minmax(220px, 1.1fr) auto; gap: 1rem; align-items: end;';
             newRow.innerHTML = `
                 <label>품명 <input name="items[${itemIndex}].name" required></label>
                 <label>사유 <input name="items[${itemIndex}].reason"></label>
                 <label>결제 금액 <input type="number" name="items[${itemIndex}].price" min="0" required placeholder="예: 15000"></label>
-                <div class="stack" style="--gap: 0.35rem;">
+                <div class="receipt-field">
+                    <span class="field-label">품목 영수증</span>
                     <input type="hidden" name="items[${itemIndex}].receiptFileId">
-                    <div class="receipt-preview"></div>
-                    <label>영수증 <input type="file" accept="image/*" onchange="uploadItemReceipt(this)"></label>
+                    <div class="receipt-preview"><span class="receipt-empty">미첨부</span></div>
+                    <label class="file-button"><span>파일 선택</span><input type="file" accept="image/*" onchange="uploadItemReceipt(this)"></label>
                 </div>
                 <button type="button" class="button danger" onclick="removeRow(this)">삭제</button>
             `;
@@ -134,5 +137,62 @@
             itemIndex = rows.length;
         }
     </script>
+    <style>
+        .receipt-field {
+            display: grid;
+            gap: 6px;
+            min-width: 0;
+        }
+        .field-label {
+            color: #4b554f;
+            font-size: 13px;
+            font-weight: 800;
+        }
+        .receipt-preview {
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+        }
+        .receipt-chip {
+            display: inline-flex;
+            align-items: center;
+            min-height: 30px;
+            padding: 0 10px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--green-dark);
+            font-size: 13px;
+            font-weight: 900;
+            text-decoration: none;
+        }
+        .receipt-empty {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .file-button {
+            width: fit-content;
+            min-height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: #4f5953;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 900;
+        }
+        .file-button input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
 </main>
 </div></body></html>
