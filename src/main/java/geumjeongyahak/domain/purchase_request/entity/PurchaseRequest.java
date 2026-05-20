@@ -6,10 +6,8 @@ import java.util.List;
 
 import geumjeongyahak.domain.base.entity.BaseEntity;
 import geumjeongyahak.domain.classroom.entity.Classroom;
-import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.users.entity.User;
-import geumjeongyahak.domain.vendor.entity.Vendor;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -52,16 +50,8 @@ public class PurchaseRequest extends BaseEntity {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    @Column(name = "total_price")
+    @Column(name = "total_price", nullable = false)
     private Long totalPrice;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "payment_method", nullable = false, length = 30)
-    private PurchasePaymentMethod paymentMethod;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vendor_id")
-    private Vendor vendor;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -81,22 +71,21 @@ public class PurchaseRequest extends BaseEntity {
     @OneToMany(mappedBy = "purchaseRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PurchaseRequestItem> items = new ArrayList<>();
 
+    @OneToMany(mappedBy = "purchaseRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PurchaseRequestPaymentTransaction> transactions = new ArrayList<>();
+
     public PurchaseRequest(
         Classroom classroom,
         User requestedBy,
         String title,
         String content,
-        PurchasePaymentMethod paymentMethod,
-        Vendor vendor,
         List<PurchaseRequestItem> items
     ) {
         this.classroom = classroom;
         this.requestedBy = requestedBy;
         this.title = title;
         this.content = content;
-        this.paymentMethod = paymentMethod;
-        this.vendor = vendor;
-        this.totalPrice = calculateTotalPrice(items);
+        this.totalPrice = 0L;
         this.status = PurchaseRequestStatus.PENDING;
         items.forEach(item -> item.assignRequest(this));
         this.items.addAll(items);
@@ -112,6 +101,7 @@ public class PurchaseRequest extends BaseEntity {
     public void reportPurchase() {
         this.status = PurchaseRequestStatus.PURCHASED;
         this.purchasedAt = LocalDateTime.now();
+        this.totalPrice = calculateTotalPrice();
     }
 
     public void confirm() {
@@ -128,23 +118,25 @@ public class PurchaseRequest extends BaseEntity {
     public void update(
         String title,
         String content,
-        PurchasePaymentMethod paymentMethod,
-        Vendor vendor,
         List<PurchaseRequestItem> items
     ) {
         this.title = title;
         this.content = content;
-        this.paymentMethod = paymentMethod;
-        this.vendor = vendor;
-        this.totalPrice = calculateTotalPrice(items);
         this.items.clear();
         items.forEach(item -> item.assignRequest(this));
         this.items.addAll(items);
     }
 
-    private long calculateTotalPrice(List<PurchaseRequestItem> items) {
-        return items.stream()
-            .mapToLong(PurchaseRequestItem::getPrice)
+    public void replaceTransactions(List<PurchaseRequestPaymentTransaction> transactions) {
+        this.transactions.clear();
+        transactions.forEach(transaction -> transaction.assignRequest(this));
+        this.transactions.addAll(transactions);
+        this.totalPrice = calculateTotalPrice();
+    }
+
+    private long calculateTotalPrice() {
+        return transactions.stream()
+            .mapToLong(PurchaseRequestPaymentTransaction::getAmount)
             .sum();
     }
 }

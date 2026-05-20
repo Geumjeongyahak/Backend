@@ -13,7 +13,7 @@
     <div class="panel" style="background: #f8faf9; border-left: 4px solid var(--green); margin-bottom: 24px;" th:if="${request.status.name() == 'APPROVED'}">
         <h3 style="margin-top: 0;">구매 결과 보고 단계</h3>
         <p style="margin-bottom: 0; color: #566059; font-size: 14px; line-height: 1.6;">
-            관리자가 요청을 승인했습니다. 필요하면 품목별 <strong>영수증 사진</strong>을 교체해 주세요.<br>
+            관리자가 요청을 승인했습니다. 거래처, 품목명, 결제 금액과 선택 영수증을 등록해 주세요.<br>
             보고가 완료되면 관리자의 최종 확인 후 프로세스가 종료됩니다.
         </p>
     </div>
@@ -30,49 +30,41 @@
         </label>
         <label>제목 <input th:field="*{title}" th:readonly="${request.status.name() != 'PENDING'}" required></label>
         <label>내용 <textarea th:field="*{content}" th:readonly="${request.status.name() != 'PENDING'}" required></textarea></label>
-        <label>결제 방식
-            <select th:field="*{paymentMethod}" th:disabled="${request.status.name() != 'PENDING'}">
-                <option value="NORMAL">일반 결제</option>
-                <option value="VENDOR_PREPAID">거래처 선결제</option>
-            </select>
-        </label>
-        <label>거래처
-            <select th:field="*{vendorId}" th:disabled="${request.status.name() != 'PENDING'}">
-                <option value="">선택 안 함</option>
-                <option th:each="vendor : ${vendors}" th:value="${vendor.id}" th:text="|${vendor.name} (${vendor.balance}원)|">거래처</option>
-            </select>
-        </label>
         
         <div class="stack" style="--gap: 1rem;">
             <h3>구매 항목</h3>
             <div id="items-container" class="stack" style="--gap: 0.5rem;">
-                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(120px, .8fr) minmax(220px, 1.1fr) auto; gap: 1rem; align-items: end;">
+                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(100px, .6fr) minmax(140px, .8fr) auto; gap: 1rem; align-items: end;">
                     <input type="hidden" th:field="*{items[__${stat.index}__].id}">
                     <label>품명 <input th:field="*{items[__${stat.index}__].name}" th:readonly="${request.status.name() != 'PENDING'}" required></label>
                     <label>사유 <input th:field="*{items[__${stat.index}__].reason}" th:readonly="${request.status.name() != 'PENDING'}"></label>
-                    
-                    <label>결제 금액
-                        <input type="number" th:field="*{items[__${stat.index}__].price}"
-                               min="0"
-                               th:readonly="${request.status.name() != 'PENDING'}"
-                               placeholder="결제 금액">
-                    </label>
-                    <div class="receipt-field">
-                        <span class="field-label">품목 영수증</span>
-                        <input type="hidden" th:field="*{items[__${stat.index}__].receiptFileId}">
-                        <div class="receipt-preview">
-                            <a class="receipt-chip" th:if="${item.receiptFileUrl != null}" th:href="${item.receiptFileUrl}" target="_blank">보기</a>
-                            <span class="receipt-empty" th:if="${item.receiptFileUrl == null}">미첨부</span>
-                        </div>
-                        <label class="file-button" th:if="${request.status.name() == 'PENDING' || request.status.name() == 'APPROVED'}">
-                            <span>파일 선택</span>
-                            <input type="file" accept="image/*" onchange="uploadItemReceipt(this)">
-                        </label>
-                    </div>
+                    <label>개수 <input type="number" th:field="*{items[__${stat.index}__].quantity}" min="1" th:readonly="${request.status.name() != 'PENDING'}" required></label>
+                    <label>결제 유형 <select th:field="*{items[__${stat.index}__].paymentType}" th:disabled="${request.status.name() != 'PENDING'}"><option value="PREPAID">선 결제</option><option value="ACTUAL">실 결제</option></select></label>
                     <button type="button" class="button danger" th:if="${stat.index > 0 && request.status.name() == 'PENDING'}" onclick="removeRow(this)">삭제</button>
                 </div>
             </div>
             <button type="button" class="button secondary" onclick="addItemRow()" th:if="${request.status.name() == 'PENDING'}">항목 추가</button>
+        </div>
+
+        <div class="stack" style="--gap: 1rem;" th:if="${request.status.name() == 'APPROVED'}">
+            <h3>구매 완료 보고</h3>
+            <label>거래처
+                <select th:field="*{vendorId}" required>
+                    <option value="">선택</option>
+                    <option th:each="vendor : ${vendors}" th:value="${vendor.id}" th:text="|${vendor.name} (${vendor.balance}원)|">거래처</option>
+                </select>
+            </label>
+            <label>결제 금액 <input type="number" th:field="*{amount}" min="1" required></label>
+            <label>거래 품목명 <input name="transactionItemNames[0]" th:value="${request.items[0].name}" required></label>
+            <div class="receipt-field">
+                <span class="field-label">영수증</span>
+                <input id="report-receipt-id" type="hidden" th:field="*{receiptFileId}">
+                <div id="report-receipt-preview" class="receipt-preview"><span class="receipt-empty">미첨부</span></div>
+                <label class="file-button">
+                    <span>파일 선택</span>
+                    <input type="file" accept="image/*" onchange="uploadReportReceipt(this)">
+                </label>
+            </div>
         </div>
 
         <div class="inline-form">
@@ -123,17 +115,12 @@
             const container = document.getElementById('items-container');
             const newRow = document.createElement('div');
             newRow.className = 'panel item-row';
-            newRow.style.cssText = 'display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(120px, .8fr) minmax(220px, 1.1fr) auto; gap: 1rem; align-items: end;';
+            newRow.style.cssText = 'display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(100px, .6fr) minmax(140px, .8fr) auto; gap: 1rem; align-items: end;';
             newRow.innerHTML = `
                 <label>품명 <input name="items[${itemIndex}].name" required></label>
                 <label>사유 <input name="items[${itemIndex}].reason"></label>
-                <label>결제 금액 <input type="number" name="items[${itemIndex}].price" min="0" required placeholder="결제 금액"></label>
-                <div class="receipt-field">
-                    <span class="field-label">품목 영수증</span>
-                    <input type="hidden" name="items[${itemIndex}].receiptFileId">
-                    <div class="receipt-preview"><span class="receipt-empty">미첨부</span></div>
-                    <label class="file-button"><span>파일 선택</span><input type="file" accept="image/*" onchange="uploadItemReceipt(this)"></label>
-                </div>
+                <label>개수 <input type="number" name="items[${itemIndex}].quantity" min="1" required value="1"></label>
+                <label>결제 유형 <select name="items[${itemIndex}].paymentType"><option value="PREPAID">선 결제</option><option value="ACTUAL" selected>실 결제</option></select></label>
                 <button type="button" class="button danger" onclick="removeRow(this)">삭제</button>
             `;
             container.appendChild(newRow);
@@ -152,16 +139,34 @@
                 const idInput = row.querySelector('input[name*=".id"]');
                 const nameInput = row.querySelector('input[name*=".name"]');
                 const reasonInput = row.querySelector('input[name*=".reason"]');
-                const priceInput = row.querySelector('input[name*=".price"]');
-                const receiptInput = row.querySelector('input[name*=".receiptFileId"]');
+                const quantityInput = row.querySelector('input[name*=".quantity"]');
+                const paymentTypeInput = row.querySelector('select[name*=".paymentType"]');
                 
                 if (idInput) idInput.name = `items[${index}].id`;
                 if (nameInput) nameInput.name = `items[${index}].name`;
                 if (reasonInput) reasonInput.name = `items[${index}].reason`;
-                if (priceInput) priceInput.name = `items[${index}].price`;
-                if (receiptInput) receiptInput.name = `items[${index}].receiptFileId`;
+                if (quantityInput) quantityInput.name = `items[${index}].quantity`;
+                if (paymentTypeInput) paymentTypeInput.name = `items[${index}].paymentType`;
             });
             itemIndex = rows.length;
+        }
+
+        async function uploadReportReceipt(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const hidden = document.getElementById('report-receipt-id');
+            const preview = document.getElementById('report-receipt-preview');
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch('/admin/request/purchase/purchase-requests/receipt-images', {method: 'POST', body: formData});
+            if (!response.ok) {
+                alert('이미지 업로드 중 오류가 발생했습니다.');
+                return;
+            }
+            const data = await response.json();
+            hidden.value = data.fileId;
+            preview.innerHTML = `<a class="receipt-chip" href="${data.url}" target="_blank">보기</a>`;
+            input.value = '';
         }
     </script>
     <style>

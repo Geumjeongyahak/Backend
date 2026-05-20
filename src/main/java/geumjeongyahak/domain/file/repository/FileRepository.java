@@ -28,8 +28,8 @@ public interface FileRepository extends JpaRepository<File, UUID> {
           and f.storageKey like concat(:storageKeyPrefix, '%')
           and not exists (
               select 1
-              from PurchaseRequestItem item
-              where item.receiptFile = f
+              from PurchaseRequestPaymentTransaction tx
+              where tx.receiptFile = f
           )
         """)
     List<File> findUnlinkedPurchaseItemFilesBefore(

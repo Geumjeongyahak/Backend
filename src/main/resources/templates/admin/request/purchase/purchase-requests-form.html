@@ -8,10 +8,10 @@
     <div class="panel" style="background: #f8faf9; border-left: 4px solid var(--green); margin-bottom: 24px;">
         <h3 style="margin-top: 0;">구매 프로세스 안내</h3>
         <ol style="margin-bottom: 0; padding-left: 20px; color: #566059; font-size: 14px; line-height: 1.6;">
-            <li><strong>신청</strong>: 필요한 물품의 품명, 사유, 확정 결제금액과 결제 방식을 작성합니다.</li>
-            <li><strong>승인</strong>: 관리자가 요청 내용을 검토하고 선결제 방식이면 거래처 잔액에서 차감합니다.</li>
-            <li><strong>보고</strong>: 품목별 영수증은 선택으로 첨부하고 승인 이후에도 교체할 수 있습니다.</li>
-            <li><strong>확정</strong>: 최종 확인이 완료되면 요청 프로세스가 종료됩니다.</li>
+            <li><strong>신청</strong>: 필요한 물품의 품명, 개수, 사유, 결제 유형을 작성합니다.</li>
+            <li><strong>승인</strong>: 관리자가 요청 내용을 검토합니다.</li>
+            <li><strong>보고</strong>: 승인 후 거래처별 결제 금액과 선택 영수증을 등록합니다.</li>
+            <li><strong>확정</strong>: 최종 확인 시 거래처별 잔액이 차감됩니다.</li>
         </ol>
     </div>
 
@@ -23,35 +23,15 @@
         </label>
         <label>제목 <input th:field="*{title}" required placeholder="예: 교재 구입"></label>
         <label>내용 <textarea th:field="*{content}" required placeholder="구매 요청 사유 및 상세 내용을 입력하세요."></textarea></label>
-        <label>결제 방식
-            <select th:field="*{paymentMethod}">
-                <option value="NORMAL">일반 결제</option>
-                <option value="VENDOR_PREPAID">거래처 선결제</option>
-            </select>
-        </label>
-        <label>거래처
-            <select th:field="*{vendorId}">
-                <option value="">선택 안 함</option>
-                <option th:each="vendor : ${vendors}" th:value="${vendor.id}" th:text="|${vendor.name} (${vendor.balance}원)|">거래처</option>
-            </select>
-        </label>
         
         <div class="stack" style="--gap: 1rem;">
             <h3>구매 항목</h3>
             <div id="items-container" class="stack" style="--gap: 0.5rem;">
-                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(120px, .8fr) minmax(220px, 1.1fr) auto; gap: 1rem; align-items: end;">
+                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(100px, .6fr) minmax(140px, .8fr) auto; gap: 1rem; align-items: end;">
                     <label>품명 <input th:field="*{items[__${stat.index}__].name}" required></label>
                     <label>사유 <input th:field="*{items[__${stat.index}__].reason}"></label>
-                    <label>결제 금액 <input type="number" th:field="*{items[__${stat.index}__].price}" min="0" required placeholder="예: 15000"></label>
-                    <div class="receipt-field">
-                        <span class="field-label">품목 영수증</span>
-                        <input type="hidden" th:field="*{items[__${stat.index}__].receiptFileId}">
-                        <div class="receipt-preview"><span class="receipt-empty">미첨부</span></div>
-                        <label class="file-button">
-                            <span>파일 선택</span>
-                            <input type="file" accept="image/*" onchange="uploadItemReceipt(this)">
-                        </label>
-                    </div>
+                    <label>개수 <input type="number" th:field="*{items[__${stat.index}__].quantity}" min="1" required></label>
+                    <label>결제 유형 <select th:field="*{items[__${stat.index}__].paymentType}"><option value="PREPAID">선 결제</option><option value="ACTUAL">실 결제</option></select></label>
                     <button type="button" class="button danger" th:if="${stat.index > 0}" onclick="removeRow(this)">삭제</button>
                 </div>
             </div>
@@ -100,17 +80,12 @@
             const container = document.getElementById('items-container');
             const newRow = document.createElement('div');
             newRow.className = 'panel item-row';
-            newRow.style.cssText = 'display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(120px, .8fr) minmax(220px, 1.1fr) auto; gap: 1rem; align-items: end;';
+            newRow.style.cssText = 'display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(100px, .6fr) minmax(140px, .8fr) auto; gap: 1rem; align-items: end;';
             newRow.innerHTML = `
                 <label>품명 <input name="items[${itemIndex}].name" required></label>
                 <label>사유 <input name="items[${itemIndex}].reason"></label>
-                <label>결제 금액 <input type="number" name="items[${itemIndex}].price" min="0" required placeholder="예: 15000"></label>
-                <div class="receipt-field">
-                    <span class="field-label">품목 영수증</span>
-                    <input type="hidden" name="items[${itemIndex}].receiptFileId">
-                    <div class="receipt-preview"><span class="receipt-empty">미첨부</span></div>
-                    <label class="file-button"><span>파일 선택</span><input type="file" accept="image/*" onchange="uploadItemReceipt(this)"></label>
-                </div>
+                <label>개수 <input type="number" name="items[${itemIndex}].quantity" min="1" required value="1"></label>
+                <label>결제 유형 <select name="items[${itemIndex}].paymentType"><option value="PREPAID">선 결제</option><option value="ACTUAL" selected>실 결제</option></select></label>
                 <button type="button" class="button danger" onclick="removeRow(this)">삭제</button>
             `;
             container.appendChild(newRow);
@@ -127,12 +102,12 @@
             rows.forEach((row, index) => {
                 const nameInput = row.querySelector('input[name*=".name"]');
                 const reasonInput = row.querySelector('input[name*=".reason"]');
-                const priceInput = row.querySelector('input[name*=".price"]');
-                const receiptInput = row.querySelector('input[name*=".receiptFileId"]');
+                const quantityInput = row.querySelector('input[name*=".quantity"]');
+                const paymentTypeInput = row.querySelector('select[name*=".paymentType"]');
                 if (nameInput) nameInput.name = `items[${index}].name`;
                 if (reasonInput) reasonInput.name = `items[${index}].reason`;
-                if (priceInput) priceInput.name = `items[${index}].price`;
-                if (receiptInput) receiptInput.name = `items[${index}].receiptFileId`;
+                if (quantityInput) quantityInput.name = `items[${index}].quantity`;
+                if (paymentTypeInput) paymentTypeInput.name = `items[${index}].paymentType`;
             });
             itemIndex = rows.length;
         }

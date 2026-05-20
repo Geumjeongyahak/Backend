@@ -1,8 +1,10 @@
 package geumjeongyahak.domain.purchase_request.entity;
 
-import geumjeongyahak.domain.file.entity.File;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -35,29 +37,20 @@ public class PurchaseRequestItem {
     private String reason;
 
     @Column(nullable = false)
-    private Long price;
+    private Integer quantity;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "receipt_file_id")
-    private File receiptFile;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_type", nullable = false, length = 20)
+    private PurchasePaymentType paymentType;
 
-    public PurchaseRequestItem(String name, String reason) {
+    public PurchaseRequestItem(String name, String reason, Integer quantity, PurchasePaymentType paymentType) {
         this.name = name;
         this.reason = reason;
-    }
-
-    public PurchaseRequestItem(String name, String reason, Long price, File receiptFile) {
-        this.name = name;
-        this.reason = reason;
-        this.price = price;
-        this.receiptFile = receiptFile;
+        this.quantity = quantity;
+        this.paymentType = paymentType;
     }
 
     void assignRequest(PurchaseRequest purchaseRequest) {
         this.purchaseRequest = purchaseRequest;
-    }
-
-    public void updateReceipt(File receiptFile) {
-        this.receiptFile = receiptFile;
     }
 }

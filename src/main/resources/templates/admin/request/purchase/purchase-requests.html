@@ -60,8 +60,6 @@
                         <th>제목</th>
                         <th>분반</th>
                         <th>요청자</th>
-                        <th>결제 방식</th>
-                        <th>거래처</th>
                         <th>결제 금액</th>
                         <th>상태</th>
                         <th>생성일</th>
@@ -74,8 +72,6 @@
                         <td><a class="link" th:href="@{/admin/request/purchase/purchase-requests/{requestId}(requestId=${request.id})}" th:text="${request.title}">교재 구입</a></td>
                         <td th:text="${request.classroomName}">벚꽃반</td>
                         <td th:text="${request.requestedByName}">홍길동</td>
-                        <td th:text="${request.paymentMethod.name()}">NORMAL</td>
-                        <td th:text="${request.vendorName ?: '-'}">-</td>
                         <td th:text="${request.totalPrice != null ? request.totalPrice : '-'}">-</td>
                         <td><span class="pill" th:classappend="'status-' + ${request.status.name()}" th:text="${request.status.name()}">PENDING</span></td>
                         <td th:text="${#temporals.format(request.createdAt, 'yyyy.MM.dd')}">2026.01.01</td>
@@ -92,7 +88,7 @@
                         </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(purchaseRequestsPage.content)}">
-                        <td colspan="10" class="empty">구매 요청이 없습니다.</td>
+                        <td colspan="8" class="empty">구매 요청이 없습니다.</td>
                     </tr>
                     </tbody>
                 </table>

@@ -134,7 +134,7 @@ public class PurchaseRequestController {
     }
 
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "품목별 영수증 교체")
+    @Operation(summary = "구매 완료 거래 수정")
     @PostMapping("/{requestId}/item-receipts")
     public ResponseEntity<PurchaseRequestDetailResponse> updateItemReceipts(
         @PathVariable Long requestId,

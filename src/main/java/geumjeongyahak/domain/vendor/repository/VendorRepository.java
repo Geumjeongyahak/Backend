@@ -13,11 +13,13 @@ import geumjeongyahak.domain.vendor.entity.Vendor;
 
 public interface VendorRepository extends JpaRepository<Vendor, Long> {
 
-    List<Vendor> findAllByOrderByNameAsc();
+    List<Vendor> findAllByIsDeletedFalseOrderByNameAsc();
 
-    List<Vendor> findAllByNameContainingIgnoreCaseOrderByNameAsc(String name);
+    List<Vendor> findAllByNameContainingIgnoreCaseAndIsDeletedFalseOrderByNameAsc(String name);
+
+    Optional<Vendor> findByIdAndIsDeletedFalse(Long id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select v from Vendor v where v.id = :id")
+    @Query("select v from Vendor v where v.id = :id and v.isDeleted = false")
     Optional<Vendor> findByIdForUpdate(@Param("id") Long id);
 }

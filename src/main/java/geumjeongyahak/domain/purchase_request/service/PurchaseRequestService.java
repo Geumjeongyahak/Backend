@@ -24,7 +24,7 @@ import geumjeongyahak.domain.notification.event.PurchaseStatusChangedPushEvent;
 import geumjeongyahak.domain.notification.event.RequestReviewedPushEvent;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
-import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
+import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestPaymentTransaction;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.exception.PurchaseRequestErrorCode;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
@@ -59,14 +59,12 @@ public class PurchaseRequestService {
         Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
         User requester = userProxyService.getById(requesterId);
 
-        Vendor vendor = resolveVendor(request.paymentMethod(), request.vendorId());
-
         List<PurchaseRequestItem> items = request.items().stream()
             .map(item -> new PurchaseRequestItem(
                 item.name(),
                 item.reason(),
-                item.price(),
-                getFileOrNull(item.receiptFileId())
+                item.quantity(),
+                item.paymentType()
             ))
             .toList();
 
@@ -76,14 +74,12 @@ public class PurchaseRequestService {
                 requester,
                 request.title(),
                 request.content(),
-                request.paymentMethod(),
-                vendor,
                 items
             )
         );
 
         log.debug("구입 요청 생성 완료 (id={})", saved.getId());
-        return PurchaseRequestDetailResponse.from(saved);
+        return toDetailResponse(saved);
     }
 
     public List<PurchaseRequestSummaryResponse> getPurchaseRequests(Long requesterId, PurchaseRequestStatus status) {
@@ -109,7 +105,7 @@ public class PurchaseRequestService {
     public PurchaseRequestDetailResponse getPurchaseRequest(Long requesterId, Long requestId, boolean isAdmin) {
         PurchaseRequest purchaseRequest = findById(requestId);
         checkAccess(purchaseRequest, requesterId, isAdmin);
-        return PurchaseRequestDetailResponse.from(purchaseRequest);
+        return toDetailResponse(purchaseRequest);
     }
 
     @Transactional
@@ -124,20 +120,19 @@ public class PurchaseRequestService {
             throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
         }
 
-        Vendor vendor = resolveVendor(request.paymentMethod(), request.vendorId());
         List<PurchaseRequestItem> items = request.items().stream()
             .map(item -> new PurchaseRequestItem(
                 item.name(),
                 item.reason(),
-                item.price(),
-                getFileOrNull(item.receiptFileId())
+                item.quantity(),
+                item.paymentType()
             ))
             .toList();
 
-        purchaseRequest.update(request.title(), request.content(), request.paymentMethod(), vendor, items);
+        purchaseRequest.update(request.title(), request.content(), items);
 
         log.debug("구입 요청 수정 완료 (id={})", purchaseRequest.getId());
-        return PurchaseRequestDetailResponse.from(purchaseRequest);
+        return toDetailResponse(purchaseRequest);
     }
 
     @Transactional
@@ -151,9 +146,6 @@ public class PurchaseRequestService {
         }
 
         User approver = userProxyService.getById(approverId);
-        if (purchaseRequest.getPaymentMethod() == PurchasePaymentMethod.VENDOR_PREPAID) {
-            vendorService.deductForPurchaseRequest(purchaseRequest.getVendor(), purchaseRequest, approver);
-        }
         purchaseRequest.approve(approver, processedNote);
         eventPublisher.publish(RequestReviewedPushEvent.approved(
             purchaseRequest.getRequestedBy().getId(),
@@ -166,7 +158,7 @@ public class PurchaseRequestService {
         ));
 
         log.debug("구입 요청 승인 완료 (requestId={})", requestId);
-        return PurchaseRequestDetailResponse.from(purchaseRequest);
+        return toDetailResponse(purchaseRequest);
     }
 
     @Transactional
@@ -191,7 +183,7 @@ public class PurchaseRequestService {
         ));
 
         log.debug("구입 요청 반려 완료 (requestId={})", requestId);
-        return PurchaseRequestDetailResponse.from(purchaseRequest);
+        return toDetailResponse(purchaseRequest);
     }
 
     @Transactional
@@ -200,7 +192,7 @@ public class PurchaseRequestService {
     ) {
         log.debug("구매 완료 보고 (requestId={})", requestId);
         PurchaseRequest purchaseRequest = findById(requestId);
-        checkAccess(purchaseRequest, requesterId, isAdmin);
+        checkAccess(purchaseRequest, requesterId, false);
 
         if (purchaseRequest.getStatus() != PurchaseRequestStatus.APPROVED) {
             throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
@@ -210,21 +202,12 @@ public class PurchaseRequestService {
             throw new BusinessException(PurchaseRequestErrorCode.PURCHASE_DEADLINE_EXCEEDED);
         }
 
-        Map<Long, PurchaseRequestItem> itemMap = purchaseRequest.getItems().stream()
-            .collect(Collectors.toMap(PurchaseRequestItem::getId, i -> i));
-
-        for (ReportPurchaseRequest.ItemReport itemReport : request.items()) {
-            PurchaseRequestItem item = itemMap.get(itemReport.itemId());
-            if (item == null) {
-                throw new ResourceNotFoundException(PurchaseRequestErrorCode.ITEM_NOT_FOUND, itemReport.itemId());
-            }
-            item.updateReceipt(getFileOrNull(itemReport.receiptFileId()));
-        }
+        purchaseRequest.replaceTransactions(toTransactions(request));
 
         purchaseRequest.reportPurchase();
 
         log.debug("구매 완료 보고 완료 (requestId={}, totalPrice={})", requestId, purchaseRequest.getTotalPrice());
-        return PurchaseRequestDetailResponse.from(purchaseRequest);
+        return toDetailResponse(purchaseRequest);
     }
 
     @Transactional
@@ -239,18 +222,9 @@ public class PurchaseRequestService {
             throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
         }
 
-        Map<Long, PurchaseRequestItem> itemMap = purchaseRequest.getItems().stream()
-            .collect(Collectors.toMap(PurchaseRequestItem::getId, i -> i));
+        purchaseRequest.replaceTransactions(toTransactions(request));
 
-        for (ReportPurchaseRequest.ItemReport itemReport : request.items()) {
-            PurchaseRequestItem item = itemMap.get(itemReport.itemId());
-            if (item == null) {
-                throw new ResourceNotFoundException(PurchaseRequestErrorCode.ITEM_NOT_FOUND, itemReport.itemId());
-            }
-            item.updateReceipt(getFileOrNull(itemReport.receiptFileId()));
-        }
-
-        return PurchaseRequestDetailResponse.from(purchaseRequest);
+        return toDetailResponse(purchaseRequest);
     }
 
     @Transactional
@@ -261,6 +235,17 @@ public class PurchaseRequestService {
         if (purchaseRequest.getStatus() != PurchaseRequestStatus.PURCHASED) {
             throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
         }
+
+        validateConfirmable(purchaseRequest);
+        User confirmer = userProxyService.getById(confirmerId);
+        Map<Vendor, Long> amountByVendor = purchaseRequest.getTransactions().stream()
+            .collect(Collectors.groupingBy(
+                PurchaseRequestPaymentTransaction::getVendor,
+                Collectors.summingLong(PurchaseRequestPaymentTransaction::getAmount)
+            ));
+        amountByVendor.forEach((vendor, amount) ->
+            vendorService.deductForPurchaseRequest(vendor, purchaseRequest, amount, confirmer)
+        );
 
         purchaseRequest.confirm();
 
@@ -273,7 +258,7 @@ public class PurchaseRequestService {
         ));
 
         log.debug("구매 결재 확인 완료 (requestId={})", requestId);
-        return PurchaseRequestDetailResponse.from(purchaseRequest);
+        return toDetailResponse(purchaseRequest);
     }
 
     @Transactional
@@ -295,21 +280,48 @@ public class PurchaseRequestService {
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));
     }
 
-    private File getFileOrNull(UUID fileId) {
-        return fileId != null ? fileProxyService.getReferenceById(fileId) : null;
+    private List<PurchaseRequestPaymentTransaction> toTransactions(ReportPurchaseRequest request) {
+        return request.transactions().stream()
+            .map(transaction -> new PurchaseRequestPaymentTransaction(
+                vendorService.getActiveById(transaction.vendorId()),
+                normalizeItemNames(transaction.itemNames()),
+                transaction.amount(),
+                getActiveFileOrNull(transaction.receiptFileId())
+            ))
+            .toList();
     }
 
-    private Vendor resolveVendor(PurchasePaymentMethod paymentMethod, Long vendorId) {
-        if (paymentMethod == PurchasePaymentMethod.VENDOR_PREPAID) {
-            if (vendorId == null) {
-                throw new BadRequestException(PurchaseRequestErrorCode.INVALID_PAYMENT_METHOD, "선결제 방식은 거래처 선택이 필수입니다.");
+    private List<String> normalizeItemNames(List<String> itemNames) {
+        List<String> normalized = itemNames.stream()
+            .filter(StringUtils::hasText)
+            .map(String::trim)
+            .toList();
+        if (normalized.isEmpty()) {
+            throw new BadRequestException(CommonErrorCode.MISSING_REQUIRED_FIELD, "거래 품목명은 필수입니다.");
+        }
+        return normalized;
+    }
+
+    private File getActiveFileOrNull(UUID fileId) {
+        return fileId != null ? fileProxyService.getActiveById(fileId) : null;
+    }
+
+    private void validateConfirmable(PurchaseRequest purchaseRequest) {
+        if (purchaseRequest.getTransactions().isEmpty()) {
+            throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
+        }
+        for (PurchaseRequestPaymentTransaction transaction : purchaseRequest.getTransactions()) {
+            if (transaction.getVendor() == null
+                || transaction.getAmount() == null
+                || transaction.getAmount() <= 0
+                || transaction.getItemNames().isEmpty()) {
+                throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
             }
-            return vendorService.getActiveById(vendorId);
         }
-        if (vendorId != null) {
-            throw new BadRequestException(PurchaseRequestErrorCode.INVALID_PAYMENT_METHOD, "일반 결제 방식은 거래처를 지정할 수 없습니다.");
-        }
-        return null;
+    }
+
+    private PurchaseRequestDetailResponse toDetailResponse(PurchaseRequest purchaseRequest) {
+        return PurchaseRequestDetailResponse.from(purchaseRequest, vendorService.getVendors(null));
     }
 
     private void checkAccess(PurchaseRequest purchaseRequest, Long requesterId, boolean isAdmin) {

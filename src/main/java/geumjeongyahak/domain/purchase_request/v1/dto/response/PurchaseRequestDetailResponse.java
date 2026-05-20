@@ -5,8 +5,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
-import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
+import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestPaymentTransaction;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
+import geumjeongyahak.domain.vendor.v1.dto.response.VendorResponse;
 
 public record PurchaseRequestDetailResponse(
 
@@ -34,15 +36,6 @@ public record PurchaseRequestDetailResponse(
     @Schema(description = "총 구매 금액 (원) - 구매 보고 이후 확정", example = "45000")
     Long totalPrice,
 
-    @Schema(description = "결제 방식", example = "NORMAL")
-    PurchasePaymentMethod paymentMethod,
-
-    @Schema(description = "거래처 ID", example = "1")
-    Long vendorId,
-
-    @Schema(description = "거래처명", example = "예소디자인")
-    String vendorName,
-
     @Schema(description = "요청 상태", example = "PENDING")
     PurchaseRequestStatus status,
 
@@ -61,6 +54,12 @@ public record PurchaseRequestDetailResponse(
     @Schema(description = "구입 항목 목록")
     List<ItemResponse> items,
 
+    @Schema(description = "구매 완료 거래 목록")
+    List<TransactionResponse> transactions,
+
+    @Schema(description = "현재 거래처별 잔액")
+    List<VendorBalanceResponse> vendorBalances,
+
     @Schema(description = "생성 시각")
     LocalDateTime createdAt
 ) {
@@ -68,23 +67,57 @@ public record PurchaseRequestDetailResponse(
         Long id,
         String name,
         String reason,
-        Long price,
-        java.util.UUID receiptFileId,
-        String receiptFileUrl
+        Integer quantity,
+        PurchasePaymentType paymentType
     ) {
         static ItemResponse from(PurchaseRequestItem item) {
             return new ItemResponse(
                 item.getId(),
                 item.getName(),
                 item.getReason(),
-                item.getPrice(),
-                item.getReceiptFile() != null ? item.getReceiptFile().getId() : null,
-                item.getReceiptFile() != null ? item.getReceiptFile().getPublicUrl() : null
+                item.getQuantity(),
+                item.getPaymentType()
             );
         }
     }
 
-    public static PurchaseRequestDetailResponse from(PurchaseRequest r) {
+    public record TransactionResponse(
+        Long id,
+        Long vendorId,
+        String vendorName,
+        List<String> itemNames,
+        Long amount,
+        java.util.UUID receiptFileId,
+        String receiptFileUrl
+    ) {
+        static TransactionResponse from(PurchaseRequestPaymentTransaction transaction) {
+            return new TransactionResponse(
+                transaction.getId(),
+                transaction.getVendor().getId(),
+                transaction.getVendor().getName(),
+                transaction.getItemNames(),
+                transaction.getAmount(),
+                transaction.getReceiptFile() != null ? transaction.getReceiptFile().getId() : null,
+                transaction.getReceiptFile() != null ? transaction.getReceiptFile().getPublicUrl() : null
+            );
+        }
+    }
+
+    public record VendorBalanceResponse(
+        Long vendorId,
+        String vendorName,
+        Long balance
+    ) {
+        public static VendorBalanceResponse from(VendorResponse vendor) {
+            return new VendorBalanceResponse(
+                vendor.id(),
+                vendor.name(),
+                vendor.balance()
+            );
+        }
+    }
+
+    public static PurchaseRequestDetailResponse from(PurchaseRequest r, List<VendorResponse> vendors) {
         return new PurchaseRequestDetailResponse(
             r.getId(),
             r.getClassroom().getId(),
@@ -94,15 +127,14 @@ public record PurchaseRequestDetailResponse(
             r.getTitle(),
             r.getContent(),
             r.getTotalPrice(),
-            r.getPaymentMethod(),
-            r.getVendor() != null ? r.getVendor().getId() : null,
-            r.getVendor() != null ? r.getVendor().getName() : null,
             r.getStatus(),
             r.getApprovalAt(),
             r.getApprovalBy() != null ? r.getApprovalBy().getName() : null,
             r.getPurchasedAt(),
             r.getNote(),
             r.getItems().stream().map(ItemResponse::from).toList(),
+            r.getTransactions().stream().map(TransactionResponse::from).toList(),
+            vendors.stream().map(VendorBalanceResponse::from).toList(),
             r.getCreatedAt()
         );
     }

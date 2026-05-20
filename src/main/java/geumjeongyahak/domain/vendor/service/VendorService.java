@@ -37,8 +37,8 @@ public class VendorService {
 
     public List<VendorResponse> getVendors(String keyword) {
         List<Vendor> vendors = StringUtils.hasText(keyword)
-            ? vendorRepository.findAllByNameContainingIgnoreCaseOrderByNameAsc(keyword.trim())
-            : vendorRepository.findAllByOrderByNameAsc();
+            ? vendorRepository.findAllByNameContainingIgnoreCaseAndIsDeletedFalseOrderByNameAsc(keyword.trim())
+            : vendorRepository.findAllByIsDeletedFalseOrderByNameAsc();
         return vendors.stream().map(VendorResponse::from).toList();
     }
 
@@ -61,15 +61,16 @@ public class VendorService {
 
     @Transactional
     public void deleteVendor(Long vendorId) {
-        vendorBalanceHistoryRepository.deleteAllByVendor_Id(vendorId);
-        vendorRepository.delete(getById(vendorId));
+        Vendor vendor = getById(vendorId);
+        vendor.delete();
+        vendorBalanceHistoryRepository.softDeleteAllByVendor_Id(vendorId);
     }
 
     @Transactional
     public VendorResponse chargeVendor(Long userId, Long vendorId, ChargeVendorRequest request) {
         Vendor vendor = getById(vendorId);
         User user = userProxyService.getById(userId);
-        File receiptFile = getFileOrNull(request.receiptFileId());
+        File receiptFile = getActiveFileOrNull(request.receiptFileId());
 
         vendor.charge(request.amount());
         vendorBalanceHistoryRepository.save(new VendorBalanceHistory(
@@ -87,21 +88,29 @@ public class VendorService {
 
     public List<VendorBalanceHistoryResponse> getHistories(Long vendorId) {
         getById(vendorId);
-        return vendorBalanceHistoryRepository.findAllByVendor_IdOrderByOccurredAtDesc(vendorId).stream()
+        return vendorBalanceHistoryRepository.findAllByVendor_IdAndIsDeletedFalseOrderByOccurredAtDesc(vendorId).stream()
             .map(VendorBalanceHistoryResponse::from)
             .toList();
     }
 
     @Transactional
     public void deductForPurchaseRequest(Vendor vendor, PurchaseRequest purchaseRequest, User approver) {
+        deductForPurchaseRequest(vendor, purchaseRequest, purchaseRequest.getTotalPrice(), approver);
+    }
+
+    @Transactional
+    public void deductForPurchaseRequest(Vendor vendor, PurchaseRequest purchaseRequest, Long amount, User approver) {
         Vendor lockedVendor = getByIdForUpdate(vendor.getId());
-        lockedVendor.deduct(purchaseRequest.getTotalPrice());
+        if (!lockedVendor.isActive()) {
+            throw new geumjeongyahak.common.exception.BusinessException(VendorErrorCode.INACTIVE);
+        }
+        lockedVendor.deduct(amount);
         vendorBalanceHistoryRepository.save(new VendorBalanceHistory(
             lockedVendor,
             VendorBalanceHistoryType.DEDUCT,
-            purchaseRequest.getTotalPrice(),
+            amount,
             lockedVendor.getBalance(),
-            "결제 요청 승인 차감",
+            "결재 확인 차감",
             null,
             purchaseRequest,
             approver
@@ -117,7 +126,7 @@ public class VendorService {
     }
 
     private Vendor getById(Long vendorId) {
-        return vendorRepository.findById(vendorId)
+        return vendorRepository.findByIdAndIsDeletedFalse(vendorId)
             .orElseThrow(() -> new ResourceNotFoundException(VendorErrorCode.NOT_FOUND, vendorId));
     }
 
@@ -128,6 +137,10 @@ public class VendorService {
 
     private File getFileOrNull(UUID fileId) {
         return fileId != null ? fileProxyService.getReferenceById(fileId) : null;
+    }
+
+    private File getActiveFileOrNull(UUID fileId) {
+        return fileId != null ? fileProxyService.getActiveById(fileId) : null;
     }
 
     private String trimToNull(String value) {

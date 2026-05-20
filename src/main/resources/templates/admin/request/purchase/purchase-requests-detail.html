@@ -18,12 +18,12 @@
     </div>
     <div class="panel" style="background: #edf8e8; border-left: 4px solid var(--green); margin-bottom: 24px;" th:if="${request.status.name() == 'APPROVED'}">
         <p style="margin: 0; color: var(--green-dark); font-weight: 800;">
-            승인된 요청입니다. 필요하면 '수정' 버튼을 눌러 품목별 영수증을 등록하거나 교체해 주세요.
+            승인된 요청입니다. 요청자가 거래처, 품목명, 결제 금액과 선택 영수증을 등록할 수 있습니다.
         </p>
     </div>
     <div class="panel" style="background: #f8faf9; border-left: 4px solid var(--green); margin-bottom: 24px;" th:if="${request.status.name() == 'PURCHASED'}">
         <p style="margin: 0; color: var(--green-dark); font-weight: 800;">
-            구매 완료 보고가 제출되었습니다. 품목별 영수증과 금액을 확인한 뒤 결재 확인을 완료해 주세요.
+            구매 완료 보고가 제출되었습니다. 거래처별 결제 금액과 영수증을 확인한 뒤 결재 확인을 완료해 주세요.
         </p>
     </div>
 
@@ -31,13 +31,12 @@
         <div class="detail-item"><span>상태</span><strong th:text="${request.status.name()}">PENDING</strong></div>
         <div class="detail-item"><span>요청자</span><strong><a class="link" th:href="@{/admin/user/users/{userId}(userId=${request.requestedById})}" th:text="${request.requestedByName}">요청자</a></strong></div>
         <div class="detail-item"><span>분반</span><strong><a class="link" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${request.classroomId})}" th:text="${request.classroomName}">분반</a></strong></div>
-        <div class="detail-item"><span>결제 방식</span><strong th:text="${request.paymentMethod.name()}">NORMAL</strong></div>
-        <div class="detail-item"><span>거래처</span><strong th:text="${request.vendorName ?: '-'}">-</strong></div>
         <div class="detail-item"><span>결제 총액</span><strong th:text="${request.totalPrice ?: '-'}">-</strong></div>
         <div class="detail-item"><span>내용</span><strong th:text="${request.content}">내용</strong></div>
         <div class="detail-item"><span>메모</span><strong th:text="${request.note ?: '-'}">-</strong></div>
     </section>
-    <section class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>ID</th><th>품명</th><th>사유</th><th>결제 금액</th><th>영수증</th></tr></thead><tbody><tr th:each="item : ${request.items}"><td th:text="${item.id}">1</td><td th:text="${item.name}">품목</td><td th:text="${item.reason ?: '-'}">사유</td><td th:text="${item.price}">0</td><td><a class="link" th:if="${item.receiptFileUrl != null}" th:href="${item.receiptFileUrl}" target="_blank">보기</a><span th:if="${item.receiptFileUrl == null}">-</span></td></tr></tbody></table></div></section>
+    <section class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>ID</th><th>품명</th><th>사유</th><th>개수</th><th>결제 유형</th></tr></thead><tbody><tr th:each="item : ${request.items}"><td th:text="${item.id}">1</td><td th:text="${item.name}">품목</td><td th:text="${item.reason ?: '-'}">사유</td><td th:text="${item.quantity}">1</td><td th:text="${item.paymentType.name()}">ACTUAL</td></tr></tbody></table></div></section>
+    <section class="panel table-panel" th:if="${!#lists.isEmpty(request.transactions)}"><h3>구매 완료 거래</h3><div class="table-scroll"><table><thead><tr><th>거래처</th><th>품목</th><th>금액</th><th>영수증</th></tr></thead><tbody><tr th:each="transaction : ${request.transactions}"><td th:text="${transaction.vendorName}">거래처</td><td th:text="${transaction.itemNames}">품목</td><td th:text="${transaction.amount}">0</td><td><a class="link" th:if="${transaction.receiptFileUrl != null}" th:href="${transaction.receiptFileUrl}" target="_blank">보기</a><span th:if="${transaction.receiptFileUrl == null}">-</span></td></tr></tbody></table></div></section>
     <section class="panel" th:if="${request.status.name() == 'PENDING'}"><form class="inline-form" th:action="@{/admin/request/purchase/purchase-requests/{requestId}/approve(requestId=${request.id})}" method="post"><input name="note" placeholder="승인 사유" required><button class="button" type="submit">승인</button></form><form class="inline-form" th:action="@{/admin/request/purchase/purchase-requests/{requestId}/reject(requestId=${request.id})}" method="post"><input name="note" placeholder="반려 사유" required><button class="button danger" type="submit">반려</button></form></section>
     <section class="panel" th:if="${request.status.name() == 'PURCHASED'}"><form class="inline-form" th:action="@{/admin/request/purchase/purchase-requests/{requestId}/confirm(requestId=${request.id})}" method="post"><button class="button" type="submit">결재 확인 완료</button></form></section>
 </main>

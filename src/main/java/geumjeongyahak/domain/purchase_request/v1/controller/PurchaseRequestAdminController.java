@@ -126,7 +126,7 @@ public class PurchaseRequestAdminController {
         );
     }
 
-    @Operation(summary = "품목별 영수증 교체")
+    @Operation(summary = "구매 완료 거래 수정")
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
     @PatchMapping("/{requestId}/item-receipts")
     public ResponseEntity<PurchaseRequestDetailResponse> updateItemReceipts(

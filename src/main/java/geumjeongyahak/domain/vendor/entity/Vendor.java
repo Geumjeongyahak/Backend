@@ -1,5 +1,7 @@
 package geumjeongyahak.domain.vendor.entity;
 
+import java.time.LocalDateTime;
+
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.domain.base.entity.BaseEntity;
 import geumjeongyahak.domain.vendor.exception.VendorErrorCode;
@@ -35,11 +37,17 @@ public class Vendor extends BaseEntity {
     @Column(nullable = false)
     private boolean isActive;
 
+    @Column(nullable = false)
+    private boolean isDeleted;
+
+    private LocalDateTime deletedAt;
+
     public Vendor(String name, String description) {
         this.name = name;
         this.description = description;
         this.balance = 0L;
         this.isActive = true;
+        this.isDeleted = false;
     }
 
     public void update(String name, String description, Boolean isActive) {
@@ -63,5 +71,11 @@ public class Vendor extends BaseEntity {
             throw new BusinessException(VendorErrorCode.INSUFFICIENT_BALANCE);
         }
         this.balance -= amount;
+    }
+
+    public void delete() {
+        this.isDeleted = true;
+        this.isActive = false;
+        this.deletedAt = LocalDateTime.now();
     }
 }

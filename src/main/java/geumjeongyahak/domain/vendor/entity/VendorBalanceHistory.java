@@ -64,6 +64,11 @@ public class VendorBalanceHistory extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime occurredAt;
 
+    @Column(nullable = false)
+    private boolean isDeleted;
+
+    private LocalDateTime deletedAt;
+
     public VendorBalanceHistory(
         Vendor vendor,
         VendorBalanceHistoryType type,
@@ -83,5 +88,11 @@ public class VendorBalanceHistory extends BaseEntity {
         this.purchaseRequest = purchaseRequest;
         this.createdBy = createdBy;
         this.occurredAt = LocalDateTime.now();
+        this.isDeleted = false;
+    }
+
+    public void delete() {
+        this.isDeleted = true;
+        this.deletedAt = LocalDateTime.now();
     }
 }

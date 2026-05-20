@@ -104,7 +104,7 @@ public class PurchaseRequestViewController {
         }
 
         List<CreatePurchaseRequestRequest.Item> items = form.getItems().stream()
-            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getPrice(), i.getReceiptFileId()))
+            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getQuantity(), i.getPaymentType()))
             .toList();
 
         Long requestId = purchaseRequestAdminViewService.createPurchaseRequest(
@@ -112,8 +112,6 @@ public class PurchaseRequestViewController {
             form.getClassroomId(),
             form.getTitle(),
             form.getContent(),
-            form.getPaymentMethod(),
-            form.getVendorId(),
             items);
 
         redirectAttributes.addFlashAttribute("message", "구매 요청이 생성되었습니다.");
@@ -133,17 +131,14 @@ public class PurchaseRequestViewController {
         form.setClassroomId(response.classroomId());
         form.setTitle(response.title());
         form.setContent(response.content());
-        form.setPaymentMethod(response.paymentMethod());
-        form.setVendorId(response.vendorId());
         form.setItems(response.items().stream()
             .map(i -> {
                 PurchaseRequestForm.ItemForm item = new PurchaseRequestForm.ItemForm();
                 item.setId(i.id());
                 item.setName(i.name());
                 item.setReason(i.reason());
-                item.setPrice(i.price());
-                item.setReceiptFileId(i.receiptFileId());
-                item.setReceiptFileUrl(i.receiptFileUrl());
+                item.setQuantity(i.quantity());
+                item.setPaymentType(i.paymentType());
                 return item;
             })
             .collect(java.util.stream.Collectors.toList()));
@@ -177,7 +172,7 @@ public class PurchaseRequestViewController {
         }
 
         List<CreatePurchaseRequestRequest.Item> items = form.getItems().stream()
-            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getPrice(), i.getReceiptFileId()))
+            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getQuantity(), i.getPaymentType()))
             .toList();
 
         purchaseRequestAdminViewService.updatePurchaseRequest(
@@ -185,8 +180,6 @@ public class PurchaseRequestViewController {
             requestId,
             form.getTitle(),
             form.getContent(),
-            form.getPaymentMethod(),
-            form.getVendorId(),
             items);
 
         redirectAttributes.addFlashAttribute("message", "구매 요청이 수정되었습니다.");
@@ -219,10 +212,17 @@ public class PurchaseRequestViewController {
             return "redirect:/admin/request/purchase/purchase-requests/" + requestId + "/edit";
         }
 
-        List<geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.ItemReport> itemReports = form.getItems().stream()
-            .filter(i -> i.getId() != null)
-            .map(i -> new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.ItemReport(i.getId(), i.getReceiptFileId()))
-            .toList();
+        List<String> itemNames = form.getTransactionItemNames().isEmpty()
+            ? form.getItems().stream().map(PurchaseRequestForm.ItemForm::getName).toList()
+            : form.getTransactionItemNames();
+        List<geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.TransactionReport> itemReports = List.of(
+            new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.TransactionReport(
+                form.getVendorId(),
+                itemNames,
+                form.getAmount(),
+                form.getReceiptFileId()
+            )
+        );
 
         purchaseRequestAdminViewService.report(userDetails.getUserId(), requestId, itemReports);
 

@@ -5,7 +5,7 @@ import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.file.repository.FileRepository;
 import geumjeongyahak.domain.post.repository.PostAttachmentRepository;
 import geumjeongyahak.domain.post.repository.PostFileRepository;
-import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestItemRepository;
+import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestPaymentTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,7 +25,7 @@ public class FileCleanupScheduler {
     private final FileRepository fileRepository;
     private final PostFileRepository postFileRepository;
     private final PostAttachmentRepository postAttachmentRepository;
-    private final PurchaseRequestItemRepository purchaseRequestItemRepository;
+    private final PurchaseRequestPaymentTransactionRepository purchaseRequestPaymentTransactionRepository;
     private final StorageService storageService;
     private final FileCleanupProperties fileCleanupProperties;
 
@@ -73,7 +73,7 @@ public class FileCleanupScheduler {
             }
             postFileRepository.deleteByFileId(file.getId());
             postAttachmentRepository.deleteByFileId(file.getId());
-            purchaseRequestItemRepository.clearReceiptFileByFileId(file.getId());
+            purchaseRequestPaymentTransactionRepository.clearReceiptFileByFileId(file.getId());
             fileRepository.delete(file);
             count++;
         }

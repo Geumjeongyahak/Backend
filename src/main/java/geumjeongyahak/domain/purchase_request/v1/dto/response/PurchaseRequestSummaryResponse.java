@@ -3,7 +3,6 @@ package geumjeongyahak.domain.purchase_request.v1.dto.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
-import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 
 public record PurchaseRequestSummaryResponse(
@@ -23,12 +22,6 @@ public record PurchaseRequestSummaryResponse(
     @Schema(description = "총 구매 금액 (원) - 구매 보고 이후 확정", example = "45000")
     Long totalPrice,
 
-    @Schema(description = "결제 방식", example = "NORMAL")
-    PurchasePaymentMethod paymentMethod,
-
-    @Schema(description = "거래처명", example = "예소디자인")
-    String vendorName,
-
     @Schema(description = "요청 상태", example = "PENDING")
     PurchaseRequestStatus status,
 
@@ -42,8 +35,6 @@ public record PurchaseRequestSummaryResponse(
             r.getRequestedBy().getName(),
             r.getTitle(),
             r.getTotalPrice(),
-            r.getPaymentMethod(),
-            r.getVendor() != null ? r.getVendor().getName() : null,
             r.getStatus(),
             r.getCreatedAt()
         );

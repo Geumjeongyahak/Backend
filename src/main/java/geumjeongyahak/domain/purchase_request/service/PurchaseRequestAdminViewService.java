@@ -5,7 +5,6 @@ import geumjeongyahak.domain.base.dto.response.AdminSorts;
 import geumjeongyahak.domain.classroom.service.ClassroomAdminViewService;
 import geumjeongyahak.domain.file.service.ImageUploadService;
 import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
-import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
@@ -90,13 +89,11 @@ public class PurchaseRequestAdminViewService {
         Long classroomId,
         String title,
         String content,
-        PurchasePaymentMethod paymentMethod,
-        Long vendorId,
         List<CreatePurchaseRequestRequest.Item> items
     ) {
         return purchaseRequestService.createPurchaseRequest(
             requesterId,
-            new CreatePurchaseRequestRequest(title, content, classroomId, paymentMethod, vendorId, items)
+            new CreatePurchaseRequestRequest(title, content, classroomId, items)
         ).id();
     }
 
@@ -106,14 +103,12 @@ public class PurchaseRequestAdminViewService {
         Long requestId,
         String title,
         String content,
-        PurchasePaymentMethod paymentMethod,
-        Long vendorId,
         List<CreatePurchaseRequestRequest.Item> items
     ) {
         purchaseRequestService.updatePurchaseRequest(
             requesterId,
             requestId,
-            new CreatePurchaseRequestRequest(title, content, null, paymentMethod, vendorId, items),
+            new CreatePurchaseRequestRequest(title, content, null, items),
             true
         );
     }
@@ -145,9 +140,9 @@ public class PurchaseRequestAdminViewService {
     public void report(
         Long requesterId,
         Long requestId,
-        List<geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.ItemReport> items
+        List<geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.TransactionReport> transactions
     ) {
-        purchaseRequestService.reportPurchase(requesterId, requestId, new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest(items), true);
+        purchaseRequestService.reportPurchase(requesterId, requestId, new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest(transactions), true);
     }
 
     @Transactional
