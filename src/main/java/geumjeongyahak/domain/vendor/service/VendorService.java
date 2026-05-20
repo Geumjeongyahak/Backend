@@ -134,11 +134,6 @@ public class VendorService {
         return vendorRepository.findByIdForUpdate(vendorId)
             .orElseThrow(() -> new ResourceNotFoundException(VendorErrorCode.NOT_FOUND, vendorId));
     }
-
-    private File getFileOrNull(UUID fileId) {
-        return fileId != null ? fileProxyService.getReferenceById(fileId) : null;
-    }
-
     private File getActiveFileOrNull(UUID fileId) {
         return fileId != null ? fileProxyService.getActiveById(fileId) : null;
     }
