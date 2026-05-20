@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.post.service.PostCrudService;
-import geumjeongyahak.domain.post.v1.dto.request.PostSearchRequest;
+import geumjeongyahak.domain.post.v1.dto.request.PostBoardSearchRequest;
 import geumjeongyahak.domain.post.v1.dto.response.PostSummaryResponse;
 
 @Slf4j
@@ -33,7 +32,6 @@ import geumjeongyahak.domain.post.v1.dto.response.PostSummaryResponse;
 public class PostBoardController {
     private final PostCrudService postCrudService;
 
-    @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "통합 게시글 목록 조회",
             description = """
@@ -60,7 +58,7 @@ public class PostBoardController {
     )
     @GetMapping
     public ResponseEntity<PaginationResponse<PostSummaryResponse>> getPosts(
-            @ParameterObject @Valid PostSearchRequest request,
+            @ParameterObject @Valid PostBoardSearchRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("GET /api/v1/posts - 통합 게시글 목록 조회 요청");
