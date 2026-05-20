@@ -1,9 +1,12 @@
 package geumjeongyahak.common.security.config;
 
+import java.net.URI;
 import java.time.Duration;
 
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import geumjeongyahak.common.security.handler.CustomAccessDeniedHandler;
 import geumjeongyahak.common.security.handler.CustomAuthenticationEntryPoint;
 import geumjeongyahak.common.security.jwt.JwtAuthenticationFilter;
@@ -47,13 +50,24 @@ public class WebSecurityConfig {
     @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173}")
     private String corsAllowedOrigins;
 
+    @Value("${CORS_ALLOWED_ORIGINS:}")
+    private String corsAllowedOriginsEnv;
+
+    @Value("${app.oauth2.google.frontend-redirect-uri:}")
+    private String googleFrontendRedirectUri;
+
+    @Value("${FRONTEND_REDIRECT_URI:}")
+    private String frontendRedirectUriEnv;
+
     @Bean
     @Order(1)
     public SecurityFilterChain adminFilterChain(HttpSecurity http) throws Exception {
         return http
             .securityMatcher("/admin/**")
             .csrf(AbstractHttpConfigurer::disable)
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/admin/auth/login").permitAll()
                 .anyRequest().hasAnyRole("ADMIN", "MANAGER")
             )
@@ -102,6 +116,8 @@ public class WebSecurityConfig {
 
             // 인가 정책: 화이트리스트만 permitAll + 나머지 authenticated
             .authorizeHttpRequests(auth -> auth
+                // CORS preflight 요청은 인증 토큰 없이 통과해야 함
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // 관리자 로그인 페이지로 redirect 용
                 .requestMatchers(HttpMethod.GET, "/").permitAll()
                 // 정적 리소스 및 문서/헬스체크
@@ -131,10 +147,7 @@ public class WebSecurityConfig {
 
         config.setAllowCredentials(false);
 
-        List<String> origins = Arrays.stream(corsAllowedOrigins.split(","))
-            .map(String::trim)
-            .filter(s -> !s.isBlank())
-            .toList();
+        List<String> origins = resolveCorsAllowedOrigins();
 
         origins.forEach(config::addAllowedOrigin);
 
@@ -147,6 +160,51 @@ public class WebSecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    private List<String> resolveCorsAllowedOrigins() {
+        Set<String> origins = new LinkedHashSet<>();
+        addCorsOrigins(origins, corsAllowedOriginsEnv);
+        addCorsOrigins(origins, corsAllowedOrigins);
+        addOriginFromUri(origins, frontendRedirectUriEnv);
+        addOriginFromUri(origins, googleFrontendRedirectUri);
+        return List.copyOf(origins);
+    }
+
+    private void addCorsOrigins(Set<String> origins, String value) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+
+        Arrays.stream(value.split(","))
+            .map(String::trim)
+            .filter(s -> !s.isBlank())
+            .forEach(origins::add);
+    }
+
+    private void addOriginFromUri(Set<String> origins, String value) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+
+        URI uri;
+        try {
+            uri = URI.create(value.trim());
+        } catch (IllegalArgumentException e) {
+            return;
+        }
+        if (uri.getScheme() == null || uri.getHost() == null) {
+            return;
+        }
+
+        StringBuilder origin = new StringBuilder()
+            .append(uri.getScheme())
+            .append("://")
+            .append(uri.getHost());
+        if (uri.getPort() != -1) {
+            origin.append(':').append(uri.getPort());
+        }
+        origins.add(origin.toString());
     }
 
     @Bean
