@@ -102,8 +102,6 @@ public class WebSecurityConfig {
 
             // 인가 정책: 화이트리스트만 permitAll + 나머지 authenticated
             .authorizeHttpRequests(auth -> auth
-                // CORS preflight 요청
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // 관리자 로그인 페이지로 redirect 용
                 .requestMatchers(HttpMethod.GET, "/").permitAll()
                 // 정적 리소스 및 문서/헬스체크
