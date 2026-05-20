@@ -49,8 +49,8 @@ public class DailyScheduleController {
 
     @PreAuthorize(DAILY_SCHEDULE_READ_ACCESS)
     @Operation(
-        summary = "하루 일정 목록 조회",
-        description = "수업 일지 목록 화면에서 사용할 하루 단위 일정을 조회합니다. 캘린더 교시 조회는 Lesson API를 사용합니다."
+        summary = "수업 일지 목록 조회",
+        description = "작성된 수업 일지를 페이지로 조회합니다. keyword로 분반명, 담당 교사명, 과목명, 수업 일지 내용을 검색하고, mine=true이면 로그인 사용자가 담당자인 수업 일지만 조회합니다."
     )
     @GetMapping
     public ResponseEntity<PaginationResponse<DailyScheduleSummaryResponse>> getDailySchedules(
@@ -68,7 +68,7 @@ public class DailyScheduleController {
     }
 
     @PreAuthorize(DAILY_SCHEDULE_READ_ACCESS)
-    @Operation(summary = "하루 일정 상세 조회", description = "수업 일지 작성/출석 처리 화면에 필요한 하루 일정 상세 정보를 조회합니다.")
+    @Operation(summary = "하루 일정 상세 조회", description = "하루 일정의 수업, 교사 출석, 학생 출석부, 수업 일지 내용을 조회합니다.")
     @GetMapping("/{dailyScheduleId}")
     public ResponseEntity<DailyScheduleDetailResponse> getDailySchedule(
         @PathVariable Long dailyScheduleId,
@@ -106,7 +106,10 @@ public class DailyScheduleController {
     }
 
     @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
-    @Operation(summary = "하루 일정 수업 일지 최초 작성", description = "수업 날짜와 분반 기준으로 하루 일정을 찾아 교시별 수업 일지를 최초 작성합니다.")
+    @Operation(
+        summary = "수업 일지 최초 작성",
+        description = "수업 날짜와 분반 ID 기준으로 하루 일정을 찾아 교시별 수업 일지를 최초 작성합니다. 이미 작성된 수업 일지가 있으면 409 Conflict를 반환합니다."
+    )
     @PostMapping("/journal")
     public ResponseEntity<DailyScheduleDetailResponse> createJournal(
         @Valid @RequestBody CreateDailyScheduleJournalRequest request,
@@ -126,7 +129,7 @@ public class DailyScheduleController {
     }
 
     @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
-    @Operation(summary = "하루 일정 수업 일지 수정", description = "하루 일정에 연결된 교시별 수업 일지를 수정합니다.")
+    @Operation(summary = "수업 일지 수정", description = "dailyScheduleId 기준으로 교시별 수업 일지 내용과 개인정보 입력값을 수정합니다.")
     @PatchMapping("/{dailyScheduleId}/journal")
     public ResponseEntity<DailyScheduleDetailResponse> updateJournal(
         @PathVariable Long dailyScheduleId,
@@ -147,7 +150,7 @@ public class DailyScheduleController {
     }
 
     @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
-    @Operation(summary = "하루 일정 수업 일지 삭제", description = "DailySchedule 자체는 유지하고 연결된 교시별 수업 일지 내용과 개인정보 입력값을 초기화합니다.")
+    @Operation(summary = "수업 일지 삭제", description = "DailySchedule 자체와 출석 정보는 유지하고, 연결된 교시별 수업 일지 내용과 개인정보 입력값만 초기화합니다.")
     @DeleteMapping("/{dailyScheduleId}/journal")
     public ResponseEntity<Void> deleteJournal(
         @PathVariable Long dailyScheduleId,

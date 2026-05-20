@@ -326,17 +326,17 @@ public class DailyScheduleService {
         UpdateDailyScheduleJournalRequest request
     ) {
         log.debug(
-            "DailySchedule 수업 일지 저장 요청 (dailyScheduleId={}, authorId={}, lessonJournalCount={})",
+            "DailySchedule 수업 일지 수정 요청 (dailyScheduleId={}, authorId={}, lessonJournalCount={})",
             dailyScheduleId,
             authorId,
             request.lessonJournals().size()
         );
         DailySchedule dailySchedule = dailyScheduleRepository.findByIdAndIsDeletedFalse(dailyScheduleId)
             .orElseThrow(() -> {
-                log.info("DailySchedule 수업 일지 저장 실패 - 하루 일정을 찾을 수 없습니다. ID: {}", dailyScheduleId);
+                log.info("DailySchedule 수업 일지 수정 실패 - 하루 일정을 찾을 수 없습니다. ID: {}", dailyScheduleId);
                 return new DailyScheduleNotFoundException(dailyScheduleId);
         });
-        validateDailyScheduleWritable(dailySchedule, authorId, canWriteAnyDailySchedule, "수업 일지 저장");
+        validateDailyScheduleWritable(dailySchedule, authorId, canWriteAnyDailySchedule, "수업 일지 수정");
         validateJournalState(dailySchedule);
         validateJournalPersonalInfo(
             dailySchedule.getId(),
@@ -351,7 +351,7 @@ public class DailyScheduleService {
             request.residentRegistrationNumberPrefix(),
             request.lessonJournals()
         );
-        log.debug("DailySchedule 수업 일지 저장 완료 (dailyScheduleId={})", dailyScheduleId);
+        log.debug("DailySchedule 수업 일지 수정 완료 (dailyScheduleId={})", dailyScheduleId);
         return getDailySchedule(dailyScheduleId, authorId, canWriteAnyDailySchedule);
     }
 
