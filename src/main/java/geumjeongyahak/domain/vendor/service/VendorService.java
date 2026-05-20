@@ -94,12 +94,13 @@ public class VendorService {
 
     @Transactional
     public void deductForPurchaseRequest(Vendor vendor, PurchaseRequest purchaseRequest, User approver) {
-        vendor.deduct(purchaseRequest.getTotalPrice());
+        Vendor lockedVendor = getByIdForUpdate(vendor.getId());
+        lockedVendor.deduct(purchaseRequest.getTotalPrice());
         vendorBalanceHistoryRepository.save(new VendorBalanceHistory(
-            vendor,
+            lockedVendor,
             VendorBalanceHistoryType.DEDUCT,
             purchaseRequest.getTotalPrice(),
-            vendor.getBalance(),
+            lockedVendor.getBalance(),
             "결제 요청 승인 차감",
             null,
             purchaseRequest,
@@ -117,6 +118,11 @@ public class VendorService {
 
     private Vendor getById(Long vendorId) {
         return vendorRepository.findById(vendorId)
+            .orElseThrow(() -> new ResourceNotFoundException(VendorErrorCode.NOT_FOUND, vendorId));
+    }
+
+    private Vendor getByIdForUpdate(Long vendorId) {
+        return vendorRepository.findByIdForUpdate(vendorId)
             .orElseThrow(() -> new ResourceNotFoundException(VendorErrorCode.NOT_FOUND, vendorId));
     }
 
