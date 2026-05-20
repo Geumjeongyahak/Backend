@@ -440,12 +440,14 @@ erDiagram
 | description | TEXT | NULL | 거래처 설명 |
 | balance | BIGINT | NOT NULL, DEFAULT 0 | 현재 선결제 잔액 |
 | is_active | BOOLEAN | NOT NULL, DEFAULT TRUE | 사용 가능 여부 |
+| is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | 삭제 여부 |
+| deleted_at | TIMESTAMP | NULL | 삭제 시각 |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
 ### 3.14 기자재 구입 요청 (purchase_requests)
 
-봉사자 혹은 관리자가 수업에 필요한 기자재를 구입하기 위해 사용하는 엔티티입니다. 요청 금액은 품목 금액 합산으로 계산하며, 영수증은 요청 단위가 아니라 품목 단위로 연결합니다.
+봉사자 혹은 관리자가 수업에 필요한 기자재를 구입하기 위해 사용하는 엔티티입니다. 최초 요청에는 예상 금액을 저장하지 않고, 구매 완료 보고 거래 라인의 금액 합산으로 총액을 계산합니다.
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
@@ -454,9 +456,7 @@ erDiagram
 | requested_by | BIGINT | FOREIGN KEY, NOT NULL | 기자재 구입 요청자 ID |
 | title | VARCHAR(255) | NOT NULL | 기자재 구입 요청 제목 |
 | content | TEXT | NOT NULL | 기자재 구입 요청 내용 |
-| total_price | BIGINT | NOT NULL | 품목 금액 합산 총액 |
-| payment_method | VARCHAR(30) | NOT NULL | 결제 방식 (`NORMAL`, `VENDOR_PREPAID`) |
-| vendor_id | BIGINT | FOREIGN KEY, NULL | 거래처 ID (`VENDOR_PREPAID`일 때 사용) |
+| total_price | BIGINT | NOT NULL | 구매 완료 거래 금액 합산 총액 |
 | status | VARCHAR(20) | NOT NULL | 기자재 구입 요청 상태 |
 | approval_at | TIMESTAMP | NULL | 기자재 구입 요청 승인일시 |
 | approval_by | BIGINT | FOREIGN KEY | 기자재 구입 요청 승인자 ID |
@@ -470,15 +470,14 @@ erDiagram
 - `APPROVED` → `PURCHASED`
 - `PURCHASED` → `CONFIRMED`
 
-**결제 방식 규칙:**
-- `NORMAL` 요청은 `vendor_id`를 저장하지 않습니다.
-- `VENDOR_PREPAID` 요청은 활성 거래처가 필요합니다.
-- `VENDOR_PREPAID` 승인 시 거래처 잔액을 차감하고 `vendor_balance_histories`에 `DEDUCT` 이력을 저장합니다.
-- 거래처 잔액 부족 시 승인 요청은 실패하며 요청 상태와 거래처 잔액은 변경되지 않습니다.
+**결재 확인 규칙:**
+- 구매 완료 거래 라인에 거래처, 품목명, 양수 결제 금액이 있어야 `CONFIRMED` 전환이 가능합니다.
+- `CONFIRMED` 전환 시 거래처별 총 결제 금액을 차감하고 `vendor_balance_histories`에 `DEDUCT` 이력을 저장합니다.
+- 거래처 잔액 부족, 비활성, 삭제 상태이면 결재 확인은 실패하며 요청 상태와 거래처 잔액은 변경되지 않습니다.
 
 ### 3.15 기자재 구입 요청 품목 (purchase_requests_items)
 
-구입 요청의 품목 단위 금액과 영수증을 관리하는 엔티티입니다. 요청 단위 영수증 테이블은 사용하지 않고, 각 품목이 선택적으로 `files` 레코드를 영수증으로 참조합니다.
+구입 요청의 신청 품목을 관리하는 엔티티입니다.
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
@@ -486,14 +485,26 @@ erDiagram
 | purchase_request_id | BIGINT | FOREIGN KEY, NOT NULL | 기자재 구입 요청 ID |
 | name | VARCHAR(255) | NOT NULL | 품명 |
 | reason | TEXT | NULL | 구입 사유 |
-| price | BIGINT | NOT NULL | 확정 결제 금액 |
-| receipt_file_id | UUID | FOREIGN KEY, NULL | 품목별 영수증 파일 ID |
+| quantity | INTEGER | NOT NULL | 개수 |
+| payment_type | VARCHAR(20) | NOT NULL | 결제 유형 (`PREPAID`, `ACTUAL`) |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
+### 3.15.1 구매 완료 거래 (purchase_request_payment_transactions)
+
+구매 완료 보고 단계에서 거래처별 실제 결제 금액과 선택 영수증을 관리하는 엔티티입니다. 한 거래 라인에는 여러 품목명을 연결할 수 있습니다.
+
+| 필드명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 거래 라인 ID |
+| purchase_request_id | BIGINT | FOREIGN KEY, NOT NULL | 기자재 구입 요청 ID |
+| vendor_id | BIGINT | FOREIGN KEY, NOT NULL | 거래처 ID |
+| amount | BIGINT | NOT NULL | 총 결제 금액 |
+| receipt_file_id | UUID | FOREIGN KEY, NULL | 영수증 파일 ID |
+
 ### 3.16 거래처 잔액 이력 (vendor_balance_histories)
 
-거래처 충전과 구입 요청 승인 차감을 기록하는 엔티티입니다.
+거래처 충전과 결재 확인 차감을 기록하는 엔티티입니다.
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
@@ -507,6 +518,8 @@ erDiagram
 | purchase_request_id | BIGINT | FOREIGN KEY, NULL | 차감과 연결된 구입 요청 ID |
 | created_by | BIGINT | FOREIGN KEY, NOT NULL | 처리자 ID |
 | occurred_at | TIMESTAMP | NOT NULL | 발생 시각 |
+| is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | 삭제 여부 |
+| deleted_at | TIMESTAMP | NULL | 삭제 시각 |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
@@ -532,5 +545,5 @@ erDiagram
 **정책:**
 - 파일 삭제 요청 시 즉시 DB 레코드를 제거하지 않고 `is_deleted = true`, `deleted_at = now()`로 표시합니다.
 - 파일 정리 스케줄러는 보관 기간이 지난 soft deleted 파일을 스토리지와 DB에서 최종 삭제합니다.
-- `documents/purchase-items/` 경로의 품목 영수증 파일이 일정 시간 동안 어떤 `purchase_requests_items.receipt_file_id`에도 연결되지 않으면 스케줄러가 soft delete 처리합니다.
+- `documents/purchase-items/` 경로의 영수증 파일이 일정 시간 동안 어떤 구매 완료 거래의 `receipt_file_id`에도 연결되지 않으면 스케줄러가 soft delete 처리합니다.
 - hard delete는 storage 삭제에 성공한 파일에만 수행합니다. storage 삭제 실패 시 DB 레코드를 유지해 다음 주기에 재시도합니다.
