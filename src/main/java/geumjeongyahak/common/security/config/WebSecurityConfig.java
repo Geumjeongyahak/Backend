@@ -115,6 +115,7 @@ public class WebSecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/departments").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/lessons").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/channels").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/posts").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/channels/*/posts", "/api/v1/channels/*/posts/**").permitAll()
                 // 그 외는 인증 필요
                 .anyRequest().authenticated()

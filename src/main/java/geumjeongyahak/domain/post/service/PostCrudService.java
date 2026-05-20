@@ -3,6 +3,7 @@ package geumjeongyahak.domain.post.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import geumjeongyahak.common.event.EventPublisher;
@@ -11,6 +12,7 @@ import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.channel.entity.Channel;
+import geumjeongyahak.domain.channel.service.ChannelAccessChecker;
 import geumjeongyahak.domain.channel.service.ChannelProxyService;
 import geumjeongyahak.domain.post.config.PostProperties;
 import geumjeongyahak.domain.post.entity.Post;
@@ -22,6 +24,7 @@ import geumjeongyahak.domain.post.repository.PostRepository;
 import geumjeongyahak.domain.post.repository.PostSpecs;
 import geumjeongyahak.domain.post.repository.PostAttachmentRepository;
 import geumjeongyahak.domain.post.repository.PostFileRepository;
+import geumjeongyahak.domain.post.v1.dto.request.PostBoardSearchRequest;
 import geumjeongyahak.domain.post.v1.dto.request.CreatePostRequest;
 import geumjeongyahak.domain.post.v1.dto.request.PostSearchRequest;
 import geumjeongyahak.domain.post.v1.dto.request.UpdatePostRequest;
@@ -46,6 +49,7 @@ import org.springframework.data.domain.Pageable;
 public class PostCrudService {
     private final PostRepository postRepository;
     private final ChannelProxyService channelProxyService;
+    private final ChannelAccessChecker channelAccessChecker;
     private final UserProxyService userProxyService;
     private final PostSearchSpecificationBuilder postSearchSpecificationBuilder;
     private final EventPublisher eventPublisher;
@@ -78,7 +82,9 @@ public class PostCrudService {
     }
 
     public PaginationResponse<PostSummaryResponse> getPosts(Long channelId, CustomUserDetails userDetails, PostSearchRequest request) {
-        Specification<Post> spec = postSearchSpecificationBuilder.build(request, userDetails)
+        ensureContentSearchAllowed(channelId, userDetails, request);
+
+        Specification<Post> spec = postSearchSpecificationBuilder.build(request)
                 .and(PostSpecs.hasChannelId(channelId));
 
         return PaginationResponse.from(
@@ -87,9 +93,11 @@ public class PostCrudService {
         );
     }
 
-    public PaginationResponse<PostSummaryResponse> getPosts(CustomUserDetails userDetails, PostSearchRequest request) {
+    public PaginationResponse<PostSummaryResponse> getPosts(CustomUserDetails userDetails, PostBoardSearchRequest request) {
+        ensureContentSearchAllowed(request.getChannelId(), userDetails, request);
+
         return PaginationResponse.from(
-                postRepository.findAll(postSearchSpecificationBuilder.build(request, userDetails), request.toRequest()),
+                postRepository.findAll(postSearchSpecificationBuilder.build(request), request.toRequest()),
                 PostSummaryResponse::from
         );
     }
@@ -217,6 +225,42 @@ public class PostCrudService {
             return null;
         }
         return LocalDateTime.now().plusMinutes(postProperties.getDraftExpirationMinutes());
+    }
+
+    private void ensureContentSearchAllowed(Long channelId, CustomUserDetails userDetails, PostSearchRequest request) {
+        if (!hasText(request.getContent())) {
+            return;
+        }
+
+        if (canSearchContent(channelId, userDetails)) {
+            return;
+        }
+
+        throw new AccessDeniedException("게시글 본문 검색 권한이 없습니다.");
+    }
+
+    private boolean canSearchContent(Long channelId, CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            return false;
+        }
+        if (userDetails.isAdmin()) {
+            return true;
+        }
+        if (channelId != null && channelAccessChecker.can("read", channelId, userDetails)) {
+            return true;
+        }
+        return hasWildcardChannelPermission(userDetails);
+    }
+
+    private boolean hasWildcardChannelPermission(CustomUserDetails userDetails) {
+        return userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("channel:read:*")
+                        || a.getAuthority().equals("channel:write:*")
+                        || a.getAuthority().equals("channel:manage:*"));
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private void publishPostChangedEvent(Long channelId) {
