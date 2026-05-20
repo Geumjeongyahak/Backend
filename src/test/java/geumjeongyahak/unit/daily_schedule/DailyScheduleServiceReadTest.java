@@ -16,15 +16,18 @@ import geumjeongyahak.domain.daily_schedule.enums.DailyScheduleStatus;
 import geumjeongyahak.domain.daily_schedule.enums.DailyStudentAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleForbiddenException;
+import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleJournalAlreadyExistsException;
 import geumjeongyahak.domain.daily_schedule.exception.DuplicateDailyStudentAttendanceException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleAttendanceStateException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleJournalStateException;
+import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleJournalLessonsException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailySchedulePersonalInfoException;
 import geumjeongyahak.domain.daily_schedule.exception.StudentNotInDailyScheduleException;
 import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyStudentAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyTeacherAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleService;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.CreateDailyScheduleJournalRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailySchedulePaginationRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
@@ -223,6 +226,79 @@ class DailyScheduleServiceReadTest {
     }
 
     @Test
+    void createJournal_createsByLessonDateAndClassroom() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Subject subject = subject(classroom, teacher, lessonDate);
+        Lesson firstLesson = lesson(subject, teacher, lessonDate, 1);
+        Lesson secondLesson = lesson(subject, teacher, lessonDate, 2);
+        ReflectionTestUtils.setField(firstLesson, "id", 11L);
+        ReflectionTestUtils.setField(secondLesson, "id", 12L);
+
+        given(dailyScheduleRepository.findByClassroomIdAndLessonDateAndIsDeletedFalse(classroom.getId(), lessonDate))
+            .willReturn(Optional.of(dailySchedule));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of(firstLesson, secondLesson));
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.empty());
+        given(dailyStudentAttendanceRepository.findAllByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(List.of());
+
+        DailyScheduleDetailResponse response = dailyScheduleService.createJournal(
+            teacher.getId(),
+            false,
+            new CreateDailyScheduleJournalRequest(
+                lessonDate,
+                classroom.getId(),
+                true,
+                "900101",
+                List.of(
+                    new UpdateDailyScheduleJournalRequest.LessonJournalRequest(11L, "1교시 수업 내용"),
+                    new UpdateDailyScheduleJournalRequest.LessonJournalRequest(12L, "2교시 수업 내용")
+                )
+            )
+        );
+
+        assertThat(firstLesson.getNote()).isEqualTo("1교시 수업 내용");
+        assertThat(secondLesson.getNote()).isEqualTo("2교시 수업 내용");
+        assertThat(dailySchedule.getResidentRegistrationNumberPrefix()).isEqualTo("900101");
+        assertThat(response.lessons()).hasSize(2);
+    }
+
+    @Test
+    void createJournal_throwsWhenJournalAlreadyExists() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Subject subject = subject(classroom, teacher, lessonDate);
+        Lesson lesson = lesson(subject, teacher, lessonDate, 1);
+        ReflectionTestUtils.setField(lesson, "id", 11L);
+        lesson.updateNote("기존 수업 내용");
+
+        given(dailyScheduleRepository.findByClassroomIdAndLessonDateAndIsDeletedFalse(classroom.getId(), lessonDate))
+            .willReturn(Optional.of(dailySchedule));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of(lesson));
+
+        assertThatThrownBy(() -> dailyScheduleService.createJournal(
+            teacher.getId(),
+            false,
+            new CreateDailyScheduleJournalRequest(
+                lessonDate,
+                classroom.getId(),
+                true,
+                "900101",
+                List.of(new UpdateDailyScheduleJournalRequest.LessonJournalRequest(11L, "수업 내용"))
+            )
+        )).isInstanceOf(DailyScheduleJournalAlreadyExistsException.class);
+    }
+
+    @Test
     void updateJournal_updatesAuthorPersonalInfoAndLessonNotes() {
         LocalDate lessonDate = LocalDate.of(2026, 5, 20);
         Classroom classroom = classroom(1L);
@@ -304,6 +380,62 @@ class DailyScheduleServiceReadTest {
             lessonDate,
             LessonStatus.COMPLETED
         );
+    }
+
+    @Test
+    void updateJournal_throwsWhenNotAllLessonsAreRequested() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Subject subject = subject(classroom, teacher, lessonDate);
+        Lesson firstLesson = lesson(subject, teacher, lessonDate, 1);
+        Lesson secondLesson = lesson(subject, teacher, lessonDate, 2);
+        ReflectionTestUtils.setField(firstLesson, "id", 11L);
+        ReflectionTestUtils.setField(secondLesson, "id", 12L);
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of(firstLesson, secondLesson));
+
+        assertThatThrownBy(() -> dailyScheduleService.updateJournal(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            new UpdateDailyScheduleJournalRequest(
+                true,
+                "900101",
+                List.of(new UpdateDailyScheduleJournalRequest.LessonJournalRequest(11L, "1교시 수업 내용"))
+            )
+        )).isInstanceOf(InvalidDailyScheduleJournalLessonsException.class);
+    }
+
+    @Test
+    void deleteJournal_clearsNotesAndPersonalInfo() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        dailySchedule.updateJournalPersonalInfo("900101", true);
+        dailySchedule.updateStatus(DailyScheduleStatus.COMPLETED);
+        Subject subject = subject(classroom, teacher, lessonDate);
+        Lesson lesson = lesson(subject, teacher, lessonDate, 1);
+        lesson.updateNote("수업 내용");
+        lesson.updateStatus(LessonStatus.COMPLETED);
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of(lesson));
+
+        dailyScheduleService.deleteJournal(dailySchedule.getId(), teacher.getId(), false);
+
+        assertThat(lesson.getNote()).isNull();
+        assertThat(lesson.getStatus()).isEqualTo(LessonStatus.SCHEDULED);
+        assertThat(dailySchedule.getStatus()).isEqualTo(DailyScheduleStatus.SCHEDULED);
+        assertThat(dailySchedule.getResidentRegistrationNumberPrefix()).isNull();
+        assertThat(dailySchedule.isPersonalInfoConsent()).isFalse();
     }
 
     @Test

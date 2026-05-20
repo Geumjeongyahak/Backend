@@ -3,6 +3,7 @@ package geumjeongyahak.domain.daily_schedule.v1.controller;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleService;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.CreateDailyScheduleJournalRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailySchedulePaginationRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleVolunteerHoursRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
@@ -22,11 +23,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -104,15 +106,35 @@ public class DailyScheduleController {
     }
 
     @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
-    @Operation(summary = "하루 일정 수업 일지 저장", description = "하루 일정에 연결된 교시별 수업 일지를 저장하거나 수정합니다.")
-    @PutMapping("/{dailyScheduleId}/journal")
+    @Operation(summary = "하루 일정 수업 일지 최초 작성", description = "수업 날짜와 분반 기준으로 하루 일정을 찾아 교시별 수업 일지를 최초 작성합니다.")
+    @PostMapping("/journal")
+    public ResponseEntity<DailyScheduleDetailResponse> createJournal(
+        @Valid @RequestBody CreateDailyScheduleJournalRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug(
+            "POST /api/v1/daily-schedules/journal - 수업 일지 생성 요청 (classroomId={}, lessonDate={}, lessonJournalCount={})",
+            request.classroomId(),
+            request.lessonDate(),
+            request.lessonJournals().size()
+        );
+        return ResponseEntity.ok(dailyScheduleService.createJournal(
+            userDetails.getUserId(),
+            canManageAnyDailySchedule(userDetails),
+            request
+        ));
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
+    @Operation(summary = "하루 일정 수업 일지 수정", description = "하루 일정에 연결된 교시별 수업 일지를 수정합니다.")
+    @PatchMapping("/{dailyScheduleId}/journal")
     public ResponseEntity<DailyScheduleDetailResponse> updateJournal(
         @PathVariable Long dailyScheduleId,
         @Valid @RequestBody UpdateDailyScheduleJournalRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug(
-            "PUT /api/v1/daily-schedules/{}/journal - 수업 일지 저장 요청 (lessonJournalCount={})",
+            "PATCH /api/v1/daily-schedules/{}/journal - 수업 일지 수정 요청 (lessonJournalCount={})",
             dailyScheduleId,
             request.lessonJournals().size()
         );
@@ -122,6 +144,22 @@ public class DailyScheduleController {
             canManageAnyDailySchedule(userDetails),
             request
         ));
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
+    @Operation(summary = "하루 일정 수업 일지 삭제", description = "DailySchedule 자체는 유지하고 연결된 교시별 수업 일지 내용과 개인정보 입력값을 초기화합니다.")
+    @DeleteMapping("/{dailyScheduleId}/journal")
+    public ResponseEntity<Void> deleteJournal(
+        @PathVariable Long dailyScheduleId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("DELETE /api/v1/daily-schedules/{}/journal - 수업 일지 삭제 요청", dailyScheduleId);
+        dailyScheduleService.deleteJournal(
+            dailyScheduleId,
+            userDetails.getUserId(),
+            canManageAnyDailySchedule(userDetails)
+        );
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
