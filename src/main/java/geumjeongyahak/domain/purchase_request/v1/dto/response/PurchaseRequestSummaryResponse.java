@@ -22,12 +22,6 @@ public record PurchaseRequestSummaryResponse(
     @Schema(description = "총 구매 금액 (원) - 구매 보고 이후 확정", example = "45000")
     Long totalPrice,
 
-    @Schema(description = "요청 전체 선금 요청 금액 (원)", example = "50000")
-    Long advancePaymentRequestedAmount,
-
-    @Schema(description = "승인된 선금 금액 (원)", example = "50000")
-    Long advancePaymentApprovedAmount,
-
     @Schema(description = "요청 상태", example = "PENDING")
     PurchaseRequestStatus status,
 
@@ -41,8 +35,6 @@ public record PurchaseRequestSummaryResponse(
             r.getRequestedBy().getName(),
             r.getTitle(),
             r.getTotalPrice(),
-            r.getAdvancePaymentRequestedAmount(),
-            r.getAdvancePaymentApprovedAmount(),
             r.getStatus(),
             r.getCreatedAt()
         );
