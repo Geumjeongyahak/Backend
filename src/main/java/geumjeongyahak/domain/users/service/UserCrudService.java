@@ -20,7 +20,10 @@ import geumjeongyahak.domain.users.exception.DuplicateEmailException;
 import geumjeongyahak.domain.users.exception.DuplicateNicknameException;
 import geumjeongyahak.domain.users.exception.UserNotFoundException;
 import geumjeongyahak.domain.users.repository.UserRepository;
+import geumjeongyahak.domain.users.repository.specification.UserSpecs;
+import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,10 +49,28 @@ public class UserCrudService {
 
     @Transactional(readOnly = true)
     public PaginationResponse<UserSimpleResponse> getAllUsersPagination(UserPaginationRequest request) {
-        log.debug("전체 사용자 목록 조회 요청");
-        var pageResponse = new PaginationResponse<>(userRepository.findAll(request.toRequest()));
+        log.debug("전체 사용자 목록 조회 요청 - role: {}, nickname: {}, name: {}, currentTeacher: {}",
+            request.getRole(), request.getNickname(), request.getName(), request.getCurrentTeacher());
+
+        Specification<User> spec = Specification.where(null);
+
+        if (request.getRole() != null) {
+            spec = spec.and(UserSpecs.hasRole(RoleType.valueOf(request.getRole())));
+        }
+        if (request.getNickname() != null) {
+            spec = spec.and(UserSpecs.containsNickname(request.getNickname()));
+        }
+        if (request.getName() != null) {
+            spec = spec.and(UserSpecs.containsName(request.getName()));
+        }
+        if (request.isCurrentTeacherOnly()) {
+            spec = spec.and(UserSpecs.isCurrentTeacher(LocalDate.now()));
+        }
+
+        var users = userRepository.findAll(spec, request.toRequest());
+        var pageResponse = new PaginationResponse<>(users);
         log.debug("전체 사용자 목록 조회 완료 - 총 {}명", pageResponse.getTotalElements());
-        
+
         return PaginationResponse.mapTo(pageResponse, UserSimpleResponse::from);
     }
 
