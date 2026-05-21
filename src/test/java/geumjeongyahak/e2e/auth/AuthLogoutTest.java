@@ -174,7 +174,8 @@ class AuthLogoutTest extends AuthBaseTest {
                 "멀티 디바이스 테스트",
                 uniqueUsername + "@test.com",
                 null,
-                "010-1234-5678"
+                "010-1234-5678",
+                "900101"
         );
 
         var signupResponse = given()

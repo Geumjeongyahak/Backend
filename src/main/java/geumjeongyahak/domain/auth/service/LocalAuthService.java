@@ -2,6 +2,7 @@ package geumjeongyahak.domain.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -33,19 +34,40 @@ public class LocalAuthService {
     @Transactional
     public TokenResponse login(LocalLoginRequest request) {
         log.debug("로그인 시도: {}", request.email());
+        UserCredential credential = authenticateLocalCredential(request);
+        return completeLogin(credential, "로그인");
+    }
 
+    @Transactional
+    public TokenResponse adminLogin(LocalLoginRequest request) {
+        log.debug("관리자 로그인 시도: {}", request.email());
+
+        UserCredential credential = authenticateLocalCredential(request);
+        RoleType role = credential.getUser().getRole();
+        if (role != RoleType.ADMIN && role != RoleType.MANAGER) {
+            throw new AccessDeniedException("관리자 로그인이 허용되지 않은 계정입니다.");
+        }
+
+        return completeLogin(credential, "관리자 로그인");
+    }
+
+    private UserCredential authenticateLocalCredential(LocalLoginRequest request) {
         if (!userCredentialService.existsByCredentialEmailAndProvider(request.email(), ProviderType.LOCAL)) {
             throw new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
         UserCredential credential = userCredentialService.getCredentialByCredentialEmailAndProvider(request.email(), ProviderType.LOCAL);
-        
+
         if (credential.getPasswordHash() == null || !passwordEncoder.matches(request.password(), credential.getPasswordHash())) {
             throw new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
+        return credential;
+    }
+
+    private TokenResponse completeLogin(UserCredential credential, String logPrefix) {
         credential.setLastLoginAt(LocalDateTime.now());
         TokenResponse tokenResponse = createTokenResponse(credential.getUser(), credential.getId());
-        log.info("로그인 성공: userId={}, email={}", credential.getUser().getId(), credential.getCredentialEmail());
+        log.info("{} 성공: userId={}, email={}", logPrefix, credential.getUser().getId(), credential.getCredentialEmail());
         return tokenResponse;
     }
 
@@ -63,7 +85,8 @@ public class LocalAuthService {
             .email(request.email())
             .phoneNumber(request.phoneNumber())
             .profileImageUrl(request.profileImageUrl())
-            .role(RoleType.VOLUNTEER)
+            .residentRegistrationNumberPrefix(request.residentRegistrationNumberPrefix())
+            .role(RoleType.GUEST)
             .build();
 
         User savedUser = userProxyService.save(user);

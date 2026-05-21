@@ -23,7 +23,8 @@ class AuthSignupTest extends AuthBaseTest {
                 "회원가입 테스트",
                 uniqueEmail,
                 null,
-                "010-1234-5678"
+                "010-1234-5678",
+                "900101"
         );
 
         var response = given()
@@ -66,7 +67,8 @@ class AuthSignupTest extends AuthBaseTest {
                 "중복 테스트",
                 TEST_ADMIN_EMAIL,  // 이미 존재하는 이메일
                 null,
-                "010-1234-5678"
+                "010-1234-5678",
+                "900101"
         );
 
         given()
@@ -107,7 +109,8 @@ class AuthSignupTest extends AuthBaseTest {
                 "테스트 사용자",
                 "test" + System.currentTimeMillis() + "@test.com",
                 null,
-                "010-1234-5678"
+                "010-1234-5678",
+                "900101"
         );
 
         given()
@@ -129,7 +132,8 @@ class AuthSignupTest extends AuthBaseTest {
                 "이메일 테스트",
                 "invalid-email",  // 잘못된 이메일 형식
                 null,
-                "010-1234-5678"
+                "010-1234-5678",
+                "900101"
         );
 
         given()
@@ -152,7 +156,8 @@ class AuthSignupTest extends AuthBaseTest {
                 "전화번호 테스트",
                 uniqueEmail,
                 null,
-                "invalid-phone"  // 잘못된 전화번호 형식
+                "invalid-phone",  // 잘못된 전화번호 형식
+                "900101"
         );
 
         given()
@@ -175,7 +180,8 @@ class AuthSignupTest extends AuthBaseTest {
                 "a".repeat(51),  // 50자 초과
                 uniqueEmail,
                 null,
-                "010-1234-5678"
+                "010-1234-5678",
+                "900101"
         );
 
         given()
@@ -198,7 +204,8 @@ class AuthSignupTest extends AuthBaseTest {
                 "최소 정보",
                 uniqueEmail,
                 null,
-                null   // 전화번호 선택
+                null,   // 전화번호 선택
+                "900101"
         );
 
         given()
