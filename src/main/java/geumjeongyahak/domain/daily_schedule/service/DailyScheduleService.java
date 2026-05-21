@@ -195,15 +195,55 @@ public class DailyScheduleService {
                 log.info("DailySchedule 상세 조회 실패 - 하루 일정을 찾을 수 없습니다. ID: {}", dailyScheduleId);
                 return new DailyScheduleNotFoundException(dailyScheduleId);
             });
+        DailyScheduleDetailResponse response = toDetailResponse(dailySchedule, viewerId, canViewSensitiveInfo);
+        log.debug("DailySchedule 상세 조회 완료 (dailyScheduleId={})", dailyScheduleId);
+        return response;
+    }
+
+    public DailyScheduleDetailResponse getDailyScheduleByClassroomAndDate(
+        Long classroomId,
+        LocalDate lessonDate,
+        Long viewerId,
+        boolean canViewSensitiveInfo
+    ) {
+        log.debug("DailySchedule 날짜/분반 상세 조회 요청 (classroomId={}, lessonDate={})", classroomId, lessonDate);
+        DailySchedule dailySchedule = dailyScheduleRepository
+            .findByClassroomIdAndLessonDateAndIsDeletedFalse(classroomId, lessonDate)
+            .orElseThrow(() -> {
+                log.info(
+                    "DailySchedule 날짜/분반 상세 조회 실패 - 하루 일정을 찾을 수 없습니다. classroomId={}, lessonDate={}",
+                    classroomId,
+                    lessonDate
+                );
+                return new DailyScheduleNotFoundException(
+                    "하루 일정을 찾을 수 없습니다. (classroomId: " + classroomId
+                        + ", lessonDate: " + lessonDate + ")"
+                );
+            });
+        DailyScheduleDetailResponse response = toDetailResponse(dailySchedule, viewerId, canViewSensitiveInfo);
+        log.debug(
+            "DailySchedule 날짜/분반 상세 조회 완료 (dailyScheduleId={}, classroomId={}, lessonDate={})",
+            dailySchedule.getId(),
+            classroomId,
+            lessonDate
+        );
+        return response;
+    }
+
+    private DailyScheduleDetailResponse toDetailResponse(
+        DailySchedule dailySchedule,
+        Long viewerId,
+        boolean canViewSensitiveInfo
+    ) {
         List<Lesson> lessons = lessonProxyService.getActiveLessonsByClassroomAndDate(
             dailySchedule.getClassroom().getId(),
             dailySchedule.getLessonDate()
         );
         DailyTeacherAttendance teacherAttendance = dailyTeacherAttendanceRepository
-            .findByDailyScheduleIdAndIsDeletedFalse(dailyScheduleId)
+            .findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId())
             .orElse(null);
         List<DailyStudentAttendance> studentAttendances = dailyStudentAttendanceRepository
-            .findAllByDailyScheduleIdAndIsDeletedFalse(dailyScheduleId)
+            .findAllByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId())
             .stream()
             .sorted(Comparator.comparing(attendance -> attendance.getStudent().getName()))
             .toList();
@@ -216,8 +256,8 @@ public class DailyScheduleService {
             canViewDailyScheduleSensitiveInfo(dailySchedule, viewerId, canViewSensitiveInfo)
         );
         log.debug(
-            "DailySchedule 상세 조회 완료 (dailyScheduleId={}, lessonCount={}, studentAttendanceCount={})",
-            dailyScheduleId,
+            "DailySchedule 상세 응답 생성 완료 (dailyScheduleId={}, lessonCount={}, studentAttendanceCount={})",
+            dailySchedule.getId(),
             lessons.size(),
             studentAttendances.size()
         );
