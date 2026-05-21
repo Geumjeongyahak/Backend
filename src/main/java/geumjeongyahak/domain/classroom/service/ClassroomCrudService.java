@@ -12,6 +12,7 @@ import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.common.exception.DuplicateResourceException;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
+import geumjeongyahak.domain.channel.service.SystemChannelService;
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.enums.ClassroomType;
 import geumjeongyahak.domain.classroom.event.ClassroomCreatedEvent;
@@ -31,6 +32,7 @@ import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomSummaryResponse;
 public class ClassroomCrudService {
     private final ClassroomRepository classroomRepository;
     private final EventPublisher eventPublisher;
+    private final SystemChannelService systemChannelService;
 
     @Transactional
     public ClassroomDetailResponse createClassroom(CreateClassroomRequest request) {
@@ -125,6 +127,7 @@ public class ClassroomCrudService {
         log.debug("분반 삭제 시도: {}", id);
         Classroom classroom = getClassroomWithoutDeleted(id);
         classroom.setDeleted(true);
+        systemChannelService.deactivateClassroomChannel(id);
         classroomRepository.save(classroom);
         log.info("분반 삭제 성공: {}", classroom.getName());
     }

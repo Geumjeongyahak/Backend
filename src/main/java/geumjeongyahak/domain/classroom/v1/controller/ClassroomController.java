@@ -25,7 +25,6 @@ import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomDetailResponse;
 public class ClassroomController {
     private final ClassroomCrudService classroomCrudService;
 
-    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "분반 상세 조회", description = "특정 분반의 상세 정보를 조회합니다.")
     @GetMapping("/{id}")
     public ResponseEntity<ClassroomDetailResponse> getClassroomDetail(

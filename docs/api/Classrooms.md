@@ -9,6 +9,8 @@ Classroom은 서비스에서 “교실”이 아니라 “분반/교육반”을
 - 생성/수정/삭제는 `ADMIN` 또는 `MANAGER` 권한이 필요합니다.
 - 성공 응답은 별도 래핑 없이 DTO를 직접 반환합니다.
 - 삭제는 soft delete 방식이며, 삭제된 분반은 목록/상세 조회에서 제외됩니다.
+- 분반 생성 시 도메인 연동 Classroom 채널이 자동 생성됩니다.
+- 분반 삭제 시 도메인 연동 Classroom 채널은 삭제하지 않고 `isActive=false`, `isDeleted=false`로 비활성화합니다.
 - `type` 값은 `WEEKDAY`(주중반), `WEEKEND`(주말반)를 사용합니다.
 
 ## 1. 분반 목록 조회
@@ -153,6 +155,13 @@ Classroom은 서비스에서 “교실”이 아니라 “분반/교육반”을
 - **Auth**: 필요
 - **Roles**: `ADMIN`, `MANAGER`
 - **Description**: 분반을 삭제 처리합니다.
+
+### Side Effects
+
+- `classrooms.is_deleted`가 `true`로 변경됩니다.
+- 연결된 `CLASSROOM + DOMAIN_LINKED` 채널은 `isActive=false`로 변경됩니다.
+- 연결 채널의 `isDeleted` 값은 `false`로 유지됩니다.
+- 기존 게시글은 삭제하거나 이관하지 않고 비활성 채널에 보관합니다.
 
 ### Response: 204 No Content
 

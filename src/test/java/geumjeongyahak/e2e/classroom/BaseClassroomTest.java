@@ -6,7 +6,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.channel.repository.ChannelRepository;
 import geumjeongyahak.e2e.BaseE2ETest;
+import geumjeongyahak.e2e.util.TestChannelHelper;
 import geumjeongyahak.e2e.util.TestClassroomHelper;
 
 @Tag("classroom")
@@ -19,6 +21,12 @@ public abstract class BaseClassroomTest extends BaseE2ETest {
 
     @Autowired
     protected TestClassroomHelper testClassroomHelper;
+
+    @Autowired
+    protected ChannelRepository channelRepository;
+
+    @Autowired
+    protected TestChannelHelper testChannelHelper;
 
     @BeforeEach
     @Override
@@ -40,6 +48,7 @@ public abstract class BaseClassroomTest extends BaseE2ETest {
         super.tearDown();
 
         // 테스트 데이터 정리
+        this.testChannelHelper.clearAll();
         this.testClassroomHelper.clearAll();
     }
 }
