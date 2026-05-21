@@ -92,7 +92,7 @@ class UserUpdateTest extends UserBaseTest {
             .post()
         .then()
             .statusCode(201)
-            .body("departmentId", nullValue())
+            .body("department", nullValue())
             .extract()
             .as(UserDetailResponse.class);
 
@@ -109,7 +109,7 @@ class UserUpdateTest extends UserBaseTest {
             .patch("/{userId}", createdUser.id())
         .then()
             .statusCode(200)
-            .body("departmentId", equalTo(1))
+            .body("department.id", equalTo(1))
             .log().all();
 
         // 3. 부서 해제 (null)

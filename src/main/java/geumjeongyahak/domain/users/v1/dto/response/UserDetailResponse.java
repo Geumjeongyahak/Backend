@@ -2,9 +2,12 @@ package geumjeongyahak.domain.users.v1.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import geumjeongyahak.domain.auth.v1.dto.response.PermissionResponse;
+import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomSummaryResponse;
+import geumjeongyahak.domain.department.v1.dto.response.DepartmentSimpleResponse;
 import geumjeongyahak.domain.users.entity.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -29,8 +32,22 @@ public record UserDetailResponse(
     @Schema(description = "사용자 기본 역할(role)", examples = { "ADMIN", "MANAGER", "VOLUNTEER", "GUEST" })
     String role,
 
-    @Schema(description = "소속 부서 ID. 소속 부서가 없으면 null일 수 있습니다.", example = "2", nullable = true)
-    Long departmentId,
+    @Schema(description = "소속 부서. 소속 부서가 없으면 null일 수 있습니다.", nullable = true)
+    DepartmentSimpleResponse department,
+
+    @Schema(description = "교원으로 배정된 분반. 교원 승인 전이면 null일 수 있습니다.", nullable = true)
+    ClassroomSummaryResponse classroom,
+
+    @Schema(description = "주민등록번호 앞자리", example = "900101")
+    String residentRegistrationNumberPrefix,
+
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    @Schema(description = "교원 활동 시작일. 교원 승인 전이면 null입니다.", example = "2026-02-01", nullable = true)
+    LocalDate teacherStartAt,
+
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    @Schema(description = "교원 활동 종료일. 교원 승인 전이면 null입니다.", example = "2026-06-30", nullable = true)
+    LocalDate teacherEndAt,
 
     @Schema(description = "사용자에게 직접 부여된 authority 목록. role 기반 권한이나 부서 권한은 포함하지 않습니다.")
     List<PermissionResponse> permissions,
@@ -49,7 +66,11 @@ public record UserDetailResponse(
             user.getEmail(),
             user.getPhoneNumber(),
             user.getRole().name(),
-            user.getDepartment() != null ? user.getDepartment().getId() : null,
+            user.getDepartment() != null ? DepartmentSimpleResponse.from(user.getDepartment()) : null,
+            user.getClassroom() != null ? ClassroomSummaryResponse.from(user.getClassroom()) : null,
+            user.getResidentRegistrationNumberPrefix(),
+            user.getTeacherStartAt(),
+            user.getTeacherEndAt(),
             user.getPermissions().stream()
                 .map(permission -> new PermissionResponse(
                     permission.toAuthorityCode(),

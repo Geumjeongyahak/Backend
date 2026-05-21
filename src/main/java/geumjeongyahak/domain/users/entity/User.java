@@ -4,6 +4,7 @@ import geumjeongyahak.domain.auth.entity.UserCredential;
 import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.base.entity.BaseEntity;
+import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.department.entity.Department;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -22,6 +23,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -57,6 +59,23 @@ public class User extends BaseEntity {
     private Department department;
 
     @Setter
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "classroom_id", nullable = true)
+    private Classroom classroom;
+
+    @Setter
+    @Column(length = 6, name = "resident_registration_number_prefix")
+    private String residentRegistrationNumberPrefix;
+
+    @Setter
+    @Column(name = "teacher_start_at")
+    private LocalDate teacherStartAt;
+
+    @Setter
+    @Column(name = "teacher_end_at")
+    private LocalDate teacherEndAt;
+
+    @Setter
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private RoleType role = RoleType.GUEST;
@@ -75,6 +94,10 @@ public class User extends BaseEntity {
         String email,
         String profileImageUrl,
         Department department,
+        Classroom classroom,
+        String residentRegistrationNumberPrefix,
+        LocalDate teacherStartAt,
+        LocalDate teacherEndAt,
         RoleType role
     ) {
         this.nickname = nickname;
@@ -83,7 +106,18 @@ public class User extends BaseEntity {
         this.email = email;
         this.profileImageUrl = profileImageUrl;
         this.department = department;
-        this.role = (role != null) ? role : RoleType.VOLUNTEER;
+        this.classroom = classroom;
+        this.residentRegistrationNumberPrefix = residentRegistrationNumberPrefix;
+        this.teacherStartAt = teacherStartAt;
+        this.teacherEndAt = teacherEndAt;
+        this.role = (role != null) ? role : RoleType.GUEST;
+    }
+
+    public void approveTeacherProfile(Classroom classroom, LocalDate teacherStartAt, LocalDate teacherEndAt) {
+        this.classroom = classroom;
+        this.teacherStartAt = teacherStartAt;
+        this.teacherEndAt = teacherEndAt;
+        this.role = RoleType.VOLUNTEER;
     }
 
     public String getUsername() {
