@@ -156,6 +156,18 @@ public class SubjectService {
             .toList();
     }
 
+    public List<SubjectDetailResponse> getUnassignedSubjects() {
+        log.debug("교사 미배정 과목 목록 조회 요청");
+
+        List<SubjectDetailResponse> responses = subjectRepository
+            .findAllByTeacherIsNullAndIsActiveTrueOrderByStartAtAscIdAsc()
+            .stream()
+            .map(SubjectDetailResponse::from)
+            .toList();
+        log.debug("교사 미배정 과목 목록 조회 완료 - 총 {}건", responses.size());
+        return responses;
+    }
+
     @Transactional
     public SubjectDetailResponse updateSubject(Long subjectId, UpdateSubjectBasicRequest request) {
         log.debug("과목 기본 정보 수정 요청 (id={})", subjectId);

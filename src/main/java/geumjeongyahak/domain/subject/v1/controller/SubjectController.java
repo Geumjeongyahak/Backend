@@ -32,6 +32,7 @@ public class SubjectController {
 
     private static final String SUBJECT_READ_ACCESS =
         "hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN')";
+    private static final String AUTHENTICATED_ACCESS = "isAuthenticated()";
 
     private final SubjectService subjectService;
 
@@ -66,6 +67,30 @@ public class SubjectController {
         log.debug("GET /api/v1/subjects/{} - 과목 단건 조회 요청", subjectId);
         SubjectDetailResponse response = subjectService.getSubject(subjectId);
         return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize(AUTHENTICATED_ACCESS)
+    @Operation(
+        summary = "교사 미배정 과목 목록 조회",
+        description = """
+            담당 교사가 아직 배정되지 않은 활성 과목 목록을 조회합니다.
+
+            권한 정책:
+            - 인증된 사용자는 모두 조회할 수 있습니다.
+
+            검색 정책:
+            - teacherId가 null인 활성 과목만 반환합니다.
+            - 응답에는 교사 배정에 필요한 과목명, 분반 정보, 운영 기간, 요일, 교시, 시작/종료 시간이 포함됩니다.
+
+            운영 정책:
+            - 교사가 미배정된 과목은 Lesson이 자동 생성되지 않은 상태일 수 있습니다.
+            - 교사 배정 대상 과목을 확인하기 위한 읽기 전용 API입니다.
+            """
+    )
+    @GetMapping("/unassigned")
+    public ResponseEntity<List<SubjectDetailResponse>> getUnassignedSubjects() {
+        log.debug("GET /api/v1/subjects/unassigned - 교사 미배정 과목 목록 조회 요청");
+        return ResponseEntity.ok(subjectService.getUnassignedSubjects());
     }
 
     @PreAuthorize(SUBJECT_READ_ACCESS)
