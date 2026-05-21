@@ -34,15 +34,13 @@
 | Users | Lessons | teacher_id | 봉사자가 진행하는 수업 |
 | Daily Schedules | Absence Requests | daily_schedule_id | 하루 일정별 결석 요청 |
 | Lesson Exchange Requests | Lesson Exchange Proposals | request_id | 교환 요청별 제안 |
-| Classrooms | Purchase Requests | classroom_id | 분반별 기자재 구입 요청 |
-| Purchase Requests | Purchase Request Items | purchase_request_id | 구입 요청별 품목 |
-| Vendors | Purchase Requests | vendor_id | 거래처 선결제 구입 요청 |
-| Vendors | Vendor Balance Histories | vendor_id | 거래처 충전/차감 이력 |
+| Subjects | Purchase Requests | subject_id | 과목별 기자재 구입 요청 |
+| Purchase Requests | Purchase Receipts | purchase_request_id | 구입 요청별 영수증 |
 | Users | 각종 요청들 | requested_by | 요청자 |
 | Users | 각종 요청들 | approval_by | 승인자 |
 | Files | Post Files | file_id | 게시글 이미지 파일 |
 | Files | Post Attachments | file_id | 게시글 첨부 파일 |
-| Files | Purchase Request Items | receipt_file_id | 품목별 기자재 구입 영수증 파일 |
+| Files | Purchase Request Receipts | file_id | 기자재 구입 영수증 파일 |
 
 #### N:M 관계
 
@@ -73,13 +71,11 @@ erDiagram
     users ||--o{ lesson_exchange_requests : "requests"
     lesson_exchange_requests ||--o{ lesson_exchange_proposals : "has"
     users ||--o{ lesson_exchange_proposals : "proposes"
-    classrooms ||--o{ purchase_requests : "has"
-    vendors ||--o{ purchase_requests : "used by prepaid request"
-    vendors ||--o{ vendor_balance_histories : "has"
-    purchase_requests ||--o{ purchase_requests_items : "has"
+    subjects ||--o{ purchase_requests : "has"
+    purchase_requests ||--o{ purchase_receipts : "has"
     files ||--o{ post_files : "used as image"
     files ||--o{ post_attachments : "used as attachment"
-    files ||--o{ purchase_requests_items : "used as item receipt"
+    files ||--o{ purchase_request_receipts : "used as receipt"
 
     %% 엔티티 정의
     users {
@@ -165,46 +161,16 @@ erDiagram
 
     purchase_requests {
         bigint id PK
-        bigint classroom_id FK
+        bigint subject_id FK
         bigint requested_by FK
-        bigint total_price
-        varchar payment_method
-        bigint vendor_id FK
-        varchar status
-        timestamp approval_at
-        bigint approval_by FK
-        timestamp purchased_at
-        text note
-    }
-
-    purchase_requests_items {
-        bigint id PK
-        bigint purchase_request_id FK
-        varchar name
-        text reason
         bigint price
-        uuid receipt_file_id FK
+        varchar status
     }
 
-    vendors {
+    purchase_receipts {
         bigint id PK
-        varchar name
-        text description
-        bigint balance
-        boolean is_active
-    }
-
-    vendor_balance_histories {
-        bigint id PK
-        bigint vendor_id FK
-        varchar type
-        bigint amount
-        bigint balance_after
-        text memo
-        uuid receipt_file_id FK
         bigint purchase_request_id FK
-        bigint created_by FK
-        timestamp occurred_at
+        varchar image_url
     }
 
     files {
@@ -429,101 +395,38 @@ erDiagram
 **상태 규칙:**
 - `ACTIVE` → `WITHDRAWN`, `ACCEPTED`, `CLOSED`
 
-### 3.13 거래처 (vendors)
+### 3.13 기자재 구입 요청 (purchase_requests)
 
-거래처 선결제 방식에서 사용할 거래처와 현재 잔액을 관리하는 엔티티입니다.
-
-| 필드명 | 데이터 타입 | 제약조건 | 설명 |
-|--------|-------------|----------|------|
-| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 거래처 고유 ID |
-| name | VARCHAR(255) | NOT NULL | 거래처명 |
-| description | TEXT | NULL | 거래처 설명 |
-| balance | BIGINT | NOT NULL, DEFAULT 0 | 현재 선결제 잔액 |
-| is_active | BOOLEAN | NOT NULL, DEFAULT TRUE | 사용 가능 여부 |
-| is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | 삭제 여부 |
-| deleted_at | TIMESTAMP | NULL | 삭제 시각 |
-| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
-| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
-
-### 3.14 기자재 구입 요청 (purchase_requests)
-
-봉사자 혹은 관리자가 수업에 필요한 기자재를 구입하기 위해 사용하는 엔티티입니다. 최초 요청에는 예상 금액을 저장하지 않고, 구매 완료 보고 거래 라인의 금액 합산으로 총액을 계산합니다.
+봉사자 혹은 관리자가 수업에 필요한 기자재를 구입하기 위해 사용하는 엔티티입니다. 
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
 | id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
-| classroom_id | BIGINT | FOREIGN KEY, NOT NULL | 분반 ID |
-| requested_by | BIGINT | FOREIGN KEY, NOT NULL | 기자재 구입 요청자 ID |
+| subject_id | BIGINT | FOREIGN KEY | 과목 ID |
+| requested_by | BIGINT | FOREIGN KEY | 기자재 구입 요청자 ID |
 | title | VARCHAR(255) | NOT NULL | 기자재 구입 요청 제목 |
 | content | TEXT | NOT NULL | 기자재 구입 요청 내용 |
-| total_price | BIGINT | NOT NULL | 구매 완료 거래 금액 합산 총액 |
+| price | BIGINT | NOT NULL | 기자재 구입 요청 가격 |
 | status | VARCHAR(20) | NOT NULL | 기자재 구입 요청 상태 |
 | approval_at | TIMESTAMP | NULL | 기자재 구입 요청 승인일시 |
 | approval_by | BIGINT | FOREIGN KEY | 기자재 구입 요청 승인자 ID |
-| purchased_at | TIMESTAMP | NULL | 구매 완료 보고 시각 |
 | note | TEXT | NULL | 추가 정보(관리자가 기입) |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
-**상태 규칙:**
-- `PENDING` → `APPROVED` 또는 `REJECTED`
-- `APPROVED` → `PURCHASED`
-- `PURCHASED` → `CONFIRMED`
+### 3.14 기자재 영수증 (purchase_receipts)
 
-**결재 확인 규칙:**
-- 구매 완료 거래 라인에 거래처, 품목명, 양수 결제 금액이 있어야 `CONFIRMED` 전환이 가능합니다.
-- `CONFIRMED` 전환 시 거래처별 총 결제 금액을 차감하고 `vendor_balance_histories`에 `DEDUCT` 이력을 저장합니다.
-- 거래처 잔액 부족, 비활성, 삭제 상태이면 결재 확인은 실패하며 요청 상태와 거래처 잔액은 변경되지 않습니다.
-
-### 3.15 기자재 구입 요청 품목 (purchase_requests_items)
-
-구입 요청의 신청 품목을 관리하는 엔티티입니다.
+봉사자 혹은 관리자가 수업에 필요한 기자재를 구입한 후 이를 영수증으로 기록하기 위해 사용하는 엔티티입니다. 물품 구입 후 영수증을 이미지로 첨부하여 기록합니다. 이는 s3에 저장됩니다.
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
-| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 품목 고유 ID |
-| purchase_request_id | BIGINT | FOREIGN KEY, NOT NULL | 기자재 구입 요청 ID |
-| name | VARCHAR(255) | NOT NULL | 품명 |
-| reason | TEXT | NULL | 구입 사유 |
-| quantity | INTEGER | NOT NULL | 개수 |
-| payment_type | VARCHAR(20) | NOT NULL | 결제 유형 (`PREPAID`, `ACTUAL`) |
+| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
+| purchase_request_id | BIGINT | FOREIGN KEY | 기자재 구입 요청 ID |
+| image_url | VARCHAR(255) | NOT NULL | 영수증 이미지 URL |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
-### 3.15.1 구매 완료 거래 (purchase_request_payment_transactions)
-
-구매 완료 보고 단계에서 거래처별 실제 결제 금액과 선택 영수증을 관리하는 엔티티입니다. 한 거래 라인에는 여러 품목명을 연결할 수 있습니다.
-
-| 필드명 | 데이터 타입 | 제약조건 | 설명 |
-|--------|-------------|----------|------|
-| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 거래 라인 ID |
-| purchase_request_id | BIGINT | FOREIGN KEY, NOT NULL | 기자재 구입 요청 ID |
-| vendor_id | BIGINT | FOREIGN KEY, NOT NULL | 거래처 ID |
-| amount | BIGINT | NOT NULL | 총 결제 금액 |
-| receipt_file_id | UUID | FOREIGN KEY, NULL | 영수증 파일 ID |
-
-### 3.16 거래처 잔액 이력 (vendor_balance_histories)
-
-거래처 충전과 결재 확인 차감을 기록하는 엔티티입니다.
-
-| 필드명 | 데이터 타입 | 제약조건 | 설명 |
-|--------|-------------|----------|------|
-| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 이력 고유 ID |
-| vendor_id | BIGINT | FOREIGN KEY, NOT NULL | 거래처 ID |
-| type | VARCHAR(20) | NOT NULL | 이력 타입 (`CHARGE`, `DEDUCT`) |
-| amount | BIGINT | NOT NULL | 충전/차감 금액 |
-| balance_after | BIGINT | NOT NULL | 처리 후 잔액 |
-| memo | TEXT | NULL | 메모 |
-| receipt_file_id | UUID | FOREIGN KEY, NULL | 충전 영수증 파일 ID |
-| purchase_request_id | BIGINT | FOREIGN KEY, NULL | 차감과 연결된 구입 요청 ID |
-| created_by | BIGINT | FOREIGN KEY, NOT NULL | 처리자 ID |
-| occurred_at | TIMESTAMP | NOT NULL | 발생 시각 |
-| is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | 삭제 여부 |
-| deleted_at | TIMESTAMP | NULL | 삭제 시각 |
-| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
-| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
-
-### 3.17 파일 메타데이터 (files)
+### 3.15 파일 메타데이터 (files)
 
 업로드된 이미지와 첨부파일의 저장소 위치 및 메타데이터를 관리하는 엔티티입니다.
 
@@ -545,5 +448,3 @@ erDiagram
 **정책:**
 - 파일 삭제 요청 시 즉시 DB 레코드를 제거하지 않고 `is_deleted = true`, `deleted_at = now()`로 표시합니다.
 - 파일 정리 스케줄러는 보관 기간이 지난 soft deleted 파일을 스토리지와 DB에서 최종 삭제합니다.
-- `documents/purchase-items/` 경로의 영수증 파일이 일정 시간 동안 어떤 구매 완료 거래의 `receipt_file_id`에도 연결되지 않으면 스케줄러가 soft delete 처리합니다.
-- hard delete는 storage 삭제에 성공한 파일에만 수행합니다. storage 삭제 실패 시 DB 레코드를 유지해 다음 주기에 재시도합니다.

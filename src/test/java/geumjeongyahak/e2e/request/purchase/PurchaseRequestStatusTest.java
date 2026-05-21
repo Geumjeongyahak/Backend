@@ -2,6 +2,7 @@ package geumjeongyahak.e2e.request.purchase;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
@@ -15,8 +16,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
-import geumjeongyahak.domain.vendor.repository.VendorBalanceHistoryRepository;
-import geumjeongyahak.domain.vendor.repository.VendorRepository;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 
 /**
@@ -30,31 +29,15 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     @Autowired
     private PurchaseRequestRepository purchaseRequestRepository;
 
-    @Autowired
-    private VendorRepository vendorRepository;
-
-    @Autowired
-    private VendorBalanceHistoryRepository vendorBalanceHistoryRepository;
-
     private Long currentRequestId;
-    private Long createdVendorId;
 
     @AfterEach
     void cleanup() {
-        if (createdVendorId != null) {
-            vendorBalanceHistoryRepository.deleteAllByVendor_Id(createdVendorId);
-        }
         if (currentRequestId != null) {
             if (purchaseRequestRepository.existsById(currentRequestId)) {
                 purchaseRequestRepository.deleteById(currentRequestId);
             }
             currentRequestId = null;
-        }
-        if (createdVendorId != null) {
-            if (vendorRepository.existsById(createdVendorId)) {
-                vendorRepository.deleteById(createdVendorId);
-            }
-            createdVendorId = null;
         }
     }
 
@@ -132,53 +115,6 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .patch("/{requestId}/approve", currentRequestId)
             .then()
             .statusCode(403);
-    }
-
-    @Test
-    @DisplayName("구입 요청 승인 → 거래처 잔액 미차감")
-    void approve_doesNotDeductVendorBalance() {
-        createdVendorId = createVendorAndCharge(100000L);
-        currentRequestId = setupPendingRequest();
-
-        given()
-            .basePath("/api/v1/admin/purchase-requests")
-            .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .contentType(ContentType.JSON)
-            .body(Map.of("note", "거래처 잔액으로 승인"))
-            .patch("/{requestId}/approve", currentRequestId)
-            .then()
-            .statusCode(200)
-            .body("status", equalTo("APPROVED"));
-
-        given()
-            .basePath("/api/v1/admin/vendors")
-            .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .get("/{vendorId}", createdVendorId)
-            .then()
-            .statusCode(200)
-            .body("balance", equalTo(100000));
-    }
-
-    @Test
-    @DisplayName("결재 확인 시 잔액 부족 → 409")
-    void confirm_withInsufficientBalance_returns409() {
-        createdVendorId = createVendorAndCharge(1000L);
-        currentRequestId = setupPurchasedRequest(createdVendorId, 20000L, null);
-
-        given()
-            .basePath("/api/v1/admin/purchase-requests")
-            .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .patch("/{requestId}/confirm", currentRequestId)
-            .then()
-            .statusCode(409);
-
-        given()
-            .basePath("/api/v1/admin/vendors")
-            .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .get("/{vendorId}", createdVendorId)
-            .then()
-            .statusCode(200)
-            .body("balance", equalTo(1000));
     }
 
     @Test
@@ -348,9 +284,8 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     // ── 구매 보고 (report) ────────────────────────────────
 
     @Test
-    @DisplayName("구매 완료 보고 시 거래 라인과 영수증 저장 → 200")
-    void report_withTransactionReceipt_returns200() {
-        createdVendorId = createVendorAndCharge(100000L);
+    @DisplayName("구매 완료 보고 시 요청 단위 영수증 여러 장 저장 → 200")
+    void report_withRequestReceipts_returns200() {
         currentRequestId = setupPendingRequest();
 
         given()
@@ -362,20 +297,33 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .then()
             .statusCode(200);
 
-        String receiptFileId = uploadPurchaseReceipt();
+        Long itemId = given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getLong("items[0].id");
+
+        String receiptFileId1 = uploadPurchaseReceipt();
+        String receiptFileId2 = uploadPurchaseReceipt();
 
         given()
             .basePath("/api/v1/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(reportBody(createdVendorId, 20000L, receiptFileId))
+            .body(Map.of(
+                "items", List.of(Map.of("itemId", itemId, "price", 20000L)),
+                "receiptFileIds", List.of(receiptFileId1, receiptFileId2)
+            ))
             .post("/{requestId}/report", currentRequestId)
             .then()
             .statusCode(200)
             .body("status", equalTo("PURCHASED"))
-            .body("transactions", hasSize(1))
-            .body("transactions[0].itemNames", hasSize(2))
-            .body("transactions[0].receiptFileId", equalTo(receiptFileId));
+            .body("receipts", hasSize(2))
+            .body("receipts[0].fileUrl", containsString("/documents/purchase-items/"));
     }
 
     // ── 재확인 요청 (reconfirmation) ───────────────────────
@@ -383,8 +331,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     @Test
     @DisplayName("요청 작성자가 PURCHASED 구입 요청 재확인 요청 → 204")
     void requestReconfirmation_asOwnerAndPurchased_returns204() {
-        createdVendorId = createVendorAndCharge(100000L);
-        currentRequestId = setupPurchasedRequest(createdVendorId, 20000L, null);
+        currentRequestId = setupPurchasedRequest();
 
         given()
             .basePath("/api/v1/purchase-requests")
@@ -397,8 +344,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     @Test
     @DisplayName("타인이 구입 요청 재확인 요청 시도 → 403")
     void requestReconfirmation_asOtherVolunteer_returns403() {
-        createdVendorId = createVendorAndCharge(100000L);
-        currentRequestId = setupPurchasedRequest(createdVendorId, 20000L, null);
+        currentRequestId = setupPurchasedRequest();
 
         given()
             .basePath("/api/v1/purchase-requests")
@@ -426,8 +372,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     @Test
     @DisplayName("관리자가 PURCHASED 구입 요청 결재 확인 → 200, CONFIRMED")
     void confirm_asAdminAndPurchased_returns200() {
-        createdVendorId = createVendorAndCharge(100000L);
-        currentRequestId = setupPurchasedRequest(createdVendorId, 20000L, null);
+        currentRequestId = setupPurchasedRequest();
 
         given()
             .basePath("/api/v1/admin/purchase-requests")
@@ -436,14 +381,6 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .then()
             .statusCode(200)
             .body("status", equalTo("CONFIRMED"));
-
-        given()
-            .basePath("/api/v1/admin/vendors")
-            .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .get("/{vendorId}", createdVendorId)
-            .then()
-            .statusCode(200)
-            .body("balance", equalTo(80000));
     }
 
     @Test
@@ -462,8 +399,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     @Test
     @DisplayName("봉사자가 결재 확인 시도 → 403")
     void confirm_asVolunteer_returns403() {
-        createdVendorId = createVendorAndCharge(100000L);
-        currentRequestId = setupPurchasedRequest(createdVendorId, 20000L, null);
+        currentRequestId = setupPurchasedRequest();
 
         given()
             .basePath("/api/v1/admin/purchase-requests")
@@ -471,38 +407,6 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .patch("/{requestId}/confirm", currentRequestId)
             .then()
             .statusCode(403);
-    }
-
-    @Test
-    @DisplayName("구매 보고 후 거래처 비활성화 시 결재 확인 → 409, 잔액 유지")
-    void confirm_inactiveVendor_returns409() {
-        createdVendorId = createVendorAndCharge(100000L);
-        currentRequestId = setupPurchasedRequest(createdVendorId, 20000L, null);
-
-        given()
-            .basePath("/api/v1/admin/vendors")
-            .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .contentType(ContentType.JSON)
-            .body(Map.of("isActive", false))
-            .patch("/{vendorId}", createdVendorId)
-            .then()
-            .statusCode(200)
-            .body("isActive", equalTo(false));
-
-        given()
-            .basePath("/api/v1/admin/purchase-requests")
-            .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .patch("/{requestId}/confirm", currentRequestId)
-            .then()
-            .statusCode(409);
-
-        given()
-            .basePath("/api/v1/admin/vendors")
-            .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .get("/{vendorId}", createdVendorId)
-            .then()
-            .statusCode(200)
-            .body("balance", equalTo(100000));
     }
 
     // ── 조회 ──────────────────────────────────────────────
@@ -580,7 +484,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .statusCode(401);
     }
 
-    private Long setupPurchasedRequest(Long vendorId, long amount, String receiptFileId) {
+    private Long setupPurchasedRequest() {
         Long requestId = setupPendingRequest();
 
         given()
@@ -592,53 +496,30 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .then()
             .statusCode(200);
 
+        Long itemId = given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get("/{requestId}", requestId)
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getLong("items[0].id");
+
         given()
             .basePath("/api/v1/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(reportBody(vendorId, amount, receiptFileId))
+            .body(Map.of("items", List.of(Map.of(
+                "itemId", itemId,
+                "price", 20000L
+            ))))
             .post("/{requestId}/report", requestId)
             .then()
             .statusCode(200)
             .body("status", equalTo("PURCHASED"));
 
         return requestId;
-    }
-
-    private Long createVendorAndCharge(long amount) {
-        Long vendorId = given()
-            .basePath("/api/v1/admin/vendors")
-            .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .contentType(ContentType.JSON)
-            .body(Map.of("name", "선결제 테스트 거래처"))
-            .post()
-            .then()
-            .statusCode(201)
-            .extract()
-            .jsonPath()
-            .getLong("id");
-
-        given()
-            .basePath("/api/v1/admin/vendors")
-            .header(AUTH_HEADER, getAuthHeader(adminToken))
-            .contentType(ContentType.JSON)
-            .body(Map.of("amount", amount, "memo", "테스트 충전"))
-            .post("/{vendorId}/charges", vendorId)
-            .then()
-            .statusCode(200);
-
-        return vendorId;
-    }
-
-    private Map<String, Object> reportBody(Long vendorId, long amount, String receiptFileId) {
-        Map<String, Object> transaction = new java.util.LinkedHashMap<>();
-        transaction.put("vendorId", vendorId);
-        transaction.put("itemNames", List.of("교재", "복사용지"));
-        transaction.put("amount", amount);
-        if (receiptFileId != null) {
-            transaction.put("receiptFileId", receiptFileId);
-        }
-        return Map.of("transactions", List.of(transaction));
     }
 
     private String uploadPurchaseReceipt() {

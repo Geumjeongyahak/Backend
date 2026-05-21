@@ -9,8 +9,6 @@ import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
-import geumjeongyahak.domain.vendor.service.VendorService;
-import geumjeongyahak.domain.vendor.v1.dto.response.VendorResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +19,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +29,6 @@ public class PurchaseRequestAdminViewService {
     private final PurchaseRequestService purchaseRequestService;
     private final ClassroomAdminViewService classroomAdminViewService;
     private final ImageUploadService imageUploadService;
-    private final VendorService vendorService;
 
     public AdminPage<PurchaseRequestSummaryResponse> getPurchaseRequests(PurchaseRequestFilter filter) {
         List<PurchaseRequestSummaryResponse> rows = purchaseRequestService.getAllPurchaseRequests(filter.status())
@@ -89,11 +87,12 @@ public class PurchaseRequestAdminViewService {
         Long classroomId,
         String title,
         String content,
+        Long advancePaymentRequestedAmount,
         List<CreatePurchaseRequestRequest.Item> items
     ) {
         return purchaseRequestService.createPurchaseRequest(
             requesterId,
-            new CreatePurchaseRequestRequest(title, content, classroomId, items)
+            new CreatePurchaseRequestRequest(title, content, classroomId, advancePaymentRequestedAmount, items, List.of())
         ).id();
     }
 
@@ -103,12 +102,13 @@ public class PurchaseRequestAdminViewService {
         Long requestId,
         String title,
         String content,
+        Long advancePaymentRequestedAmount,
         List<CreatePurchaseRequestRequest.Item> items
     ) {
         purchaseRequestService.updatePurchaseRequest(
             requesterId,
             requestId,
-            new CreatePurchaseRequestRequest(title, content, null, items),
+            new CreatePurchaseRequestRequest(title, content, null, advancePaymentRequestedAmount, items, List.of()),
             true
         );
     }
@@ -122,13 +122,9 @@ public class PurchaseRequestAdminViewService {
         return classroomAdminViewService.getClassrooms(new ClassroomAdminViewService.ClassroomFilter(null, null, "name,ASC"));
     }
 
-    public List<VendorResponse> getAllVendors() {
-        return vendorService.getVendors(null);
-    }
-
     @Transactional
-    public void approve(Long approverId, Long requestId, String note) {
-        purchaseRequestService.approvePurchaseRequest(approverId, requestId, note);
+    public void approve(Long approverId, Long requestId, String note, Long advancePaymentApprovedAmount) {
+        purchaseRequestService.approvePurchaseRequest(approverId, requestId, note, advancePaymentApprovedAmount);
     }
 
     @Transactional
@@ -140,9 +136,10 @@ public class PurchaseRequestAdminViewService {
     public void report(
         Long requesterId,
         Long requestId,
-        List<geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.TransactionReport> transactions
+        List<geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.ItemReport> items,
+        List<UUID> receiptFileIds
     ) {
-        purchaseRequestService.reportPurchase(requesterId, requestId, new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest(transactions), true);
+        purchaseRequestService.reportPurchase(requesterId, requestId, new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest(items, receiptFileIds), true);
     }
 
     @Transactional

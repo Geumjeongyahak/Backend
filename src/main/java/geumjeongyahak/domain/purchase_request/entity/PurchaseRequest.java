@@ -50,8 +50,14 @@ public class PurchaseRequest extends BaseEntity {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    @Column(name = "total_price", nullable = false)
+    @Column(name = "total_price")
     private Long totalPrice;
+
+    @Column(name = "advance_payment_requested_amount")
+    private Long advancePaymentRequestedAmount;
+
+    @Column(name = "advance_payment_approved_amount")
+    private Long advancePaymentApprovedAmount;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -72,36 +78,44 @@ public class PurchaseRequest extends BaseEntity {
     private List<PurchaseRequestItem> items = new ArrayList<>();
 
     @OneToMany(mappedBy = "purchaseRequest", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PurchaseRequestPaymentTransaction> transactions = new ArrayList<>();
+    private List<PurchaseRequestReceipt> receipts = new ArrayList<>();
 
     public PurchaseRequest(
         Classroom classroom,
         User requestedBy,
         String title,
         String content,
-        List<PurchaseRequestItem> items
+        Long advancePaymentRequestedAmount,
+        List<PurchaseRequestItem> items,
+        List<PurchaseRequestReceipt> receipts
     ) {
         this.classroom = classroom;
         this.requestedBy = requestedBy;
         this.title = title;
         this.content = content;
-        this.totalPrice = 0L;
+        this.advancePaymentRequestedAmount = advancePaymentRequestedAmount;
         this.status = PurchaseRequestStatus.PENDING;
         items.forEach(item -> item.assignRequest(this));
         this.items.addAll(items);
+        receipts.forEach(receipt -> receipt.assignRequest(this));
+        this.receipts.addAll(receipts);
     }
 
-    public void approve(User approver, String note) {
+    public void approve(User approver, String note, Long advancePaymentApprovedAmount) {
         this.status = PurchaseRequestStatus.APPROVED;
         this.approvalBy = approver;
         this.approvalAt = LocalDateTime.now();
         this.note = note;
+        this.advancePaymentApprovedAmount = advancePaymentApprovedAmount;
     }
 
-    public void reportPurchase() {
+    public void reportPurchase(long totalPrice, List<PurchaseRequestReceipt> receipts) {
         this.status = PurchaseRequestStatus.PURCHASED;
+        this.totalPrice = totalPrice;
         this.purchasedAt = LocalDateTime.now();
-        this.totalPrice = calculateTotalPrice();
+        this.receipts.clear();
+        receipts.forEach(receipt -> receipt.assignRequest(this));
+        this.receipts.addAll(receipts);
     }
 
     public void confirm() {
@@ -115,28 +129,12 @@ public class PurchaseRequest extends BaseEntity {
         this.note = note;
     }
 
-    public void update(
-        String title,
-        String content,
-        List<PurchaseRequestItem> items
-    ) {
+    public void update(String title, String content, Long advancePaymentRequestedAmount, List<PurchaseRequestItem> items) {
         this.title = title;
         this.content = content;
+        this.advancePaymentRequestedAmount = advancePaymentRequestedAmount;
         this.items.clear();
         items.forEach(item -> item.assignRequest(this));
         this.items.addAll(items);
-    }
-
-    public void replaceTransactions(List<PurchaseRequestPaymentTransaction> transactions) {
-        this.transactions.clear();
-        transactions.forEach(transaction -> transaction.assignRequest(this));
-        this.transactions.addAll(transactions);
-        this.totalPrice = calculateTotalPrice();
-    }
-
-    private long calculateTotalPrice() {
-        return transactions.stream()
-            .mapToLong(PurchaseRequestPaymentTransaction::getAmount)
-            .sum();
     }
 }

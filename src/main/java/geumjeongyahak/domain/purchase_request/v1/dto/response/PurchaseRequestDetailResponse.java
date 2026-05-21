@@ -5,10 +5,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
-import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestPaymentTransaction;
-import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
+import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestReceipt;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
-import geumjeongyahak.domain.vendor.v1.dto.response.VendorResponse;
 
 public record PurchaseRequestDetailResponse(
 
@@ -36,6 +34,12 @@ public record PurchaseRequestDetailResponse(
     @Schema(description = "총 구매 금액 (원) - 구매 보고 이후 확정", example = "45000")
     Long totalPrice,
 
+    @Schema(description = "요청 전체 선금 요청 금액 (원)", example = "50000")
+    Long advancePaymentRequestedAmount,
+
+    @Schema(description = "승인된 선금 금액 (원)", example = "50000")
+    Long advancePaymentApprovedAmount,
+
     @Schema(description = "요청 상태", example = "PENDING")
     PurchaseRequestStatus status,
 
@@ -54,11 +58,8 @@ public record PurchaseRequestDetailResponse(
     @Schema(description = "구입 항목 목록")
     List<ItemResponse> items,
 
-    @Schema(description = "구매 완료 거래 목록")
-    List<TransactionResponse> transactions,
-
-    @Schema(description = "현재 거래처별 잔액")
-    List<VendorBalanceResponse> vendorBalances,
+    @Schema(description = "영수증 목록")
+    List<ReceiptResponse> receipts,
 
     @Schema(description = "생성 시각")
     LocalDateTime createdAt
@@ -67,57 +68,35 @@ public record PurchaseRequestDetailResponse(
         Long id,
         String name,
         String reason,
-        Integer quantity,
-        PurchasePaymentType paymentType
+        Long expectedPrice,
+        Long actualPrice
     ) {
         static ItemResponse from(PurchaseRequestItem item) {
             return new ItemResponse(
                 item.getId(),
                 item.getName(),
                 item.getReason(),
-                item.getQuantity(),
-                item.getPaymentType()
+                item.getExpectedPrice(),
+                item.getActualPrice()
             );
         }
     }
 
-    public record TransactionResponse(
+    public record ReceiptResponse(
         Long id,
-        Long vendorId,
-        String vendorName,
-        List<String> itemNames,
-        Long amount,
-        java.util.UUID receiptFileId,
-        String receiptFileUrl
+        java.util.UUID fileId,
+        String fileUrl
     ) {
-        static TransactionResponse from(PurchaseRequestPaymentTransaction transaction) {
-            return new TransactionResponse(
-                transaction.getId(),
-                transaction.getVendor().getId(),
-                transaction.getVendor().getName(),
-                transaction.getItemNames(),
-                transaction.getAmount(),
-                transaction.getReceiptFile() != null ? transaction.getReceiptFile().getId() : null,
-                transaction.getReceiptFile() != null ? transaction.getReceiptFile().getPublicUrl() : null
+        static ReceiptResponse from(PurchaseRequestReceipt receipt) {
+            return new ReceiptResponse(
+                receipt.getId(),
+                receipt.getFile().getId(),
+                receipt.getFile().getPublicUrl()
             );
         }
     }
 
-    public record VendorBalanceResponse(
-        Long vendorId,
-        String vendorName,
-        Long balance
-    ) {
-        public static VendorBalanceResponse from(VendorResponse vendor) {
-            return new VendorBalanceResponse(
-                vendor.id(),
-                vendor.name(),
-                vendor.balance()
-            );
-        }
-    }
-
-    public static PurchaseRequestDetailResponse from(PurchaseRequest r, List<VendorResponse> vendors) {
+    public static PurchaseRequestDetailResponse from(PurchaseRequest r) {
         return new PurchaseRequestDetailResponse(
             r.getId(),
             r.getClassroom().getId(),
@@ -127,14 +106,15 @@ public record PurchaseRequestDetailResponse(
             r.getTitle(),
             r.getContent(),
             r.getTotalPrice(),
+            r.getAdvancePaymentRequestedAmount(),
+            r.getAdvancePaymentApprovedAmount(),
             r.getStatus(),
             r.getApprovalAt(),
             r.getApprovalBy() != null ? r.getApprovalBy().getName() : null,
             r.getPurchasedAt(),
             r.getNote(),
             r.getItems().stream().map(ItemResponse::from).toList(),
-            r.getTransactions().stream().map(TransactionResponse::from).toList(),
-            vendors.stream().map(VendorBalanceResponse::from).toList(),
+            r.getReceipts().stream().map(ReceiptResponse::from).toList(),
             r.getCreatedAt()
         );
     }

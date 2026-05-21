@@ -198,16 +198,7 @@ VALUES
      'CLOSED', NULL, NULL, '2026-05-25 16:00:00', '2026-05-24 10:30:00', '2026-05-25 16:00:00');
 ALTER SEQUENCE lesson_exchange_proposals_id_seq RESTART WITH 6;
 
--- 14. Vendors
-INSERT INTO vendors (id, name, description, balance, is_active)
-VALUES
-    (1, '예소디자인', '부산대 인근 거래처', 0, TRUE),
-    (2, '목민서관', '야학 부근 거래처', 0, TRUE),
-    (3, '지성문구', '부산대 인근 거래처', 0, TRUE),
-    (4, '마트', '야학 부근 거래처', 0, TRUE);
-ALTER SEQUENCE vendors_id_seq RESTART WITH 5;
-
--- 15. Students
+-- 14. Students
 INSERT INTO students (id, class_id, name, phone_number, description, status)
 VALUES
     (1, 1, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),

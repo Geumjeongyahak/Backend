@@ -501,7 +501,6 @@
             <a th:href="@{/admin/request/absence/absence-requests}" th:classappend="${active == 'absenceRequests'} ? 'active'">결석 요청</a>
             <a th:href="@{/admin/request/lesson-exchange}" th:classappend="${active == 'lessonExchangeRequests'} ? 'active'">수업 교환</a>
             <a th:href="@{/admin/request/purchase/purchase-requests}" th:classappend="${active == 'purchaseRequests'} ? 'active'">구매 요청</a>
-            <a th:href="@{/admin/request/purchase/vendors}" th:classappend="${active == 'vendors'} ? 'active'">거래처</a>
         </nav>
         <div th:if="${#arrays.contains(@environment.getActiveProfiles(), 'dev')}" style="margin-top: 20px;">
             <a href="/swagger-ui/index.html" target="_blank" style="display: block; padding: 10px 14px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); font-size: 13px; font-weight: 800; text-align: center;">

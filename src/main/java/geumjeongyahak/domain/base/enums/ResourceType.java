@@ -17,7 +17,6 @@ public enum ResourceType {
     USER("user"),
     ABSENCE_REQUEST("absence-request"),
     PURCHASE_REQUEST("purchase-request"),
-    VENDOR("vendor"),
     LESSON_EXCHANGE_REQUEST("lesson-exchange-request");
 
     private final String code;

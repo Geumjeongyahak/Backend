@@ -1,6 +1,6 @@
 package geumjeongyahak.domain.purchase_request.entity;
 
-import jakarta.persistence.Column;
+import geumjeongyahak.domain.file.entity.File;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -15,9 +15,9 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(name = "purchase_requests_items")
+@Table(name = "purchase_request_receipts")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class PurchaseRequestItem {
+public class PurchaseRequestReceipt {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,32 +27,15 @@ public class PurchaseRequestItem {
     @JoinColumn(name = "purchase_request_id", nullable = false)
     private PurchaseRequest purchaseRequest;
 
-    @Column(nullable = false)
-    private String name;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "file_id", nullable = false)
+    private File file;
 
-    @Column(columnDefinition = "TEXT")
-    private String reason;
-
-    private Long expectedPrice;
-
-    private Long actualPrice;
-
-    public PurchaseRequestItem(String name, String reason) {
-        this.name = name;
-        this.reason = reason;
-    }
-
-    public PurchaseRequestItem(String name, String reason, Long expectedPrice) {
-        this.name = name;
-        this.reason = reason;
-        this.expectedPrice = expectedPrice;
+    public PurchaseRequestReceipt(File file) {
+        this.file = file;
     }
 
     void assignRequest(PurchaseRequest purchaseRequest) {
         this.purchaseRequest = purchaseRequest;
-    }
-
-    public void updatePurchaseDetails(Long price) {
-        this.actualPrice = price;
     }
 }
