@@ -7,7 +7,7 @@
 ## 1. 사용자 관리 API
 
 ### 1.1. 사용자 목록 조회
-전체 사용자 목록을 페이지네이션하여 조회합니다.
+전체 사용자 목록을 페이지네이션 및 검색 조건에 따라 조회합니다.
 
 - **URL**: `/api/v1/users`
 - **Method**: `GET`
@@ -15,6 +15,9 @@
 - **Query Parameters**:
     - `page` (optional): 페이지 번호 (0-based)
     - `size` (optional): 페이지 크기
+    - `role` (optional): 역할 필터 (`ADMIN`, `MANAGER`, `VOLUNTEER`, `GUEST`)
+    - `name` (optional): 이름 부분 검색
+    - `currentTeacher` (optional): `true` 설정 시 현재 활동 기간 내의 교원만 조회
 - **Response**: `200 OK` (PaginationResponse<UserSimpleResponse>)
   ```json
   {

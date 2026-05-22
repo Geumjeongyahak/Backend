@@ -61,7 +61,7 @@ class UserUpdateTest extends UserBaseTest {
             .statusCode(200)
             .body("id", equalTo(createdUser.id().intValue()))
             .body("name", equalTo("Updated Name"))
-                        .body("phoneNumber", equalTo("010-9999-8888"))
+            .body("phoneNumber", equalTo("010-9999-8888"))
             .body("email", equalTo("updated@test.com"))
             .body("role", equalTo("VOLUNTEER"))
             .log().all();
@@ -88,7 +88,7 @@ class UserUpdateTest extends UserBaseTest {
             .post()
         .then()
             .statusCode(201)
-            .body("departmentId", nullValue())
+            .body("department", nullValue())
             .extract()
             .as(UserDetailResponse.class);
 
@@ -105,7 +105,7 @@ class UserUpdateTest extends UserBaseTest {
             .patch("/{userId}", createdUser.id())
         .then()
             .statusCode(200)
-            .body("departmentId", equalTo(1))
+            .body("department.id", equalTo(1))
             .log().all();
 
         // 3. 부서 해제 (null)
@@ -182,7 +182,7 @@ class UserUpdateTest extends UserBaseTest {
             .patch("/me")
         .then()
             .statusCode(200)
-                        .body("name", equalTo("Updated Volunteer Name"))
+            .body("name", equalTo("Updated Volunteer Name"))
             .body("phoneNumber", equalTo("010-5555-6666"))
             .body("email", equalTo("volunteer.updated@test.com"))
             .log().all();

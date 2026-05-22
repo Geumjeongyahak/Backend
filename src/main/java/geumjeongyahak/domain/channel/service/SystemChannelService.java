@@ -45,6 +45,19 @@ public class SystemChannelService {
     }
 
     @Transactional
+    public void deactivateClassroomChannel(Long classroomId) {
+        channelRepository.findByChannelTypeAndBindingTypeAndRefIdAndIsDeletedFalse(
+                ChannelType.CLASSROOM,
+                ChannelBindingType.DOMAIN_LINKED,
+                classroomId
+            )
+            .ifPresent(channel -> {
+                channel.setActive(false);
+                log.info("분반 연동 채널 비활성화 완료 - classroomId: {}, channelId: {}", classroomId, channel.getId());
+            });
+    }
+
+    @Transactional
     public Channel ensureNoticeChannel(String name, String description, boolean isDefault) {
         return channelRepository.findByChannelTypeAndRefIdAndIsDeletedFalse(ChannelType.NOTICE, null)
                 .orElseGet(() -> createSeedChannel(

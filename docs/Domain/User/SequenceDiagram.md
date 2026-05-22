@@ -86,9 +86,6 @@ sequenceDiagram
     UserAdminController->>UserAdminController: @PreAuthorize 권한 검사<br/>(ADMIN or user:manage:*)
     UserAdminController->>UserCrudService: createUser(request)
 
-        UserRepository-->>UserProxyService: true
-    end
-
     UserCrudService->>UserProxyService: existsByEmail(email)
     UserProxyService->>UserRepository: existsByEmail(email)
     alt 이메일 중복
@@ -152,9 +149,6 @@ sequenceDiagram
     end
 
     Note over UserCrudService,CredentialRepository: 트랜잭션 시작
-
-        end
-    end
 
     opt email 변경 요청
         UserCrudService->>UserRepository: existsByEmail(newEmail)
@@ -286,9 +280,6 @@ sequenceDiagram
 
     Note over UserCrudService,CredentialRepository: 트랜잭션 시작
     Note over UserCrudService: role=empty, departmentId=empty → 변경 불가
-
-        end
-    end
 
     opt email 변경 요청
         UserCrudService->>UserRepository: existsByEmail(newEmail)

@@ -14,7 +14,6 @@
 
         <form class="panel filter-grid" th:action="@{/admin/user/users}" method="get">
             <label>검색어
-                <input name="keyword" th:value="${filter.keyword}" placeholder="이름, 이메일, 연락처">
             </label>
             <label>역할
                 <select name="role">
@@ -92,7 +91,7 @@
                         <td th:text="${#temporals.format(user.createdAt, 'yyyy.MM.dd')}">2026.01.01</td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(usersPage.content)}">
-                        <td colspan="9" class="empty">등록된 사용자가 없습니다.</td>
+                        <td colspan="10" class="empty">등록된 사용자가 없습니다.</td>
                     </tr>
                     </tbody>
                 </table>

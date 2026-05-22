@@ -4,8 +4,11 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
+
+import java.time.LocalDate;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
@@ -156,6 +159,35 @@ class UserPaginationTest extends UserBaseTest {
             .statusCode(200)
             .body("content.size()", equalTo(0))
             .body("page", equalTo(9999))
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("현재 활동 중인 선생님 필터 조회 성공(200 OK)")
+    void getAllUsers_CurrentTeacherOnly() {
+        LocalDate today = LocalDate.now();
+        userTestHelper.createTestUser("currentTeacher@test.com", "currentTeacher", "pw1", RoleType.VOLUNTEER);
+        userTestHelper.setTeacherPeriod("currentTeacher@test.com", today.minusDays(1), today.plusDays(1));
+
+        userTestHelper.createTestUser("openEndedTeacher@test.com", "openEndedTeacher", "pw2", RoleType.VOLUNTEER);
+        userTestHelper.setTeacherPeriod("openEndedTeacher@test.com", today.minusDays(1), null);
+
+        userTestHelper.createTestUser("futureTeacher@test.com", "futureTeacher", "pw3", RoleType.VOLUNTEER);
+        userTestHelper.setTeacherPeriod("futureTeacher@test.com", today.plusDays(1), today.plusDays(10));
+
+        userTestHelper.createTestUser("expiredTeacher@test.com", "expiredTeacher", "pw4", RoleType.VOLUNTEER);
+        userTestHelper.setTeacherPeriod("expiredTeacher@test.com", today.minusDays(10), today.minusDays(1));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .queryParam("currentTeacher", true)
+            .queryParam("size", 100)
+        .when()
+            .get()
+        .then()
+            .statusCode(200)
+            .body("content.name", hasItems("currentTeacher", "openEndedTeacher"))
+            .body("content.name", not(hasItems("futureTeacher", "expiredTeacher")))
             .log().all();
     }
 

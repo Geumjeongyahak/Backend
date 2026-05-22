@@ -1,6 +1,7 @@
 package geumjeongyahak.e2e.post;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
@@ -110,7 +111,7 @@ class PostAdminViewFileTest extends BasePostTest {
         return given()
             .contentType(ContentType.URLENC)
             .formParam("username", TEST_POST_ADMIN_USERNAME + "@test.com")
-            .formParam("password", "pw_" + TEST_POST_ADMIN_USERNAME)
+            .formParam("password", userTestHelper.getDefaultPassword(TEST_POST_ADMIN_USERNAME))
             .redirects()
             .follow(false)
         .when()
@@ -135,6 +136,7 @@ class PostAdminViewFileTest extends BasePostTest {
 
         String location = response.header("Location");
         String prefix = "/admin/channel/" + noticeChannelId + "/posts/";
+        assertThat(location).contains(prefix).endsWith("/edit");
         Long postId = Long.valueOf(location.substring(location.indexOf(prefix) + prefix.length(), location.lastIndexOf("/edit")));
         testPostHelper.registerPost(postId);
         return postId;

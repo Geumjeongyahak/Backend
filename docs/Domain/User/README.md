@@ -173,9 +173,6 @@ sequenceDiagram
     Security->>Controller: 권한 통과
     Controller->>Service: createUser(request)
 
-        DB-->>Service: true
-    end
-
     Service->>DB: existsByEmail(email)
     alt 이메일 중복
         DB-->>Service: true
@@ -252,8 +249,11 @@ sequenceDiagram
 
     note over Service,DB: 트랜잭션 시작
 
+        Service->>DB: existsByEmail(newEmail)
         alt 중복
+            Service-->>Client: 409 BIZ-01-001
         end
+        Service->>Service: user.setEmail()
     end
 
     opt email 변경
@@ -416,7 +416,9 @@ sequenceDiagram
 
     note over Service,DB: 트랜잭션 시작
 
+        Service->>DB: existsByEmail()
         alt 중복
+            Service-->>Client: 409 BIZ-01-001
         end
     end
 

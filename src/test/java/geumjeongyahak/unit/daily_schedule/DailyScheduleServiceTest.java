@@ -119,7 +119,7 @@ class DailyScheduleServiceTest {
 
     private User teacher(String name) {
         return User.builder()
-                        .name(name)
+            .name(name)
             .role(RoleType.VOLUNTEER)
             .build();
     }

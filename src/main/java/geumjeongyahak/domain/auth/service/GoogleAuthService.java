@@ -96,7 +96,12 @@ public class GoogleAuthService {
     }
 
     @Transactional
-    public TokenResponse signup(String tempToken, String name, String phoneNumber) {
+    public TokenResponse signup(
+        String tempToken,
+        String name,
+        String phoneNumber,
+        String residentRegistrationNumberPrefix
+    ) {
         String[] parts = extractTempToken(tempToken);
         String googleSub = parts[0];
         String email = parts[1];
@@ -108,6 +113,7 @@ public class GoogleAuthService {
                 .name(name)
                 .email(email)
                 .phoneNumber(phoneNumber)
+                .residentRegistrationNumberPrefix(residentRegistrationNumberPrefix)
                 .role(RoleType.GUEST)
                 .build()));
 

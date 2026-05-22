@@ -2,10 +2,15 @@ package geumjeongyahak.e2e.classroom;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import geumjeongyahak.domain.channel.entity.Channel;
+import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
+import geumjeongyahak.domain.channel.enums.ChannelBindingType;
+import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.enums.ClassroomType;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("E2E: Classroom 삭제 테스트")
 public class ClassroomDeleteTest extends BaseClassroomTest {
@@ -20,6 +25,16 @@ public class ClassroomDeleteTest extends BaseClassroomTest {
             "관리자 삭제 테스트용 교실"
         );
         Long classroomId = classroom.getId();
+        Channel linkedChannel = channelRepository.save(Channel.builder()
+            .name("Test Classroom Delete 1")
+            .description("삭제 테스트용 분반 연동 채널")
+            .channelType(ChannelType.CLASSROOM)
+            .bindingType(ChannelBindingType.DOMAIN_LINKED)
+            .refId(classroomId)
+            .accessLevel(ChannelAccessLevel.READ_WRITE)
+            .isActive(true)
+            .build());
+        testChannelHelper.registerChannel(linkedChannel.getId());
 
         // When & Then: 관리자가 교실 삭제
         given()
@@ -38,6 +53,10 @@ public class ClassroomDeleteTest extends BaseClassroomTest {
         .then()
             .statusCode(404)
             .log().all();
+
+        Channel deactivatedChannel = channelRepository.findById(linkedChannel.getId()).orElseThrow();
+        assertThat(deactivatedChannel.isActive()).isFalse();
+        assertThat(deactivatedChannel.isDeleted()).isFalse();
     }
 
     @Test

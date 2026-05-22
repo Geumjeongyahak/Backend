@@ -1,14 +1,17 @@
 package geumjeongyahak.e2e.util;
 
+import geumjeongyahak.common.security.jwt.JwtTokenProvider;
+import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
 import geumjeongyahak.domain.auth.service.UserCredentialService;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.repository.UserRepository;
-import geumjeongyahak.common.security.jwt.JwtTokenProvider;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,68 +23,96 @@ public class TestUserHelper {
     private final UserCredentialRepository userCredentialRepository;
     private final UserCredentialService userCredentialService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final PasswordEncoder passwordEncoder;
     private final Map<String, User> userCache;
 
     public TestUserHelper(
             UserRepository userRepository,
             UserCredentialRepository userCredentialRepository,
             UserCredentialService userCredentialService,
-            JwtTokenProvider jwtTokenProvider
+            JwtTokenProvider jwtTokenProvider,
+            PasswordEncoder passwordEncoder
     ) {
         this.userRepository = userRepository;
         this.userCredentialRepository = userCredentialRepository;
         this.userCredentialService = userCredentialService;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.passwordEncoder = passwordEncoder;
         this.userCache = new HashMap<>();
     }
 
-    public User createTestUser(String userKey, String name, String email, String password, RoleType role) {
-        if (userCache.containsKey(userKey)) {
-            return userCache.get(userKey);
+    public User createTestUser(String email, String name, String password, RoleType role) {
+        String normalizedEmail = toDefaultEmail(email);
+        if (userCache.containsKey(normalizedEmail)) {
+            return userCache.get(normalizedEmail);
         }
-        
-        User user = User.builder()
+
+        User user = userRepository.findByEmail(normalizedEmail).orElseGet(() -> {
+            User newUser = User.builder()
                 .name(name)
-                .email(email)
+                .email(normalizedEmail)
                 .role(role)
                 .build();
-        User savedUser = userRepository.save(user);
-        
-        userCredentialService.createLocalCredential(savedUser, email, password);
-        
-        userCache.put(userKey, savedUser);
-        return savedUser;
+            return userRepository.save(newUser);
+        });
+
+        userCredentialRepository.findByCredentialEmailAndProvider(normalizedEmail, ProviderType.LOCAL)
+            .ifPresentOrElse(
+                credential -> userCredentialService.updateLocalPassword(user, passwordEncoder.encode(password)),
+                () -> userCredentialService.createLocalCredential(user, normalizedEmail, password)
+            );
+
+        userCache.put(normalizedEmail, user);
+        return user;
     }
 
-    public User createTestUser(String userKey, RoleType role) {
-        return createTestUser(userKey, userKey, userKey + "@test.com", getDefaultPassword(userKey), role);
+    public User createTestUser(String userKey, String name, String email, String password, RoleType role) {
+        return createTestUser(email, name, password, role);
     }
 
-    public User createTestUser(String userKey, Collection<RoleType> roles) {
+    public User createTestUser(String email, RoleType role) {
+        String normalizedEmail = toDefaultEmail(email);
+        String name = normalizedEmail.split("@")[0];
+        return createTestUser(normalizedEmail, name, getDefaultPassword(email), role);
+    }
+
+    public User createTestUser(String email, Collection<RoleType> roles) {
         RoleType role = (roles != null && !roles.isEmpty()) ? roles.iterator().next() : RoleType.VOLUNTEER;
-        return createTestUser(userKey, role);
+        return createTestUser(email, role);
     }
 
-    public void setUser(String userKey) {
-        userRepository.findByEmail(toDefaultEmail(userKey))
-            .ifPresent(user -> userCache.put(userKey, user));
+    public User setTeacherPeriod(String email, LocalDate teacherStartAt, LocalDate teacherEndAt) {
+        String normalizedEmail = toDefaultEmail(email);
+        User user = userRepository.findByEmail(normalizedEmail)
+            .orElseThrow(() -> new IllegalArgumentException("User not found: " + normalizedEmail));
+        user.setTeacherStartAt(teacherStartAt);
+        user.setTeacherEndAt(teacherEndAt);
+        userCache.put(normalizedEmail, user);
+        return user;
     }
 
-    public User getUser(String userKey) {
-        User user = userCache.get(userKey);
+    public void setUser(String email) {
+        String normalizedEmail = toDefaultEmail(email);
+        userRepository.findByEmail(normalizedEmail)
+            .ifPresent(user -> userCache.put(normalizedEmail, user));
+    }
+
+    public User getUser(String email) {
+        String normalizedEmail = toDefaultEmail(email);
+        User user = userCache.get(normalizedEmail);
         if (user == null) {
-            userRepository.findByEmail(toDefaultEmail(userKey))
-                .ifPresent(u -> userCache.put(userKey, u));
-            user = userCache.get(userKey);
+            userRepository.findByEmail(normalizedEmail)
+                .ifPresent(u -> userCache.put(normalizedEmail, u));
+            user = userCache.get(normalizedEmail);
         }
         return user;
     }
 
-    public String getDefaultPassword(String userKey) {
-        if ("admin1234".equals(userKey)) return "admin1234";
-        if ("teacher01".equals(userKey)) return "teacher01";
-        if ("teacher02".equals(userKey)) return "teacher02";
-        return "pw_" + userKey;
+    public String getDefaultPassword(String identifier) {
+        if ("admin@test.com".equals(identifier) || "admin1234".equals(identifier)) return "admin1234";
+        if ("teacher01@test.com".equals(identifier) || "teacher01".equals(identifier)) return "teacher01";
+        if ("teacher02@test.com".equals(identifier) || "teacher02".equals(identifier)) return "teacher02";
+        return "pw_" + identifier;
     }
 
     public String generateAccessToken(Long userId) {
@@ -92,21 +123,29 @@ public class TestUserHelper {
         return jwtTokenProvider.createToken(String.valueOf(userId), expSeconds);
     }
 
-    public String generateAccessTokenByUserKey(String userKey) {
-        User user = getUser(userKey);
+    public String generateAccessTokenByEmail(String email) {
+        User user = getUser(email);
         if (user == null) {
-            throw new IllegalArgumentException("User not found: " + userKey);
+            throw new IllegalArgumentException("User not found: " + email);
         }
         return generateAccessToken(user.getId());
     }
 
-    public String generateAccessTokenByUserKey(String userKey, Long expSeconds) {
-        User user = getUser(userKey);
+    public String generateAccessTokenByEmail(String email, Long expSeconds) {
+        User user = getUser(email);
         if (user == null) {
-            throw new IllegalArgumentException("User not found: " + userKey);
+            throw new IllegalArgumentException("User not found: " + email);
         }
         return generateToken(user.getId(), expSeconds);
-    }   
+    }
+
+    public String generateAccessTokenByUserKey(String userKey) {
+        return generateAccessTokenByEmail(userKey);
+    }
+
+    public String generateAccessTokenByUserKey(String userKey, Long expSeconds) {
+        return generateAccessTokenByEmail(userKey, expSeconds);
+    }
 
     private String toDefaultEmail(String userKey) {
         if (userKey.contains("@")) {
@@ -123,12 +162,12 @@ public class TestUserHelper {
 
     public void clearAll() {
         userCache.values().stream()
-                .map(User::getId)
-                .filter(id -> id != null && id > 4)
-                .forEach(id -> {
-                    userCredentialRepository.deleteAllByUserId(id);
-                    userRepository.deleteById(id);
-                });
+            .map(User::getId)
+            .filter(id -> id != null && id > 4)
+            .forEach(id -> {
+                userCredentialRepository.deleteAllByUserId(id);
+                userRepository.deleteById(id);
+            });
         userCache.clear();
     }
 }

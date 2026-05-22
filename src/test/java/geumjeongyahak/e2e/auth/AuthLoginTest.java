@@ -112,7 +112,7 @@ class AuthLoginTest extends AuthBaseTest {
     void login_MissingPassword() {
         String invalidReq = """
             {
-                "username": "admin1234"
+                "email": "admin@test.com"
             }
             """;
 

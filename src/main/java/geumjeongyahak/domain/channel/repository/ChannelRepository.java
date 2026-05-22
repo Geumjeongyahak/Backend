@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import geumjeongyahak.domain.channel.entity.Channel;
 import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
+import geumjeongyahak.domain.channel.enums.ChannelBindingType;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 
 import java.util.Optional;
@@ -14,6 +15,12 @@ import java.util.List;
 
 public interface ChannelRepository extends JpaRepository<Channel, Long>, JpaSpecificationExecutor<Channel> {
     Optional<Channel> findByChannelTypeAndRefIdAndIsDeletedFalse(ChannelType channelType, Long refId);
+
+    Optional<Channel> findByChannelTypeAndBindingTypeAndRefIdAndIsDeletedFalse(
+        ChannelType channelType,
+        ChannelBindingType bindingType,
+        Long refId
+    );
 
     @Query("select c.accessLevel from Channel c where c.id = :id and c.isDeleted = false")
     Optional<ChannelAccessLevel> findAccessLevelById(Long id);

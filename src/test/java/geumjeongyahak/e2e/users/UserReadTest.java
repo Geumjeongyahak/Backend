@@ -21,7 +21,8 @@ class UserReadTest extends UserBaseTest {
         .then()
             .statusCode(200)
             .body("id", equalTo(userId.intValue()))
-                        .log().all();
+            .body("email", equalTo(TEST_ADMIN_EMAIL))
+            .log().all();
     }
 
     @Test
@@ -74,7 +75,8 @@ class UserReadTest extends UserBaseTest {
             .get("/me")
         .then()
             .statusCode(200)
-                        .body("permissions", notNullValue())
+            .body("email", equalTo(TEST_ADMIN_EMAIL))
+            .body("permissions", notNullValue())
             .log().all();
     }
 
@@ -87,7 +89,8 @@ class UserReadTest extends UserBaseTest {
             .get("/me")
         .then()
             .statusCode(200)
-                        .body("permissions", notNullValue())
+            .body("email", equalTo(TEST_VOLUNTEER_USERNAME))
+            .body("permissions", notNullValue())
             .log().all();
     }
 

@@ -35,7 +35,7 @@ class UserCreateTest extends UserBaseTest {
             .statusCode(201)
             .body("id", notNullValue())
             .body("email", equalTo(uniqueUsername + "@test.com"))
-                        .body("name", equalTo("Manager User"))
+            .body("name", equalTo("Manager User"))
             .body("role", equalTo("MANAGER"))
             .log().all()
             .extract()
@@ -181,10 +181,11 @@ class UserCreateTest extends UserBaseTest {
     }
 
     @Test
-    @DisplayName("중복된 이메일로 User 생성 실패(409 Conflict)")
+    @DisplayName("중복된 email로 User 생성 실패(409 Conflict)")
     void createUser_DuplicateEmail() {
+        // 기존 admin 사용자와 동일한 email 사용
         CreateUserRequest req = new CreateUserRequest(
-                "admin@test.com",
+                TEST_ADMIN_EMAIL,
                 "Duplicate User",
                 "password123!",
                 "010-1234-5678",

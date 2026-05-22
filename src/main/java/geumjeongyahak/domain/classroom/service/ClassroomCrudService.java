@@ -15,6 +15,7 @@ import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.enums.ClassroomType;
 import geumjeongyahak.domain.classroom.event.ClassroomCreatedEvent;
+import geumjeongyahak.domain.classroom.event.ClassroomDeletedEvent;
 import geumjeongyahak.domain.classroom.exception.ClassroomErrorCode;
 import geumjeongyahak.domain.classroom.repository.ClassroomRepository;
 import geumjeongyahak.domain.classroom.repository.specification.ClassroomSpecs;
@@ -126,6 +127,7 @@ public class ClassroomCrudService {
         Classroom classroom = getClassroomWithoutDeleted(id);
         classroom.setDeleted(true);
         classroomRepository.save(classroom);
+        eventPublisher.publish(new ClassroomDeletedEvent(id));
         log.info("분반 삭제 성공: {}", classroom.getName());
     }
 

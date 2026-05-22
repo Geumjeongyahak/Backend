@@ -35,6 +35,15 @@ public class LocalAuthController {
         return ResponseEntity.ok(localLoginService.login(request));
     }
 
+    @Operation(summary = "관리자 로그인", description = "관리자 페이지에서 사용할 ADMIN/MANAGER 전용 JWT 로그인을 수행합니다.")
+    @PostMapping("/admin/login")
+    public ResponseEntity<TokenResponse> adminLogin(
+            @Valid @RequestBody LocalLoginRequest request
+    ) {
+        log.debug("POST /api/v1/auth/admin/login - 관리자 로그인 요청: {}", request.email());
+        return ResponseEntity.ok(localLoginService.adminLogin(request));
+    }
+
     @Operation(summary = "회원가입", description = "새로운 사용자를 등록합니다.")
     @PostMapping("/signup")
     public ResponseEntity<TokenResponse> signup(

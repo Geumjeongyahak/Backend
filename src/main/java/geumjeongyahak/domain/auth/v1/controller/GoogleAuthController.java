@@ -90,7 +90,10 @@ public class GoogleAuthController {
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(googleAuthService.signup(
-                request.tempToken(), request.name(), request.phoneNumber()
+                request.tempToken(),
+                request.name(),
+                request.phoneNumber(),
+                request.residentRegistrationNumberPrefix()
             ));
     }
 }

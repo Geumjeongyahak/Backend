@@ -5,6 +5,7 @@ import geumjeongyahak.domain.channel.entity.Channel;
 import geumjeongyahak.domain.channel.event.DepartmentChannelProvisionedEvent;
 import geumjeongyahak.domain.channel.service.SystemChannelService;
 import geumjeongyahak.domain.classroom.event.ClassroomCreatedEvent;
+import geumjeongyahak.domain.classroom.event.ClassroomDeletedEvent;
 import geumjeongyahak.domain.department.event.DepartmentCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,5 +34,12 @@ public class DomainChannelEventHandler {
     public void handleClassroomCreated(ClassroomCreatedEvent event) {
         systemChannelService.ensureClassroomChannel(event.classroomId(), event.classroomName());
         log.info("분반 채널 생성 완료 - classroomId: {}", event.classroomId());
+    }
+
+    @EventListener
+    @Transactional
+    public void handleClassroomDeleted(ClassroomDeletedEvent event) {
+        systemChannelService.deactivateClassroomChannel(event.classroomId());
+        log.info("분반 채널 비활성화 완료 - classroomId: {}", event.classroomId());
     }
 }

@@ -19,7 +19,10 @@ import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.exception.DuplicateEmailException;
 import geumjeongyahak.domain.users.exception.UserNotFoundException;
 import geumjeongyahak.domain.users.repository.UserRepository;
+import geumjeongyahak.domain.users.repository.specification.UserSpecs;
+import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
 @Slf4j
@@ -44,10 +47,25 @@ public class UserCrudService {
 
     @Transactional(readOnly = true)
     public PaginationResponse<UserSimpleResponse> getAllUsersPagination(UserPaginationRequest request) {
-        log.debug("전체 사용자 목록 조회 요청");
-        var pageResponse = new PaginationResponse<>(userRepository.findAll(request.toRequest()));
+        log.debug("전체 사용자 목록 조회 요청 - role: {}, name: {}, currentTeacher: {}",
+            request.getRole(), request.getName(), request.getCurrentTeacher());
+
+        Specification<User> spec = Specification.allOf();
+
+        if (request.getRole() != null) {
+            spec = spec.and(UserSpecs.hasRole(RoleType.valueOf(request.getRole())));
+        }
+        if (request.getName() != null) {
+            spec = spec.and(UserSpecs.containsName(request.getName()));
+        }
+        if (request.isCurrentTeacherOnly()) {
+            spec = spec.and(UserSpecs.isCurrentTeacher(LocalDate.now()));
+        }
+
+        var users = userRepository.findAll(spec, request.toRequest());
+        var pageResponse = new PaginationResponse<>(users);
         log.debug("전체 사용자 목록 조회 완료 - 총 {}명", pageResponse.getTotalElements());
-        
+
         return PaginationResponse.mapTo(pageResponse, UserSimpleResponse::from);
     }
 
@@ -71,8 +89,7 @@ public class UserCrudService {
         }
 
         User savedUser = userRepository.save(userBuilder.build());
-        
-        
+
         credentialService.createLocalCredential(
             savedUser,
             request.email(),

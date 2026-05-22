@@ -46,6 +46,10 @@ CREATE TABLE users (
     phone_number VARCHAR(20),
     profile_image_url VARCHAR(255),
     department_id BIGINT REFERENCES departments(id),
+    classroom_id BIGINT,
+    resident_registration_number_prefix VARCHAR(6),
+    teacher_start_at DATE,
+    teacher_end_at DATE,
     role VARCHAR(20) NOT NULL DEFAULT 'GUEST',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

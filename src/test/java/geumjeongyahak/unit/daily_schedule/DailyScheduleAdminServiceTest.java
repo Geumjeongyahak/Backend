@@ -127,7 +127,7 @@ class DailyScheduleAdminServiceTest {
 
     private User teacher(Long id, String name) {
         User teacher = User.builder()
-                        .name(name)
+            .name(name)
             .role(RoleType.VOLUNTEER)
             .build();
         ReflectionTestUtils.setField(teacher, "id", id);
