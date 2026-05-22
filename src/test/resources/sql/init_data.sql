@@ -93,8 +93,15 @@ VALUES
 ALTER TABLE lessons ALTER COLUMN id RESTART WITH 7;
 
 -- 10. Students
-INSERT INTO students (id, class_id, name, phone_number, description, status)
+INSERT INTO students (id, name, phone_number, description, status)
 VALUES
-    (1, 1, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),
-    (2, 1, '박민수', '010-4444-4444', '기초반', 'ENROLLED');
+    (1, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),
+    (2, '박민수', '010-4444-4444', '기초반', 'ENROLLED');
 ALTER TABLE students ALTER COLUMN id RESTART WITH 3;
+
+-- 10. Student Classrooms
+INSERT INTO student_classrooms (id, student_id, classroom_id)
+VALUES
+    (1, 1, 1),
+    (2, 2, 1);
+ALTER TABLE student_classrooms ALTER COLUMN id RESTART WITH 3;

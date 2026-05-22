@@ -1,16 +1,21 @@
 package geumjeongyahak.domain.student.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,9 +42,8 @@ public class Student extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "class_id", nullable = false)
-    private Classroom classroom;
+    @OneToMany(mappedBy = "student", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+    private List<StudentClassroom> studentClassrooms = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -52,7 +56,7 @@ public class Student extends BaseEntity {
         this.name = name;
         this.phoneNumber = phoneNumber;
         this.description = description;
-        this.classroom = classroom;
+        setClassroom(classroom);
         this.status = StudentStatus.ENROLLED;
         this.isDeleted = false;
     }
@@ -71,11 +75,74 @@ public class Student extends BaseEntity {
             this.status = status;
         }
         if (classroom != null) {
-            this.classroom = classroom;
+            setClassroom(classroom);
         }
     }
 
     public void delete() {
         this.isDeleted = true;
+    }
+
+    public Classroom getClassroom() {
+        return studentClassrooms.stream()
+                .filter(studentClassroom -> !studentClassroom.isDeleted())
+                .findFirst()
+                .map(StudentClassroom::getClassroom)
+                .orElse(null);
+    }
+
+    public List<Classroom> getClassrooms() {
+        return studentClassrooms.stream()
+                .filter(studentClassroom -> !studentClassroom.isDeleted())
+                .map(StudentClassroom::getClassroom)
+                .toList();
+    }
+
+    public void setClassroom(Classroom classroom) {
+        if (classroom == null) {
+            setClassrooms(List.of());
+            return;
+        }
+        setClassrooms(List.of(classroom));
+    }
+
+    public void setClassrooms(Collection<Classroom> classrooms) {
+        Set<Long> targetClassroomIds = new HashSet<>();
+        if (classrooms != null) {
+            classrooms.stream()
+                    .filter(classroom -> classroom != null && classroom.getId() != null)
+                    .map(Classroom::getId)
+                    .forEach(targetClassroomIds::add);
+        }
+
+        studentClassrooms.forEach(studentClassroom -> {
+            Long classroomId = studentClassroom.getClassroom().getId();
+            if (targetClassroomIds.contains(classroomId)) {
+                studentClassroom.restore();
+            } else {
+                studentClassroom.delete();
+            }
+        });
+
+        if (classrooms != null) {
+            classrooms.stream()
+                    .distinct()
+                    .forEach(this::addClassroom);
+        }
+    }
+
+    public void addClassroom(Classroom classroom) {
+        if (classroom == null) {
+            return;
+        }
+        studentClassrooms.stream()
+                .filter(studentClassroom -> isSameClassroom(studentClassroom.getClassroom(), classroom))
+                .findFirst()
+                .ifPresentOrElse(StudentClassroom::restore, () -> studentClassrooms.add(new StudentClassroom(this, classroom)));
+    }
+
+    private boolean isSameClassroom(Classroom existing, Classroom classroom) {
+        return existing == classroom
+                || existing.getId() != null && existing.getId().equals(classroom.getId());
     }
 }

@@ -208,11 +208,18 @@ VALUES
 ALTER SEQUENCE vendors_id_seq RESTART WITH 5;
 
 -- 15. Students
-INSERT INTO students (id, class_id, name, phone_number, description, status)
+INSERT INTO students (id, name, phone_number, description, status)
 VALUES
-    (1, 1, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),
-    (2, 1, '박민수', '010-4444-4444', '기초반', 'ENROLLED');
+    (1, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),
+    (2, '박민수', '010-4444-4444', '기초반', 'ENROLLED');
 ALTER SEQUENCE students_id_seq RESTART WITH 3;
+
+-- 15. Student Classrooms
+INSERT INTO student_classrooms (id, student_id, classroom_id)
+VALUES
+    (1, 1, 1),
+    (2, 2, 1);
+ALTER SEQUENCE student_classrooms_id_seq RESTART WITH 3;
 
 -- 15. Daily Student Attendances
 INSERT INTO daily_student_attendances (

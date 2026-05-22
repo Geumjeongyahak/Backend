@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.student.repository.specification;
 
+import jakarta.persistence.criteria.JoinType;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
 import geumjeongyahak.domain.student.entity.Student;
@@ -35,7 +36,12 @@ public class StudentSpecs {
             if (classroomId == null) {
                 return criteriaBuilder.conjunction();
             }
-            return criteriaBuilder.equal(root.get("classroom").get("id"), classroomId);
+            query.distinct(true);
+            var studentClassrooms = root.join("studentClassrooms", JoinType.INNER);
+            return criteriaBuilder.and(
+                    criteriaBuilder.equal(studentClassrooms.get("classroom").get("id"), classroomId),
+                    criteriaBuilder.isFalse(studentClassrooms.get("isDeleted"))
+            );
         };
     }
 }
