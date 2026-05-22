@@ -13,12 +13,15 @@ import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailR
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleVolunteerHoursResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.GrantedAuthority;
@@ -31,6 +34,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
@@ -65,6 +69,32 @@ public class DailyScheduleController {
             request.getSize()
         );
         return ResponseEntity.ok(dailyScheduleService.getJournalDailySchedules(request, userDetails.getUserId()));
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_READ_ACCESS)
+    @Operation(
+        summary = "날짜/분반 기준 하루 일정 상세 조회",
+        description = "수업 날짜와 분반 ID 기준으로 하루 일정의 수업, 교사 출석, 학생 출석부, 수업 일지 내용을 조회합니다."
+    )
+    @GetMapping("/detail")
+    public ResponseEntity<DailyScheduleDetailResponse> getDailyScheduleByClassroomAndDate(
+        @Parameter(description = "분반 ID", example = "1")
+        @RequestParam Long classroomId,
+        @Parameter(description = "수업 날짜", example = "2026-06-10")
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate lessonDate,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug(
+            "GET /api/v1/daily-schedules/detail - 날짜/분반 기준 하루 일정 상세 조회 요청 (classroomId={}, lessonDate={})",
+            classroomId,
+            lessonDate
+        );
+        return ResponseEntity.ok(dailyScheduleService.getDailyScheduleByClassroomAndDate(
+            classroomId,
+            lessonDate,
+            userDetails.getUserId(),
+            canViewSensitiveInfo(userDetails)
+        ));
     }
 
     @PreAuthorize(DAILY_SCHEDULE_READ_ACCESS)

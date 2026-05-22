@@ -11,6 +11,7 @@ DailySchedule은 같은 분반과 같은 날짜의 Lesson들을 하루 단위로
 | API | 권한 |
 |-----|------|
 | `GET /api/v1/daily-schedules` | `VOLUNTEER`, `MANAGER`, `ADMIN` |
+| `GET /api/v1/daily-schedules/detail` | `VOLUNTEER`, `MANAGER`, `ADMIN` |
 | `GET /api/v1/daily-schedules/{dailyScheduleId}` | `VOLUNTEER`, `MANAGER`, `ADMIN` |
 | `GET /api/v1/daily-schedules/volunteer-hours` | `VOLUNTEER`, `MANAGER`, `ADMIN` |
 | `POST /api/v1/daily-schedules/journal` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
@@ -47,6 +48,7 @@ DailySchedule 도메인은 다음 권한 코드를 사용합니다.
 - `page`, `size`로 페이지를 지정합니다. 기본값은 `page=0`, `size=10`입니다.
 - 삭제된 DailySchedule, DailyTeacherAttendance, DailyStudentAttendance는 조회와 집계에서 제외됩니다.
 - 상세 조회는 DailySchedule에 연결된 Lesson 목록, 교사 출석, 학생 출석부를 함께 반환합니다.
+- 상세 조회는 `dailyScheduleId` 또는 `lessonDate`와 `classroomId` 조합으로 조회할 수 있습니다.
 
 예시:
 
@@ -96,6 +98,14 @@ GET /api/v1/daily-schedules?keyword=수학&mine=true&page=0&size=8
   "totalPages": 1
 }
 ```
+
+날짜/분반 기준 상세 조회:
+
+```http
+GET /api/v1/daily-schedules/detail?classroomId=1&lessonDate=2026-06-20
+```
+
+응답 구조는 `GET /api/v1/daily-schedules/{dailyScheduleId}`와 동일합니다. 해당 날짜와 분반에 연결된 활성 DailySchedule이 없으면 `404 Not Found`를 반환합니다.
 
 ## 수업 일지 정책
 

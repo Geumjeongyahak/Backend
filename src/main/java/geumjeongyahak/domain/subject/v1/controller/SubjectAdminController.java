@@ -59,6 +59,7 @@ public class SubjectAdminController {
             - teacherId가 전달되면 teacherAssignedAt에 현재 시각을 기록합니다.
             - 같은 분반에서 운영 기간이 겹치고 요일과 교시가 같은 과목은 중복으로 생성할 수 없습니다.
             - startAt은 endAt보다 늦을 수 없습니다.
+            - 과목 운영 기간은 시작일과 종료일을 포함해 최대 365일까지 설정할 수 있습니다.
             - startTime은 endTime보다 빨라야 합니다.
             - period는 1 이상이어야 합니다.
 

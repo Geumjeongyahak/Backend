@@ -2,6 +2,7 @@ package geumjeongyahak.domain.subject.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import geumjeongyahak.domain.request.service.LessonExchangeRequestProxyService;
 import geumjeongyahak.domain.subject.entity.Subject;
 import geumjeongyahak.domain.subject.exception.SubjectDuplicateException;
 import geumjeongyahak.domain.subject.exception.SubjectNotFoundException;
+import geumjeongyahak.domain.subject.exception.SubjectOperationPeriodExceededException;
 import geumjeongyahak.domain.subject.exception.SubjectTeacherAssignmentConflictException;
 import geumjeongyahak.domain.subject.event.SubjectCreatedEvent;
 import geumjeongyahak.domain.subject.event.SubjectScheduleRecreatedEvent;
@@ -43,6 +45,8 @@ import geumjeongyahak.domain.users.repository.UserRepository;
 @Transactional(readOnly = true)
 public class SubjectService {
 
+    private static final long MAX_SUBJECT_OPERATION_DAYS = 365;
+
     private final SubjectRepository subjectRepository;
     private final ClassroomRepository classroomRepository;
     private final UserRepository userRepository;
@@ -54,6 +58,8 @@ public class SubjectService {
     @Transactional
     public SubjectDetailResponse createSubject(CreateSubjectRequest request) {
         log.debug("과목 등록 요청 (name={})", request.name());
+        validateCreateSchedule(request.startAt(), request.endAt(), request.startTime(), request.endTime());
+
         Classroom classroom = classroomRepository.findById(request.classroomId())
             .orElseThrow(() -> {
                 log.info("과목 등록 실패 - 교실을 찾을 수 없습니다. ID: {}", request.classroomId());
@@ -148,6 +154,18 @@ public class SubjectService {
         return subjectRepository.findAll().stream()
             .map(SubjectDetailResponse::from)
             .toList();
+    }
+
+    public List<SubjectDetailResponse> getUnassignedSubjects() {
+        log.debug("교사 미배정 과목 목록 조회 요청");
+
+        List<SubjectDetailResponse> responses = subjectRepository
+            .findAllByTeacherIsNullAndIsActiveTrueOrderByStartAtAscIdAsc()
+            .stream()
+            .map(SubjectDetailResponse::from)
+            .toList();
+        log.debug("교사 미배정 과목 목록 조회 완료 - 총 {}건", responses.size());
+        return responses;
     }
 
     @Transactional
@@ -411,6 +429,20 @@ public class SubjectService {
         }
         if (!startTime.isBefore(endTime)) {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT, "startTime은 endTime보다 빨라야 합니다.");
+        }
+    }
+
+    private void validateCreateSchedule(
+        LocalDate startAt,
+        LocalDate endAt,
+        java.time.LocalTime startTime,
+        java.time.LocalTime endTime
+    ) {
+        validateSchedule(startAt, endAt, startTime, endTime);
+
+        long operationDays = ChronoUnit.DAYS.between(startAt, endAt) + 1;
+        if (operationDays > MAX_SUBJECT_OPERATION_DAYS) {
+            throw new SubjectOperationPeriodExceededException(MAX_SUBJECT_OPERATION_DAYS);
         }
     }
 

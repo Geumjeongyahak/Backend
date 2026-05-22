@@ -181,7 +181,7 @@ public class SubjectCreateTest extends SubjectBaseTest {
         Map<String, Object> request = createRequest(
             "과거 수업 제외 과목",
             "2026-03-02",
-            "2099-06-30",
+            "2027-03-01",
             "MONDAY"
         );
 
@@ -266,6 +266,29 @@ public class SubjectCreateTest extends SubjectBaseTest {
             .post()
             .then()
             .statusCode(400)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("검증 실패(운영 기간 365일 초과) 시 400 Bad Request")
+    void createSubject_BadRequest_WhenOperationPeriodExceeds365Days() {
+        Map<String, Object> request = createRequest(
+            "장기 운영 과목",
+            "2026-03-02",
+            "2027-03-02",
+            "MONDAY"
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .post()
+            .then()
+            .statusCode(400)
+            .body("code", is("VAL-05-001"))
+            .body("detail", is("과목 운영 기간은 최대 365일까지 설정할 수 있습니다."))
             .log().all();
     }
 

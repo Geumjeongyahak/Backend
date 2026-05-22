@@ -2,7 +2,9 @@ package geumjeongyahak.e2e.subject;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 
+import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,20 @@ public class SubjectListReadTest extends SubjectBaseTest {
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType("application/json")
             .body(createRequest(classroomId, name, dayOfWeek, period))
+            .when()
+            .post()
+            .then()
+            .statusCode(201);
+    }
+
+    private void createUnassignedSubject(long classroomId, String name, String dayOfWeek, int period) {
+        Map<String, Object> request = new HashMap<>(createRequest(classroomId, name, dayOfWeek, period));
+        request.remove("teacherId");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
             .when()
             .post()
             .then()
@@ -88,6 +104,44 @@ public class SubjectListReadTest extends SubjectBaseTest {
             .get()
             .then()
             .statusCode(404)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("교사 미배정 과목 목록 조회 성공(200 OK)")
+    void getUnassignedSubjects_Success() {
+        createUnassignedSubject(CLASSROOM_1, "교사 미배정 국어", "MONDAY", 2);
+        createUnassignedSubject(CLASSROOM_2, "교사 미배정 수학", "TUESDAY", 1);
+        createSubject(CLASSROOM_1, "담당 교사 배정 과목", "WEDNESDAY", 3);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(subjectManageAccessToken))
+            .when()
+            .get("/unassigned")
+            .then()
+            .statusCode(200)
+            .body("size()", is(2))
+            .body("[0].teacherId", nullValue())
+            .body("[0].teacherName", nullValue())
+            .body("[0].teacherAssignedAt", nullValue())
+            .body("[0].classroomId", is((int) CLASSROOM_1))
+            .body("[1].classroomId", is((int) CLASSROOM_2))
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("게스트도 인증된 사용자면 교사 미배정 과목 목록 조회 성공(200 OK)")
+    void getUnassignedSubjects_Success_Guest() {
+        createUnassignedSubject(CLASSROOM_1, "교사 미배정 국어", "MONDAY", 2);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(userTestHelper.generateAccessTokenByUserKey("guest01")))
+            .when()
+            .get("/unassigned")
+            .then()
+            .statusCode(200)
+            .body("size()", is(1))
+            .body("[0].teacherId", nullValue())
             .log().all();
     }
 
