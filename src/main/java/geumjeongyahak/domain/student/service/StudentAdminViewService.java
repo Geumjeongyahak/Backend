@@ -40,7 +40,7 @@ public class StudentAdminViewService {
         return AdminSorts.sort(rows, sort, Map.of(
                 "id", Comparator.comparing(StudentResponse::id),
                 "name", Comparator.comparing(StudentResponse::name, Comparator.nullsLast(String::compareToIgnoreCase)),
-                "classroomName", Comparator.comparing(StudentResponse::classroomName, Comparator.nullsLast(String::compareToIgnoreCase)),
+                "classroomName", Comparator.comparing(StudentResponse::classroomNames, Comparator.nullsLast(String::compareToIgnoreCase)),
                 "status", Comparator.comparing(StudentResponse::status, Comparator.nullsLast(String::compareToIgnoreCase))
         ), "name,ASC");
     }
@@ -50,12 +50,12 @@ public class StudentAdminViewService {
     }
 
     @Transactional
-    public Long createStudent(String name, String phoneNumber, String description, Long classroomId) {
+    public Long createStudent(String name, String phoneNumber, String description, List<Long> classroomIds) {
         return studentService.createStudent(new CreateStudentRequest(
                 name,
                 phoneNumber,
                 description,
-                classroomId
+                classroomIds
         )).id();
     }
 
@@ -66,14 +66,14 @@ public class StudentAdminViewService {
             String phoneNumber,
             String description,
             StudentStatus status,
-            Long classroomId
+            List<Long> classroomIds
     ) {
         studentService.updateStudent(studentId, new UpdateStudentRequest(
                 name,
                 phoneNumber,
                 description,
                 status,
-                classroomId
+                classroomIds
         ));
     }
 

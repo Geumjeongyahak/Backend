@@ -19,8 +19,8 @@
                 </select>
             </label>
             <label>분반
-                <select name="classroomId" required>
-                    <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}" th:selected="${student.classroomId == classroom.id}">분반</option>
+                <select name="classroomIds" multiple required size="6">
+                    <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}" th:selected="${student.classroomIds().contains(classroom.id)}">분반</option>
                 </select>
             </label>
             <label>설명 <textarea name="description" th:text="${student.description}"></textarea></label>

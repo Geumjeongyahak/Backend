@@ -26,8 +26,8 @@ public class StudentReadTest extends StudentBaseTest {
             .body("name", equalTo("TestStudent1"))
             .body("phoneNumber", equalTo("010-1234-5678"))
             .body("description", equalTo("E2E seed")) // BaseTest 헬퍼가 고정 description 사용
-            .body("classroomId", equalTo(DEFAULT_CLASSROOM_ID.intValue()))
-            .body("classroomName", equalTo(DEFAULT_CLASSROOM_NAME))
+            .body("classrooms[0].id", equalTo(DEFAULT_CLASSROOM_ID.intValue()))
+            .body("classrooms[0].name", equalTo(DEFAULT_CLASSROOM_NAME))
             .log().all();
     }
 

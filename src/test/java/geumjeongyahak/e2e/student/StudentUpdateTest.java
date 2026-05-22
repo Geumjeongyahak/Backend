@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static geumjeongyahak.domain.student.enums.StudentStatus.ON_LEAVE;
 
 import io.restassured.http.ContentType;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import geumjeongyahak.domain.student.v1.dto.request.UpdateStudentRequest;
@@ -41,8 +42,8 @@ class StudentUpdateTest extends StudentBaseTest {
             // phoneNumber는 null로 보내서 기존 값 유지
             .body("phoneNumber", equalTo("010-1111-2222"))
             .body("description", equalTo("updated description"))
-            .body("classroomId", equalTo(DEFAULT_CLASSROOM_ID.intValue()))
-            .body("classroomName", equalTo(DEFAULT_CLASSROOM_NAME))
+            .body("classrooms[0].id", equalTo(DEFAULT_CLASSROOM_ID.intValue()))
+            .body("classrooms[0].name", equalTo(DEFAULT_CLASSROOM_NAME))
             .log().all();
     }
 
@@ -179,7 +180,7 @@ class StudentUpdateTest extends StudentBaseTest {
             null,
             null,
             null,
-            2L
+            List.of(2L)
         );
 
         given()
@@ -191,8 +192,8 @@ class StudentUpdateTest extends StudentBaseTest {
             .then()
             .statusCode(200)
             .body("id", equalTo(created.id().intValue()))
-            .body("classroomId", equalTo(2))
-            .body("classroomName", equalTo("장미반"))
+            .body("classrooms[0].id", equalTo(2))
+            .body("classrooms[0].name", equalTo("장미반"))
             .log().all();
     }
 
@@ -206,7 +207,7 @@ class StudentUpdateTest extends StudentBaseTest {
             null,
             null,
             null,
-            99999L
+            List.of(99999L)
         );
 
         given()

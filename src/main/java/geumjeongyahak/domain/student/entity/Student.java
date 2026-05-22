@@ -29,10 +29,6 @@ import geumjeongyahak.domain.student.enums.StudentStatus;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Student extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @Column(nullable = false, length = 50)
     private String name;
 
@@ -53,15 +49,19 @@ public class Student extends BaseEntity {
     private boolean isDeleted = false;
 
     public Student(String name, String phoneNumber, String description, Classroom classroom) {
+        this(name, phoneNumber, description, List.of(classroom));
+    }
+
+    public Student(String name, String phoneNumber, String description, Collection<Classroom> classrooms) {
         this.name = name;
         this.phoneNumber = phoneNumber;
         this.description = description;
-        setClassroom(classroom);
+        setClassrooms(classrooms);
         this.status = StudentStatus.ENROLLED;
         this.isDeleted = false;
     }
 
-    public void update(String name, String phoneNumber, String description, StudentStatus status, Classroom classroom) {
+    public void updateInfo(String name, String phoneNumber, String description, StudentStatus status) {
         if (name != null) {
             this.name = name;
         }
@@ -74,21 +74,10 @@ public class Student extends BaseEntity {
         if (status != null) {
             this.status = status;
         }
-        if (classroom != null) {
-            setClassroom(classroom);
-        }
     }
 
     public void delete() {
         this.isDeleted = true;
-    }
-
-    public Classroom getClassroom() {
-        return studentClassrooms.stream()
-                .filter(studentClassroom -> !studentClassroom.isDeleted())
-                .findFirst()
-                .map(StudentClassroom::getClassroom)
-                .orElse(null);
     }
 
     public List<Classroom> getClassrooms() {
@@ -96,14 +85,6 @@ public class Student extends BaseEntity {
                 .filter(studentClassroom -> !studentClassroom.isDeleted())
                 .map(StudentClassroom::getClassroom)
                 .toList();
-    }
-
-    public void setClassroom(Classroom classroom) {
-        if (classroom == null) {
-            setClassrooms(List.of());
-            return;
-        }
-        setClassrooms(List.of(classroom));
     }
 
     public void setClassrooms(Collection<Classroom> classrooms) {

@@ -41,8 +41,8 @@ public class StudentService {
             throw new DuplicateStudentException(request.name(), request.phoneNumber());
         }
 
-        Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
-        Student student = new Student(request.name(), request.phoneNumber(), request.description(), classroom);
+        List<Classroom> classrooms = getActiveClassrooms(request.classroomIds());
+        Student student = new Student(request.name(), request.phoneNumber(), request.description(), classrooms);
 
         Student savedStudent = studentRepository.save(student);
 
@@ -94,11 +94,14 @@ public class StudentService {
             throw new DuplicateStudentException(newName, newPhone);
         }
 
-        Classroom classroom = request.classroomId() != null
-            ? classroomProxyService.getActiveById(request.classroomId())
+        List<Classroom> classrooms = request.classroomIds() != null
+            ? getActiveClassrooms(request.classroomIds())
             : null;
 
-        student.update(request.name(), request.phoneNumber(), request.description(), request.status(), classroom);
+        student.updateInfo(request.name(), request.phoneNumber(), request.description(), request.status());
+        if (classrooms != null) {
+            student.setClassrooms(classrooms);
+        }
 
         log.info("학생 수정 완료 - ID: {}, name: {}", student.getId(), student.getName());
         return StudentResponse.from(student);
@@ -126,5 +129,12 @@ public class StudentService {
 
     private Sort defaultSort() {
         return Sort.by(Sort.Direction.ASC, DEFAULT_SORT_PROPERTY);
+    }
+
+    private List<Classroom> getActiveClassrooms(List<Long> classroomIds) {
+        return classroomIds.stream()
+            .distinct()
+            .map(classroomProxyService::getActiveById)
+            .toList();
     }
 }

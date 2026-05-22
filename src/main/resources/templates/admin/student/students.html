@@ -68,7 +68,7 @@
                         <td th:text="${student.id}">1</td>
                         <td><a class="link" th:href="@{/admin/student/students/{studentId}(studentId=${student.id})}" th:text="${student.name}">홍길동</a></td>
                         <td><span class="pill" th:text="${student.status}">ENROLLED</span></td>
-                        <td><a class="link" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${student.classroomId})}" th:text="${student.classroomName}">벚꽃반</a></td>
+                        <td th:text="${student.classroomNames() ?: '-'}">벚꽃반</td>
                         <td th:text="${student.phoneNumber ?: '-'}">010</td>
                         <td th:text="${student.description ?: '-'}">비고</td>
                         <td><a class="button secondary" th:href="@{/admin/student/students/{studentId}(studentId=${student.id})}">상세</a></td>
