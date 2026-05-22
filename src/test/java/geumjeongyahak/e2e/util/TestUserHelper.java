@@ -73,7 +73,7 @@ public class TestUserHelper {
     public User createTestUser(String email, RoleType role) {
         String normalizedEmail = toDefaultEmail(email);
         String name = normalizedEmail.split("@")[0];
-        return createTestUser(normalizedEmail, name, getDefaultPassword(normalizedEmail), role);
+        return createTestUser(normalizedEmail, name, getDefaultPassword(email), role);
     }
 
     public User createTestUser(String email, Collection<RoleType> roles) {

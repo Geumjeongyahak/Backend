@@ -1,25 +1,23 @@
 package geumjeongyahak.e2e.auth;
 
-import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalSignupRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LogoutRequest;
+import geumjeongyahak.domain.auth.v1.dto.request.RefreshTokenRequest;
 import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.notNullValue;
 
 @DisplayName("E2E: 로그아웃 테스트")
 class AuthLogoutTest extends AuthBaseTest {
 
     @Test
-    @DisplayName("로그아웃 성공(200 OK)")
+    @DisplayName("유효한 Refresh Token으로 로그아웃 성공(200 OK)")
     void logout_Success() {
-        // 먼저 로그인
         LocalLoginRequest loginReq = new LocalLoginRequest(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
 
         var loginResponse = given()
@@ -32,7 +30,6 @@ class AuthLogoutTest extends AuthBaseTest {
             .extract()
             .as(TokenResponse.class);
 
-        // 로그아웃 요청 (RefreshToken 필요)
         LogoutRequest logoutReq = new LogoutRequest(loginResponse.refreshToken());
         given()
             .contentType(ContentType.JSON)
@@ -41,30 +38,81 @@ class AuthLogoutTest extends AuthBaseTest {
         .when()
             .post("/logout")
         .then()
-            .statusCode(200);
+            .statusCode(200)
+            .body("message", equalTo("로그아웃되었습니다."));
 
-        // NOTE: 현재 시스템은 stateless JWT를 사용하며 블랙리스트가 구현되어 있지 않음.
-        // 또한 /logout 엔드포인트는 permitAll() 설정되어 있어 토큰 검증 여부와 관계없이 접근 가능함.
+        RefreshTokenRequest refreshReq = new RefreshTokenRequest(loginResponse.refreshToken());
+        given()
+            .contentType(ContentType.JSON)
+            .body(refreshReq)
+        .when()
+            .post("/refresh")
+        .then()
+            .statusCode(401);
     }
 
     @Test
-    @DisplayName("유효하지 않은 토큰으로 로그아웃 시도 시에도 성공(200 OK) - permitAll 엔드포인트")
-    void logout_InvalidToken_Success() {
+    @DisplayName("잘못된 Refresh Token으로 로그아웃 - 멱등성 보장(200 OK)")
+    void logout_InvalidToken() {
         LogoutRequest logoutReq = new LogoutRequest("invalid-refresh-token");
         given()
             .contentType(ContentType.JSON)
-            .header(AUTH_HEADER, "Bearer invalid-token")
             .body(logoutReq)
         .when()
             .post("/logout")
         .then()
-            .statusCode(200); // permitAll이므로 필터에서 401을 내지 않음
+            .statusCode(200);
     }
 
     @Test
-    @DisplayName("토큰 없이 로그아웃 시도 시에도 성공(200 OK) - permitAll 엔드포인트")
-    void logout_NoToken_Success() {
-        LogoutRequest logoutReq = new LogoutRequest("some-refresh-token");
+    @DisplayName("빈 Refresh Token으로 로그아웃 실패(400 Bad Request)")
+    void logout_EmptyToken() {
+        LogoutRequest logoutReq = new LogoutRequest("");
+        given()
+            .contentType(ContentType.JSON)
+            .body(logoutReq)
+        .when()
+            .post("/logout")
+        .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("Refresh Token 누락 시 로그아웃 실패(400 Bad Request)")
+    void logout_MissingToken() {
+        given()
+            .contentType(ContentType.JSON)
+            .body("{}")
+        .when()
+            .post("/logout")
+        .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("이미 로그아웃된 토큰으로 재로그아웃 - 멱등성 보장(200 OK)")
+    void logout_AlreadyLoggedOut() {
+        LocalLoginRequest loginReq = new LocalLoginRequest(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+
+        var loginResponse = given()
+            .contentType(ContentType.JSON)
+            .body(loginReq)
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(200)
+            .extract()
+            .as(TokenResponse.class);
+
+        LogoutRequest logoutReq = new LogoutRequest(loginResponse.refreshToken());
+        given()
+            .contentType(ContentType.JSON)
+            .body(logoutReq)
+        .when()
+            .post("/logout")
+        .then()
+            .statusCode(200);
+
         given()
             .contentType(ContentType.JSON)
             .body(logoutReq)
@@ -99,7 +147,6 @@ class AuthLogoutTest extends AuthBaseTest {
             .extract()
             .as(TokenResponse.class);
 
-        // 로그인 (두 번의 세션을 시뮬레이션하기 위해)
         LocalLoginRequest loginReq = new LocalLoginRequest(uniqueUsername + "@test.com", "password123!");
 
         var loginResponse1 = given()
@@ -122,28 +169,59 @@ class AuthLogoutTest extends AuthBaseTest {
             .extract()
             .as(TokenResponse.class);
 
-        // 전체 로그아웃 요청 (인증 필요)
         given()
             .header(AUTH_HEADER, getAuthHeader(loginResponse1.accessToken()))
         .when()
             .post("/logout-all")
         .then()
-            .statusCode(200);
-    }
-
-    @Test
-    @DisplayName("만료된 토큰으로 로그아웃 시도 성공(200 OK)")
-    void logout_ExpiredToken_Success() {
-        String expiredToken = userTestHelper.generateAccessTokenByEmail(TEST_ADMIN_EMAIL, -1L);
-        LogoutRequest logoutReq = new LogoutRequest("some-refresh-token");
+            .statusCode(200)
+            .body("message", equalTo("모든 디바이스에서 로그아웃되었습니다."));
 
         given()
             .contentType(ContentType.JSON)
-            .header(AUTH_HEADER, getAuthHeader(expiredToken))
-            .body(logoutReq)
+            .body(new RefreshTokenRequest(signupResponse.refreshToken()))
         .when()
-            .post("/logout")
+            .post("/refresh")
         .then()
-            .statusCode(200);
+            .statusCode(401);
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(new RefreshTokenRequest(loginResponse1.refreshToken()))
+        .when()
+            .post("/refresh")
+        .then()
+            .statusCode(401);
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(new RefreshTokenRequest(loginResponse2.refreshToken()))
+        .when()
+            .post("/refresh")
+        .then()
+            .statusCode(401);
+    }
+
+    @Test
+    @DisplayName("인증 없이 전체 디바이스 로그아웃 실패(401 Unauthorized)")
+    void logoutAllDevices_Unauthorized() {
+        given()
+        .when()
+            .post("/logout-all")
+        .then()
+            .statusCode(401);
+    }
+
+    @Test
+    @DisplayName("만료된 Access Token으로 전체 디바이스 로그아웃 실패(401 Unauthorized)")
+    void logoutAllDevices_ExpiredToken() {
+        String expiredToken = userTestHelper.generateAccessTokenByEmail(TEST_ADMIN_EMAIL, -1L);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(expiredToken))
+        .when()
+            .post("/logout-all")
+        .then()
+            .statusCode(401);
     }
 }
