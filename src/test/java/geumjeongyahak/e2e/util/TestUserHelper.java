@@ -1,12 +1,12 @@
 package geumjeongyahak.e2e.util;
 
+import geumjeongyahak.common.security.jwt.JwtTokenProvider;
 import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
 import geumjeongyahak.domain.auth.service.UserCredentialService;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.repository.UserRepository;
-import geumjeongyahak.common.security.jwt.JwtTokenProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,32 +42,38 @@ public class TestUserHelper {
     }
 
     public User createTestUser(String email, String name, String password, RoleType role) {
-        if (userCache.containsKey(email)) {
-            return userCache.get(email);
+        String normalizedEmail = toDefaultEmail(email);
+        if (userCache.containsKey(normalizedEmail)) {
+            return userCache.get(normalizedEmail);
         }
 
-        User user = userRepository.findByEmail(email).orElseGet(() -> {
+        User user = userRepository.findByEmail(normalizedEmail).orElseGet(() -> {
             User newUser = User.builder()
-                    .name(name)
-                    .email(email)
-                    .role(role)
-                    .build();
+                .name(name)
+                .email(normalizedEmail)
+                .role(role)
+                .build();
             return userRepository.save(newUser);
         });
-        
-        userCredentialRepository.findByCredentialEmailAndProvider(email, ProviderType.LOCAL)
+
+        userCredentialRepository.findByCredentialEmailAndProvider(normalizedEmail, ProviderType.LOCAL)
             .ifPresentOrElse(
                 credential -> userCredentialService.updateLocalPassword(user, passwordEncoder.encode(password)),
-                () -> userCredentialService.createLocalCredential(user, email, password)
+                () -> userCredentialService.createLocalCredential(user, normalizedEmail, password)
             );
-        
-        userCache.put(email, user);
+
+        userCache.put(normalizedEmail, user);
         return user;
     }
 
+    public User createTestUser(String userKey, String name, String email, String password, RoleType role) {
+        return createTestUser(email, name, password, role);
+    }
+
     public User createTestUser(String email, RoleType role) {
-        String name = email.split("@")[0];
-        return createTestUser(email, name, getDefaultPassword(email), role);
+        String normalizedEmail = toDefaultEmail(email);
+        String name = normalizedEmail.split("@")[0];
+        return createTestUser(normalizedEmail, name, getDefaultPassword(normalizedEmail), role);
     }
 
     public User createTestUser(String email, Collection<RoleType> roles) {
@@ -76,25 +82,28 @@ public class TestUserHelper {
     }
 
     public User setTeacherPeriod(String email, LocalDate teacherStartAt, LocalDate teacherEndAt) {
-        User user = userRepository.findByEmail(email)
-            .orElseThrow(() -> new IllegalArgumentException("User not found: " + email));
+        String normalizedEmail = toDefaultEmail(email);
+        User user = userRepository.findByEmail(normalizedEmail)
+            .orElseThrow(() -> new IllegalArgumentException("User not found: " + normalizedEmail));
         user.setTeacherStartAt(teacherStartAt);
         user.setTeacherEndAt(teacherEndAt);
-        userCache.put(email, user);
+        userCache.put(normalizedEmail, user);
         return user;
     }
 
     public void setUser(String email) {
-        userRepository.findByEmail(email)
-            .ifPresent(user -> userCache.put(email, user));
+        String normalizedEmail = toDefaultEmail(email);
+        userRepository.findByEmail(normalizedEmail)
+            .ifPresent(user -> userCache.put(normalizedEmail, user));
     }
 
     public User getUser(String email) {
-        User user = userCache.get(email);
+        String normalizedEmail = toDefaultEmail(email);
+        User user = userCache.get(normalizedEmail);
         if (user == null) {
-            userRepository.findByEmail(email)
-                .ifPresent(u -> userCache.put(email, u));
-            user = userCache.get(email);
+            userRepository.findByEmail(normalizedEmail)
+                .ifPresent(u -> userCache.put(normalizedEmail, u));
+            user = userCache.get(normalizedEmail);
         }
         return user;
     }
@@ -128,16 +137,37 @@ public class TestUserHelper {
             throw new IllegalArgumentException("User not found: " + email);
         }
         return generateToken(user.getId(), expSeconds);
-    }   
+    }
+
+    public String generateAccessTokenByUserKey(String userKey) {
+        return generateAccessTokenByEmail(userKey);
+    }
+
+    public String generateAccessTokenByUserKey(String userKey, Long expSeconds) {
+        return generateAccessTokenByEmail(userKey, expSeconds);
+    }
+
+    private String toDefaultEmail(String userKey) {
+        if (userKey.contains("@")) {
+            return userKey;
+        }
+        return switch (userKey) {
+            case "admin1234" -> "admin@test.com";
+            case "teacher01" -> "teacher01@test.com";
+            case "teacher02" -> "teacher02@test.com";
+            case "guest01" -> "guest01@test.com";
+            default -> userKey + "@test.com";
+        };
+    }
 
     public void clearAll() {
         userCache.values().stream()
-                .map(User::getId)
-                .filter(id -> id != null && id > 4)
-                .forEach(id -> {
-                    userCredentialRepository.deleteAllByUserId(id);
-                    userRepository.deleteById(id);
-                });
+            .map(User::getId)
+            .filter(id -> id != null && id > 4)
+            .forEach(id -> {
+                userCredentialRepository.deleteAllByUserId(id);
+                userRepository.deleteById(id);
+            });
         userCache.clear();
     }
 }

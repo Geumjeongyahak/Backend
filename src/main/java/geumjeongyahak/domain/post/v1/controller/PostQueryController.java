@@ -24,7 +24,6 @@ public class PostQueryController {
 
     private final PostCrudService postCrudService;
 
-    @PreAuthorize("@channelAccess.can('read', #channelId, principal)")
     @Operation(
             summary = "게시글 목록 조회",
             description = """
@@ -32,6 +31,7 @@ public class PostQueryController {
 
                     동작 방식:
                     - 고정 글이 먼저 정렬되고, 그다음 최신 생성 글 순으로 내려옵니다.
+                    - 모든 사용자가 읽을수 있습니다.
 
                     사이드 이펙트:
                     - 읽기 전용입니다. 조회수는 상세 조회 시점에만 증가합니다.
@@ -46,7 +46,7 @@ public class PostQueryController {
         return ResponseEntity.ok(postCrudService.getPosts(channelId, userDetails, request));
     }
 
-    @PreAuthorize("@channelAccess.can('read', #channelId, principal)")
+    @PreAuthorize("isAuthenticated() && @channelAccess.can('read', #channelId, principal)")
     @Operation(
             summary = "게시글 상세 조회",
             description = """

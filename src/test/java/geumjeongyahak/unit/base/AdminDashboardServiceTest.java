@@ -16,6 +16,7 @@ import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestReposito
 import geumjeongyahak.domain.request.enums.RequestStatus;
 import geumjeongyahak.domain.request.repository.AbsenceRequestRepository;
 import geumjeongyahak.domain.student.repository.StudentRepository;
+import geumjeongyahak.domain.subject.repository.SubjectRepository;
 import geumjeongyahak.domain.users.repository.UserRepository;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
@@ -48,6 +49,9 @@ class AdminDashboardServiceTest {
     @Mock
     private LessonRepository lessonRepository;
 
+    @Mock
+    private SubjectRepository subjectRepository;
+
     @InjectMocks
     private AdminDashboardService adminDashboardService;
 
@@ -59,6 +63,7 @@ class AdminDashboardServiceTest {
         given(purchaseRequestRepository.countByStatus(PurchaseRequestStatus.PENDING)).willReturn(2L);
         given(absenceRequestRepository.countByStatus(RequestStatus.PENDING)).willReturn(5L);
         given(studentRepository.count()).willReturn(11L);
+        given(subjectRepository.countByIsActiveTrue()).willReturn(7L);
         given(lessonRepository.countByIsDeletedFalse()).willReturn(20L);
         given(lessonRepository.countByIsDeletedFalseAndDate(any(LocalDate.class))).willReturn(3L);
         given(lessonRepository.countByStatusAndIsDeletedFalseAndDateBetween(
@@ -75,6 +80,7 @@ class AdminDashboardServiceTest {
         assertThat(summary.pendingPurchaseRequestCount()).isEqualTo(2L);
         assertThat(summary.pendingAbsenceRequestCount()).isEqualTo(5L);
         assertThat(summary.studentCount()).isEqualTo(11L);
+        assertThat(summary.subjectCount()).isEqualTo(7L);
         assertThat(summary.lessonCount()).isEqualTo(20L);
         assertThat(summary.todayLessonCount()).isEqualTo(3L);
         assertThat(summary.weeklyScheduledLessonCount()).isEqualTo(8L);

@@ -41,13 +41,15 @@ class DepartmentReadTest extends DepartmentBaseTest {
     }
 
     @Test
-    @DisplayName("인증 없이 Department 목록 조회 실패(401 Unauthorized)")
-    void getAllDepartments_NoAuth_Unauthorized() {
+    @DisplayName("인증 없이 Department 목록 조회 성공(200 OK)")
+    void getAllDepartments_NoAuth_Success() {
         given()
         .when()
             .get()
         .then()
-            .statusCode(401)
+            .statusCode(200)
+            .body("departments", notNullValue())
+            .body("departments", hasSize(greaterThanOrEqualTo(1)))
             .log().all();
     }
 

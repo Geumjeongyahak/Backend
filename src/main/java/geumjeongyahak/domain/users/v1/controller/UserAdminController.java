@@ -106,6 +106,7 @@ public class UserAdminController {
             - 특정 부서 소속 사용자 선등록
 
             동작 방식:
+            - email 중복 여부를 먼저 검사합니다.
             - 요청 role을 기본 역할로 저장합니다.
             - departmentId가 있으면 해당 부서를 연결합니다.
             - 사용자 레코드 생성 후 Local 로그인 자격 증명(email, password)을 함께 생성합니다.

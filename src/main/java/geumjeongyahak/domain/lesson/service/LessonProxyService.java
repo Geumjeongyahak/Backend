@@ -4,6 +4,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +44,17 @@ public class LessonProxyService {
         return lessonRepository.findAllBySubjectClassroomIdAndDateAndIsDeletedFalseOrderByPeriodAscStartTimeAsc(
             classroomId,
             date
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<Lesson> getActiveLessonsByClassroomIdsAndDates(Set<Long> classroomIds, Set<LocalDate> dates) {
+        if (classroomIds.isEmpty() || dates.isEmpty()) {
+            return List.of();
+        }
+        return lessonRepository.findAllActiveByClassroomIdsAndDates(
+            List.copyOf(classroomIds),
+            List.copyOf(dates)
         );
     }
 

@@ -56,14 +56,14 @@ public class LessonExchangeProposalService {
         validateNotOwnRequest(exchangeRequest, proposerId);
         validateNoDuplicateActiveProposal(requestId, proposerId);
 
-        LessonExchangeProposalType proposalType = resolveProposalType(request.dailyScheduleId());
+        LessonExchangeProposalType proposalType = resolveProposalType(request.lessonDate());
 
         String classroomName = null;
         DailySchedule proposalDailySchedule = null;
 
         // 교환형 제안과 대체형 제안을 구분
         if (proposalType == LessonExchangeProposalType.EXCHANGE) {
-            proposalDailySchedule = getProposalDailySchedule(proposerId, request.dailyScheduleId());
+            proposalDailySchedule = getProposalDailySchedule(proposerId, request.lessonDate());
             validateNoTimeOverlapWithRequest(
                 exchangeRequest,
                 proposalDailySchedule
@@ -132,13 +132,13 @@ public class LessonExchangeProposalService {
         // 생성 시 적용한 "요청당 제안자별 ACTIVE 제안 1건만 허용" 정책을 그대로 유지
         // 즉 여기서는 새 ACTIVE 제안을 추가하지 않으므로 중복 ACTIVE 제안 검증을 다시 수행하지 않음
 
-        LessonExchangeProposalType proposalType = resolveProposalType(request.dailyScheduleId());
+        LessonExchangeProposalType proposalType = resolveProposalType(request.lessonDate());
 
         String classroomName = null;
         DailySchedule proposalDailySchedule = null;
 
         if (proposalType == LessonExchangeProposalType.EXCHANGE) {
-            proposalDailySchedule = getProposalDailySchedule(proposerId, request.dailyScheduleId());
+            proposalDailySchedule = getProposalDailySchedule(proposerId, request.lessonDate());
             validateNoTimeOverlapWithRequest(
                 exchangeRequest,
                 proposalDailySchedule
@@ -304,7 +304,7 @@ public class LessonExchangeProposalService {
         LessonExchangeRequest exchangeRequest,
         DailySchedule proposalDailySchedule
     ) {
-        if (exchangeRequest.getDailySchedule().getId().equals(proposalDailySchedule.getId())) {
+        if (exchangeRequest.getLessonDate().equals(proposalDailySchedule.getLessonDate())) {
             throw new ProposalTimeOverlapWithRequestException();
         }
     }
@@ -324,12 +324,8 @@ public class LessonExchangeProposalService {
     }
 
     // 교환형 제안 대상 DailySchedule을 조회하고 제안자 담당 일정인지 확인
-    private DailySchedule getProposalDailySchedule(Long proposerId, Long dailyScheduleId) {
-        DailySchedule dailySchedule = dailyScheduleProxyService.getActiveById(dailyScheduleId);
-        if (!dailySchedule.getTeacher().getId().equals(proposerId)) {
-            throw new ProposalLessonsNotFoundException();
-        }
-        return dailySchedule;
+    private DailySchedule getProposalDailySchedule(Long proposerId, LocalDate lessonDate) {
+        return dailyScheduleProxyService.getActiveByTeacherIdAndLessonDate(proposerId, lessonDate);
     }
 
     // 제안자가 수업 교환 요청의 기존 수업과 충돌하는 수업이 있는지 검증
@@ -365,8 +361,8 @@ public class LessonExchangeProposalService {
     }
 
     // 제안 수업 유형을 판단하는 메서드(대체형/교환형)
-    private LessonExchangeProposalType resolveProposalType(Long dailyScheduleId) {
-        if (dailyScheduleId == null) {
+    private LessonExchangeProposalType resolveProposalType(LocalDate lessonDate) {
+        if (lessonDate == null) {
             return LessonExchangeProposalType.SUBSTITUTION;
         }
 

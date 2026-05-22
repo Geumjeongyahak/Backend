@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
@@ -35,6 +37,19 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
     List<Lesson> findAllBySubjectClassroomIdAndDateAndIsDeletedFalseOrderByPeriodAscStartTimeAsc(
         Long classroomId,
         LocalDate date
+    );
+
+    @EntityGraph(attributePaths = {"teacher", "subject", "subject.classroom"})
+    @Query("""
+        SELECT l FROM Lesson l
+        WHERE l.isDeleted = false
+            AND l.subject.classroom.id IN :classroomIds
+            AND l.date IN :dates
+        ORDER BY l.date DESC, l.period ASC, l.startTime ASC
+        """)
+    List<Lesson> findAllActiveByClassroomIdsAndDates(
+        @Param("classroomIds") List<Long> classroomIds,
+        @Param("dates") List<LocalDate> dates
     );
 
     @EntityGraph(attributePaths = {"teacher", "subject", "subject.classroom"})

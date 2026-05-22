@@ -18,8 +18,8 @@ import geumjeongyahak.e2e.util.TestPostHelper;
 
 @Tag("post")
 public abstract class BasePostTest extends BaseE2ETest {
-    protected static final String TEST_POST_ADMIN_USERNAME = "postAdminUser1234@test.com";
-    protected static final String TEST_POST_GUEST_USERNAME = "postGuestUser1234@test.com";
+    protected static final String TEST_POST_ADMIN_USERNAME = "postAdminUser1234";
+    protected static final String TEST_POST_GUEST_USERNAME = "postGuestUser1234";
 
     protected String adminAccessToken;
     protected String guestAccessToken;
@@ -48,8 +48,8 @@ public abstract class BasePostTest extends BaseE2ETest {
         userTestHelper.createTestUser(TEST_POST_ADMIN_USERNAME, RoleType.ADMIN);
         userTestHelper.createTestUser(TEST_POST_GUEST_USERNAME, RoleType.GUEST);
 
-        adminAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_POST_ADMIN_USERNAME);
-        guestAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_POST_GUEST_USERNAME);
+        adminAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_POST_ADMIN_USERNAME);
+        guestAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_POST_GUEST_USERNAME);
 
         Channel channel = channelRepository.save(Channel.builder()
                 .name("테스트 공지 채널")

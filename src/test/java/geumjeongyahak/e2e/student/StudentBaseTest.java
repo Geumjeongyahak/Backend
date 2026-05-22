@@ -18,9 +18,9 @@ import geumjeongyahak.e2e.BaseE2ETest;
 @Tag("student")
 public abstract class StudentBaseTest extends BaseE2ETest {
 
-    public static final String TEST_VOLUNTEER_USERNAME = "volunteer1234@test.com";
-    public static final String TEST_GUEST_USERNAME = "studentGuest1234@test.com";
-    public static final String TEST_STUDENT_WRITER_USERNAME = "studentWriter1234@test.com";
+    public static final String TEST_VOLUNTEER_USERNAME = "volunteer1234";
+    public static final String TEST_GUEST_USERNAME = "studentGuest1234";
+    public static final String TEST_STUDENT_WRITER_USERNAME = "studentWriter1234";
     protected static final Long DEFAULT_CLASSROOM_ID = 1L;
     protected static final String DEFAULT_CLASSROOM_NAME = "벚꽃반";
     private static final String STUDENT_WRITE_PERMISSION = "student:write:*";
@@ -38,18 +38,18 @@ public abstract class StudentBaseTest extends BaseE2ETest {
     protected void setUp() {
         super.setUp();
         RestAssured.basePath = "/api/v1/students";
-        this.adminAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_ADMIN_USERNAME);
+        this.adminAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_ADMIN_USERNAME);
 
         this.userTestHelper.createTestUser(TEST_VOLUNTEER_USERNAME, RoleType.VOLUNTEER);
-        this.volunteerAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_VOLUNTEER_USERNAME);
+        this.volunteerAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_VOLUNTEER_USERNAME);
 
         this.userTestHelper.createTestUser(TEST_GUEST_USERNAME, RoleType.GUEST);
-        this.guestAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_GUEST_USERNAME);
+        this.guestAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_GUEST_USERNAME);
 
         User studentWriter = this.userTestHelper.createTestUser(TEST_STUDENT_WRITER_USERNAME, RoleType.GUEST);
         userPermissionRepository.findByUserIdAndPermissionCode(studentWriter.getId(), STUDENT_WRITE_PERMISSION)
             .orElseGet(() -> userPermissionRepository.save(new UserPermission(studentWriter, STUDENT_WRITE_PERMISSION)));
-        this.studentWriteAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_STUDENT_WRITER_USERNAME);
+        this.studentWriteAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_STUDENT_WRITER_USERNAME);
     }
 
     protected StudentResponse createStudent(String name, String phoneNumber) {

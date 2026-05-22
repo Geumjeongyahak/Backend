@@ -39,9 +39,9 @@ import static java.util.Map.entry;
 @Tag("request")
 public abstract class RequestBaseTest extends BaseE2ETest {
 
-    protected static final String GUEST_USERNAME = "guest01@test.com";
-    protected static final String VOLUNTEER_USERNAME = "teacher01@test.com";   // id=2
-    protected static final String VOLUNTEER2_USERNAME = "teacher02@test.com";  // id=3
+    protected static final String GUEST_USERNAME = "guest01";
+    protected static final String VOLUNTEER_USERNAME = "teacher01";   // id=2
+    protected static final String VOLUNTEER2_USERNAME = "teacher02";  // id=3
     protected static final long CLASSROOM_ID = 1L;
     protected static final long TEACHER_ID = 2L;   // teacher01
     protected static final long TEACHER2_ID = 3L;  // teacher02
@@ -66,12 +66,12 @@ public abstract class RequestBaseTest extends BaseE2ETest {
     @Override
     protected void setUp() {
         super.setUp();
-        adminToken = userTestHelper.generateAccessTokenByEmail(TEST_ADMIN_USERNAME);
-        userTestHelper.createTestUser("manager01@test.com", RoleType.MANAGER);
-        managerToken = userTestHelper.generateAccessTokenByEmail("manager01@test.com");
-        guestToken = userTestHelper.generateAccessTokenByEmail(GUEST_USERNAME);
-        volunteerToken = userTestHelper.generateAccessTokenByEmail(VOLUNTEER_USERNAME);
-        volunteer2Token = userTestHelper.generateAccessTokenByEmail(VOLUNTEER2_USERNAME);
+        adminToken = userTestHelper.generateAccessTokenByUserKey(TEST_ADMIN_USERNAME);
+        userTestHelper.createTestUser("manager01", RoleType.MANAGER);
+        managerToken = userTestHelper.generateAccessTokenByUserKey("manager01");
+        guestToken = userTestHelper.generateAccessTokenByUserKey(GUEST_USERNAME);
+        volunteerToken = userTestHelper.generateAccessTokenByUserKey(VOLUNTEER_USERNAME);
+        volunteer2Token = userTestHelper.generateAccessTokenByUserKey(VOLUNTEER2_USERNAME);
     }
 
     // ──────────────────────────────────────────────────────
@@ -83,12 +83,12 @@ public abstract class RequestBaseTest extends BaseE2ETest {
     }
 
     protected Long createAbsenceRequest(String authHeader, Long lessonId, String title, String reason) {
-        Long dailyScheduleId = getDailyScheduleIdByLessonId(lessonId);
+        String lessonDate = lessonHelper.getLessonDate(getAuthHeader(adminToken), lessonId);
         return given()
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, authHeader)
             .contentType(ContentType.JSON)
-            .body(Map.of("dailyScheduleId", dailyScheduleId, "title", title, "reason", reason))
+            .body(Map.of("lessonDate", lessonDate, "title", title, "reason", reason))
             .post()
             .then()
             .statusCode(201)
@@ -144,12 +144,8 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         String content,
         LocalDateTime expiresAt
     ) {
-        Long dailyScheduleId = dailyScheduleRepository
-            .findByClassroomIdAndLessonDateAndIsDeletedFalse(CLASSROOM_ID, lessonDate)
-            .orElseThrow()
-            .getId();
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("dailyScheduleId", dailyScheduleId);
+        body.put("lessonDate", lessonDate.toString());
         body.put("title", title);
         body.put("content", content);
         body.put("expiresAt", expiresAt.toString());
@@ -169,9 +165,9 @@ public abstract class RequestBaseTest extends BaseE2ETest {
                 entry("items", java.util.List.of(Map.ofEntries(
                     entry("name", title + " 품목"),
                     entry("reason", content),
-                    entry("expectedPrice", price)
-                ))),
-                entry("receiptFileIds", java.util.List.of())
+                    entry("quantity", 1),
+                    entry("paymentType", "ACTUAL")
+                )))
             ))
             .post()
             .then()
@@ -182,15 +178,14 @@ public abstract class RequestBaseTest extends BaseE2ETest {
     }
 
     protected String createAccessTokenWithPermission(
-        String namePrefix,
+        String userKeyPrefix,
         RoleType role,
         String permissionCode
     ) {
-        String name = namePrefix + System.nanoTime();
-        String email = name + "@test.com";
-        User user = userTestHelper.createTestUser(email, name, "password123!", role);
+        String userKey = userKeyPrefix + System.nanoTime();
+        User user = userTestHelper.createTestUser(userKey, role);
         userPermissionRepository.save(new UserPermission(user, permissionCode));
-        return userTestHelper.generateAccessTokenByEmail(email);
+        return userTestHelper.generateAccessTokenByUserKey(userKey);
     }
 
 }

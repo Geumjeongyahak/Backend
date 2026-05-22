@@ -33,7 +33,6 @@ import java.util.Set;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseEntity {
-
     @Setter
     @Column(nullable = false, length = 50)
     private String name;

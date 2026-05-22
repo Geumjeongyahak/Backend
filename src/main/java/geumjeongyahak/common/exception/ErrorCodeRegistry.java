@@ -11,10 +11,12 @@ import geumjeongyahak.domain.comment.exception.CommentErrorCode;
 import geumjeongyahak.domain.department.exception.DepartmentErrorCode;
 import geumjeongyahak.domain.lesson.exception.LessonErrorCode;
 import geumjeongyahak.domain.post.exception.PostErrorCode;
+import geumjeongyahak.domain.purchase_request.exception.PurchaseRequestErrorCode;
 import geumjeongyahak.domain.request.exception.RequestErrorCode;
 import geumjeongyahak.domain.student.exception.StudentErrorCode;
 import geumjeongyahak.domain.subject.exception.SubjectErrorCode;
 import geumjeongyahak.domain.users.exception.UserErrorCode;
+import geumjeongyahak.domain.vendor.exception.VendorErrorCode;
 
 public final class ErrorCodeRegistry {
 
@@ -34,7 +36,9 @@ public final class ErrorCodeRegistry {
                 ChannelErrorCode.values(),
                 PostErrorCode.values(),
                 CommentErrorCode.values(),
-                RequestErrorCode.values()
+                RequestErrorCode.values(),
+                PurchaseRequestErrorCode.values(),
+                VendorErrorCode.values()
             )
             .flatMap(Arrays::stream)
             .map(ErrorCode.class::cast)

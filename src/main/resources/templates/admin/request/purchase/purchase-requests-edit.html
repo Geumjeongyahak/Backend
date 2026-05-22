@@ -13,7 +13,7 @@
     <div class="panel" style="background: #f8faf9; border-left: 4px solid var(--green); margin-bottom: 24px;" th:if="${request.status.name() == 'APPROVED'}">
         <h3 style="margin-top: 0;">구매 결과 보고 단계</h3>
         <p style="margin-bottom: 0; color: #566059; font-size: 14px; line-height: 1.6;">
-            관리자가 요청을 승인했습니다. 물품 구매를 완료하셨다면 각 항목의 <strong>실제 구매 가격</strong>을 입력하고 <strong>영수증 사진</strong>을 업로드해 주세요.<br>
+            관리자가 요청을 승인했습니다. 거래처, 품목명, 결제 금액과 선택 영수증을 등록해 주세요.<br>
             보고가 완료되면 관리자의 최종 확인 후 프로세스가 종료됩니다.
         </p>
     </div>
@@ -30,50 +30,41 @@
         </label>
         <label>제목 <input th:field="*{title}" th:readonly="${request.status.name() != 'PENDING'}" required></label>
         <label>내용 <textarea th:field="*{content}" th:readonly="${request.status.name() != 'PENDING'}" required></textarea></label>
-        <label>선금 요청 금액
-            <input type="number" th:field="*{advancePaymentRequestedAmount}" min="0" th:readonly="${request.status.name() != 'PENDING'}">
-        </label>
-        <label th:if="${request.status.name() != 'PENDING'}">선금 승인 금액
-            <input type="number" th:field="*{advancePaymentApprovedAmount}" readonly>
-        </label>
         
         <div class="stack" style="--gap: 1rem;">
             <h3>구매 항목</h3>
             <div id="items-container" class="stack" style="--gap: 0.5rem;">
-                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: 1fr 1.4fr 1fr 1fr auto; gap: 1rem; align-items: end;">
+                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(100px, .6fr) minmax(140px, .8fr) auto; gap: 1rem; align-items: end;">
                     <input type="hidden" th:field="*{items[__${stat.index}__].id}">
                     <label>품명 <input th:field="*{items[__${stat.index}__].name}" th:readonly="${request.status.name() != 'PENDING'}" required></label>
                     <label>사유 <input th:field="*{items[__${stat.index}__].reason}" th:readonly="${request.status.name() != 'PENDING'}"></label>
-                    
-                    <label>예상 가격
-                        <input type="number" th:field="*{items[__${stat.index}__].expectedPrice}"
-                               min="0"
-                               th:readonly="${request.status.name() != 'PENDING'}"
-                               placeholder="예상 가격">
-                    </label>
-                    <label>실제 가격
-                        <input type="number" th:field="*{items[__${stat.index}__].actualPrice}"
-                               min="0"
-                               th:disabled="${request.status.name() != 'APPROVED'}"
-                               th:placeholder="${request.status.name() == 'APPROVED'} ? '가격 입력' : '구매 후 입력'">
-                    </label>
+                    <label>개수 <input type="number" th:field="*{items[__${stat.index}__].quantity}" min="1" th:readonly="${request.status.name() != 'PENDING'}" required></label>
+                    <label>결제 유형 <select th:field="*{items[__${stat.index}__].paymentType}" th:disabled="${request.status.name() != 'PENDING'}"><option value="PREPAID">선 결제</option><option value="ACTUAL">실 결제</option></select></label>
                     <button type="button" class="button danger" th:if="${stat.index > 0 && request.status.name() == 'PENDING'}" onclick="removeRow(this)">삭제</button>
                 </div>
             </div>
             <button type="button" class="button secondary" onclick="addItemRow()" th:if="${request.status.name() == 'PENDING'}">항목 추가</button>
         </div>
 
-        <div class="stack" style="--gap: 0.75rem;" th:if="${request.status.name() == 'APPROVED' || request.status.name() == 'PURCHASED' || request.status.name() == 'CONFIRMED'}">
-            <h3>영수증</h3>
-            <div id="receipt-inputs">
-                <input type="hidden" th:each="receiptFileId, stat : *{receiptFileIds}" th:name="'receiptFileIds[' + ${stat.index} + ']'" th:value="${receiptFileId}">
-            </div>
-            <div id="receipt-preview" class="inline-form">
-                <a class="button secondary" th:each="receiptFileUrl, stat : *{receiptFileUrls}" th:href="${receiptFileUrl}" target="_blank" th:text="'영수증 ' + ${stat.count}">영수증</a>
-            </div>
-            <label th:if="${request.status.name() == 'APPROVED'}">영수증 추가
-                <input type="file" accept="image/*" multiple onchange="uploadReceipts(this)">
+        <div class="stack" style="--gap: 1rem;" th:if="${request.status.name() == 'APPROVED'}">
+            <h3>구매 완료 보고</h3>
+            <label>거래처
+                <select th:field="*{vendorId}" required>
+                    <option value="">선택</option>
+                    <option th:each="vendor : ${vendors}" th:value="${vendor.id}" th:text="|${vendor.name} (${vendor.balance}원)|">거래처</option>
+                </select>
             </label>
+            <label>결제 금액 <input type="number" th:field="*{amount}" min="1" required></label>
+            <label>거래 품목명 <input name="transactionItemNames[0]" th:value="${request.items[0].name}" required></label>
+            <div class="receipt-field">
+                <span class="field-label">영수증</span>
+                <input id="report-receipt-id" type="hidden" th:field="*{receiptFileId}">
+                <div id="report-receipt-preview" class="receipt-preview"><span class="receipt-empty">미첨부</span></div>
+                <label class="file-button">
+                    <span>파일 선택</span>
+                    <input type="file" accept="image/*" onchange="uploadReportReceipt(this)">
+                </label>
+            </div>
         </div>
 
         <div class="inline-form">
@@ -86,49 +77,37 @@
         const isPending = /*[[${request.status.name() == 'PENDING'}]]*/ true;
         const isApproved = /*[[${request.status.name() == 'APPROVED'}]]*/ false;
 
-        async function uploadReceipts(input) {
-            const files = Array.from(input.files || []);
-            if (files.length === 0) return;
+        async function uploadItemReceipt(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
 
-            const inputContainer = document.getElementById('receipt-inputs');
-            const previewContainer = document.getElementById('receipt-preview');
+            const row = input.closest('.item-row');
+            const hidden = row.querySelector('input[name*=".receiptFileId"]');
+            const preview = row.querySelector('.receipt-preview');
+            const formData = new FormData();
+            formData.append('file', file);
 
-            for (const file of files) {
-                const formData = new FormData();
-                formData.append('file', file);
+            try {
+                const response = await fetch('/admin/request/purchase/purchase-requests/receipt-images', {
+                    method: 'POST',
+                    body: formData
+                });
 
-                try {
-                    const response = await fetch('/admin/request/purchase/purchase-requests/receipt-images', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (!response.ok) {
-                        const errorBody = await response.text();
-                        console.error('영수증 업로드 실패', response.status, errorBody);
-                        throw new Error(`업로드 실패 (${response.status})`);
-                    }
-
-                    const data = await response.json();
-                    const index = inputContainer.querySelectorAll('input').length;
-                    const hidden = document.createElement('input');
-                    hidden.type = 'hidden';
-                    hidden.name = `receiptFileIds[${index}]`;
-                    hidden.value = data.fileId;
-                    inputContainer.appendChild(hidden);
-
-                    const link = document.createElement('a');
-                    link.href = data.url;
-                    link.target = '_blank';
-                    link.className = 'button secondary';
-                    link.textContent = `영수증 ${index + 1}`;
-                    previewContainer.appendChild(link);
-                } catch (error) {
-                    console.error(error);
-                    alert(`이미지 업로드 중 오류가 발생했습니다. ${error.message}`);
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    console.error('영수증 업로드 실패', response.status, errorBody);
+                    throw new Error(`업로드 실패 (${response.status})`);
                 }
+
+                const data = await response.json();
+                hidden.value = data.fileId;
+                preview.innerHTML = `<a class="receipt-chip" href="${data.url}" target="_blank">보기</a>`;
+            } catch (error) {
+                console.error(error);
+                alert(`이미지 업로드 중 오류가 발생했습니다. ${error.message}`);
+            } finally {
+                input.value = '';
             }
-            input.value = '';
         }
 
         function addItemRow() {
@@ -136,12 +115,12 @@
             const container = document.getElementById('items-container');
             const newRow = document.createElement('div');
             newRow.className = 'panel item-row';
-            newRow.style.cssText = 'display: grid; grid-template-columns: 1fr 1.4fr 1fr 1fr auto; gap: 1rem; align-items: end;';
+            newRow.style.cssText = 'display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(100px, .6fr) minmax(140px, .8fr) auto; gap: 1rem; align-items: end;';
             newRow.innerHTML = `
                 <label>품명 <input name="items[${itemIndex}].name" required></label>
                 <label>사유 <input name="items[${itemIndex}].reason"></label>
-                <label>예상 가격 <input type="number" name="items[${itemIndex}].expectedPrice" min="0" placeholder="예상 가격"></label>
-                <label>실제 가격 <input type="number" name="items[${itemIndex}].actualPrice" disabled placeholder="구매 후 입력"></label>
+                <label>개수 <input type="number" name="items[${itemIndex}].quantity" min="1" required value="1"></label>
+                <label>결제 유형 <select name="items[${itemIndex}].paymentType"><option value="PREPAID">선 결제</option><option value="ACTUAL" selected>실 결제</option></select></label>
                 <button type="button" class="button danger" onclick="removeRow(this)">삭제</button>
             `;
             container.appendChild(newRow);
@@ -160,17 +139,92 @@
                 const idInput = row.querySelector('input[name*=".id"]');
                 const nameInput = row.querySelector('input[name*=".name"]');
                 const reasonInput = row.querySelector('input[name*=".reason"]');
-                const expectedPriceInput = row.querySelector('input[name*=".expectedPrice"]');
-                const actualPriceInput = row.querySelector('input[name*=".actualPrice"]');
+                const quantityInput = row.querySelector('input[name*=".quantity"]');
+                const paymentTypeInput = row.querySelector('select[name*=".paymentType"]');
                 
                 if (idInput) idInput.name = `items[${index}].id`;
                 if (nameInput) nameInput.name = `items[${index}].name`;
                 if (reasonInput) reasonInput.name = `items[${index}].reason`;
-                if (expectedPriceInput) expectedPriceInput.name = `items[${index}].expectedPrice`;
-                if (actualPriceInput) actualPriceInput.name = `items[${index}].actualPrice`;
+                if (quantityInput) quantityInput.name = `items[${index}].quantity`;
+                if (paymentTypeInput) paymentTypeInput.name = `items[${index}].paymentType`;
             });
             itemIndex = rows.length;
         }
+
+        async function uploadReportReceipt(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const hidden = document.getElementById('report-receipt-id');
+            const preview = document.getElementById('report-receipt-preview');
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch('/admin/request/purchase/purchase-requests/receipt-images', {method: 'POST', body: formData});
+            if (!response.ok) {
+                alert('이미지 업로드 중 오류가 발생했습니다.');
+                return;
+            }
+            const data = await response.json();
+            hidden.value = data.fileId;
+            preview.innerHTML = `<a class="receipt-chip" href="${data.url}" target="_blank">보기</a>`;
+            input.value = '';
+        }
     </script>
+    <style>
+        .receipt-field {
+            display: grid;
+            gap: 6px;
+            min-width: 0;
+        }
+        .field-label {
+            color: #4b554f;
+            font-size: 13px;
+            font-weight: 800;
+        }
+        .receipt-preview {
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+        }
+        .receipt-chip {
+            display: inline-flex;
+            align-items: center;
+            min-height: 30px;
+            padding: 0 10px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--green-dark);
+            font-size: 13px;
+            font-weight: 900;
+            text-decoration: none;
+        }
+        .receipt-empty {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .file-button {
+            width: fit-content;
+            min-height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: #4f5953;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 900;
+        }
+        .file-button input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
 </main>
 </div></body></html>

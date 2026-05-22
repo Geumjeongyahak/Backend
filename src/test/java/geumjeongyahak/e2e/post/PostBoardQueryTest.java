@@ -11,6 +11,7 @@ import geumjeongyahak.domain.post.v1.dto.request.CreatePostRequest;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -101,6 +102,80 @@ public class PostBoardQueryTest extends BasePostTest {
                 .body("content", hasSize(1))
                 .body("content[0].title", equalTo("교육연구부 회의"))
                 .body("content[0].channelType", equalTo("DEPARTMENT"));
+    }
+
+    @Test
+    @DisplayName("비인증 사용자는 게시글 목록을 조회할 수 있지만 본문 검색과 상세 조회는 제한된다")
+    void getBoardPosts_WithoutAuth_AllowsListButRestrictsContentSearchAndDetail() {
+        Channel closedChannel = channelRepository.save(Channel.builder()
+                .name("닫힌 운영 채널")
+                .description("목록 노출 테스트")
+                .channelType(ChannelType.CUSTOM)
+                .bindingType(ChannelBindingType.STANDALONE)
+                .accessLevel(ChannelAccessLevel.CLOSED)
+                .isActive(true)
+                .build());
+        testChannelHelper.registerChannel(closedChannel.getId());
+
+        Long postId = createPost(closedChannel.getId(), "닫힌 채널 목록 노출");
+
+        given()
+                .when()
+                .get("/api/v1/posts")
+                .then()
+                .statusCode(200)
+                .body("content.title", hasItem("닫힌 채널 목록 노출"));
+
+        given()
+                .queryParam("content", "닫힌")
+                .when()
+                .get("/api/v1/posts")
+                .then()
+                .statusCode(403);
+
+        given()
+                .when()
+                .get("/api/v1/channels/{channelId}/posts/{postId}", closedChannel.getId(), postId)
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("관리자는 게시글 본문으로 통합 목록을 검색할 수 있다")
+    void getBoardPosts_WithContent_AsAdmin_Success() {
+        createPost(noticeChannelId, "본문 검색 허용");
+
+        given()
+                .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+                .queryParam("content", "본문 검색 허용")
+                .when()
+                .get("/api/v1/posts")
+                .then()
+                .statusCode(200)
+                .body("content", hasSize(1))
+                .body("content[0].title", equalTo("본문 검색 허용"));
+    }
+
+    @Test
+    @DisplayName("채널 하위 게시글 목록은 통합 게시판 전용 필터를 바인딩하지 않는다")
+    void getChannelPosts_WithBoardScopeFilters_IgnoresBoardOnlyFilters() {
+        Long postId = createPost(noticeChannelId, "채널 범위 필터 테스트");
+
+        given()
+                .queryParam("channelType", "NOTICE")
+                .when()
+                .get("/api/v1/channels/{channelId}/posts", noticeChannelId)
+                .then()
+                .statusCode(200)
+                .body("content.id", hasItem(postId.intValue()));
+
+        given()
+                .queryParam("channelId", noticeChannelId)
+                .when()
+                .get("/api/v1/channels/{channelId}/posts", noticeChannelId)
+                .then()
+                .statusCode(200)
+                .body("content.id", hasItem(postId.intValue()));
     }
 
     private Long createPost(Long channelId, String title) {

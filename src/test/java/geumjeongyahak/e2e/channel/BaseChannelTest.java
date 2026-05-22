@@ -11,8 +11,8 @@ import geumjeongyahak.e2e.util.TestChannelHelper;
 
 @Tag("channel")
 public abstract class BaseChannelTest extends BaseE2ETest {
-    protected static final String TEST_CHANNEL_ADMIN_USERNAME = "channelAdminUser1234@test.com";
-    protected static final String TEST_CHANNEL_GUEST_USERNAME = "channelGuestUser1234@test.com";
+    protected static final String TEST_CHANNEL_ADMIN_USERNAME = "channelAdminUser1234";
+    protected static final String TEST_CHANNEL_GUEST_USERNAME = "channelGuestUser1234";
 
     protected String adminAccessToken;
     protected String guestAccessToken;
@@ -29,8 +29,8 @@ public abstract class BaseChannelTest extends BaseE2ETest {
         userTestHelper.createTestUser(TEST_CHANNEL_ADMIN_USERNAME, RoleType.ADMIN);
         userTestHelper.createTestUser(TEST_CHANNEL_GUEST_USERNAME, RoleType.GUEST);
 
-        adminAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_CHANNEL_ADMIN_USERNAME);
-        guestAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_CHANNEL_GUEST_USERNAME);
+        adminAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_CHANNEL_ADMIN_USERNAME);
+        guestAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_CHANNEL_GUEST_USERNAME);
     }
 
     @AfterEach

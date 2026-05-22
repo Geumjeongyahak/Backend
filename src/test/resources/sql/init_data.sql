@@ -98,4 +98,3 @@ VALUES
     (1, 1, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),
     (2, 1, '박민수', '010-4444-4444', '기초반', 'ENROLLED');
 ALTER TABLE students ALTER COLUMN id RESTART WITH 3;
-

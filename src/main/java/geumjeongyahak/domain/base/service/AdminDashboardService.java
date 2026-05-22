@@ -9,6 +9,7 @@ import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestReposito
 import geumjeongyahak.domain.request.enums.RequestStatus;
 import geumjeongyahak.domain.request.repository.AbsenceRequestRepository;
 import geumjeongyahak.domain.student.repository.StudentRepository;
+import geumjeongyahak.domain.subject.repository.SubjectRepository;
 import geumjeongyahak.domain.users.repository.UserRepository;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -29,6 +30,7 @@ public class AdminDashboardService {
     private final AbsenceRequestRepository absenceRequestRepository;
     private final StudentRepository studentRepository;
     private final LessonRepository lessonRepository;
+    private final SubjectRepository subjectRepository;
 
     public AdminDashboardSummary getSummary() {
         LocalDate today = LocalDate.now();
@@ -42,6 +44,7 @@ public class AdminDashboardService {
             purchaseRequestRepository.countByStatus(PurchaseRequestStatus.PENDING),
             absenceRequestRepository.countByStatus(RequestStatus.PENDING),
             studentRepository.count(),
+            subjectRepository.countByIsActiveTrue(),
             lessonRepository.countByIsDeletedFalse(),
             lessonRepository.countByIsDeletedFalseAndDate(today),
             lessonRepository.countByStatusAndIsDeletedFalseAndDateBetween(LessonStatus.SCHEDULED, weekStart, weekEnd),
@@ -58,6 +61,7 @@ public class AdminDashboardService {
         long pendingPurchaseRequestCount,
         long pendingAbsenceRequestCount,
         long studentCount,
+        long subjectCount,
         long lessonCount,
         long todayLessonCount,
         long weeklyScheduledLessonCount,

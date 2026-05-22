@@ -36,6 +36,8 @@ public interface SubjectRepository extends JpaRepository<Subject, Long> {
     @EntityGraph(attributePaths = {"classroom", "teacher"})
     List<Subject> findByClassroomId(Long classroomId);
 
+    long countByIsActiveTrue();
+
     boolean existsByClassroomIdAndTeacherId(Long classroomId, Long teacherId);
 
     @Override

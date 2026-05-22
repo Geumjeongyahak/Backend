@@ -85,8 +85,11 @@ VALUES
     (16, '생활안전부', '생활안전부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 3, 'READ_WRITE', FALSE, FALSE, TRUE),
     (17, '총무부', '총무부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 4, 'READ_WRITE', FALSE, FALSE, TRUE),
     (18, '홍보부', '홍보부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 5, 'READ_WRITE', FALSE, FALSE, TRUE),
-    (19, '편집부', '편집부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 6, 'READ_WRITE', FALSE, FALSE, TRUE);
-ALTER SEQUENCE channels_id_seq RESTART WITH 20;
+    (19, '편집부', '편집부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 6, 'READ_WRITE', FALSE, FALSE, TRUE),
+    (20, '인수인계서', '교원 인수인계서 자료를 공유하는 채널', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', FALSE, FALSE, TRUE),
+    (21, '시험 문제 자료', '시험 문제와 평가 자료를 공유하는 채널', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', FALSE, FALSE, TRUE),
+    (22, '서류 양식', '운영에 필요한 각종 서류 양식을 공유하는 채널', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', FALSE, FALSE, TRUE);
+ALTER SEQUENCE channels_id_seq RESTART WITH 23;
 
 -- 8. Subjects
 INSERT INTO subjects (id, class_id, teacher_id, name, start_at, end_at, day_of_week, start_time, end_time, period, teacher_assigned_at, description)
@@ -104,8 +107,14 @@ VALUES
     (3, 1, 2, 3, '2026-06-10', '21:00:00', '21:40:00', 'SCHEDULED'),
     (4, 2, 3, 1, '2026-06-17', '19:20:00', '20:00:00', 'SCHEDULED'),
     (5, 2, 3, 2, '2026-06-17', '20:10:00', '20:50:00', 'SCHEDULED'),
-    (6, 2, 3, 3, '2026-06-17', '21:00:00', '21:40:00', 'SCHEDULED');
-ALTER SEQUENCE lessons_id_seq RESTART WITH 7;
+    (6, 2, 3, 3, '2026-06-17', '21:00:00', '21:40:00', 'SCHEDULED'),
+    (7, 1, 2, 1, '2026-05-13', '19:20:00', '20:00:00', 'COMPLETED'),
+    (8, 1, 2, 2, '2026-05-13', '20:10:00', '20:50:00', 'COMPLETED'),
+    (9, 1, 2, 3, '2026-05-13', '21:00:00', '21:40:00', 'COMPLETED');
+UPDATE lessons SET note = '1교시에는 한글 자음과 모음 복습을 진행했습니다.' WHERE id = 7;
+UPDATE lessons SET note = '2교시에는 짧은 단어 읽기와 받아쓰기를 연습했습니다.' WHERE id = 8;
+UPDATE lessons SET note = '3교시에는 생활 문장 읽기 활동과 개별 피드백을 진행했습니다.' WHERE id = 9;
+ALTER SEQUENCE lessons_id_seq RESTART WITH 10;
 
 -- 10. Daily Schedules
 INSERT INTO daily_schedules (
@@ -117,8 +126,22 @@ VALUES
     (2, 2, 3, '2026-06-17', '19:20:00', '21:40:00', 'SCHEDULED', FALSE, '2026-05-20 00:00:00', '2026-05-20 00:00:00'),
     (3, 1, 2, '2026-06-24', '19:20:00', '21:40:00', 'SCHEDULED', FALSE, '2026-05-20 00:00:00', '2026-05-20 00:00:00'),
     (4, 2, 3, '2026-06-24', '19:20:00', '21:40:00', 'SCHEDULED', FALSE, '2026-05-20 00:00:00', '2026-05-20 00:00:00'),
-    (5, 8, 2, '2026-06-27', '19:20:00', '20:00:00', 'SCHEDULED', FALSE, '2026-05-20 00:00:00', '2026-05-20 00:00:00');
-ALTER SEQUENCE daily_schedules_id_seq RESTART WITH 6;
+    (5, 8, 2, '2026-06-27', '19:20:00', '20:00:00', 'SCHEDULED', FALSE, '2026-05-20 00:00:00', '2026-05-20 00:00:00'),
+    (6, 1, 2, '2026-05-13', '19:20:00', '21:40:00', 'COMPLETED', FALSE, '2026-05-13 18:00:00', '2026-05-13 22:00:00');
+UPDATE daily_schedules
+SET resident_registration_number_prefix = '900101',
+    personal_info_consent = TRUE
+WHERE id = 6;
+ALTER SEQUENCE daily_schedules_id_seq RESTART WITH 7;
+
+-- 10-1. Daily Teacher Attendances
+INSERT INTO daily_teacher_attendances (
+    id, daily_schedule_id, status, volunteer_service_minutes, attended_at, latitude, longitude, is_deleted,
+    created_at, updated_at
+)
+VALUES
+    (1, 6, 'PRESENT', 140, '2026-05-13 19:18:00', NULL, NULL, FALSE, '2026-05-13 19:18:00', '2026-05-13 19:18:00');
+ALTER SEQUENCE daily_teacher_attendances_id_seq RESTART WITH 2;
 
 -- 11. Absence Requests
 INSERT INTO absence_requests (
@@ -175,9 +198,27 @@ VALUES
      'CLOSED', NULL, NULL, '2026-05-25 16:00:00', '2026-05-24 10:30:00', '2026-05-25 16:00:00');
 ALTER SEQUENCE lesson_exchange_proposals_id_seq RESTART WITH 6;
 
--- 14. Students
+-- 14. Vendors
+INSERT INTO vendors (id, name, description, balance, is_active)
+VALUES
+    (1, '예소디자인', '부산대 인근 거래처', 0, TRUE),
+    (2, '목민서관', '야학 부근 거래처', 0, TRUE),
+    (3, '지성문구', '부산대 인근 거래처', 0, TRUE),
+    (4, '마트', '야학 부근 거래처', 0, TRUE);
+ALTER SEQUENCE vendors_id_seq RESTART WITH 5;
+
+-- 15. Students
 INSERT INTO students (id, class_id, name, phone_number, description, status)
 VALUES
     (1, 1, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),
     (2, 1, '박민수', '010-4444-4444', '기초반', 'ENROLLED');
 ALTER SEQUENCE students_id_seq RESTART WITH 3;
+
+-- 15. Daily Student Attendances
+INSERT INTO daily_student_attendances (
+    id, daily_schedule_id, student_id, status, is_deleted, created_at, updated_at
+)
+VALUES
+    (1, 6, 1, 'PRESENT', FALSE, '2026-05-13 22:00:00', '2026-05-13 22:00:00'),
+    (2, 6, 2, 'LATE', FALSE, '2026-05-13 22:00:00', '2026-05-13 22:00:00');
+ALTER SEQUENCE daily_student_attendances_id_seq RESTART WITH 3;

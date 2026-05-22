@@ -23,7 +23,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -31,17 +33,25 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class ChannelCrudService {
 
+    private static final Set<ChannelType> MANUALLY_CREATABLE_CHANNEL_TYPES = EnumSet.of(
+            ChannelType.NOTICE,
+            ChannelType.EVENT,
+            ChannelType.RESOURCE,
+            ChannelType.CUSTOM
+    );
+
     private final ChannelRepository channelRepository;
     private final ChannelAccessChecker channelAccess;
 
     @Transactional
     public ChannelResponse createChannel(CreateChannelRequest request) {
-        log.debug("커스텀 채널 생성 요청: {}", request.name());
+        ChannelType channelType = resolveCreateChannelType(request.channelType());
+        log.debug("수동 채널 생성 요청: name={}, channelType={}", request.name(), channelType);
 
         Channel channel = channelRepository.save(Channel.builder()
                 .name(request.name())
                 .description(request.description())
-                .channelType(ChannelType.CUSTOM)
+                .channelType(channelType)
                 .bindingType(ChannelBindingType.STANDALONE)
                 .refId(null)
                 .accessLevel(ChannelAccessLevel.valueOf(request.accessLevel()))
@@ -50,7 +60,7 @@ public class ChannelCrudService {
                 .isActive(request.isActive())
                 .build());
 
-        log.info("커스텀 채널 생성 성공: id={}", channel.getId());
+        log.info("수동 채널 생성 성공: id={}, channelType={}", channel.getId(), channelType);
         return ChannelResponse.from(channel);
     }
 
@@ -157,6 +167,30 @@ public class ChannelCrudService {
         }
 
         return channel;
+    }
+
+    private ChannelType resolveCreateChannelType(String channelType) {
+        if (channelType == null || channelType.isBlank()) {
+            return ChannelType.CUSTOM;
+        }
+
+        ChannelType resolved;
+        try {
+            resolved = ChannelType.valueOf(channelType.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessException(
+                    CommonErrorCode.INVALID_INPUT,
+                    "알 수 없는 채널 유형입니다. 허용 값: NOTICE, EVENT, RESOURCE, CUSTOM"
+            );
+        }
+
+        if (!MANUALLY_CREATABLE_CHANNEL_TYPES.contains(resolved)) {
+            throw new BusinessException(
+                    CommonErrorCode.INVALID_INPUT,
+                    "수동 생성 채널 유형은 NOTICE, EVENT, RESOURCE, CUSTOM만 허용됩니다."
+            );
+        }
+        return resolved;
     }
 
     private Channel getStandaloneChannel(Long id) {

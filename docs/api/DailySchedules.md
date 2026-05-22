@@ -13,7 +13,9 @@ DailySchedule은 같은 분반과 같은 날짜의 Lesson들을 하루 단위로
 | `GET /api/v1/daily-schedules` | `VOLUNTEER`, `MANAGER`, `ADMIN` |
 | `GET /api/v1/daily-schedules/{dailyScheduleId}` | `VOLUNTEER`, `MANAGER`, `ADMIN` |
 | `GET /api/v1/daily-schedules/volunteer-hours` | `VOLUNTEER`, `MANAGER`, `ADMIN` |
-| `PUT /api/v1/daily-schedules/{dailyScheduleId}/journal` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
+| `POST /api/v1/daily-schedules/journal` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
+| `PATCH /api/v1/daily-schedules/{dailyScheduleId}/journal` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
+| `DELETE /api/v1/daily-schedules/{dailyScheduleId}/journal` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
 | `PATCH /api/v1/daily-schedules/{dailyScheduleId}/student-attendances` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
 | `PATCH /api/v1/daily-schedules/{dailyScheduleId}/teacher-attendance` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
 | `PATCH /api/v1/daily-schedules/{dailyScheduleId}/status` | `ADMIN`, `daily-schedule:manage:*` |
@@ -37,57 +39,93 @@ DailySchedule 도메인은 다음 권한 코드를 사용합니다.
 
 ## 조회 정책
 
-- 목록 조회는 `from`, `to` 기간 필터를 필수로 사용합니다.
-- 기간은 시작일과 종료일을 모두 포함합니다.
-- 목록은 수업 날짜 오름차순, ID 오름차순으로 정렬됩니다.
-- `classroomId`, `teacherId`, `status`로 목록을 추가 필터링할 수 있습니다.
+- `GET /api/v1/daily-schedules`는 수업 일지 목록 화면에서 사용하는 페이지 조회 API입니다.
+- 목록에는 작성된 수업 일지만 포함됩니다. 연결된 활성 Lesson note 중 하나라도 작성되어 있으면 작성된 수업 일지로 판단합니다.
+- 목록은 수업 날짜 내림차순, ID 내림차순으로 정렬됩니다.
+- `keyword`로 분반명, 담당 교사명, 과목명, 수업 일지 내용을 검색할 수 있습니다.
+- `mine=true`이면 로그인 사용자가 담당 교사인 수업 일지만 조회합니다.
+- `page`, `size`로 페이지를 지정합니다. 기본값은 `page=0`, `size=10`입니다.
 - 삭제된 DailySchedule, DailyTeacherAttendance, DailyStudentAttendance는 조회와 집계에서 제외됩니다.
 - 상세 조회는 DailySchedule에 연결된 Lesson 목록, 교사 출석, 학생 출석부를 함께 반환합니다.
 
 예시:
 
 ```http
-GET /api/v1/daily-schedules?from=2026-06-01&to=2026-06-30&classroomId=1
+GET /api/v1/daily-schedules?keyword=수학&mine=true&page=0&size=8
 ```
 
 ```json
-[
-  {
-    "dailyScheduleId": 1,
-    "lessonDate": "2026-06-20",
-    "classroomId": 1,
-    "classroomName": "장미반",
-    "teacherId": 2,
-    "teacherName": "홍길동",
-    "activityStartTime": "14:00:00",
-    "activityEndTime": "16:00:00",
-    "volunteerServiceMinutes": 120,
-    "status": "SCHEDULED",
-    "teacherAttendanceStatus": "ABSENT",
-    "lessonCount": 3
-  }
-]
+{
+  "content": [
+    {
+      "dailyScheduleId": 1,
+      "lessonDate": "2026-06-20",
+      "classroomId": 1,
+      "classroomName": "장미반",
+      "teacherId": 2,
+      "teacherName": "홍길동",
+      "activityStartTime": "14:00:00",
+      "activityEndTime": "16:00:00",
+      "volunteerServiceMinutes": 120,
+      "status": "SCHEDULED",
+      "teacherAttendanceStatus": "ABSENT",
+      "lessonCount": 3,
+      "lessons": [
+        {
+          "lessonId": 11,
+          "period": 1,
+          "startTime": "14:00:00",
+          "endTime": "14:40:00",
+          "subjectName": "수학",
+          "note": "1교시에는 분수 덧셈을 복습했습니다."
+        },
+        {
+          "lessonId": 12,
+          "period": 2,
+          "startTime": "14:50:00",
+          "endTime": "15:30:00",
+          "subjectName": "수학",
+          "note": "2교시에는 문장제 풀이를 진행했습니다."
+        }
+      ]
+    }
+  ],
+  "page": 0,
+  "size": 8,
+  "totalElements": 1,
+  "totalPages": 1
+}
 ```
 
 ## 수업 일지 정책
 
-- 수업 일지는 DailySchedule에 연결된 교시별 Lesson note를 한 번에 저장합니다.
+- 수업 일지는 DailySchedule에 연결된 교시별 Lesson note를 한 번에 작성하거나 수정합니다.
+- 최초 작성은 `lessonDate`, `classroomId` 기준으로 DailySchedule을 조회해 처리합니다.
+- 수정과 삭제는 `dailyScheduleId` 기준으로 처리합니다.
 - 요청에 포함된 `lessonId`는 해당 DailySchedule과 같은 분반, 같은 날짜의 활성 Lesson이어야 합니다.
+- 생성/수정 요청에는 해당 DailySchedule에 연결된 모든 활성 Lesson의 `lessonId`와 `note`가 포함되어야 합니다.
 - 수업 일지 내용은 공백일 수 없습니다.
 - 개인정보 활용 동의가 `true`이면 주민번호 앞자리 6자리를 함께 입력해야 합니다.
 - 개인정보 활용 동의가 `false`이면 주민번호 앞자리를 입력할 수 없습니다.
 - `CANCELLED` 상태의 DailySchedule에는 수업 일지를 저장할 수 없습니다.
 - `COMPLETED` 상태에서도 잘못 작성한 수업 일지는 수정할 수 있습니다.
+- 이미 작성된 수업 일지가 있는 DailySchedule에 생성 API를 호출하면 `409 Conflict`를 반환합니다.
+- 수업 일지 삭제는 DailySchedule 자체 삭제가 아니라 연결된 Lesson note와 개인정보 입력값을 초기화합니다.
+- 수업 일지 삭제 시 교사 출석과 학생 출석부는 유지합니다.
+- 수업 일지 삭제 후 같은 `lessonDate`, `classroomId`로 다시 생성할 수 있습니다.
+- 삭제 대상이 `COMPLETED` 상태였다면 DailySchedule과 연결된 Lesson 상태를 `SCHEDULED`로 되돌립니다.
 
-요청:
+최초 작성 요청:
 
 ```http
-PUT /api/v1/daily-schedules/1/journal
+POST /api/v1/daily-schedules/journal
 Content-Type: application/json
 ```
 
 ```json
 {
+  "lessonDate": "2026-06-20",
+  "classroomId": 1,
   "personalInfoConsent": true,
   "residentRegistrationNumberPrefix": "900101",
   "lessonJournals": [
@@ -102,6 +140,38 @@ Content-Type: application/json
   ]
 }
 ```
+
+수정 요청:
+
+```http
+PATCH /api/v1/daily-schedules/1/journal
+Content-Type: application/json
+```
+
+```json
+{
+  "personalInfoConsent": true,
+  "residentRegistrationNumberPrefix": "900101",
+  "lessonJournals": [
+    {
+      "lessonId": 11,
+      "note": "1교시에는 국어 읽기 활동 내용을 수정했습니다."
+    },
+    {
+      "lessonId": 12,
+      "note": "2교시에는 받아쓰기 활동 내용을 수정했습니다."
+    }
+  ]
+}
+```
+
+삭제 요청:
+
+```http
+DELETE /api/v1/daily-schedules/1/journal
+```
+
+성공 시 `204 No Content`를 반환합니다.
 
 ## 출석 정책
 
@@ -201,7 +271,9 @@ GET /api/v1/daily-schedules/volunteer-hours
 | 다른 교사의 민감 정보 또는 봉사 시간 조회 권한 없음 | `403 Forbidden` |
 | 담당자가 아닌 사용자가 수업 일지/출석 변경 시도 | `403 Forbidden` |
 | 존재하지 않거나 삭제된 DailySchedule 접근 | `404 Not Found` |
+| 이미 작성된 수업 일지 생성 시도 | `409 Conflict` |
 | DailySchedule에 연결되지 않은 Lesson으로 수업 일지 저장 | `400 Bad Request` |
+| 수업 일지 생성/수정 요청에 일부 교시가 누락됨 | `400 Bad Request` |
 | DailySchedule에 연결되지 않은 학생으로 출석 처리 | `400 Bad Request` |
 | 학생 출석 요청에 같은 학생이 중복됨 | `400 Bad Request` |
 | 휴강 상태에서 수업 일지 또는 출석 처리 시도 | `400 Bad Request` |

@@ -9,6 +9,10 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE}
   jpa:
     open-in-view: false
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:false}
   cloud:
     gcp:
       project-id: ${GCP_PROJECT_ID}

@@ -28,6 +28,10 @@
                 <span>분반</span>
                 <strong th:text="${summary.classroomCount}">0</strong>
             </a>
+            <a class="metric" th:href="@{/admin/subject/subjects(active=true)}">
+                <span>활성 과목</span>
+                <strong th:text="${summary.subjectCount}">0</strong>
+            </a>
             <a class="metric" th:href="@{/admin/request/purchase/purchase-requests(status='PENDING')}">
                 <span>대기 중 구매 요청</span>
                 <strong th:text="${summary.pendingPurchaseRequestCount}">0</strong>
@@ -88,9 +92,17 @@
                         <span>분반 관리</span>
                         <p style="font-size: 13px; margin: 4px 0 0;">분반 및 교육 과정 운영</p>
                     </a>
+                    <a class="metric" th:href="@{/admin/subject/subjects}">
+                        <span>과목 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">정기 수업 편성과 담당 교사 관리</p>
+                    </a>
                     <a class="metric" th:href="@{/admin/lesson/lessons}">
                         <span>수업 관리</span>
                         <p style="font-size: 13px; margin: 4px 0 0;">수업 일정과 운영 상태 조회</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/daily-schedule/daily-schedules}">
+                        <span>하루 일정 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">출석 현황과 수업 일지 관리</p>
                     </a>
                 </div>
             </section>
@@ -108,6 +120,10 @@
                 <a class="metric" th:href="@{/admin/request/purchase/purchase-requests(status='PENDING')}">
                     <span style="color: var(--warning);">승인 대기 중</span>
                     <p style="font-size: 13px; margin: 4px 0 0;">검토가 필요한 신규 구매 요청</p>
+                </a>
+                <a class="metric" th:href="@{/admin/request/purchase/vendors}">
+                    <span>거래처 관리</span>
+                    <p style="font-size: 13px; margin: 4px 0 0;">선결제 거래처와 잔액 관리</p>
                 </a>
                 <a class="metric" th:href="@{/admin/request/lesson-exchange}">
                     <span>수업 교환 요청</span>

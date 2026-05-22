@@ -24,7 +24,6 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
 import java.util.Optional;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -96,7 +95,7 @@ public class UserCrudService {
             request.email(),
             request.password()
         );
-        log.info("사용자 생성 완료 - ID: {}, Name: {}", savedUser.getId(), savedUser.getName());
+        log.info("사용자 생성 완료 - ID: {}, email: {}", savedUser.getId(), savedUser.getEmail());
 
         return UserDetailResponse.from(savedUser);
     }
@@ -118,7 +117,7 @@ public class UserCrudService {
             Optional.ofNullable(request.role()),
             Optional.ofNullable(request.departmentId())
         );
-        log.info("사용자 수정 완료 - ID: {}, Name: {}", user.getId(), user.getName());
+        log.info("사용자 수정 완료 - ID: {}, email: {}", user.getId(), user.getEmail());
         return UserDetailResponse.from(user);
     }
 
@@ -139,7 +138,7 @@ public class UserCrudService {
                 Optional.empty(), // 본인 수정 시 역할 변경 불가
                 Optional.empty()  // 본인 수정 시 부서 변경 불가
         );
-        log.debug("본인 사용자 수정 완료 - ID: {}, Name: {}", user.getId(), user.getName());
+        log.debug("본인 사용자 수정 완료 - ID: {}, email: {}", user.getId(), user.getEmail());
         return UserDetailResponse.from(user);
     }
 

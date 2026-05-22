@@ -14,10 +14,16 @@ public interface DailyScheduleRepository extends JpaRepository<DailySchedule, Lo
     Optional<DailySchedule> findByClassroomIdAndLessonDate(Long classroomId, LocalDate lessonDate);
 
     @EntityGraph(attributePaths = {"classroom", "teacher"})
+    Optional<DailySchedule> findByTeacherIdAndLessonDateAndIsDeletedFalse(Long teacherId, LocalDate lessonDate);
+
+    @EntityGraph(attributePaths = {"classroom", "teacher"})
     List<DailySchedule> findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(
         LocalDate from,
         LocalDate to
     );
+
+    @EntityGraph(attributePaths = {"classroom", "teacher"})
+    List<DailySchedule> findAllByIsDeletedFalseOrderByLessonDateDescIdDesc();
 
     @EntityGraph(attributePaths = {"classroom", "teacher"})
     Optional<DailySchedule> findByIdAndIsDeletedFalse(Long dailyScheduleId);

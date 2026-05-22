@@ -21,6 +21,9 @@ public class FileCleanupProperties {
     @Min(1)
     private int chunkSize = 100;
 
+    @Min(1)
+    private long temporaryRetentionHours = 24;
+
     @NotBlank
     private String cron = "0 0 3 * * *";
 }

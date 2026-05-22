@@ -41,8 +41,7 @@ public class PurchaseRequestController {
     @Operation(
         summary = "구입 요청 생성",
         description = "classroomId 로 지정한 분반에 대한 기자재 구입 요청을 생성합니다. "
-            + "품목은 품명, 사유, 예상 가격을 입력하며 실제 가격은 승인 후 구매 완료 보고 시점에 입력합니다. "
-            + "receiptFileIds 로 업로드된 영수증 파일을 구입 요청에 연결할 수 있습니다. "
+            + "품목은 품명, 사유, 확정 결제금액, 선택 영수증을 입력합니다. "
             + "상태는 PENDING 으로 시작합니다."
     )
     @PostMapping
@@ -132,6 +131,20 @@ public class PurchaseRequestController {
         log.debug("POST /api/v1/purchase-requests/{}/reconfirmation", requestId);
         purchaseRequestReconfirmationService.requestReconfirmation(userDetails.getUserId(), requestId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "구매 완료 거래 수정")
+    @PostMapping("/{requestId}/item-receipts")
+    public ResponseEntity<PurchaseRequestDetailResponse> updateItemReceipts(
+        @PathVariable Long requestId,
+        @Valid @RequestBody ReportPurchaseRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("POST /api/v1/purchase-requests/{}/item-receipts", requestId);
+        return ResponseEntity.ok(
+            purchaseRequestService.updateItemReceipts(userDetails.getUserId(), requestId, request, false)
+        );
     }
 
 }
