@@ -8,10 +8,10 @@
     <div class="panel" style="background: #f8faf9; border-left: 4px solid var(--green); margin-bottom: 24px;">
         <h3 style="margin-top: 0;">구매 프로세스 안내</h3>
         <ol style="margin-bottom: 0; padding-left: 20px; color: #566059; font-size: 14px; line-height: 1.6;">
-            <li><strong>신청</strong>: 필요한 물품의 품명, 사유, 예상 가격과 요청 전체 선금 금액을 작성합니다.</li>
-            <li><strong>승인</strong>: 관리자가 요청 내용을 검토하고 실제 선금 승인 금액을 결정합니다.</li>
-            <li><strong>구매 및 보고</strong>: 승인된 물품을 구매한 후, <strong>실제 가격</strong>과 <strong>영수증 사진</strong>을 요청 단위로 첨부하여 보고합니다.</li>
-            <li><strong>확정</strong>: 최종 확인이 완료되면 요청 프로세스가 종료됩니다.</li>
+            <li><strong>신청</strong>: 필요한 물품의 품명, 개수, 사유, 결제 유형을 작성합니다.</li>
+            <li><strong>승인</strong>: 관리자가 요청 내용을 검토합니다.</li>
+            <li><strong>보고</strong>: 승인 후 거래처별 결제 금액과 선택 영수증을 등록합니다.</li>
+            <li><strong>확정</strong>: 최종 확인 시 거래처별 잔액이 차감됩니다.</li>
         </ol>
     </div>
 
@@ -23,17 +23,15 @@
         </label>
         <label>제목 <input th:field="*{title}" required placeholder="예: 교재 구입"></label>
         <label>내용 <textarea th:field="*{content}" required placeholder="구매 요청 사유 및 상세 내용을 입력하세요."></textarea></label>
-        <label>선금 요청 금액
-            <input type="number" th:field="*{advancePaymentRequestedAmount}" min="0" placeholder="예: 50000">
-        </label>
         
         <div class="stack" style="--gap: 1rem;">
             <h3>구매 항목</h3>
             <div id="items-container" class="stack" style="--gap: 0.5rem;">
-                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: 1fr 1.5fr 1fr auto; gap: 1rem; align-items: end;">
+                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(100px, .6fr) minmax(140px, .8fr) auto; gap: 1rem; align-items: end;">
                     <label>품명 <input th:field="*{items[__${stat.index}__].name}" required></label>
                     <label>사유 <input th:field="*{items[__${stat.index}__].reason}"></label>
-                    <label>예상 가격 <input type="number" th:field="*{items[__${stat.index}__].expectedPrice}" min="0" placeholder="예: 15000"></label>
+                    <label>개수 <input type="number" th:field="*{items[__${stat.index}__].quantity}" min="1" required></label>
+                    <label>결제 유형 <select th:field="*{items[__${stat.index}__].paymentType}"><option value="PREPAID">선 결제</option><option value="ACTUAL">실 결제</option></select></label>
                     <button type="button" class="button danger" th:if="${stat.index > 0}" onclick="removeRow(this)">삭제</button>
                 </div>
             </div>
@@ -45,15 +43,49 @@
     <script th:inline="javascript">
         let itemIndex = /*[[${form.items.size()}]]*/ 0;
 
+        async function uploadItemReceipt(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+
+            const row = input.closest('.item-row');
+            const hidden = row.querySelector('input[name*=".receiptFileId"]');
+            const preview = row.querySelector('.receipt-preview');
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/admin/request/purchase/purchase-requests/receipt-images', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    console.error('영수증 업로드 실패', response.status, errorBody);
+                    throw new Error(`업로드 실패 (${response.status})`);
+                }
+
+                const data = await response.json();
+                hidden.value = data.fileId;
+                preview.innerHTML = `<a class="receipt-chip" href="${data.url}" target="_blank">보기</a>`;
+            } catch (error) {
+                console.error(error);
+                alert(`이미지 업로드 중 오류가 발생했습니다. ${error.message}`);
+            } finally {
+                input.value = '';
+            }
+        }
+
         function addItemRow() {
             const container = document.getElementById('items-container');
             const newRow = document.createElement('div');
             newRow.className = 'panel item-row';
-            newRow.style.cssText = 'display: grid; grid-template-columns: 1fr 1.5fr 1fr auto; gap: 1rem; align-items: end;';
+            newRow.style.cssText = 'display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(100px, .6fr) minmax(140px, .8fr) auto; gap: 1rem; align-items: end;';
             newRow.innerHTML = `
                 <label>품명 <input name="items[${itemIndex}].name" required></label>
                 <label>사유 <input name="items[${itemIndex}].reason"></label>
-                <label>예상 가격 <input type="number" name="items[${itemIndex}].expectedPrice" min="0" placeholder="예: 15000"></label>
+                <label>개수 <input type="number" name="items[${itemIndex}].quantity" min="1" required value="1"></label>
+                <label>결제 유형 <select name="items[${itemIndex}].paymentType"><option value="PREPAID">선 결제</option><option value="ACTUAL" selected>실 결제</option></select></label>
                 <button type="button" class="button danger" onclick="removeRow(this)">삭제</button>
             `;
             container.appendChild(newRow);
@@ -70,13 +102,72 @@
             rows.forEach((row, index) => {
                 const nameInput = row.querySelector('input[name*=".name"]');
                 const reasonInput = row.querySelector('input[name*=".reason"]');
-                const expectedPriceInput = row.querySelector('input[name*=".expectedPrice"]');
+                const quantityInput = row.querySelector('input[name*=".quantity"]');
+                const paymentTypeInput = row.querySelector('select[name*=".paymentType"]');
                 if (nameInput) nameInput.name = `items[${index}].name`;
                 if (reasonInput) reasonInput.name = `items[${index}].reason`;
-                if (expectedPriceInput) expectedPriceInput.name = `items[${index}].expectedPrice`;
+                if (quantityInput) quantityInput.name = `items[${index}].quantity`;
+                if (paymentTypeInput) paymentTypeInput.name = `items[${index}].paymentType`;
             });
             itemIndex = rows.length;
         }
     </script>
+    <style>
+        .receipt-field {
+            display: grid;
+            gap: 6px;
+            min-width: 0;
+        }
+        .field-label {
+            color: #4b554f;
+            font-size: 13px;
+            font-weight: 800;
+        }
+        .receipt-preview {
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+        }
+        .receipt-chip {
+            display: inline-flex;
+            align-items: center;
+            min-height: 30px;
+            padding: 0 10px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--green-dark);
+            font-size: 13px;
+            font-weight: 900;
+            text-decoration: none;
+        }
+        .receipt-empty {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .file-button {
+            width: fit-content;
+            min-height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: #4f5953;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 900;
+        }
+        .file-button input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
 </main>
 </div></body></html>

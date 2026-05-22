@@ -14,8 +14,11 @@ spring:
   sql:
     init:
       mode: always
+      schema-locations: classpath:/sql/init_scheme.sql
       data-locations: classpath:/sql/init_data.sql
-      continue-on-error: true
+      continue-on-error: false
+  flyway:
+    enabled: false
   cloud:
     gcp:
       storage:

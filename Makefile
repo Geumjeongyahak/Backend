@@ -3,10 +3,12 @@ COMPOSE := docker compose
 APP_IMAGE ?= ghcr.io/geumjeongyahak/backend:latest
 
 BASE_FILES := -f docker-compose.yml
-LOCAL_FILES := $(BASE_FILES) -f docker-compose.local.yml
+LOCAL_PROJECT := -p backend-local
+LOCAL_FILES := $(LOCAL_PROJECT) --env-file .env.local $(BASE_FILES) -f docker-compose.local.yml
 DEV_FILES := $(BASE_FILES) -f docker-compose.dev.yml -f infra/app-server/docker-compose.observability.yml
 MONITORING_FILES := -f infra/monitoring/docker-compose.prometheus.yml
 
+LOCAL_SERVICES := app db
 APP_SERVER_SERVICES := app db node-exporter cadvisor postgres-exporter alloy
 
 .PHONY: \
@@ -29,19 +31,19 @@ logs:
 	$(COMPOSE) $(BASE_FILES) logs -f app db
 
 up-local:
-	$(COMPOSE) $(LOCAL_FILES) up --build
+	$(COMPOSE) $(LOCAL_FILES) up --build --remove-orphans $(LOCAL_SERVICES)
 
 down-local:
-	$(COMPOSE) $(LOCAL_FILES) down
+	$(COMPOSE) $(LOCAL_FILES) down --remove-orphans
 
 ps-local:
-	$(COMPOSE) $(LOCAL_FILES) ps
+	$(COMPOSE) $(LOCAL_FILES) ps $(LOCAL_SERVICES)
 
 logs-local:
 	$(COMPOSE) $(LOCAL_FILES) logs -f app db
 
 build-local:
-	$(COMPOSE) $(LOCAL_FILES) build
+	$(COMPOSE) $(LOCAL_FILES) build $(LOCAL_SERVICES)
 
 pull-dev:
 	$(COMPOSE) $(DEV_FILES) pull app node-exporter cadvisor postgres-exporter alloy

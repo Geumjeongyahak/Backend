@@ -90,8 +90,7 @@ public class PurchaseRequestAdminController {
             purchaseRequestService.approvePurchaseRequest(
                 userDetails.getUserId(),
                 requestId,
-                request.note(),
-                request.advancePaymentApprovedAmount()
+                request.note()
             )
         );
     }
@@ -124,6 +123,20 @@ public class PurchaseRequestAdminController {
         log.debug("PATCH /api/v1/admin/purchase-requests/{}/confirm", requestId);
         return ResponseEntity.ok(
             purchaseRequestService.confirmPurchase(userDetails.getUserId(), requestId)
+        );
+    }
+
+    @Operation(summary = "구매 완료 거래 수정")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
+    @PatchMapping("/{requestId}/item-receipts")
+    public ResponseEntity<PurchaseRequestDetailResponse> updateItemReceipts(
+        @PathVariable Long requestId,
+        @Valid @RequestBody geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/admin/purchase-requests/{}/item-receipts", requestId);
+        return ResponseEntity.ok(
+            purchaseRequestService.updateItemReceipts(userDetails.getUserId(), requestId, request, true)
         );
     }
 }

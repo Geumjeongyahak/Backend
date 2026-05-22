@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('거래처 상세')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1 th:text="${vendor.name}">거래처</h1>
+                <p>거래처 정보, 잔액, 충전/차감 이력</p>
+            </div>
+            <a class="button secondary" th:href="@{/admin/request/purchase/vendors}">목록</a>
+        </div>
+
+        <section class="panel detail-grid">
+            <div class="detail-item"><span>상태</span><strong><span class="pill" th:classappend="${vendor.isActive} ? 'status-APPROVED' : 'status-REJECTED'" th:text="${vendor.isActive ? '활성' : '비활성'}">활성</span></strong></div>
+            <div class="detail-item"><span>잔액</span><strong class="money" th:text="${#numbers.formatInteger(vendor.balance, 0, 'COMMA')}">0</strong></div>
+            <div class="detail-item"><span>설명</span><strong th:text="${vendor.description ?: '-'}">-</strong></div>
+            <div class="detail-item"><span>생성일</span><strong th:text="${#temporals.format(vendor.createdAt, 'yyyy.MM.dd HH:mm')}">2026.01.01</strong></div>
+        </section>
+
+        <section class="panel">
+            <h3 style="margin-top: 0;">거래처 수정</h3>
+            <form class="form-grid" th:action="@{/admin/request/purchase/vendors/{vendorId}(vendorId=${vendor.id})}" method="post">
+                <label>거래처명
+                    <input name="name" th:value="${vendor.name}" required>
+                </label>
+                <label>설명
+                    <textarea name="description" th:text="${vendor.description}"></textarea>
+                </label>
+                <label class="check-label vendor-check">
+                    <input type="checkbox" name="isActive" value="true" th:checked="${vendor.isActive}">
+                    활성
+                </label>
+                <button class="button" type="submit">수정</button>
+            </form>
+        </section>
+
+        <section class="panel">
+            <h3 style="margin-top: 0;">금액 충전</h3>
+            <form class="form-grid" th:action="@{/admin/request/purchase/vendors/{vendorId}/charges(vendorId=${vendor.id})}" method="post">
+                <label>충전 금액
+                    <input type="number" name="amount" min="1" required placeholder="예: 100000">
+                </label>
+                <label>메모
+                    <input name="memo" placeholder="예: 5월 선결제 충전">
+                </label>
+                <input id="charge-receipt-id" type="hidden" name="receiptFileId">
+                <label class="file-button">충전 영수증
+                    <input type="file" accept="image/*" onchange="uploadChargeReceipt(this)">
+                </label>
+                <div id="charge-receipt-preview" class="inline-form"></div>
+                <button class="button" type="submit">충전</button>
+            </form>
+        </section>
+
+        <section class="panel table-panel">
+            <h3 style="margin-top: 0;">잔액 이력</h3>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>시각</th>
+                        <th>유형</th>
+                        <th>금액</th>
+                        <th>처리 후 잔액</th>
+                        <th>메모</th>
+                        <th>영수증</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="history : ${histories}">
+                        <td th:text="${#temporals.format(history.occurredAt, 'yyyy.MM.dd HH:mm')}">2026.01.01</td>
+                        <td th:text="${history.type.name()}">CHARGE</td>
+                        <td class="money" th:text="${#numbers.formatInteger(history.amount, 0, 'COMMA')}">0</td>
+                        <td class="money" th:text="${#numbers.formatInteger(history.balanceAfter, 0, 'COMMA')}">0</td>
+                        <td th:text="${history.memo ?: '-'}">-</td>
+                        <td><a class="link" th:if="${history.receiptFileUrl != null}" th:href="${history.receiptFileUrl}" target="_blank">보기</a><span th:if="${history.receiptFileUrl == null}">-</span></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(histories)}">
+                        <td colspan="6" class="empty">이력이 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel">
+            <form th:action="@{/admin/request/purchase/vendors/{vendorId}/delete(vendorId=${vendor.id})}" method="post" onsubmit="return confirm('이 거래처를 삭제하시겠습니까?');">
+                <button class="button danger" type="submit">삭제</button>
+            </form>
+        </section>
+    </main>
+    <script>
+        async function uploadChargeReceipt(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch('/admin/request/purchase/vendors/receipt-images', {
+                method: 'POST',
+                body: formData
+            });
+            if (!response.ok) {
+                alert('영수증 업로드에 실패했습니다.');
+                input.value = '';
+                return;
+            }
+            const data = await response.json();
+            document.getElementById('charge-receipt-id').value = data.fileId;
+            document.getElementById('charge-receipt-preview').innerHTML =
+                `<a class="button secondary" href="${data.url}" target="_blank">영수증 보기</a>`;
+        }
+    </script>
+    <style>
+        .vendor-check {
+            min-height: 40px;
+            align-self: end;
+        }
+        .money {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .detail-item .money {
+            text-align: left;
+        }
+        .file-button {
+            width: fit-content;
+            min-height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: #4f5953;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 900;
+        }
+        .file-button input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</div>
+</body>
+</html>
