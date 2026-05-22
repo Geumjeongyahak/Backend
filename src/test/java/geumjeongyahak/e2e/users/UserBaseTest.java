@@ -9,7 +9,7 @@ import geumjeongyahak.e2e.BaseE2ETest;
 @Tag("user")
 public abstract class UserBaseTest extends BaseE2ETest {
 
-    public static final String TEST_VOLUNTEER_USERNAME = "volunteer1234";
+    public static final String TEST_VOLUNTEER_USERNAME = "volunteer1234@test.com";
     public String adminAccessToken;
     public String volunteerAccessToken;
 
@@ -20,12 +20,11 @@ public abstract class UserBaseTest extends BaseE2ETest {
         RestAssured.basePath = "/api/v1/users";
         this.userTestHelper.createTestUser(
             TEST_VOLUNTEER_USERNAME,
-            TEST_VOLUNTEER_USERNAME,
-            TEST_VOLUNTEER_USERNAME + "@test.com",
-            "pw_" + TEST_VOLUNTEER_USERNAME,
+            "Volunteer User",
+            "pw_volunteer",
             RoleType.VOLUNTEER
         );
-        this.adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
-        this.volunteerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_VOLUNTEER_USERNAME);
+        this.adminAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_ADMIN_EMAIL);
+        this.volunteerAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_VOLUNTEER_USERNAME);
     }
 }

@@ -92,7 +92,6 @@ public class GoogleAuthController {
             .body(googleAuthService.signup(
                 request.tempToken(),
                 request.name(),
-                request.nickname(),
                 request.phoneNumber(),
                 request.residentRegistrationNumberPrefix()
             ));

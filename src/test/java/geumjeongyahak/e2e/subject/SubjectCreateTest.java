@@ -91,11 +91,11 @@ public class SubjectCreateTest extends SubjectBaseTest {
     void createSubject_Success_WhenTeacherIsManager() {
         long managerId = 100L;
         jdbcTemplate.update("DELETE FROM user_permissions WHERE user_id = ?", managerId);
-        jdbcTemplate.update("DELETE FROM users WHERE id = ? OR nickname = ?", managerId, "subject-manager");
+        jdbcTemplate.update("DELETE FROM users WHERE id = ? OR primary_email = ?", managerId, "subject-manager@test.com");
         jdbcTemplate.update("""
-            INSERT INTO users (id, nickname, name, primary_email, role)
-            VALUES (?, ?, ?, ?, ?)
-            """, managerId, "subject-manager", "과목 매니저", "subject-manager@test.com", "MANAGER");
+            INSERT INTO users (id, name, primary_email, role)
+            VALUES (?, ?, ?, ?)
+            """, managerId, "과목 매니저", "subject-manager@test.com", "MANAGER");
 
         Map<String, Object> request = new HashMap<>(createRequest(
             "매니저 담당 과목",

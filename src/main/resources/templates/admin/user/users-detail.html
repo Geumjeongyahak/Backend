@@ -11,7 +11,6 @@
         <div class="detail-item"><span>ID</span><strong th:text="${user.id}">1</strong></div>
         <div class="detail-item"><span>역할</span><strong th:text="${user.role}">VOLUNTEER</strong></div>
         <div class="detail-item"><span>이메일</span><strong th:text="${user.email}">email</strong></div>
-        <div class="detail-item"><span>닉네임</span><strong th:text="${user.nickname}">nick</strong></div>
         <div class="detail-item"><span>연락처</span><strong th:text="${user.phoneNumber ?: '-'}">-</strong></div>
         <div class="detail-item"><span>부서</span><strong><a class="link" th:if="${user.departmentId != null}" th:href="@{/admin/department/departments/{departmentId}(departmentId=${user.departmentId})}" th:text="|#${user.departmentId}|">부서</a><span th:if="${user.departmentId == null}">-</span></strong></div>
     </section>

@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.context.annotation.Import;
+import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.e2e.util.TestUserHelper;
 
 
@@ -21,7 +22,7 @@ import geumjeongyahak.e2e.util.TestUserHelper;
 public abstract class BaseE2ETest {
     public static final Logger log = LoggerFactory.getLogger(BaseE2ETest.class);
     public static final String AUTH_HEADER = "Authorization";
-    public static final String TEST_ADMIN_USERNAME = "admin1234";
+    public static final String TEST_ADMIN_USERNAME = "admin@test.com";
     public static final String TEST_ADMIN_EMAIL = "admin@test.com";
     public static final String TEST_ADMIN_PASSWORD = "admin1234";
 
@@ -37,6 +38,9 @@ public abstract class BaseE2ETest {
         RestAssured.baseURI = "http://localhost" + ":" + port;
         RestAssured.basePath = "";
         log.info("RestAssured.baseURI 설정: {}", RestAssured.baseURI);
+
+        // Ensure admin user exists with correct password for E2E tests
+        userTestHelper.createTestUser(TEST_ADMIN_EMAIL, "관리자", TEST_ADMIN_PASSWORD, RoleType.ADMIN);
     }
 
     @AfterEach

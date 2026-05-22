@@ -74,7 +74,7 @@ public class UserAdminController {
             - 부서 이동 또는 역할 변경 전 원본 데이터 확인
 
             응답 정보:
-            - 이름, 닉네임, 이메일, 전화번호
+            - 이름, 이메일, 전화번호
             - 기본 역할(role)
             - 소속 부서 ID
             - 사용자에게 직접 부여된 세부 권한 목록
@@ -106,7 +106,6 @@ public class UserAdminController {
             - 특정 부서 소속 사용자 선등록
 
             동작 방식:
-            - nickname, email 중복 여부를 먼저 검사합니다.
             - 요청 role을 기본 역할로 저장합니다.
             - departmentId가 있으면 해당 부서를 연결합니다.
             - 사용자 레코드 생성 후 Local 로그인 자격 증명(email, password)을 함께 생성합니다.
@@ -114,7 +113,7 @@ public class UserAdminController {
             사이드 이펙트:
             - users 테이블에 새 사용자가 저장됩니다.
             - 인증 도메인에 local credential이 함께 생성됩니다.
-            - 중복 이메일/닉네임이면 생성되지 않고 예외가 반환됩니다.
+            - 중복 이메일이면 생성되지 않고 예외가 반환됩니다.
             """
     )
     @PostMapping
@@ -140,7 +139,7 @@ public class UserAdminController {
 
             동작 방식:
             - 전달한 필드만 반영합니다.
-            - 닉네임이나 이메일이 변경되면 중복 여부를 다시 검사합니다.
+            - 이메일이 변경되면 중복 여부를 다시 검사합니다.
             - 비밀번호가 전달되면 Local credential의 비밀번호 해시를 갱신합니다.
             - 이메일이 변경되면 사용자 기본 이메일과 Local credential 이메일을 함께 갱신합니다.
 

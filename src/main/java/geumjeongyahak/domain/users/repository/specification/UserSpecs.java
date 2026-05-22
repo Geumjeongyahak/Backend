@@ -11,10 +11,6 @@ public class UserSpecs {
         return (root, query, cb) -> cb.equal(root.get("role"), role);
     }
 
-    public static Specification<User> containsNickname(String nickname) {
-        return (root, query, cb) -> cb.like(root.get("nickname"), "%" + nickname + "%");
-    }
-
     public static Specification<User> containsName(String name) {
         return (root, query, cb) -> cb.like(root.get("name"), "%" + name + "%");
     }

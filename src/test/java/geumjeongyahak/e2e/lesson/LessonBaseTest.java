@@ -21,8 +21,8 @@ import geumjeongyahak.e2e.util.TestLessonHelper;
 @Tag("lesson")
 public class LessonBaseTest extends BaseE2ETest {
 
-    public static final String TEST_VOLUNTEER_USERNAME = "teacher01";
-    public static final String TEST_MANAGER_USERNAME = "manager01";
+    public static final String TEST_VOLUNTEER_USERNAME = "teacher01@test.com";
+    public static final String TEST_MANAGER_USERNAME = "manager01@test.com";
     protected static final long CLASSROOM_ID = 1L;
     protected static final long TEACHER_ID = 2L;
     protected static final long TEACHER2_ID = 3L;
@@ -44,10 +44,10 @@ public class LessonBaseTest extends BaseE2ETest {
     protected void setUp() {
         super.setUp();
         RestAssured.basePath = "/api/v1/lessons";
-        this.adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
+        this.adminAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_ADMIN_USERNAME);
         userTestHelper.createTestUser(TEST_MANAGER_USERNAME, RoleType.MANAGER);
-        this.managerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_MANAGER_USERNAME);
-        this.volunteerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_VOLUNTEER_USERNAME);
+        this.managerAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_MANAGER_USERNAME);
+        this.volunteerAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_VOLUNTEER_USERNAME);
     }
 
     @AfterEach
@@ -191,14 +191,15 @@ public class LessonBaseTest extends BaseE2ETest {
     }
 
     protected String createAccessTokenWithPermission(
-        String nicknamePrefix,
+        String namePrefix,
         RoleType role,
         String permissionCode
     ) {
-        String nickname = nicknamePrefix + System.nanoTime();
-        User user = userTestHelper.createTestUser(nickname, role);
+        String name = namePrefix + System.nanoTime();
+        String email = name + "@test.com";
+        User user = userTestHelper.createTestUser(email, name, "password123!", role);
         userPermissionRepository.save(new UserPermission(user, permissionCode));
-        return userTestHelper.generateAccessTokenByNickname(nickname);
+        return userTestHelper.generateAccessTokenByEmail(email);
     }
 
     protected void deleteLesson(Long lessonId, String token) {

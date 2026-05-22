@@ -83,10 +83,10 @@ public class UserCredentialService {
         String email,
         String password
     ) {
-        log.info("로컬 로그인 자격 증명 생성 요청 - userId: {}, nickname: {}", user.getId(), user.getNickname());
+        log.info("로컬 로그인 자격 증명 생성 요청 - userId: {}, name: {}", user.getId(), user.getName());
 
         if (hasCredentialForProvider(user.getId(), ProviderType.LOCAL)) {
-            log.info("로컬 로그인 자격 증명 생성 실패 - 이미 로컬 계정으로 가입된 사용자: userId: {}, nickname: {}", user.getId(), user.getNickname());
+            log.info("로컬 로그인 자격 증명 생성 실패 - 이미 로컬 계정으로 가입된 사용자: userId: {}, name: {}", user.getId(), user.getName());
             throw new DuplicateCredentialException(
                 "이미 가입된 계정입니다."
             );
@@ -104,7 +104,7 @@ public class UserCredentialService {
             true
         );
         
-        log.debug("로컬 로그인 자격 증명 생성 완료 - userId: {}, nickname: {}", user.getId(), user.getNickname());
+        log.debug("로컬 로그인 자격 증명 생성 완료 - userId: {}, name: {}", user.getId(), user.getName());
         return userCredentialRepository.save(credential);
     }
 
@@ -115,10 +115,10 @@ public class UserCredentialService {
         String credentialEmail,
         boolean emailVerified
     ) {
-        log.info("Google 로그인 자격 증명 생성 요청 - userId: {}, nickname: {}", user.getId(), user.getNickname());
+        log.info("Google 로그인 자격 증명 생성 요청 - userId: {}, name: {}", user.getId(), user.getName());
 
         if (hasCredentialForProvider(user.getId(), ProviderType.GOOGLE)) {
-            log.info("Google 로그인 자격 증명 생성 실패 - 이미 Google 계정으로 가입된 사용자: userId: {}, nickname: {}", user.getId(), user.getNickname());
+            log.info("Google 로그인 자격 증명 생성 실패 - 이미 Google 계정으로 가입된 사용자: userId: {}, name: {}", user.getId(), user.getName());
             throw new DuplicateCredentialException(
                 "이미 Google 계정으로 가입된 사용자입니다."
             );
@@ -140,26 +140,26 @@ public class UserCredentialService {
             credentialEmail,
             emailVerified
         );
-        log.debug("Google 로그인 자격 증명 생성 완료 - userId: {}, nickname: {}", user.getId(), user.getNickname());
+        log.debug("Google 로그인 자격 증명 생성 완료 - userId: {}, name: {}", user.getId(), user.getName());
         return userCredentialRepository.save(credential);
     }
 
     @Transactional
     public void updateLocalPassword(User user, String newPasswordHash) {
-        log.info("로컬 로그인 비밀번호 업데이트 요청 - userId: {}, nickname: {}", user.getId(), user.getNickname());
+        log.info("로컬 로그인 비밀번호 업데이트 요청 - userId: {}, name: {}", user.getId(), user.getName());
         UserCredential credential = userCredentialRepository.findByUserIdAndProvider(user.getId(), ProviderType.LOCAL)
             .orElseThrow(() -> {
-                log.info("로컬 로그인 비밀번호 업데이트 실패 - 로컬 계정이 존재하지 않음: userId: {}, nickname: {}", user.getId(), user.getNickname());
+                log.info("로컬 로그인 비밀번호 업데이트 실패 - 로컬 계정이 존재하지 않음: userId: {}, name: {}", user.getId(), user.getName());
                 throw new CredentialNotFoundException();
             });
         credential.setPasswordHash(newPasswordHash);
         userCredentialRepository.save(credential);
-        log.debug("로컬 로그인 비밀번호 업데이트 완료 - userId: {}, nickname: {}", user.getId(), user.getNickname());
+        log.debug("로컬 로그인 비밀번호 업데이트 완료 - userId: {}, name: {}", user.getId(), user.getName());
     }
 
     @Transactional
     public void updateLocalCredentialEmail(User user, String newEmail) {
-        log.info("로컬 로그인 이메일 업데이트 요청 - userId: {}, nickname: {}", user.getId(), user.getNickname());
+        log.info("로컬 로그인 이메일 업데이트 요청 - userId: {}, name: {}", user.getId(), user.getName());
         UserCredential credential = userCredentialRepository.findByUserIdAndProvider(user.getId(), ProviderType.LOCAL)
             .orElseThrow(CredentialNotFoundException::new);
         if (newEmail.equals(credential.getCredentialEmail())) {
@@ -175,8 +175,8 @@ public class UserCredentialService {
 
     @Transactional
     public void deleteAllCredentials(User user) {
-        log.info("사용자 자격 증명 삭제 요청 - userId: {}, nickname: {}", user.getId(), user.getNickname());
+        log.info("사용자 자격 증명 삭제 요청 - userId: {}, name: {}", user.getId(), user.getName());
         userCredentialRepository.deleteAllByUserId(user.getId());
-        log.debug("사용자 자격 증명 삭제 완료 - userId: {}, nickname: {}", user.getId(), user.getNickname());
+        log.debug("사용자 자격 증명 삭제 완료 - userId: {}, name: {}", user.getId(), user.getName());
     }
 }

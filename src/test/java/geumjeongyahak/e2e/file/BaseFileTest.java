@@ -13,7 +13,7 @@ import geumjeongyahak.e2e.BaseE2ETest;
 @Tag("file")
 public abstract class BaseFileTest extends BaseE2ETest {
 
-    protected static final String TEST_FILE_USER = "fileUser1234";
+    protected static final String TEST_FILE_USER = "fileUser1234@test.com";
 
     protected String userAccessToken;
 
@@ -27,7 +27,7 @@ public abstract class BaseFileTest extends BaseE2ETest {
         RestAssured.basePath = "/api/v1/files";
 
         userTestHelper.createTestUser(TEST_FILE_USER, RoleType.VOLUNTEER);
-        userAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_FILE_USER);
+        userAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_FILE_USER);
     }
 
     @AfterEach

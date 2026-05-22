@@ -72,7 +72,6 @@ GET /api/v1/users
     {
       "id": 1,
       "name": "홍길동",
-      "nickname": "까치",
       "email": "user@example.com",
       "phoneNumber": "010-1234-5678",
       "role": "VOLUNTEER",
@@ -114,7 +113,6 @@ GET /api/v1/users/{userId}
 {
   "id": 1,
   "name": "홍길동",
-  "nickname": "까치",
   "email": "user@example.com",
   "phoneNumber": "010-1234-5678",
   "role": "VOLUNTEER",
@@ -149,7 +147,6 @@ POST /api/v1/users
 ```json
 {
   "email": "newuser@example.com",
-  "nickname": "까치",
   "name": "홍길동",
   "password": "password123!",
   "phoneNumber": "010-1234-5678",
@@ -161,7 +158,6 @@ POST /api/v1/users
 | 필드 | 타입 | 필수 | 제약 | 설명 |
 |------|------|------|------|------|
 | `email` | string | **Y** | 이메일 형식 | 로그인용 이메일. 중복 불가 |
-| `nickname` | string | **Y** | 최대 30자 | 서비스 내 표시 닉네임. 중복 불가 |
 | `name` | string | **Y** | 최대 50자 | 실명 또는 관리용 이름 |
 | `password` | string | **Y** | 최소 8자 | 초기 로그인 비밀번호 |
 | `phoneNumber` | string | N | 전화번호 형식 | 연락처 |
@@ -181,7 +177,6 @@ POST /api/v1/users
 
 | 코드 | HTTP | 설명 |
 |------|------|------|
-| `BIZ-01-001` | 409 | 닉네임 중복 |
 | `BIZ-01-002` | 409 | 이메일 중복 |
 | `RES-02-001` | 404 | 부서를 찾을 수 없음 (`departmentId` 지정 시) |
 | `VAL001` | 400 | 입력값 검증 실패 |
@@ -210,7 +205,6 @@ PATCH /api/v1/users/{userId}
 ```json
 {
   "name": "수정된이름",
-  "nickname": "새닉네임",
   "phoneNumber": "010-9876-5432",
   "email": "changed@example.com",
   "password": "newpassword123!",
@@ -222,7 +216,6 @@ PATCH /api/v1/users/{userId}
 | 필드 | 타입 | 필수 | 제약 | 설명 |
 |------|------|------|------|------|
 | `name` | string | N | 최대 50자 | 이름 |
-| `nickname` | string | N | 최대 50자 | 닉네임. 변경 시 중복 검사 |
 | `phoneNumber` | string | N | 전화번호 형식 | 연락처 |
 | `email` | string | N | 이메일 형식 | 로그인 이메일. 변경 시 credential도 함께 변경됨 |
 | `password` | string | N | 최소 8자 | 비밀번호. 전달 시 credential 해시 갱신 |
@@ -245,7 +238,6 @@ PATCH /api/v1/users/{userId}
 | 코드 | HTTP | 설명 |
 |------|------|------|
 | `RES-01-001` | 404 | 사용자를 찾을 수 없음 |
-| `BIZ-01-001` | 409 | 닉네임 중복 |
 | `BIZ-01-002` | 409 | 이메일 중복 |
 | `RES-02-001` | 404 | 부서를 찾을 수 없음 |
 | `VAL001` | 400 | 입력값 검증 실패 |
@@ -325,7 +317,6 @@ PATCH /api/v1/users/me
 ```json
 {
   "name": "수정된이름",
-  "nickname": "새닉네임",
   "phoneNumber": "010-9876-5432",
   "email": "changed@example.com",
   "password": "newpassword123!"
@@ -335,7 +326,6 @@ PATCH /api/v1/users/me
 | 필드 | 타입 | 필수 | 제약 | 설명 |
 |------|------|------|------|------|
 | `name` | string | N | 최대 50자 | 이름 |
-| `nickname` | string | N | 최대 50자 | 닉네임. 변경 시 중복 검사 |
 | `phoneNumber` | string | N | 전화번호 형식 | 연락처 |
 | `email` | string | N | 이메일 형식 | 로그인 이메일. 변경 시 credential도 함께 변경됨 |
 | `password` | string | N | 최소 8자 | 비밀번호. 전달 시 credential 해시 갱신 |
@@ -354,7 +344,6 @@ PATCH /api/v1/users/me
 
 | 코드 | HTTP | 설명 |
 |------|------|------|
-| `BIZ-01-001` | 409 | 닉네임 중복 |
 | `BIZ-01-002` | 409 | 이메일 중복 |
 | `VAL001` | 400 | 입력값 검증 실패 |
 | `AUTH001` | 401 | 인증 실패 |
@@ -502,7 +491,6 @@ DELETE /api/v1/users/{userId}/permissions
 |------|------|----------|------|
 | `id` | Long | N | 사용자 식별자 |
 | `name` | string | N | 이름 |
-| `nickname` | string | N | 닉네임 |
 | `email` | string | N | 기본 이메일 |
 | `phoneNumber` | string | Y | 전화번호 |
 | `role` | string | N | 기본 역할 (`ADMIN`, `MANAGER`, `VOLUNTEER`, `GUEST`) |
@@ -516,7 +504,6 @@ DELETE /api/v1/users/{userId}/permissions
 |------|------|----------|------|
 | `id` | Long | N | 사용자 식별자 |
 | `name` | string | N | 이름 |
-| `nickname` | string | N | 닉네임 |
 | `email` | string | N | 기본 이메일 |
 | `phoneNumber` | string | Y | 전화번호 |
 | `role` | string | N | 기본 역할 |

@@ -99,7 +99,6 @@ public class GoogleAuthService {
     public TokenResponse signup(
         String tempToken,
         String name,
-        String nickname,
         String phoneNumber,
         String residentRegistrationNumberPrefix
     ) {
@@ -112,7 +111,6 @@ public class GoogleAuthService {
             .map(UserCredential::getUser)
             .orElseGet(() -> userProxyService.save(User.builder()
                 .name(name)
-                .nickname(nickname)
                 .email(email)
                 .phoneNumber(phoneNumber)
                 .residentRegistrationNumberPrefix(residentRegistrationNumberPrefix)

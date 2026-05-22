@@ -27,11 +27,6 @@ public class UserProxyService {
     }
 
     @Transactional(readOnly = true)
-    public boolean existsByNickname(String nickname) {
-        return userRepository.existsByNickname(nickname);
-    }
-
-    @Transactional(readOnly = true)
     public boolean existsByDepartmentId(Long departmentId) {
         return userRepository.existsByDepartmentId(departmentId);
     }

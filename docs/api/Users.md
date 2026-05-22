@@ -16,7 +16,6 @@
     - `page` (optional): 페이지 번호 (0-based)
     - `size` (optional): 페이지 크기
     - `role` (optional): 역할 필터 (`ADMIN`, `MANAGER`, `VOLUNTEER`, `GUEST`)
-    - `nickname` (optional): 닉네임 부분 검색
     - `name` (optional): 이름 부분 검색
     - `currentTeacher` (optional): `true` 설정 시 현재 활동 기간 내의 교원만 조회
 - **Response**: `200 OK` (PaginationResponse<UserSimpleResponse>)
@@ -26,7 +25,6 @@
       {
         "id": 1,
         "name": "홍길동",
-        "nickname": "까치",
         "email": "user@example.com",
         "phoneNumber": "010-1234-5678",
         "role": "VOLUNTEER",
@@ -53,7 +51,6 @@
   {
     "id": 1,
     "name": "홍길동",
-    "nickname": "까치",
     "email": "user@example.com",
     "phoneNumber": "010-1234-5678",
     "role": "VOLUNTEER",
@@ -84,7 +81,6 @@
   ```json
   {
     "email": "newuser@test.com",
-    "nickname": "새닉네임",
     "name": "신규사용자",
     "password": "password123!",
     "phoneNumber": "010-1111-2222",
@@ -119,7 +115,6 @@
 - **Request Body**: (UpdateSelfRequest)
   ```json
   {
-    "nickname": "변경한닉네임",
     "password": "newpassword123!"
   }
   ```

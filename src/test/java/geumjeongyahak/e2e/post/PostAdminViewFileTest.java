@@ -109,8 +109,8 @@ class PostAdminViewFileTest extends BasePostTest {
     private String loginAdminSession() {
         return given()
             .contentType(ContentType.URLENC)
-            .formParam("username", TEST_POST_ADMIN_USERNAME + "@test.com")
-            .formParam("password", "pw_" + TEST_POST_ADMIN_USERNAME)
+            .formParam("username", TEST_POST_ADMIN_USERNAME)
+            .formParam("password", userTestHelper.getDefaultPassword(TEST_POST_ADMIN_USERNAME))
             .redirects()
             .follow(false)
         .when()

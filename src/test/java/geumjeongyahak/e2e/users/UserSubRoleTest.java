@@ -17,7 +17,6 @@ class UserSubRoleTest extends UserBaseTest {
         String unique = "permtest" + System.currentTimeMillis();
         CreateUserRequest req = new CreateUserRequest(
             unique + "@test.com",
-            unique,
             "Permission Test User",
             "password123!",
             "010-1234-5678",
@@ -36,7 +35,7 @@ class UserSubRoleTest extends UserBaseTest {
             .extract()
             .as(UserDetailResponse.class);
 
-        userTestHelper.setUser(user.nickname());
+        userTestHelper.setUser(user.email());
         return user.id();
     }
 

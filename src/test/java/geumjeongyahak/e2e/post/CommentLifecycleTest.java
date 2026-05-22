@@ -101,9 +101,10 @@ class CommentLifecycleTest extends BasePostTest {
             .body("code", equalTo("VAL002"));
     }
 
-    private String createToken(String username) {
-        userTestHelper.createTestUser(username, RoleType.GUEST);
-        return userTestHelper.generateAccessTokenByNickname(username);
+    private String createToken(String name) {
+        String email = name + "@test.com";
+        userTestHelper.createTestUser(email, RoleType.GUEST);
+        return userTestHelper.generateAccessTokenByEmail(email);
     }
 
     private Long createAllAuthenticatedChannel() {

@@ -597,7 +597,6 @@ class DailyScheduleServiceReadTest {
 
     private User teacher(Long id, String name) {
         User teacher = User.builder()
-            .nickname(name)
             .name(name)
             .role(RoleType.VOLUNTEER)
             .build();

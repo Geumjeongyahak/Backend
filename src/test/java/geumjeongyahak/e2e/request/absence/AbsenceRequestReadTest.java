@@ -59,12 +59,12 @@ class AbsenceRequestReadTest extends RequestBaseTest {
         requestIdByVolunteer2 = createAbsenceRequest(
             getAuthHeader(volunteer2Token), lessonIdForVolunteer2, "봉사자2 결석 요청", "봉사자2 결석 사유");
 
-        User readPermissionUser = userTestHelper.createTestUser("absence-reader", RoleType.GUEST);
+        User readPermissionUser = userTestHelper.createTestUser("absence-reader@test.com", RoleType.GUEST);
         userPermissionRepository.findByUserIdAndPermissionCode(
                 readPermissionUser.getId(), "absence-request:read:*")
             .orElseGet(() -> userPermissionRepository.save(
                 new UserPermission(readPermissionUser, "absence-request:read:*")));
-        readPermissionToken = userTestHelper.generateAccessTokenByNickname("absence-reader");
+        readPermissionToken = userTestHelper.generateAccessTokenByEmail("absence-reader@test.com");
     }
 
     @AfterEach

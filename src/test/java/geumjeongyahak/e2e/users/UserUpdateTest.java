@@ -21,7 +21,6 @@ class UserUpdateTest extends UserBaseTest {
         // 먼저 사용자 생성
         CreateUserRequest createReq = new CreateUserRequest(
                 "updatetest@test.com",
-                "updatetest",
                 "Update Test User",
                 "pw_updatetest",
                 "010-1111-2222",
@@ -40,12 +39,11 @@ class UserUpdateTest extends UserBaseTest {
             .extract()
             .as(UserDetailResponse.class);
 
-        userTestHelper.setUser(createdUser.nickname());
+        userTestHelper.setUser(createdUser.email());
 
         // 수정 요청
         UpdateUserRequest updateReq = new UpdateUserRequest(
                 "Updated Name",
-                "updatednick",
                 "010-9999-8888",
                 "updated@test.com",
                 "newpassword123!",
@@ -63,7 +61,6 @@ class UserUpdateTest extends UserBaseTest {
             .statusCode(200)
             .body("id", equalTo(createdUser.id().intValue()))
             .body("name", equalTo("Updated Name"))
-            .body("nickname", equalTo("updatednick"))
             .body("phoneNumber", equalTo("010-9999-8888"))
             .body("email", equalTo("updated@test.com"))
             .body("role", equalTo("VOLUNTEER"))
@@ -76,7 +73,6 @@ class UserUpdateTest extends UserBaseTest {
         // 1. 사용자 생성 (부서 없음)
         CreateUserRequest createReq = new CreateUserRequest(
                 "depttest@test.com",
-                "depttest",
                 "Dept Test User",
                 "pw_depttest",
                 "010-0000-0000",
@@ -98,7 +94,7 @@ class UserUpdateTest extends UserBaseTest {
 
         // 2. 부서 할당 (ID: 1 - 교무기획부)
         UpdateUserRequest updateReq = new UpdateUserRequest(
-                null, null, null, null, null, null, 1L
+                null, null, null, null, null, 1L
         );
 
         given()
@@ -114,7 +110,7 @@ class UserUpdateTest extends UserBaseTest {
 
         // 3. 부서 해제 (null)
         UpdateUserRequest clearReq = new UpdateUserRequest(
-                null, null, null, null, null, null, null
+                null, null, null, null, null, null
         );
 
         // Note: UpdateUserRequest에서 null 전달 시 유지가 될지 해제가 될지는 UserCrudService 구현에 따라 다름.
@@ -127,7 +123,6 @@ class UserUpdateTest extends UserBaseTest {
     void updateUser_Forbidden() {
         UpdateUserRequest updateReq = new UpdateUserRequest(
                 "Hacker Name",
-                null,
                 null,
                 null,
                 null,
@@ -155,7 +150,6 @@ class UserUpdateTest extends UserBaseTest {
                 null,
                 null,
                 null,
-                null,
                 null
         );
 
@@ -175,7 +169,6 @@ class UserUpdateTest extends UserBaseTest {
     void updateSelf_Success() {
         UpdateSelfRequest updateReq = new UpdateSelfRequest(
                 "Updated Volunteer Name",
-                "updatedvol",
                 "010-5555-6666",
                 "volunteer.updated@test.com",
                 null
@@ -189,7 +182,6 @@ class UserUpdateTest extends UserBaseTest {
             .patch("/me")
         .then()
             .statusCode(200)
-            .body("nickname", equalTo("updatedvol"))
             .body("name", equalTo("Updated Volunteer Name"))
             .body("phoneNumber", equalTo("010-5555-6666"))
             .body("email", equalTo("volunteer.updated@test.com"))
@@ -201,7 +193,6 @@ class UserUpdateTest extends UserBaseTest {
     void updateSelf_Unauthorized() {
         UpdateSelfRequest updateReq = new UpdateSelfRequest(
                 "Hacker",
-                null,
                 null,
                 null,
                 null

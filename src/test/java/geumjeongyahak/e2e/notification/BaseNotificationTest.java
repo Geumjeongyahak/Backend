@@ -14,9 +14,9 @@ import org.springframework.context.annotation.Import;
 @Import(TestNotificationConfig.class)
 public abstract class BaseNotificationTest extends BaseE2ETest {
 
-    protected static final String TEST_NOTIFICATION_USER = "notificationUser1234";
-    protected static final String TEST_NOTIFICATION_OTHER_USER = "notificationOtherUser1234";
-    protected static final String TEST_NOTIFICATION_ADMIN = "notificationAdmin1234";
+    protected static final String TEST_NOTIFICATION_USER = "notificationUser1234@test.com";
+    protected static final String TEST_NOTIFICATION_OTHER_USER = "notificationOtherUser1234@test.com";
+    protected static final String TEST_NOTIFICATION_ADMIN = "notificationAdmin1234@test.com";
 
     protected String accessToken;
     protected String otherAccessToken;
@@ -39,9 +39,9 @@ public abstract class BaseNotificationTest extends BaseE2ETest {
         userTestHelper.createTestUser(TEST_NOTIFICATION_OTHER_USER, RoleType.VOLUNTEER);
         userTestHelper.createTestUser(TEST_NOTIFICATION_ADMIN, RoleType.ADMIN);
 
-        accessToken = userTestHelper.generateAccessTokenByNickname(TEST_NOTIFICATION_USER);
-        otherAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_NOTIFICATION_OTHER_USER);
-        adminEmail = TEST_NOTIFICATION_ADMIN + "@test.com";
+        accessToken = userTestHelper.generateAccessTokenByEmail(TEST_NOTIFICATION_USER);
+        otherAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_NOTIFICATION_OTHER_USER);
+        adminEmail = TEST_NOTIFICATION_ADMIN;
         adminPassword = userTestHelper.getDefaultPassword(TEST_NOTIFICATION_ADMIN);
         controlledPushNotificationSender.reset();
     }

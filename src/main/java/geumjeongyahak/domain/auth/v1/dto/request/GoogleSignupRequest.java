@@ -10,11 +10,6 @@ public record GoogleSignupRequest(
     @Schema(description = "콜백에서 발급된 임시 토큰")
     @NotBlank String tempToken,
 
-    @Schema(description = "닉네임", example = "홍길동")
-    @NotBlank(message = "닉네임은 필수입니다.")
-    @Size(max = 50, message = "닉네임은 50자 이하여야 합니다.")
-    String nickname,
-
     @Schema(description = "이름", example = "홍길동")
     @NotBlank(message = "이름은 필수입니다.")
     @Size(max = 50, message = "이름은 50자 이하여야 합니다.")

@@ -14,9 +14,9 @@ import geumjeongyahak.e2e.BaseE2ETest;
 @Tag("subject")
 public class SubjectBaseTest extends BaseE2ETest {
 
-    public static final String TEST_VOLUNTEER_USERNAME = "teacher01";
-    public static final String TEST_SUBJECT_WRITER_USERNAME = "subjectWriter1234";
-    public static final String TEST_SUBJECT_MANAGER_USERNAME = "subjectManager1234";
+    public static final String TEST_VOLUNTEER_USERNAME = "teacher01@test.com";
+    public static final String TEST_SUBJECT_WRITER_USERNAME = "subjectWriter1234@test.com";
+    public static final String TEST_SUBJECT_MANAGER_USERNAME = "subjectManager1234@test.com";
     private static final String SUBJECT_WRITE_PERMISSION = "subject:write:*";
     private static final String SUBJECT_MANAGE_PERMISSION = "subject:manage:*";
 
@@ -37,18 +37,18 @@ public class SubjectBaseTest extends BaseE2ETest {
         super.setUp();
         RestAssured.basePath = "/api/v1/subjects";
         cleanSubjectTables();
-        this.adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
-        this.volunteerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_VOLUNTEER_USERNAME);
+        this.adminAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_ADMIN_USERNAME);
+        this.volunteerAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_VOLUNTEER_USERNAME);
 
         User subjectWriter = userTestHelper.createTestUser(TEST_SUBJECT_WRITER_USERNAME, RoleType.GUEST);
         userPermissionRepository.findByUserIdAndPermissionCode(subjectWriter.getId(), SUBJECT_WRITE_PERMISSION)
             .orElseGet(() -> userPermissionRepository.save(new UserPermission(subjectWriter, SUBJECT_WRITE_PERMISSION)));
-        this.subjectWriteAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_SUBJECT_WRITER_USERNAME);
+        this.subjectWriteAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_SUBJECT_WRITER_USERNAME);
 
         User subjectManager = userTestHelper.createTestUser(TEST_SUBJECT_MANAGER_USERNAME, RoleType.GUEST);
         userPermissionRepository.findByUserIdAndPermissionCode(subjectManager.getId(), SUBJECT_MANAGE_PERMISSION)
             .orElseGet(() -> userPermissionRepository.save(new UserPermission(subjectManager, SUBJECT_MANAGE_PERMISSION)));
-        this.subjectManageAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_SUBJECT_MANAGER_USERNAME);
+        this.subjectManageAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_SUBJECT_MANAGER_USERNAME);
     }
 
     private void cleanSubjectTables() {

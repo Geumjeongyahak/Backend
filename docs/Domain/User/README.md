@@ -49,7 +49,6 @@
 |------|------|:--------:|------|
 | `id` | Long | N | 사용자 ID |
 | `name` | string | N | 이름 |
-| `nickname` | string | N | 닉네임 |
 | `email` | string | N | 기본 이메일 |
 | `phoneNumber` | string | Y | 전화번호 |
 | `role` | string | N | 기본 역할 (`ADMIN` \| `MANAGER` \| `VOLUNTEER` \| `GUEST`) |
@@ -94,7 +93,6 @@ sequenceDiagram
 |------|------|:--------:|------|
 | `id` | Long | N | 사용자 ID |
 | `name` | string | N | 이름 |
-| `nickname` | string | N | 닉네임 |
 | `email` | string | N | 기본 이메일 |
 | `phoneNumber` | string | Y | 전화번호 |
 | `role` | string | N | 기본 역할 |
@@ -148,7 +146,6 @@ sequenceDiagram
 | 필드 | 타입 | 필수 | 제약 | 설명 |
 |------|------|:----:|------|------|
 | `email` | string | **Y** | 이메일 형식, 중복 불가 | 로그인용 이메일 |
-| `nickname` | string | **Y** | 최대 30자, 중복 불가 | 서비스 내 표시 닉네임 |
 | `name` | string | **Y** | 최대 50자 | 실명 또는 관리용 이름 |
 | `password` | string | **Y** | 최소 8자 | 초기 로그인 비밀번호 |
 | `phoneNumber` | string | N | 전화번호 형식 | 연락처 |
@@ -175,12 +172,6 @@ sequenceDiagram
 
     Security->>Controller: 권한 통과
     Controller->>Service: createUser(request)
-
-    Service->>DB: existsByNickname(nickname)
-    alt 닉네임 중복
-        DB-->>Service: true
-        Service-->>Client: 409 BIZ-01-001
-    end
 
     Service->>DB: existsByEmail(email)
     alt 이메일 중복
@@ -225,7 +216,6 @@ sequenceDiagram
 | 필드 | 타입 | 필수 | 제약 | 설명 |
 |------|------|:----:|------|------|
 | `name` | string | N | 최대 50자 | 이름 |
-| `nickname` | string | N | 최대 50자, 중복 불가 | 닉네임 |
 | `phoneNumber` | string | N | 전화번호 형식 | 연락처 |
 | `email` | string | N | 이메일 형식, 중복 불가 | 로그인 이메일. 변경 시 credential도 갱신 |
 | `password` | string | N | 최소 8자 | 비밀번호. 변경 시 BCrypt 해시 갱신 |
@@ -259,12 +249,11 @@ sequenceDiagram
 
     note over Service,DB: 트랜잭션 시작
 
-    opt nickname 변경
-        Service->>DB: existsByNickname(newNickname)
+        Service->>DB: existsByEmail(newEmail)
         alt 중복
             Service-->>Client: 409 BIZ-01-001
         end
-        Service->>Service: user.setNickname()
+        Service->>Service: user.setEmail()
     end
 
     opt email 변경
@@ -394,7 +383,6 @@ sequenceDiagram
 | 필드 | 타입 | 필수 | 제약 | 설명 |
 |------|------|:----:|------|------|
 | `name` | string | N | 최대 50자 | 이름 |
-| `nickname` | string | N | 최대 50자, 중복 불가 | 닉네임 |
 | `phoneNumber` | string | N | 전화번호 형식 | 연락처 |
 | `email` | string | N | 이메일 형식, 중복 불가 | 로그인 이메일. 변경 시 credential도 갱신 |
 | `password` | string | N | 최소 8자 | 비밀번호. 변경 시 BCrypt 해시 갱신 |
@@ -428,8 +416,7 @@ sequenceDiagram
 
     note over Service,DB: 트랜잭션 시작
 
-    opt nickname 변경
-        Service->>DB: existsByNickname()
+        Service->>DB: existsByEmail()
         alt 중복
             Service-->>Client: 409 BIZ-01-001
         end

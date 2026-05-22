@@ -33,9 +33,6 @@ import java.util.Set;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseEntity {
-    @Setter
-    @Column(nullable = false, length = 50, unique = true)
-    private String nickname;
 
     @Setter
     @Column(nullable = false, length = 50)
@@ -88,7 +85,6 @@ public class User extends BaseEntity {
 
     @Builder
     public User(
-        @NonNull String nickname,
         @NonNull String name,
         String phoneNumber,
         String email,
@@ -100,7 +96,6 @@ public class User extends BaseEntity {
         LocalDate teacherEndAt,
         RoleType role
     ) {
-        this.nickname = nickname;
         this.name = name;
         this.phoneNumber = phoneNumber;
         this.email = email;

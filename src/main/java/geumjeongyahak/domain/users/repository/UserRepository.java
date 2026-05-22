@@ -11,9 +11,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User>{
-    Optional<User> findByNickname(String nickname);
+    Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
-    boolean existsByNickname(String nickname);
     boolean existsByDepartmentId(Long departmentId);
     boolean existsByIdAndDepartmentId(Long userId, Long departmentId);
     long countByDepartmentId(Long departmentId);

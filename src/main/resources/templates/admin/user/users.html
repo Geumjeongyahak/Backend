@@ -14,7 +14,6 @@
 
         <form class="panel filter-grid" th:action="@{/admin/user/users}" method="get">
             <label>검색어
-                <input name="keyword" th:value="${filter.keyword}" placeholder="이름, 닉네임, 이메일, 연락처">
             </label>
             <label>역할
                 <select name="role">
@@ -62,7 +61,6 @@
                     <tr>
                         <th>ID</th>
                         <th>이름</th>
-                        <th>닉네임</th>
                         <th>이메일</th>
                         <th>연락처</th>
                         <th>역할</th>
@@ -76,7 +74,6 @@
                     <tr th:each="user : ${usersPage.content}">
                         <td th:text="${user.id}">1</td>
                         <td><a class="link" th:href="@{/admin/user/users/{userId}(userId=${user.id})}" th:text="${user.name}">홍길동</a></td>
-                        <td th:text="${user.nickname}">nick</td>
                         <td th:text="${user.email ?: '-'}">user@example.com</td>
                         <td th:text="${user.phoneNumber ?: '-'}">010</td>
                         <td><span class="pill" th:text="${user.role}">ADMIN</span></td>

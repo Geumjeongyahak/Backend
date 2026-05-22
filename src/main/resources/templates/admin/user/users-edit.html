@@ -6,7 +6,6 @@
     <div class="page-title"><div><h1>사용자 수정</h1><p th:text="${user.name}">사용자</p></div></div>
     <form class="panel form-grid" th:action="@{/admin/user/users/{userId}(userId=${user.id})}" method="post">
         <label>이메일 <input name="email" type="email" th:value="${user.email}" required></label>
-        <label>닉네임 <input name="nickname" th:value="${user.nickname}" required></label>
         <label>이름 <input name="name" th:value="${user.name}" required></label>
         <label>연락처 <input name="phoneNumber" th:value="${user.phoneNumber}"></label>
         <label>역할

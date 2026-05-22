@@ -80,7 +80,6 @@ erDiagram
     %% 엔티티 정의
     users {
         bigint id PK
-        varchar nickname UK
         varchar name
         varchar primary_email UK
         varchar phone_number

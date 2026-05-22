@@ -11,7 +11,7 @@ import geumjeongyahak.e2e.util.TestDepartmentHelper;
 
 @Tag("department")
 public abstract class DepartmentBaseTest extends BaseE2ETest {
-    public static final String TEST_VOLUNTEER_USERNAME = "volunteer1234";
+    public static final String TEST_VOLUNTEER_USERNAME = "volunteer1234@test.com";
     public String adminAccessToken;
     public String volunteerAccessToken;
 
@@ -28,8 +28,8 @@ public abstract class DepartmentBaseTest extends BaseE2ETest {
         this.userTestHelper.createTestUser(TEST_VOLUNTEER_USERNAME, RoleType.VOLUNTEER);
 
         // 토큰 생성
-        this.adminAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_ADMIN_USERNAME);
-        this.volunteerAccessToken = userTestHelper.generateAccessTokenByNickname(TEST_VOLUNTEER_USERNAME);
+        this.adminAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_ADMIN_USERNAME);
+        this.volunteerAccessToken = userTestHelper.generateAccessTokenByEmail(TEST_VOLUNTEER_USERNAME);
     }
 
     @AfterEach

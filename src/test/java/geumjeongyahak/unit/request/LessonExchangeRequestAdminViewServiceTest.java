@@ -149,7 +149,6 @@ class LessonExchangeRequestAdminViewServiceTest {
         LocalDateTime createdAt
     ) {
         User requestedBy = User.builder()
-            .nickname(requestedByName)
             .name(requestedByName)
             .role(RoleType.VOLUNTEER)
             .build();

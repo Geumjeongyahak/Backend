@@ -19,7 +19,6 @@ class AuthSignupTest extends AuthBaseTest {
         String uniqueEmail = "signuptest" + System.currentTimeMillis() + "@test.com";
         LocalSignupRequest req = new LocalSignupRequest(
                 "password123!",
-                "signup-test",
                 "회원가입 테스트",
                 uniqueEmail,
                 null,
@@ -63,7 +62,6 @@ class AuthSignupTest extends AuthBaseTest {
     void signup_DuplicateEmail() {
         LocalSignupRequest req = new LocalSignupRequest(
                 "password123!",
-                "duplicate-test",
                 "중복 테스트",
                 TEST_ADMIN_EMAIL,  // 이미 존재하는 이메일
                 null,
@@ -105,7 +103,6 @@ class AuthSignupTest extends AuthBaseTest {
     void signup_ShortPassword() {
         LocalSignupRequest req = new LocalSignupRequest(
                 "short",  // 8자 미만
-                "short-password-test",
                 "테스트 사용자",
                 "test" + System.currentTimeMillis() + "@test.com",
                 null,
@@ -128,7 +125,6 @@ class AuthSignupTest extends AuthBaseTest {
     void signup_InvalidEmail() {
         LocalSignupRequest req = new LocalSignupRequest(
                 "password123!",
-                "invalid-email-test",
                 "이메일 테스트",
                 "invalid-email",  // 잘못된 이메일 형식
                 null,
@@ -152,7 +148,6 @@ class AuthSignupTest extends AuthBaseTest {
         String uniqueEmail = "phonetest" + System.currentTimeMillis() + "@test.com";
         LocalSignupRequest req = new LocalSignupRequest(
                 "password123!",
-                "invalid-phone-test",
                 "전화번호 테스트",
                 uniqueEmail,
                 null,
@@ -176,7 +171,6 @@ class AuthSignupTest extends AuthBaseTest {
         String uniqueEmail = "longname" + System.currentTimeMillis() + "@test.com";
         LocalSignupRequest req = new LocalSignupRequest(
                 "password123!",
-                "long-name-test",
                 "a".repeat(51),  // 50자 초과
                 uniqueEmail,
                 null,
@@ -200,7 +194,6 @@ class AuthSignupTest extends AuthBaseTest {
         String uniqueEmail = "minimal" + System.currentTimeMillis() + "@test.com";
         LocalSignupRequest req = new LocalSignupRequest(
                 "password123!",
-                "minimal-test",
                 "최소 정보",
                 uniqueEmail,
                 null,

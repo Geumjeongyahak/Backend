@@ -13,9 +13,6 @@ public class UserPaginationRequest extends BasePaginationRequest {
     @Schema(description = "검색할 역할(Role)", example = "VOLUNTEER", nullable = true)
     private String role;
 
-    @Schema(description = "검색할 닉네임(부분 일치)", example = "홍길동", nullable = true)
-    private String nickname;
-
     @Schema(description = "검색할 이름(부분 일치)", example = "홍길동", nullable = true)
     private String name;
 
