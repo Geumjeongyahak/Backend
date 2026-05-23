@@ -1,0 +1,87 @@
+package geumjeongyahak.domain.teacher_application.service;
+
+import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.subject.entity.Subject;
+import geumjeongyahak.domain.subject.service.SubjectProxyService;
+import geumjeongyahak.domain.teacher_application.entity.TeacherApplication;
+import geumjeongyahak.domain.teacher_application.enums.TeacherApplicationStatus;
+import geumjeongyahak.domain.teacher_application.exception.DuplicatePendingTeacherApplicationException;
+import geumjeongyahak.domain.teacher_application.exception.InvalidPreferredSubjectException;
+import geumjeongyahak.domain.teacher_application.exception.TeacherApplicationApplicantNotGuestException;
+import geumjeongyahak.domain.teacher_application.repository.TeacherApplicationRepository;
+import geumjeongyahak.domain.teacher_application.v1.dto.request.CreateTeacherApplicationRequest;
+import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationResponse;
+import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.users.service.UserProxyService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class TeacherApplicationService {
+
+    private final TeacherApplicationRepository teacherApplicationRepository;
+    private final UserProxyService userProxyService;
+    private final SubjectProxyService subjectProxyService;
+
+    @Transactional
+    public TeacherApplicationResponse createTeacherApplication(
+        Long applicantId,
+        CreateTeacherApplicationRequest request
+    ) {
+        log.debug(
+            "교원 신청 생성 요청 (applicantId={}, preferredSubjectId={})",
+            applicantId,
+            request.preferredSubjectId()
+        );
+
+        User applicant = userProxyService.getById(applicantId);
+        validateApplicantRole(applicant);
+        validateNoPendingApplication(applicantId);
+
+        Subject preferredSubject = subjectProxyService.getById(request.preferredSubjectId());
+        validatePreferredSubject(preferredSubject);
+
+        TeacherApplication saved = teacherApplicationRepository.save(new TeacherApplication(
+            applicant,
+            applicant.getName(),
+            request.phoneNumber(),
+            request.email(),
+            request.birthDate(),
+            request.address(),
+            request.educationAndMajor(),
+            preferredSubject,
+            request.motivation(),
+            request.desiredTeacherImage(),
+            request.meaningOfSharing()
+        ));
+
+        log.debug("교원 신청 생성 완료 (applicationId={})", saved.getId());
+        return TeacherApplicationResponse.from(saved);
+    }
+
+    private void validateApplicantRole(User applicant) {
+        if (applicant.getRole() != RoleType.GUEST) {
+            throw new TeacherApplicationApplicantNotGuestException();
+        }
+    }
+
+    private void validateNoPendingApplication(Long applicantId) {
+        if (teacherApplicationRepository.existsByApplicant_IdAndStatus(
+            applicantId,
+            TeacherApplicationStatus.PENDING
+        )) {
+            throw new DuplicatePendingTeacherApplicationException();
+        }
+    }
+
+    private void validatePreferredSubject(Subject preferredSubject) {
+        if (!Boolean.TRUE.equals(preferredSubject.getIsActive()) || preferredSubject.getTeacher() != null) {
+            throw new InvalidPreferredSubjectException();
+        }
+    }
+}

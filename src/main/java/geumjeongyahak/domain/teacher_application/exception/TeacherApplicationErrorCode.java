@@ -28,6 +28,16 @@ public enum TeacherApplicationErrorCode implements ErrorCode {
         HttpStatus.FORBIDDEN,
         "AUTH-12-001",
         "해당 교원 신청에 대한 권한이 없습니다."
+    ),
+    TEACHER_APPLICATION_APPLICANT_NOT_GUEST(
+        HttpStatus.FORBIDDEN,
+        "AUTH-12-002",
+        "GUEST 사용자만 교원 신청을 할 수 있습니다."
+    ),
+    INVALID_PREFERRED_SUBJECT(
+        HttpStatus.BAD_REQUEST,
+        "VAL-12-001",
+        "교사가 미배정된 활성 과목만 선호 과목으로 신청할 수 있습니다."
     );
 
     private final HttpStatus status;
