@@ -10,6 +10,7 @@ import geumjeongyahak.domain.teacher_application.enums.TeacherApplicationStatus;
 import geumjeongyahak.domain.teacher_application.exception.DuplicatePendingTeacherApplicationException;
 import geumjeongyahak.domain.teacher_application.exception.InvalidPreferredSubjectException;
 import geumjeongyahak.domain.teacher_application.exception.TeacherApplicationApplicantNotGuestException;
+import geumjeongyahak.domain.teacher_application.exception.TeacherApplicationNotFoundException;
 import geumjeongyahak.domain.teacher_application.repository.TeacherApplicationRepository;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.CreateTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.MyTeacherApplicationResponse;
@@ -81,6 +82,15 @@ public class TeacherApplicationService {
             .map(TeacherApplicationResponse::from)
             .map(MyTeacherApplicationResponse::exists)
             .orElseGet(MyTeacherApplicationResponse::empty);
+    }
+
+    public TeacherApplicationResponse getTeacherApplication(Long applicationId) {
+        log.debug("교원 신청 상세 조회 요청 (applicationId={})", applicationId);
+
+        TeacherApplication application = teacherApplicationRepository.findById(applicationId)
+            .orElseThrow(() -> new TeacherApplicationNotFoundException(applicationId));
+
+        return TeacherApplicationResponse.from(application);
     }
 
     private void validateApplicantRole(User applicant) {
