@@ -4,6 +4,7 @@ import static io.restassured.RestAssured.given;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +58,7 @@ public abstract class StudentBaseTest extends BaseE2ETest {
             name,
             phoneNumber,
             "E2E seed",
-            DEFAULT_CLASSROOM_ID
+            List.of(DEFAULT_CLASSROOM_ID)
         );
 
         return given()

@@ -10,6 +10,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
 import io.restassured.http.ContentType;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -61,7 +62,7 @@ class StudentListReadTest extends StudentBaseTest {
             name,
             phoneNumber,
             "학생 목록 조회 테스트",
-            classroomId
+            List.of(classroomId)
         );
 
         return given()
@@ -159,8 +160,8 @@ class StudentListReadTest extends StudentBaseTest {
             .then()
             .statusCode(200)
             .body("size()", equalTo(1))
-            .body("classroomId", everyItem(is(2)))
-            .body("[0].classroomName", equalTo("장미반"))
+            .body("[0].classrooms[0].id", is(2))
+            .body("[0].classrooms[0].name", equalTo("장미반"))
             .log().all();
     }
 
@@ -179,7 +180,7 @@ class StudentListReadTest extends StudentBaseTest {
             .body("size()", equalTo(1))
             .body("[0].name", equalTo("Daisy Student"))
             .body("[0].status", equalTo("ON_LEAVE"))
-            .body("[0].classroomId", equalTo(DEFAULT_CLASSROOM_ID.intValue()))
+            .body("[0].classrooms[0].id", equalTo(DEFAULT_CLASSROOM_ID.intValue()))
             .log().all();
     }
 

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import java.util.List;
 
 @Controller
 @RequestMapping("/admin/student/students")
@@ -55,10 +56,10 @@ public class StudentViewController {
             @RequestParam String name,
             @RequestParam(required = false) String phoneNumber,
             @RequestParam(required = false) String description,
-            @RequestParam Long classroomId,
+            @RequestParam List<Long> classroomIds,
             RedirectAttributes redirectAttributes
     ) {
-        Long studentId = studentAdminViewService.createStudent(name, phoneNumber, description, classroomId);
+        Long studentId = studentAdminViewService.createStudent(name, phoneNumber, description, classroomIds);
         redirectAttributes.addFlashAttribute("message", "학생을 등록했습니다.");
         return "redirect:/admin/student/students/" + studentId;
     }
@@ -96,10 +97,10 @@ public class StudentViewController {
             @RequestParam(required = false) String phoneNumber,
             @RequestParam(required = false) String description,
             @RequestParam StudentStatus status,
-            @RequestParam Long classroomId,
+            @RequestParam List<Long> classroomIds,
             RedirectAttributes redirectAttributes
     ) {
-        studentAdminViewService.updateStudent(studentId, name, phoneNumber, description, status, classroomId);
+        studentAdminViewService.updateStudent(studentId, name, phoneNumber, description, status, classroomIds);
         redirectAttributes.addFlashAttribute("message", "학생 정보를 수정했습니다.");
         return "redirect:/admin/student/students/" + studentId;
     }

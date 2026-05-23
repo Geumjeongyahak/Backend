@@ -2,10 +2,12 @@ package geumjeongyahak.e2e.student;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.startsWith;
 
 import io.restassured.http.ContentType;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import geumjeongyahak.domain.student.v1.dto.request.CreateStudentRequest;
@@ -21,7 +23,7 @@ public class StudentCreateTest extends StudentBaseTest {
             uniqueName,
             "010-1234-5678",
             "E2E 학생 등록 테스트",
-            DEFAULT_CLASSROOM_ID
+            List.of(DEFAULT_CLASSROOM_ID)
         );
 
         given()
@@ -36,10 +38,42 @@ public class StudentCreateTest extends StudentBaseTest {
             .body("name", equalTo(uniqueName))
             .body("phoneNumber", equalTo("010-1234-5678"))
             .body("description", equalTo("E2E 학생 등록 테스트"))
-            .body("classroomId", equalTo(DEFAULT_CLASSROOM_ID.intValue()))
-            .body("classroomName", equalTo(DEFAULT_CLASSROOM_NAME))
+            .body("classrooms[0].id", equalTo(DEFAULT_CLASSROOM_ID.intValue()))
+            .body("classrooms[0].name", equalTo(DEFAULT_CLASSROOM_NAME))
             .body("status", equalTo("ENROLLED"))
             .log().all();
+    }
+
+    @Test
+    @DisplayName("관리자 권한으로 여러 분반에 소속된 학생 생성 성공(201 Created)")
+    void createStudent_WithMultipleClassrooms_Success_Admin() {
+        String uniqueName = "다중분반학생" + System.currentTimeMillis();
+        CreateStudentRequest req = new CreateStudentRequest(
+            uniqueName,
+            "010-1212-3434",
+            "다중 분반 소속 테스트",
+            List.of(DEFAULT_CLASSROOM_ID, 2L)
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(req)
+            .when()
+            .post()
+            .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .body("name", equalTo(uniqueName));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .queryParam("classroomId", 2L)
+            .when()
+            .get()
+            .then()
+            .statusCode(200)
+            .body("name", hasItem(uniqueName));
     }
 
     @Test
@@ -49,7 +83,7 @@ public class StudentCreateTest extends StudentBaseTest {
             "권한없는생성",
             "010-1234-5678",
             "권한 테스트",
-            DEFAULT_CLASSROOM_ID
+            List.of(DEFAULT_CLASSROOM_ID)
         );
 
         given()
@@ -72,7 +106,7 @@ public class StudentCreateTest extends StudentBaseTest {
             uniqueName,
             "010-1234-9999",
             "student:write 권한 테스트",
-            DEFAULT_CLASSROOM_ID
+            List.of(DEFAULT_CLASSROOM_ID)
         );
 
         given()
@@ -95,7 +129,7 @@ public class StudentCreateTest extends StudentBaseTest {
             "인증없음",
             "010-1234-5678",
             "인증 테스트",
-            DEFAULT_CLASSROOM_ID
+            List.of(DEFAULT_CLASSROOM_ID)
         );
 
         given()
@@ -114,7 +148,7 @@ public class StudentCreateTest extends StudentBaseTest {
         String name = "중복학생" + System.currentTimeMillis();
         String phone = "010-9999-8888";
 
-        CreateStudentRequest req = new CreateStudentRequest(name, phone, "중복 1회차", DEFAULT_CLASSROOM_ID);
+        CreateStudentRequest req = new CreateStudentRequest(name, phone, "중복 1회차", List.of(DEFAULT_CLASSROOM_ID));
 
         // 1회차 생성 성공
         given()
@@ -130,7 +164,7 @@ public class StudentCreateTest extends StudentBaseTest {
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType(ContentType.JSON)
-            .body(new CreateStudentRequest(name, phone, "중복 2회차", DEFAULT_CLASSROOM_ID))
+            .body(new CreateStudentRequest(name, phone, "중복 2회차", List.of(DEFAULT_CLASSROOM_ID)))
             .when()
             .post()
             .then()
@@ -168,7 +202,7 @@ public class StudentCreateTest extends StudentBaseTest {
             "전화번호오류",
             "invalid-phone",
             "전화번호 검증 실패",
-            DEFAULT_CLASSROOM_ID
+            List.of(DEFAULT_CLASSROOM_ID)
         );
 
         given()
@@ -190,7 +224,7 @@ public class StudentCreateTest extends StudentBaseTest {
             "분반없음",
             "010-1234-5678",
             "분반 검증 실패",
-            99999L
+            List.of(99999L)
         );
 
         given()

@@ -14,7 +14,7 @@
             <label>이름 <input name="name" maxlength="50" required></label>
             <label>연락처 <input name="phoneNumber" placeholder="010-1234-5678"></label>
             <label>분반
-                <select name="classroomId" required>
+                <select name="classroomIds" multiple required size="6">
                     <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}">분반</option>
                 </select>
             </label>

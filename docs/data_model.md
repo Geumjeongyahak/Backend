@@ -48,6 +48,7 @@
 
 | 엔티티 A | 엔티티 B | 조인 테이블 | 설명 |
 |----------|----------|-------------|------|
+| Students | Classrooms | student_classrooms | 학생 분반 소속 |
 | Students | Subjects | student_enrollments | 학생 과목 등록 |
 
 ### 2.2 ERD 다이어그램
@@ -66,6 +67,8 @@ erDiagram
     users ||--o{ lessons : "conducts"
 
     %% 학생 관련
+    students ||--o{ student_classrooms : "belongs to"
+    classrooms ||--o{ student_classrooms : "has"
     students ||--o{ student_enrollments : "enrolls"
     subjects ||--o{ student_enrollments : "has"
     %% 요청들
@@ -106,6 +109,13 @@ erDiagram
         bigint id PK
         varchar name
         varchar phone_number
+    }
+
+    student_classrooms {
+        bigint id PK
+        bigint student_id FK
+        bigint classroom_id FK
+        boolean is_deleted
     }
 
     subjects {
@@ -281,7 +291,7 @@ erDiagram
 
 ### 3.5 학생 (students)
 
-학생을 관리하는 엔티티입니다. 현재로서는 관리자가 추가 및 등록을 관리합니다.
+학생을 관리하는 엔티티입니다. 현재로서는 관리자가 추가 및 등록을 관리합니다. 학생은 `student_classrooms`를 통해 하나 이상의 분반에 소속될 수 있습니다.
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
@@ -293,7 +303,21 @@ erDiagram
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
 
-### 3.6 과목(subjects)
+### 3.6 학생 분반 소속 (student_classrooms)
+
+학생과 분반의 소속 관계를 관리하는 엔티티입니다. 같은 학생-분반 조합은 하나의 행으로 관리하며, 삭제 시 `is_deleted`를 사용하는 soft delete 방식을 따릅니다.
+
+| 필드명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
+| student_id | BIGINT | FOREIGN KEY, NOT NULL | 학생 ID |
+| classroom_id | BIGINT | FOREIGN KEY, NOT NULL | 분반 ID |
+| is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | 삭제 여부 |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
+| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
+
+
+### 3.7 과목(subjects)
 
 학생이 수업할 과목입니다. 학생과 봉사에 대한 협의 후 관리자가 추가 및 수정을 관리합니다.
 
@@ -314,7 +338,7 @@ erDiagram
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
 
-### 3.7 수업 (lessons)
+### 3.8 수업 (lessons)
 
 수업을 관리하는 엔티티입니다. 봉사자가 관리자와 협의하여 수업을 생성할 때, 시작일, 종료일, 요일, 시간 등을 기반으로 자동 생성됩니다.
 이 수업은 캘린더 뷰 형태로 일별 / 월별로 조회할 수 있습니다. 
@@ -332,7 +356,7 @@ erDiagram
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
-### 3.8 학생 과목 등록 (student_enrollments)
+### 3.9 학생 과목 등록 (student_enrollments)
 
 학생이 과목에 등록하는 엔티티입니다. 등록된 학생은 해당 과목이 속한 분반의 DailySchedule 학생 출석부 초기화 대상이 됩니다.
 
@@ -349,7 +373,7 @@ erDiagram
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
 
-### 3.9 결석 요청 (absence_requests)
+### 3.10 결석 요청 (absence_requests)
 
 교사(봉사자)는 하루 일정에 부득이하게 결석할 때 이를 요청하기 위해 사용하는 엔티티입니다.
 
@@ -379,7 +403,7 @@ erDiagram
 - 취소는 물리 삭제가 아니라 `CANCELLED` 상태 변경이며 요청자 본인만 가능
 - 만료 시각이 지난 `PENDING` 요청은 스케줄러가 `EXPIRED`로 변경함
 
-### 3.10 수업 교환 요청 (lesson_exchange_requests)
+### 3.11 수업 교환 요청 (lesson_exchange_requests)
 
 교사(봉사자)는 특정 날짜의 자신의 수업 전체에 대해 하루 단위 수업 교환을 요청할 때 사용하는 엔티티입니다.
 현재 수업 교환 요청은 `lesson_date`와 요청자 기준 활성 Lesson 목록으로 대상을 계산합니다. 장기적으로는 DailySchedule 기반 전환을 검토할 수 있지만, 현 구현에서는 제안 수락 시 실제 교시별 Lesson 담당 교사를 변경해야 하므로 Lesson 기반 구조를 유지합니다.
@@ -406,7 +430,7 @@ erDiagram
 - `PENDING` → `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED`
 - `APPROVED` → `COMPLETED`, `EXPIRED`
 
-### 3.10.1 수업 교환 제안 (lesson_exchange_proposals)
+### 3.11.1 수업 교환 제안 (lesson_exchange_proposals)
 
 승인된 수업 교환 요청에 대해 다른 봉사자가 교환형 또는 대체형 제안을 등록할 때 사용하는 엔티티입니다.
 
@@ -429,7 +453,7 @@ erDiagram
 **상태 규칙:**
 - `ACTIVE` → `WITHDRAWN`, `ACCEPTED`, `CLOSED`
 
-### 3.13 거래처 (vendors)
+### 3.12 거래처 (vendors)
 
 거래처 선결제 방식에서 사용할 거래처와 현재 잔액을 관리하는 엔티티입니다.
 
@@ -445,7 +469,7 @@ erDiagram
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
-### 3.14 기자재 구입 요청 (purchase_requests)
+### 3.13 기자재 구입 요청 (purchase_requests)
 
 봉사자 혹은 관리자가 수업에 필요한 기자재를 구입하기 위해 사용하는 엔티티입니다. 최초 요청에는 예상 금액을 저장하지 않고, 구매 완료 보고 거래 라인의 금액 합산으로 총액을 계산합니다.
 
@@ -475,7 +499,7 @@ erDiagram
 - `CONFIRMED` 전환 시 거래처별 총 결제 금액을 차감하고 `vendor_balance_histories`에 `DEDUCT` 이력을 저장합니다.
 - 거래처 잔액 부족, 비활성, 삭제 상태이면 결재 확인은 실패하며 요청 상태와 거래처 잔액은 변경되지 않습니다.
 
-### 3.15 기자재 구입 요청 품목 (purchase_requests_items)
+### 3.14 기자재 구입 요청 품목 (purchase_requests_items)
 
 구입 요청의 신청 품목을 관리하는 엔티티입니다.
 
@@ -490,7 +514,7 @@ erDiagram
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
-### 3.15.1 구매 완료 거래 (purchase_request_payment_transactions)
+### 3.14.1 구매 완료 거래 (purchase_request_payment_transactions)
 
 구매 완료 보고 단계에서 거래처별 실제 결제 금액과 선택 영수증을 관리하는 엔티티입니다. 한 거래 라인에는 여러 품목명을 연결할 수 있습니다.
 
@@ -502,7 +526,7 @@ erDiagram
 | amount | BIGINT | NOT NULL | 총 결제 금액 |
 | receipt_file_id | UUID | FOREIGN KEY, NULL | 영수증 파일 ID |
 
-### 3.16 거래처 잔액 이력 (vendor_balance_histories)
+### 3.15 거래처 잔액 이력 (vendor_balance_histories)
 
 거래처 충전과 결재 확인 차감을 기록하는 엔티티입니다.
 
@@ -523,7 +547,7 @@ erDiagram
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
-### 3.17 파일 메타데이터 (files)
+### 3.16 파일 메타데이터 (files)
 
 업로드된 이미지와 첨부파일의 저장소 위치 및 메타데이터를 관리하는 엔티티입니다.
 

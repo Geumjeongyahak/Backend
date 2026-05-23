@@ -20,7 +20,7 @@
             <div class="detail-item"><span>ID</span><strong th:text="${student.id}">1</strong></div>
             <div class="detail-item"><span>상태</span><strong><span class="pill" th:text="${student.status}">ENROLLED</span></strong></div>
             <div class="detail-item"><span>연락처</span><strong th:text="${student.phoneNumber ?: '-'}">010</strong></div>
-            <div class="detail-item"><span>분반</span><strong><a class="link" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${student.classroomId})}" th:text="${student.classroomName}">벚꽃반</a></strong></div>
+            <div class="detail-item"><span>분반</span><strong th:text="${student.classroomNames() ?: '-'}">벚꽃반</strong></div>
             <div class="detail-item" style="grid-column: 1 / -1;"><span>설명</span><strong th:text="${student.description ?: '-'}">설명</strong></div>
         </section>
     </main>

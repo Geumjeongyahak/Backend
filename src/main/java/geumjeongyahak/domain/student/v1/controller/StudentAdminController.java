@@ -46,7 +46,7 @@ public class StudentAdminController {
 
             동작 방식:
             - 이름과 전화번호 조합으로 중복 등록 여부를 확인합니다.
-            - classroomId로 삭제되지 않은 분반을 확인한 뒤 학생과 연결합니다.
+            - classroomIds로 삭제되지 않은 분반들을 확인한 뒤 학생과 연결합니다.
             - 초기 상태는 자동으로 'ENROLLED(재학)'로 설정됩니다.
 
             사이드 이펙트:
@@ -76,7 +76,7 @@ public class StudentAdminController {
 
             동작 방식:
             - 전달된 필드만 반영됩니다 (Patch).
-            - classroomId가 전달되면 소속 분반을 변경합니다.
+            - classroomIds가 전달되면 소속 분반 목록을 변경합니다.
             - 수정 후 이름과 전화번호 조합이 다른 학생과 중복되는지 검사합니다.
 
             사이드 이펙트:
