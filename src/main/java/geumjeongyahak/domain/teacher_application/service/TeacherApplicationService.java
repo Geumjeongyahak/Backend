@@ -11,6 +11,7 @@ import geumjeongyahak.domain.subject.entity.Subject;
 import geumjeongyahak.domain.subject.service.SubjectProxyService;
 import geumjeongyahak.domain.teacher_application.entity.TeacherApplication;
 import geumjeongyahak.domain.teacher_application.enums.TeacherApplicationStatus;
+import geumjeongyahak.domain.teacher_application.event.TeacherApprovedEvent;
 import geumjeongyahak.domain.teacher_application.exception.DuplicatePendingTeacherApplicationException;
 import geumjeongyahak.domain.teacher_application.exception.InvalidPreferredSubjectException;
 import geumjeongyahak.domain.teacher_application.exception.InvalidTeacherApplicationStatusException;
@@ -30,6 +31,7 @@ import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +50,7 @@ public class TeacherApplicationService {
     private final TeacherApplicationRepository teacherApplicationRepository;
     private final UserProxyService userProxyService;
     private final SubjectProxyService subjectProxyService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public TeacherApplicationResponse createTeacherApplication(
@@ -188,7 +191,12 @@ public class TeacherApplicationService {
 
         User reviewer = userProxyService.getById(reviewerId);
         application.approve(reviewer, request.note());
-        application.getApplicant().setRole(RoleType.VOLUNTEER);
+        eventPublisher.publishEvent(new TeacherApprovedEvent(
+            application.getApplicant().getId(),
+            request.classroomId(),
+            request.teacherStartAt(),
+            request.teacherEndAt()
+        ));
 
         log.debug(
             "교원 신청 승인 완료 (applicationId={}, applicantId={})",

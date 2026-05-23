@@ -43,7 +43,7 @@ class TeacherApplicationApproveTest extends BaseE2ETest {
         super.setUp();
         RestAssured.basePath = "/api/v1/admin/teacher-applications";
         cleanupTeacherApplications();
-        resetGuestRole();
+        resetApplicant();
 
         adminToken = userTestHelper.generateAccessTokenByUserKey(TEST_ADMIN_USERNAME);
         guestToken = userTestHelper.generateAccessTokenByUserKey("guest01");
@@ -57,18 +57,18 @@ class TeacherApplicationApproveTest extends BaseE2ETest {
     @AfterEach
     void cleanup() {
         cleanupTeacherApplications();
-        resetGuestRole();
+        resetApplicant();
     }
 
     @Test
-    @DisplayName("관리자가 PENDING 교원 신청 승인 → 200, 신청자 VOLUNTEER 승격")
+    @DisplayName("관리자가 PENDING 교원 신청 승인 → 200, 신청자 교원 프로필 승인")
     void approveTeacherApplication_asAdmin_returnsApprovedApplication() {
         insertTeacherApplication(70L, "PENDING");
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .contentType("application/json")
-            .body(Map.of("note", "면접 후 승인"))
+            .body(approveRequest("면접 후 승인"))
             .patch("/{applicationId}/approve", 70L)
             .then()
             .statusCode(200)
@@ -80,6 +80,20 @@ class TeacherApplicationApproveTest extends BaseE2ETest {
 
         String role = jdbcTemplate.queryForObject("SELECT role FROM users WHERE id = 4", String.class);
         assertThat(role).isEqualTo("VOLUNTEER");
+        Map<String, Object> user = jdbcTemplate.queryForMap("""
+            SELECT classroom_id, teacher_start_at, teacher_end_at
+            FROM users
+            WHERE id = 4
+            """);
+        assertThat(user.get("CLASSROOM_ID")).isEqualTo(2L);
+        assertThat(user.get("TEACHER_START_AT").toString()).isEqualTo("2026-06-01");
+        assertThat(user.get("TEACHER_END_AT").toString()).isEqualTo("2026-12-31");
+
+        Integer permissionCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM user_permissions WHERE user_id = 4 AND permission_code = 'channel:write:5'",
+            Integer.class
+        );
+        assertThat(permissionCount).isEqualTo(1);
     }
 
     @Test
@@ -90,7 +104,7 @@ class TeacherApplicationApproveTest extends BaseE2ETest {
         given()
             .header(AUTH_HEADER, getAuthHeader(managerToken))
             .contentType("application/json")
-            .body(Map.of("note", "권한 승인"))
+            .body(approveRequest("권한 승인"))
             .patch("/{applicationId}/approve", 71L)
             .then()
             .statusCode(200)
@@ -107,7 +121,7 @@ class TeacherApplicationApproveTest extends BaseE2ETest {
         given()
             .header(AUTH_HEADER, getAuthHeader(guestToken))
             .contentType("application/json")
-            .body(Map.of("note", "승인"))
+            .body(approveRequest("승인"))
             .patch("/{applicationId}/approve", 72L)
             .then()
             .statusCode(403);
@@ -121,7 +135,7 @@ class TeacherApplicationApproveTest extends BaseE2ETest {
         given()
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .contentType("application/json")
-            .body(Map.of("note", "승인"))
+            .body(approveRequest("승인"))
             .patch("/{applicationId}/approve", 73L)
             .then()
             .statusCode(409);
@@ -136,7 +150,7 @@ class TeacherApplicationApproveTest extends BaseE2ETest {
         given()
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .contentType("application/json")
-            .body(Map.of("note", "승인"))
+            .body(approveRequest("승인"))
             .patch("/{applicationId}/approve", 74L)
             .then()
             .statusCode(403);
@@ -148,7 +162,7 @@ class TeacherApplicationApproveTest extends BaseE2ETest {
         given()
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .contentType("application/json")
-            .body(Map.of("note", "승인"))
+            .body(approveRequest("승인"))
             .patch("/{applicationId}/approve", 999_999L)
             .then()
             .statusCode(404);
@@ -161,10 +175,66 @@ class TeacherApplicationApproveTest extends BaseE2ETest {
 
         given()
             .contentType("application/json")
-            .body(Map.of("note", "승인"))
+            .body(approveRequest("승인"))
             .patch("/{applicationId}/approve", 75L)
             .then()
             .statusCode(401);
+    }
+
+    @Test
+    @DisplayName("교원 활동 종료일이 시작일보다 빠르면 교원 신청 승인 → 400")
+    void approveTeacherApplication_invalidPeriod_returns400() {
+        insertTeacherApplication(76L, "PENDING");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType("application/json")
+            .body(Map.of(
+                "classroomId", 2,
+                "teacherStartAt", "2026-12-31",
+                "teacherEndAt", "2026-06-01",
+                "note", "승인"
+            ))
+            .patch("/{applicationId}/approve", 76L)
+            .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("분반 없이 교원 신청 승인 → 400")
+    void approveTeacherApplication_withoutClassroom_returns400() {
+        insertTeacherApplication(77L, "PENDING");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType("application/json")
+            .body(Map.of(
+                "teacherStartAt", "2026-06-01",
+                "teacherEndAt", "2026-12-31",
+                "note", "승인"
+            ))
+            .patch("/{applicationId}/approve", 77L)
+            .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 분반으로 교원 신청 승인 → 404")
+    void approveTeacherApplication_classroomNotFound_returns404() {
+        insertTeacherApplication(78L, "PENDING");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType("application/json")
+            .body(Map.of(
+                "classroomId", 999_999,
+                "teacherStartAt", "2026-06-01",
+                "teacherEndAt", "2026-12-31",
+                "note", "승인"
+            ))
+            .patch("/{applicationId}/approve", 78L)
+            .then()
+            .statusCode(404);
     }
 
     private void insertTeacherApplication(Long id, String status) {
@@ -191,7 +261,24 @@ class TeacherApplicationApproveTest extends BaseE2ETest {
         jdbcTemplate.update("DELETE FROM teacher_applications");
     }
 
-    private void resetGuestRole() {
-        jdbcTemplate.update("UPDATE users SET role = 'GUEST' WHERE id = 4");
+    private Map<String, Object> approveRequest(String note) {
+        return Map.of(
+            "classroomId", 2,
+            "teacherStartAt", "2026-06-01",
+            "teacherEndAt", "2026-12-31",
+            "note", note
+        );
+    }
+
+    private void resetApplicant() {
+        jdbcTemplate.update("""
+            UPDATE users
+            SET role = 'GUEST',
+                classroom_id = NULL,
+                teacher_start_at = NULL,
+                teacher_end_at = NULL
+            WHERE id = 4
+            """);
+        jdbcTemplate.update("DELETE FROM user_permissions WHERE user_id = 4 AND permission_code LIKE 'channel:write:%'");
     }
 }
