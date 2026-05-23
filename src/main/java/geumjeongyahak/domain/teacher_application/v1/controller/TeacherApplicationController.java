@@ -3,6 +3,7 @@ package geumjeongyahak.domain.teacher_application.v1.controller;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.teacher_application.service.TeacherApplicationService;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.CreateTeacherApplicationRequest;
+import geumjeongyahak.domain.teacher_application.v1.dto.response.MyTeacherApplicationResponse;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,5 +42,18 @@ public class TeacherApplicationController {
         log.debug("POST /api/v1/teacher-applications (preferredSubjectId={})", request.preferredSubjectId());
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(teacherApplicationService.createTeacherApplication(userDetails.getUserId(), request));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+        summary = "내 교원 신청 조회",
+        description = "현재 로그인 사용자의 최신 PENDING, APPROVED, REJECTED 교원 신청 1건을 조회합니다. 없으면 exists=false를 반환합니다."
+    )
+    @GetMapping("/me")
+    public ResponseEntity<MyTeacherApplicationResponse> getMyTeacherApplication(
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("GET /api/v1/teacher-applications/me");
+        return ResponseEntity.ok(teacherApplicationService.getMyTeacherApplication(userDetails.getUserId()));
     }
 }

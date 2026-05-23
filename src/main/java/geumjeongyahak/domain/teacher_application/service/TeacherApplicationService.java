@@ -1,5 +1,7 @@
 package geumjeongyahak.domain.teacher_application.service;
 
+import java.util.List;
+
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.subject.entity.Subject;
 import geumjeongyahak.domain.subject.service.SubjectProxyService;
@@ -10,6 +12,7 @@ import geumjeongyahak.domain.teacher_application.exception.InvalidPreferredSubje
 import geumjeongyahak.domain.teacher_application.exception.TeacherApplicationApplicantNotGuestException;
 import geumjeongyahak.domain.teacher_application.repository.TeacherApplicationRepository;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.CreateTeacherApplicationRequest;
+import geumjeongyahak.domain.teacher_application.v1.dto.response.MyTeacherApplicationResponse;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
@@ -23,6 +26,12 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class TeacherApplicationService {
+
+    private static final List<TeacherApplicationStatus> MY_VISIBLE_STATUSES = List.of(
+        TeacherApplicationStatus.PENDING,
+        TeacherApplicationStatus.APPROVED,
+        TeacherApplicationStatus.REJECTED
+    );
 
     private final TeacherApplicationRepository teacherApplicationRepository;
     private final UserProxyService userProxyService;
@@ -62,6 +71,16 @@ public class TeacherApplicationService {
 
         log.debug("교원 신청 생성 완료 (applicationId={})", saved.getId());
         return TeacherApplicationResponse.from(saved);
+    }
+
+    public MyTeacherApplicationResponse getMyTeacherApplication(Long applicantId) {
+        log.debug("내 교원 신청 조회 요청 (applicantId={})", applicantId);
+
+        return teacherApplicationRepository
+            .findFirstByApplicant_IdAndStatusInOrderByCreatedAtDesc(applicantId, MY_VISIBLE_STATUSES)
+            .map(TeacherApplicationResponse::from)
+            .map(MyTeacherApplicationResponse::exists)
+            .orElseGet(MyTeacherApplicationResponse::empty);
     }
 
     private void validateApplicantRole(User applicant) {
