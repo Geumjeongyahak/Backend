@@ -5,6 +5,7 @@ import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.teacher_application.enums.TeacherApplicationStatus;
 import geumjeongyahak.domain.teacher_application.service.TeacherApplicationService;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.ApproveTeacherApplicationRequest;
+import geumjeongyahak.domain.teacher_application.v1.dto.request.RejectTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.TeacherApplicationPaginationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -68,6 +69,20 @@ public class TeacherApplicationAdminController {
         log.debug("PATCH /api/v1/admin/teacher-applications/{}/approve", applicationId);
         return ResponseEntity.ok(
             teacherApplicationService.approveTeacherApplication(userDetails.getUserId(), applicationId, request)
+        );
+    }
+
+    @PreAuthorize(MANAGE_PERMISSION)
+    @Operation(summary = "교원 신청 반려")
+    @PatchMapping("/{applicationId}/reject")
+    public ResponseEntity<TeacherApplicationResponse> rejectTeacherApplication(
+        @PathVariable Long applicationId,
+        @Valid @RequestBody RejectTeacherApplicationRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/admin/teacher-applications/{}/reject", applicationId);
+        return ResponseEntity.ok(
+            teacherApplicationService.rejectTeacherApplication(userDetails.getUserId(), applicationId, request)
         );
     }
 }

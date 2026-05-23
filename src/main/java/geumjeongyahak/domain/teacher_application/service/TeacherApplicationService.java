@@ -21,6 +21,7 @@ import geumjeongyahak.domain.teacher_application.repository.TeacherApplicationRe
 import geumjeongyahak.domain.teacher_application.repository.TeacherApplicationSpecs;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.ApproveTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.CreateTeacherApplicationRequest;
+import geumjeongyahak.domain.teacher_application.v1.dto.request.RejectTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.TeacherApplicationPaginationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.UpdateTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.MyTeacherApplicationResponse;
@@ -194,6 +195,25 @@ public class TeacherApplicationService {
             application.getId(),
             application.getApplicant().getId()
         );
+        return TeacherApplicationResponse.from(application);
+    }
+
+    @Transactional
+    public TeacherApplicationResponse rejectTeacherApplication(
+        Long reviewerId,
+        Long applicationId,
+        RejectTeacherApplicationRequest request
+    ) {
+        log.debug("교원 신청 반려 요청 (reviewerId={}, applicationId={})", reviewerId, applicationId);
+
+        TeacherApplication application = teacherApplicationRepository.findById(applicationId)
+            .orElseThrow(() -> new TeacherApplicationNotFoundException(applicationId));
+        validatePending(application);
+
+        User reviewer = userProxyService.getById(reviewerId);
+        application.reject(reviewer, request.note());
+
+        log.debug("교원 신청 반려 완료 (applicationId={})", application.getId());
         return TeacherApplicationResponse.from(application);
     }
 
