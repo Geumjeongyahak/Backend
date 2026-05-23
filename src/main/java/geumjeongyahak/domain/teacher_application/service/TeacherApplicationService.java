@@ -2,7 +2,11 @@ package geumjeongyahak.domain.teacher_application.service;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
+
 import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.subject.entity.Subject;
 import geumjeongyahak.domain.subject.service.SubjectProxyService;
 import geumjeongyahak.domain.teacher_application.entity.TeacherApplication;
@@ -14,7 +18,9 @@ import geumjeongyahak.domain.teacher_application.exception.TeacherApplicationApp
 import geumjeongyahak.domain.teacher_application.exception.TeacherApplicationForbiddenException;
 import geumjeongyahak.domain.teacher_application.exception.TeacherApplicationNotFoundException;
 import geumjeongyahak.domain.teacher_application.repository.TeacherApplicationRepository;
+import geumjeongyahak.domain.teacher_application.repository.TeacherApplicationSpecs;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.CreateTeacherApplicationRequest;
+import geumjeongyahak.domain.teacher_application.v1.dto.request.TeacherApplicationPaginationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.UpdateTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.MyTeacherApplicationResponse;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationResponse;
@@ -94,6 +100,25 @@ public class TeacherApplicationService {
             .orElseThrow(() -> new TeacherApplicationNotFoundException(applicationId));
 
         return TeacherApplicationResponse.from(application);
+    }
+
+    public PaginationResponse<TeacherApplicationResponse> getTeacherApplications(
+        TeacherApplicationStatus status,
+        TeacherApplicationPaginationRequest request
+    ) {
+        log.debug(
+            "관리자 교원 신청 목록 조회 요청 (status={}, keyword={})",
+            status,
+            request.getKeyword()
+        );
+
+        Specification<TeacherApplication> specification = Specification.allOf(
+            TeacherApplicationSpecs.hasStatus(status),
+            TeacherApplicationSpecs.containsKeyword(request.getKeyword())
+        );
+        Page<TeacherApplication> page = teacherApplicationRepository.findAll(specification, request.toRequest());
+
+        return PaginationResponse.from(page, TeacherApplicationResponse::from);
     }
 
     @Transactional
