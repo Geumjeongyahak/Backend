@@ -133,6 +133,19 @@ public class TeacherApplicationService {
         return TeacherApplicationResponse.from(application);
     }
 
+    @Transactional
+    public void cancelTeacherApplication(Long applicantId, Long applicationId) {
+        log.debug("교원 신청 취소 요청 (applicantId={}, applicationId={})", applicantId, applicationId);
+
+        TeacherApplication application = teacherApplicationRepository.findById(applicationId)
+            .orElseThrow(() -> new TeacherApplicationNotFoundException(applicationId));
+        validateOwner(application, applicantId);
+        validatePending(application);
+
+        application.cancel();
+        log.debug("교원 신청 취소 완료 (applicationId={})", application.getId());
+    }
+
     private void validateApplicantRole(User applicant) {
         if (applicant.getRole() != RoleType.GUEST) {
             throw new TeacherApplicationApplicantNotGuestException();

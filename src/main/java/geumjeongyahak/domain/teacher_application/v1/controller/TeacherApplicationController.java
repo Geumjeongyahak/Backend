@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -75,5 +76,20 @@ public class TeacherApplicationController {
         return ResponseEntity.ok(
             teacherApplicationService.updateTeacherApplication(userDetails.getUserId(), applicationId, request)
         );
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+        summary = "교원 신청 취소",
+        description = "신청자 본인이 PENDING 상태의 교원 신청서를 취소합니다. 실제 삭제가 아니라 CANCELLED 상태로 변경합니다."
+    )
+    @DeleteMapping("/{applicationId}")
+    public ResponseEntity<Void> cancelTeacherApplication(
+        @PathVariable Long applicationId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("DELETE /api/v1/teacher-applications/{}", applicationId);
+        teacherApplicationService.cancelTeacherApplication(userDetails.getUserId(), applicationId);
+        return ResponseEntity.noContent().build();
     }
 }
