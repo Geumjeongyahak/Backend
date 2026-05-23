@@ -9,10 +9,13 @@ import geumjeongyahak.domain.teacher_application.entity.TeacherApplication;
 import geumjeongyahak.domain.teacher_application.enums.TeacherApplicationStatus;
 import geumjeongyahak.domain.teacher_application.exception.DuplicatePendingTeacherApplicationException;
 import geumjeongyahak.domain.teacher_application.exception.InvalidPreferredSubjectException;
+import geumjeongyahak.domain.teacher_application.exception.InvalidTeacherApplicationStatusException;
 import geumjeongyahak.domain.teacher_application.exception.TeacherApplicationApplicantNotGuestException;
+import geumjeongyahak.domain.teacher_application.exception.TeacherApplicationForbiddenException;
 import geumjeongyahak.domain.teacher_application.exception.TeacherApplicationNotFoundException;
 import geumjeongyahak.domain.teacher_application.repository.TeacherApplicationRepository;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.CreateTeacherApplicationRequest;
+import geumjeongyahak.domain.teacher_application.v1.dto.request.UpdateTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.MyTeacherApplicationResponse;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationResponse;
 import geumjeongyahak.domain.users.entity.User;
@@ -93,6 +96,43 @@ public class TeacherApplicationService {
         return TeacherApplicationResponse.from(application);
     }
 
+    @Transactional
+    public TeacherApplicationResponse updateTeacherApplication(
+        Long applicantId,
+        Long applicationId,
+        UpdateTeacherApplicationRequest request
+    ) {
+        log.debug(
+            "교원 신청 수정 요청 (applicantId={}, applicationId={}, preferredSubjectId={})",
+            applicantId,
+            applicationId,
+            request.preferredSubjectId()
+        );
+
+        TeacherApplication application = teacherApplicationRepository.findById(applicationId)
+            .orElseThrow(() -> new TeacherApplicationNotFoundException(applicationId));
+        validateOwner(application, applicantId);
+        validatePending(application);
+
+        Subject preferredSubject = subjectProxyService.getById(request.preferredSubjectId());
+        validatePreferredSubject(preferredSubject);
+
+        application.update(
+            request.phoneNumber(),
+            request.email(),
+            request.birthDate(),
+            request.address(),
+            request.educationAndMajor(),
+            preferredSubject,
+            request.motivation(),
+            request.desiredTeacherImage(),
+            request.meaningOfSharing()
+        );
+
+        log.debug("교원 신청 수정 완료 (applicationId={})", application.getId());
+        return TeacherApplicationResponse.from(application);
+    }
+
     private void validateApplicantRole(User applicant) {
         if (applicant.getRole() != RoleType.GUEST) {
             throw new TeacherApplicationApplicantNotGuestException();
@@ -111,6 +151,18 @@ public class TeacherApplicationService {
     private void validatePreferredSubject(Subject preferredSubject) {
         if (!Boolean.TRUE.equals(preferredSubject.getIsActive()) || preferredSubject.getTeacher() != null) {
             throw new InvalidPreferredSubjectException();
+        }
+    }
+
+    private void validateOwner(TeacherApplication application, Long applicantId) {
+        if (!application.getApplicant().getId().equals(applicantId)) {
+            throw new TeacherApplicationForbiddenException();
+        }
+    }
+
+    private void validatePending(TeacherApplication application) {
+        if (application.getStatus() != TeacherApplicationStatus.PENDING) {
+            throw new InvalidTeacherApplicationStatusException();
         }
     }
 }

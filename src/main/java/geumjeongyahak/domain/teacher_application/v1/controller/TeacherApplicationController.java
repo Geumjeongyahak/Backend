@@ -3,6 +3,7 @@ package geumjeongyahak.domain.teacher_application.v1.controller;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.teacher_application.service.TeacherApplicationService;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.CreateTeacherApplicationRequest;
+import geumjeongyahak.domain.teacher_application.v1.dto.request.UpdateTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.MyTeacherApplicationResponse;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -55,5 +58,22 @@ public class TeacherApplicationController {
     ) {
         log.debug("GET /api/v1/teacher-applications/me");
         return ResponseEntity.ok(teacherApplicationService.getMyTeacherApplication(userDetails.getUserId()));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+        summary = "교원 신청 수정",
+        description = "신청자 본인이 PENDING 상태의 교원 신청서를 수정합니다."
+    )
+    @PatchMapping("/{applicationId}")
+    public ResponseEntity<TeacherApplicationResponse> updateTeacherApplication(
+        @PathVariable Long applicationId,
+        @Valid @RequestBody UpdateTeacherApplicationRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/teacher-applications/{}", applicationId);
+        return ResponseEntity.ok(
+            teacherApplicationService.updateTeacherApplication(userDetails.getUserId(), applicationId, request)
+        );
     }
 }
