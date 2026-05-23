@@ -32,7 +32,7 @@ public enum TeacherApplicationErrorCode implements ErrorCode {
     TEACHER_APPLICATION_APPLICANT_NOT_GUEST(
         HttpStatus.FORBIDDEN,
         "AUTH-12-002",
-        "GUEST 사용자만 교원 신청을 할 수 있습니다."
+        "교원 신청자는 GUEST 상태여야 합니다."
     ),
     INVALID_PREFERRED_SUBJECT(
         HttpStatus.BAD_REQUEST,

@@ -1,8 +1,10 @@
 package geumjeongyahak.domain.teacher_application.v1.controller;
 
+import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.teacher_application.enums.TeacherApplicationStatus;
 import geumjeongyahak.domain.teacher_application.service.TeacherApplicationService;
+import geumjeongyahak.domain.teacher_application.v1.dto.request.ApproveTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.TeacherApplicationPaginationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,8 +15,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class TeacherApplicationAdminController {
 
     private static final String READ_PERMISSION = "hasRole('ADMIN') or hasAuthority('teacher-application:read:*')";
+    private static final String MANAGE_PERMISSION = "hasRole('ADMIN') or hasAuthority('teacher-application:manage:*')";
 
     private final TeacherApplicationService teacherApplicationService;
 
@@ -49,5 +55,19 @@ public class TeacherApplicationAdminController {
     ) {
         log.debug("GET /api/v1/admin/teacher-applications/{}", applicationId);
         return ResponseEntity.ok(teacherApplicationService.getTeacherApplication(applicationId));
+    }
+
+    @PreAuthorize(MANAGE_PERMISSION)
+    @Operation(summary = "교원 신청 승인")
+    @PatchMapping("/{applicationId}/approve")
+    public ResponseEntity<TeacherApplicationResponse> approveTeacherApplication(
+        @PathVariable Long applicationId,
+        @Valid @RequestBody ApproveTeacherApplicationRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/admin/teacher-applications/{}/approve", applicationId);
+        return ResponseEntity.ok(
+            teacherApplicationService.approveTeacherApplication(userDetails.getUserId(), applicationId, request)
+        );
     }
 }
