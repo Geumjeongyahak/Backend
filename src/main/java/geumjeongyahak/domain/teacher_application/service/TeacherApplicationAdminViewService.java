@@ -28,8 +28,12 @@ public class TeacherApplicationAdminViewService {
 
     public TeacherApplicationPage getTeacherApplications(TeacherApplicationFilter filter) {
         TeacherApplicationPaginationRequest request = new TeacherApplicationPaginationRequest();
-        request.setPage(filter.page());
-        request.setSize(filter.size());
+        if (filter.page() != null) {
+            request.setPage(filter.page());
+        }
+        if (filter.size() != null) {
+            request.setSize(filter.size());
+        }
         request.setKeyword(filter.keyword());
 
         PaginationResponse<TeacherApplicationResponse> response =
