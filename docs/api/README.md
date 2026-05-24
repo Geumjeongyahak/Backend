@@ -8,6 +8,7 @@
 - [Classrooms](./Classrooms.md)
 - [Students](./Students.md)
 - [Subjects](./Subjects.md)
+- [TeacherApplications](./TeacherApplications.md)
 - [Lessons](./Lessons.md)
 - [DailySchedules](./DailySchedules.md)
 - [Requests](./Requests.md)
