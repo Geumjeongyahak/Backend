@@ -15,6 +15,8 @@ public interface TeacherApplicationRepository
 
     boolean existsByApplicant_IdAndStatus(Long applicantId, TeacherApplicationStatus status);
 
+    long countByStatus(TeacherApplicationStatus status);
+
     @EntityGraph(attributePaths = {"applicant", "preferredSubject", "preferredSubject.classroom", "reviewedBy"})
     Optional<TeacherApplication> findById(Long applicationId);
 
