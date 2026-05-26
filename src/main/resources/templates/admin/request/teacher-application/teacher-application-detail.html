@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('교원 신청 상세')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1 th:text="|${detail.application.applicantName} 교원 신청|">교원 신청</h1>
+                <p>교원 지원서 상세와 승인, 반려 처리를 관리합니다.</p>
+            </div>
+            <div>
+                <a class="reset-link" th:href="@{/admin/request/teacher-applications}">목록</a>
+            </div>
+        </div>
+
+        <div class="flash" style="background: #fff0ed; color: var(--danger);" th:if="${error}" th:text="${error}">
+            입력값이 올바르지 않습니다.
+        </div>
+
+        <section class="panel detail-grid">
+            <div class="detail-item">
+                <span>상태</span>
+                <strong>
+                    <span class="pill"
+                          th:classappend="'status-' + ${detail.application.status.name()}"
+                          th:text="${detail.statusLabel}">승인 대기</span>
+                </strong>
+            </div>
+            <div class="detail-item">
+                <span>신청자</span>
+                <strong>
+                    <a class="link"
+                       th:href="@{/admin/user/users/{userId}(userId=${detail.application.applicantId})}"
+                       th:text="|${detail.application.applicantName} (#${detail.application.applicantId})|">홍길동 (#5)</a>
+                </strong>
+            </div>
+            <div class="detail-item">
+                <span>연락처</span>
+                <strong th:text="${detail.application.applicantPhoneNumber}">010-0000-0000</strong>
+            </div>
+            <div class="detail-item">
+                <span>이메일</span>
+                <strong th:text="${detail.application.applicantEmail}">hong@example.com</strong>
+            </div>
+            <div class="detail-item">
+                <span>생년월일</span>
+                <strong th:text="${detail.application.birthDate}">1999-03-15</strong>
+            </div>
+            <div class="detail-item">
+                <span>주소</span>
+                <strong th:text="${detail.application.address}">부산광역시 금정구</strong>
+            </div>
+            <div class="detail-item">
+                <span>최종 학력 및 전공</span>
+                <strong th:text="${detail.application.educationAndMajor}">부산대학교 국어국문학과 졸업</strong>
+            </div>
+            <div class="detail-item">
+                <span>신청일</span>
+                <strong th:text="${#temporals.format(detail.application.createdAt, 'yyyy.MM.dd HH:mm')}">2026.05.24 10:00</strong>
+            </div>
+            <div class="detail-item">
+                <span>처리자</span>
+                <strong th:text="${detail.application.reviewedByName ?: '-'}">-</strong>
+            </div>
+            <div class="detail-item">
+                <span>처리일</span>
+                <strong th:text="${detail.application.reviewedAt != null ? #temporals.format(detail.application.reviewedAt, 'yyyy.MM.dd HH:mm') : '-'}">-</strong>
+            </div>
+            <div class="detail-item" style="grid-column: 1 / -1;">
+                <span>승인 메모 또는 반려 사유</span>
+                <strong th:text="${detail.application.reviewNote ?: '-'}">-</strong>
+            </div>
+        </section>
+
+        <section class="panel detail-grid">
+            <div class="detail-item">
+                <span>선호 과목</span>
+                <strong th:text="${detail.application.preferredSubjectName}">국어</strong>
+            </div>
+            <div class="detail-item">
+                <span>선호 분반</span>
+                <strong th:text="${detail.application.preferredClassroomName}">국화반</strong>
+            </div>
+            <div class="detail-item">
+                <span>요일</span>
+                <strong th:text="${detail.application.preferredDayOfWeek}">FRIDAY</strong>
+            </div>
+            <div class="detail-item">
+                <span>시간</span>
+                <strong th:text="|${detail.application.preferredStartTime} - ${detail.application.preferredEndTime}|">19:00 - 22:00</strong>
+            </div>
+        </section>
+
+        <section class="panel stack">
+            <h2>지원서 답변</h2>
+            <div class="detail-item">
+                <span>금정열린배움터에 관심을 가지게 된 동기</span>
+                <strong style="white-space: pre-wrap;" th:text="${detail.application.motivation}">지원 동기</strong>
+            </div>
+            <div class="detail-item">
+                <span>금정열린배움터에서 희망하는 교사상</span>
+                <strong style="white-space: pre-wrap;" th:text="${detail.application.desiredTeacherImage}">교사상</strong>
+            </div>
+            <div class="detail-item">
+                <span>지원자가 생각하는 나눔의 의미</span>
+                <strong style="white-space: pre-wrap;" th:text="${detail.application.meaningOfSharing}">나눔의 의미</strong>
+            </div>
+        </section>
+
+        <section class="panel stack" th:if="${detail.pending}">
+            <h2>신청 처리</h2>
+            <form class="form-grid"
+                  th:action="@{/admin/request/teacher-applications/{applicationId}/approve(applicationId=${detail.application.id})}"
+                  method="post">
+                <label>배정 분반
+                    <select name="classroomId" required>
+                        <option value="">분반 선택</option>
+                        <option th:each="classroom : ${detail.classroomOptions}"
+                                th:value="${classroom.id}"
+                                th:text="${classroom.name}">국화반</option>
+                    </select>
+                </label>
+                <label>교원 활동 시작일
+                    <input type="date" name="teacherStartAt" required>
+                </label>
+                <label>교원 활동 종료일
+                    <input type="date" name="teacherEndAt" required>
+                </label>
+                <label>승인 메모
+                    <textarea name="note" placeholder="면접 후 승인"></textarea>
+                </label>
+                <div>
+                    <button class="button" type="submit">승인</button>
+                </div>
+            </form>
+            <form class="form-grid"
+                  th:action="@{/admin/request/teacher-applications/{applicationId}/reject(applicationId=${detail.application.id})}"
+                  method="post">
+                <label>반려 사유
+                    <textarea name="note" placeholder="반려 사유" required></textarea>
+                </label>
+                <div>
+                    <button class="button danger" type="submit">반려</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="panel" th:unless="${detail.pending}">
+            <p style="margin: 0; font-weight: 800;">이미 처리된 교원 신청입니다.</p>
+        </section>
+    </main>
+</div>
+</body>
+</html>

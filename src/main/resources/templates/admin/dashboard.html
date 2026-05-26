@@ -40,6 +40,10 @@
                 <span>대기 중 결석 요청</span>
                 <strong th:text="${summary.pendingAbsenceRequestCount}">0</strong>
             </a>
+            <a class="metric" th:href="@{/admin/request/teacher-applications(status='PENDING')}">
+                <span>대기 중 교원 신청</span>
+                <strong th:text="${summary.pendingTeacherApplicationCount}">0</strong>
+            </a>
             <a class="metric" th:href="@{/admin/lesson/lessons}">
                 <span>전체 수업</span>
                 <strong th:text="${summary.lessonCount}">0</strong>
@@ -132,6 +136,10 @@
                 <a class="metric" th:href="@{/admin/request/absence/absence-requests}">
                     <span>결석 요청</span>
                     <p style="font-size: 13px; margin: 4px 0 0;">교사 결석 요청 처리 현황 확인</p>
+                </a>
+                <a class="metric" th:href="@{/admin/request/teacher-applications}">
+                    <span>교원 신청</span>
+                    <p style="font-size: 13px; margin: 4px 0 0;">신규 교원 지원서 검토와 승인 처리</p>
                 </a>
             </div>
         </section>
