@@ -20,5 +20,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     );
 
     @EntityGraph(attributePaths = {"createdBy", "updatedBy"})
+    Page<Event> findAllByIsDeletedFalse(Pageable pageable);
+
+    @EntityGraph(attributePaths = {"createdBy", "updatedBy"})
     Optional<Event> findByIdAndIsDeletedFalse(Long id);
 }
