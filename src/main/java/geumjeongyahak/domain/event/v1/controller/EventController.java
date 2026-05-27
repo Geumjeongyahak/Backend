@@ -26,7 +26,19 @@ public class EventController {
 
     private final EventService eventService;
 
-    @Operation(summary = "행사 목록 조회", description = "행사 일정 목록을 조회합니다. 인증 없이 접근할 수 있습니다.")
+    @Operation(
+        summary = "행사 목록 조회",
+        description = """
+            행사 일정 목록을 페이지네이션으로 조회합니다.
+
+            정책:
+            - 인증 없이 접근할 수 있습니다.
+            - startDate와 endDate를 함께 전달하면 해당 기간의 행사만 조회합니다.
+            - startDate와 endDate를 모두 생략하면 전체 행사를 조회합니다.
+            - 삭제된 행사는 조회되지 않습니다.
+            - 기본 정렬은 eventDate ASC, startTime ASC, id ASC입니다.
+            """
+    )
     @GetMapping
     public ResponseEntity<PaginationResponse<EventResponse>> getEvents(
         @ParameterObject @Valid EventSearchRequest request
@@ -35,7 +47,16 @@ public class EventController {
         return ResponseEntity.ok(eventService.getEvents(request));
     }
 
-    @Operation(summary = "행사 상세 조회", description = "행사 일정 상세 정보를 조회합니다. 인증 없이 접근할 수 있습니다.")
+    @Operation(
+        summary = "행사 상세 조회",
+        description = """
+            행사 일정 상세 정보를 조회합니다.
+
+            정책:
+            - 인증 없이 접근할 수 있습니다.
+            - 삭제된 행사는 조회되지 않습니다.
+            """
+    )
     @GetMapping("/{eventId}")
     public ResponseEntity<EventResponse> getEvent(@PathVariable Long eventId) {
         log.debug("GET /api/v1/events/{}", eventId);

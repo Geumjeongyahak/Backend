@@ -35,7 +35,18 @@ public class EventAdminController {
     private final EventService eventService;
 
     @PreAuthorize(EVENT_MANAGE_ACCESS)
-    @Operation(summary = "행사 등록", description = "행사 일정을 등록합니다.")
+    @Operation(
+        summary = "행사 등록",
+        description = """
+            행사 일정을 등록합니다.
+
+            정책:
+            - ADMIN 또는 event:manage:* 권한이 필요합니다.
+            - 행사 날짜는 단일 날짜(eventDate)로 저장합니다.
+            - startTime과 endTime은 둘 다 없거나 둘 다 있어야 합니다.
+            - 생성자와 마지막 수정자는 현재 로그인 사용자로 저장됩니다.
+            """
+    )
     @PostMapping
     public ResponseEntity<EventResponse> createEvent(
         @Valid @RequestBody CreateEventRequest request,
@@ -48,7 +59,19 @@ public class EventAdminController {
     }
 
     @PreAuthorize(EVENT_MANAGE_ACCESS)
-    @Operation(summary = "행사 수정", description = "행사 일정을 수정합니다.")
+    @Operation(
+        summary = "행사 수정",
+        description = """
+            행사 일정을 부분 수정합니다.
+
+            정책:
+            - ADMIN 또는 event:manage:* 권한이 필요합니다.
+            - 전달한 필드만 수정합니다.
+            - description은 빈 문자열로 수정할 수 있습니다.
+            - startTime과 endTime은 둘 다 없거나 둘 다 있어야 합니다.
+            - 마지막 수정자는 현재 로그인 사용자로 저장됩니다.
+            """
+    )
     @PatchMapping("/{eventId}")
     public ResponseEntity<EventResponse> updateEvent(
         @PathVariable Long eventId,
@@ -60,7 +83,17 @@ public class EventAdminController {
     }
 
     @PreAuthorize(EVENT_MANAGE_ACCESS)
-    @Operation(summary = "행사 삭제", description = "행사 일정을 삭제합니다.")
+    @Operation(
+        summary = "행사 삭제",
+        description = """
+            행사 일정을 삭제합니다.
+
+            정책:
+            - ADMIN 또는 event:manage:* 권한이 필요합니다.
+            - 물리 삭제하지 않고 isDeleted=true로 처리합니다.
+            - 삭제된 행사는 목록/상세 조회에서 제외됩니다.
+            """
+    )
     @DeleteMapping("/{eventId}")
     public ResponseEntity<Void> deleteEvent(
         @PathVariable Long eventId,
