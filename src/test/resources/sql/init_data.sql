@@ -56,6 +56,34 @@ VALUES
     (3, '스마트폰반', 'WEEKEND', '스마트폰 기능/앱 사용');
 ALTER TABLE classrooms ALTER COLUMN id RESTART WITH 4;
 
+-- 6-1. Site Contents
+INSERT INTO site_contents (id, content_type, ref_id, title, name, content_group, sort_order)
+VALUES
+    (1, 'PRINCIPAL', NULL, '교장', '정해웅', NULL, 1),
+    (2, 'DEPARTMENT', 1, '교무기획부', NULL, NULL, 2),
+    (3, 'DEPARTMENT', 2, '교육연구부', NULL, NULL, 3),
+    (4, 'CLASSROOM', 1, '벚꽃반', NULL, 'WEEKDAY', 1),
+    (5, 'CLASSROOM', NULL, '주말 오전반', NULL, 'WEEKEND_MORNING', 1),
+    (6, 'CLASSROOM', NULL, '주말 오후반', NULL, 'WEEKEND_AFTERNOON', 1);
+ALTER TABLE site_contents ALTER COLUMN id RESTART WITH 7;
+
+INSERT INTO site_content_items (id, site_content_id, content, sort_order)
+VALUES
+    (1, 1, '금정열린배움터의 전반적인 운영을 총괄', 1),
+    (2, 2, '야학 행사 계획 및 교무 선생님 보조', 1),
+    (3, 3, '신입 선생님 면접', 1),
+    (4, 3, '생일 및 참관, 연구 수업 관리', 2),
+    (5, 3, '각종 일지 관리', 3),
+    (6, 4, '평일 기초 학습반', 1),
+    (7, 5, '주말 오전 시간대에 운영되는 반', 1),
+    (8, 6, '주말 오후 시간대에 운영되는 반', 1);
+ALTER TABLE site_content_items ALTER COLUMN id RESTART WITH 9;
+
+INSERT INTO site_histories (id, title, detail, link_label, link_href, sort_order)
+VALUES
+    (1, '1997년', '금정열린배움터 설립', NULL, NULL, 1);
+ALTER TABLE site_histories ALTER COLUMN id RESTART WITH 2;
+
 -- 7. Channels
 INSERT INTO channels (id, name, description, channel_type, binding_type, ref_id, access_level, allow_guest_read, is_default, is_active)
 VALUES
