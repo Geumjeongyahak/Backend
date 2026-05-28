@@ -39,6 +39,7 @@
 - [Classrooms](../api/Classrooms.md)
 - [Students](../api/Students.md)
 - [Requests](../api/Requests.md)
+- [Events](../api/Events.md)
 - [Channels](../api/Channels.md)
 - [Posts](../api/Posts.md)
 - [Comments](../api/Comments.md)
