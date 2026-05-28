@@ -66,9 +66,7 @@ public class FileCleanupScheduler {
     private int processChunk(List<File> files) {
         int count = 0;
         for (File file : files) {
-            boolean gcsDeleted = storageService.delete(file.getStorageKey());
-            if (!gcsDeleted) {
-                log.warn("GCS 삭제 실패, DB 레코드 유지 (fileId={}, path={})", file.getId(), file.getStorageKey());
+            if (!deleteStorageObject(file)) {
                 continue;
             }
             postFileRepository.deleteByFileId(file.getId());
@@ -78,5 +76,17 @@ public class FileCleanupScheduler {
             count++;
         }
         return count;
+    }
+
+    private boolean deleteStorageObject(File file) {
+        if (file.isGoogleDriveFile()) {
+            return true;
+        }
+
+        boolean gcsDeleted = storageService.delete(file.getStorageKey());
+        if (!gcsDeleted) {
+            log.warn("GCS 삭제 실패, DB 레코드 유지 (fileId={}, path={})", file.getId(), file.getStorageKey());
+        }
+        return gcsDeleted;
     }
 }

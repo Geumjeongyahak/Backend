@@ -3,8 +3,10 @@ package geumjeongyahak.domain.post.v1.controller;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
 import geumjeongyahak.domain.post.service.PostFileService;
+import geumjeongyahak.domain.post.v1.dto.request.AttachPostFileRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -72,6 +75,36 @@ public class PostFileController {
 
     @PreAuthorize("@channelAccess.can('write', #channelId, principal)")
     @Operation(
+            summary = "등록된 파일을 게시글 첨부파일로 연동",
+            description = """
+                    files 테이블에 이미 등록된 파일을 게시글 첨부파일로 연동합니다.
+
+                    사용 사례:
+                    - /api/v1/files/drive 로 Google Drive 파일 메타데이터를 등록한 뒤 fileId로 연동합니다.
+                    - 기존 첨부파일 응답 구조는 PostAttachmentInfo와 동일하게 유지됩니다.
+
+                    제약 사항:
+                    - 본인이 작성한 초안에만 연동할 수 있습니다.
+                    - DRAFT 상태 게시글에만 사용할 수 있습니다.
+                    """
+    )
+    @PostMapping(value = "/{postId}/attachments", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<FileUploadResponse> attachRegisteredAttachment(
+            @PathVariable Long channelId,
+            @PathVariable Long postId,
+            @Valid @RequestBody AttachPostFileRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(postFileService.attachRegisteredAttachment(
+                channelId,
+                postId,
+                userDetails,
+                request.fileId(),
+                request.sortOrder()));
+    }
+
+    @PreAuthorize("@channelAccess.can('write', #channelId, principal)")
+    @Operation(
             summary = "게시글 첨부파일 삭제",
             description = """
                     게시글에 연동된 첨부파일을 삭제합니다.
@@ -92,4 +125,3 @@ public class PostFileController {
         return ResponseEntity.noContent().build();
     }
 }
-

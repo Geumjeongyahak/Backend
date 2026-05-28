@@ -26,6 +26,9 @@ public record FileUploadResponse(
     @Schema(description = "파일 확장자입니다. 변환이 일어나는 경우 최종 저장 확장자를 반환합니다.", example = "png")
     String ext,
 
+    @Schema(description = "Google Drive에 저장된 외부 파일이면 true입니다.", example = "false")
+    boolean isGoogleDrive,
+
     @Schema(description = "업로드 직후 클라이언트가 사용할 접근 URL입니다. 이미지라면 즉시 미리보기에 사용할 수 있고, 문서라면 후속 다운로드 처리에 활용할 수 있습니다.", example = "https://storage.googleapis.com/example-bucket/editor/example.png")
     String url
 ) {
@@ -37,6 +40,7 @@ public record FileUploadResponse(
             file.getContentType(),
             file.getFileSize(),
             file.getExt(),
+            file.isGoogleDrive(),
             url
         );
     }
