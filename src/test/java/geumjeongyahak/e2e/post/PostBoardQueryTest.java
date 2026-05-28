@@ -42,6 +42,42 @@ public class PostBoardQueryTest extends BasePostTest {
     }
 
     @Test
+    @DisplayName("비인증 사용자는 공개 공지와 행사 게시글 상세를 조회할 수 있다")
+    void getPost_WithoutAuth_AllowsGuestReadableNoticeAndEventDetails() {
+        Long noticePostId = createPost(noticeChannelId, "비로그인 공지 상세");
+
+        Channel eventChannel = channelRepository.save(Channel.builder()
+                .name("행사안내")
+                .description("비로그인 행사 상세 조회 테스트")
+                .channelType(ChannelType.EVENT)
+                .bindingType(ChannelBindingType.STANDALONE)
+                .accessLevel(ChannelAccessLevel.READ_ONLY)
+                .allowGuestRead(true)
+                .isActive(true)
+                .build());
+        testChannelHelper.registerChannel(eventChannel.getId());
+        Long eventPostId = createPost(eventChannel.getId(), "비로그인 행사 상세");
+
+        given()
+                .when()
+                .get("/api/v1/channels/{channelId}/posts/{postId}", noticeChannelId, noticePostId)
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(noticePostId.intValue()))
+                .body("title", equalTo("비로그인 공지 상세"))
+                .body("viewCount", equalTo(1));
+
+        given()
+                .when()
+                .get("/api/v1/channels/{channelId}/posts/{postId}", eventChannel.getId(), eventPostId)
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(eventPostId.intValue()))
+                .body("title", equalTo("비로그인 행사 상세"))
+                .body("viewCount", equalTo(1));
+    }
+
+    @Test
     @DisplayName("통합 게시판은 공지, 반별, 부서별 필터로 조회할 수 있다")
     void getBoardPosts_WithBoardFilters_Success() {
         Channel classroomChannel = channelRepository.save(Channel.builder()
@@ -105,8 +141,8 @@ public class PostBoardQueryTest extends BasePostTest {
     }
 
     @Test
-    @DisplayName("비인증 사용자는 게시글 목록을 조회할 수 있지만 본문 검색과 상세 조회는 제한된다")
-    void getBoardPosts_WithoutAuth_AllowsListButRestrictsContentSearchAndDetail() {
+    @DisplayName("비인증 사용자는 게시글 목록을 조회할 수 있지만 본문 검색과 비공개 상세 조회는 제한된다")
+    void getBoardPosts_WithoutAuth_AllowsListButRestrictsContentSearchAndPrivateDetail() {
         Channel closedChannel = channelRepository.save(Channel.builder()
                 .name("닫힌 운영 채널")
                 .description("목록 노출 테스트")
@@ -136,6 +172,18 @@ public class PostBoardQueryTest extends BasePostTest {
         given()
                 .when()
                 .get("/api/v1/channels/{channelId}/posts/{postId}", closedChannel.getId(), postId)
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("비인증 사용자는 공개 채널의 초안 게시글 상세를 조회할 수 없다")
+    void getPost_WithoutAuth_RejectsDraftEvenInGuestReadableChannel() {
+        Long draftId = testPostHelper.createDraftAndRegister(noticeChannelId, adminAccessToken);
+
+        given()
+                .when()
+                .get("/api/v1/channels/{channelId}/posts/{postId}", noticeChannelId, draftId)
                 .then()
                 .statusCode(403);
     }
