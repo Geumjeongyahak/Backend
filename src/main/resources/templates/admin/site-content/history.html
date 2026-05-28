@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('연혁 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>연혁</h1>
+                <p>공개 연혁 페이지에 표시되는 항목을 관리합니다.</p>
+            </div>
+            <a class="button" th:href="@{/admin/site-content/history/new}">연혁 등록</a>
+        </div>
+        <section class="panel table-panel">
+            <div class="table-scroll">
+                <table>
+                    <thead><tr><th>ID</th><th>제목</th><th>상세</th><th>링크</th><th>정렬</th><th>관리</th></tr></thead>
+                    <tbody>
+                    <tr th:each="history : ${histories}">
+                        <td th:text="${history.id}">1</td>
+                        <td th:text="${history.title}">1997년</td>
+                        <td th:text="${history.detail ?: '-'}">설립</td>
+                        <td th:text="${history.linkLabel ?: '-'}">-</td>
+                        <td th:text="${history.sortOrder}">1</td>
+                        <td><a class="button secondary" th:href="@{/admin/site-content/history/{historyId}/edit(historyId=${history.id})}">수정</a></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(histories)}"><td colspan="6" class="empty">등록된 연혁이 없습니다.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>
