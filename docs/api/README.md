@@ -16,6 +16,7 @@
 - [Channels](./Channels.md)
 - [Posts](./Posts.md)
 - [Comments](./Comments.md)
+- [SiteContent](./SiteContent.md)
 
 ## 문서 기준
 
