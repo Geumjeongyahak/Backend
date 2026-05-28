@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('교학 회의록 등록')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>교학 회의록 등록</h1>
+                <p>회의 전 안건을 먼저 작성합니다.</p>
+            </div>
+        </div>
+
+        <form class="panel form-grid" th:action="@{/admin/meeting-records}" th:object="${form}" method="post">
+            <label>제목 <input th:field="*{title}" required placeholder="예: 2026년 5월 교학 회의"></label>
+            <label>안건 <textarea th:field="*{agenda}" required placeholder="회의 전 공유할 안건을 입력하세요."></textarea></label>
+            <button class="button" type="submit">등록</button>
+        </form>
+    </main>
+</div>
+</body>
+</html>
