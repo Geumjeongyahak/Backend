@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('행사 수정')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>행사 수정</h1>
+                <p th:text="${event.title}">문학의 밤</p>
+            </div>
+            <a class="reset-link" th:href="@{/admin/event/events}">목록으로</a>
+        </div>
+
+        <section class="panel">
+            <h2>기본 정보</h2>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span>ID</span>
+                    <strong th:text="${event.id}">1</strong>
+                </div>
+                <div class="detail-item">
+                    <span>생성자</span>
+                    <strong th:text="${event.createdByName}">관리자</strong>
+                </div>
+                <div class="detail-item">
+                    <span>마지막 수정자</span>
+                    <strong th:text="${event.lastModifiedByName}">관리자</strong>
+                </div>
+                <div class="detail-item">
+                    <span>수정일</span>
+                    <strong th:text="${event.updatedAt != null ? #temporals.format(event.updatedAt, 'yyyy.MM.dd HH:mm') : '-'}">2026.05.01 10:00</strong>
+                </div>
+            </div>
+        </section>
+
+        <form class="panel form-grid" method="post">
+            <label>제목
+                <input name="title" maxlength="100" required th:value="${event.title}">
+            </label>
+            <label>행사일
+                <input name="eventDate" type="date" required th:value="${event.eventDate}">
+            </label>
+            <label>시작 시간
+                <input name="startTime" type="time" th:value="${event.startTime}">
+            </label>
+            <label>종료 시간
+                <input name="endTime" type="time" th:value="${event.endTime}">
+            </label>
+            <label>설명
+                <textarea name="description" th:text="${event.description}"></textarea>
+            </label>
+            <button class="button" type="submit" disabled>수정</button>
+        </form>
+    </main>
+</div>
+</body>
+</html>

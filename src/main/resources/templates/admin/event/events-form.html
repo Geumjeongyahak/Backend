@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('행사 등록')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>행사 등록</h1>
+                <p>캘린더에 표시할 행사 일정을 등록합니다.</p>
+            </div>
+            <a class="reset-link" th:href="@{/admin/event/events}">목록으로</a>
+        </div>
+
+        <form class="panel form-grid" method="post">
+            <label>제목
+                <input name="title" maxlength="100" required>
+            </label>
+            <label>행사일
+                <input name="eventDate" type="date" required>
+            </label>
+            <label>시작 시간
+                <input name="startTime" type="time">
+            </label>
+            <label>종료 시간
+                <input name="endTime" type="time">
+            </label>
+            <label>설명
+                <textarea name="description"></textarea>
+            </label>
+            <button class="button" type="submit" disabled>등록</button>
+        </form>
+    </main>
+</div>
+</body>
+</html>

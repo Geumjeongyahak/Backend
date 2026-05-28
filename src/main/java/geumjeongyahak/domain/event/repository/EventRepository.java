@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.event.repository;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -21,6 +22,9 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     @EntityGraph(attributePaths = {"createdBy", "updatedBy"})
     Page<Event> findAllByIsDeletedFalse(Pageable pageable);
+
+    @EntityGraph(attributePaths = {"createdBy", "updatedBy"})
+    List<Event> findAllByIsDeletedFalseOrderByEventDateAscStartTimeAscIdAsc();
 
     @EntityGraph(attributePaths = {"createdBy", "updatedBy"})
     Optional<Event> findByIdAndIsDeletedFalse(Long id);
