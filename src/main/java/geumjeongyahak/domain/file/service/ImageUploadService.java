@@ -33,6 +33,7 @@ public class ImageUploadService {
 
     private static final String PROFILE_DIRECTORY = "profiles";
     private static final String EDITOR_DIRECTORY = "editor";
+    private static final String SITE_CONTENT_DIRECTORY = "site-contents";
     private static final String PURCHASE_ITEM_DIRECTORY = "documents/purchase-items";
     private static final int PROFILE_IMAGE_WIDTH = 256;
     private static final int PROFILE_IMAGE_HEIGHT = 256;
@@ -72,15 +73,20 @@ public class ImageUploadService {
         fileValidationSupport.validateImage(file);
 
         StorageService.StoredFile storedFile = storageService.upload(file, EDITOR_DIRECTORY);
-        File savedFile = saveFile(
-            storedFile,
-            file.getOriginalFilename(),
-            file.getContentType(),
-            file.getSize(),
-            fileValidationSupport.extractExtension(file.getOriginalFilename())
-        );
+        File savedFile = saveUploadedImage(file, storedFile);
 
         log.debug("게시글 이미지 업로드 완료 (fileId={})", savedFile.getId());
+        return FileUploadResponse.from(savedFile, storedFile.url());
+    }
+
+    @Transactional
+    public FileUploadResponse uploadSiteContentImage(MultipartFile file) {
+        fileValidationSupport.validateImage(file);
+
+        StorageService.StoredFile storedFile = storageService.upload(file, SITE_CONTENT_DIRECTORY);
+        File savedFile = saveUploadedImage(file, storedFile);
+
+        log.debug("사이트 콘텐츠 이미지 업로드 완료 (fileId={})", savedFile.getId());
         return FileUploadResponse.from(savedFile, storedFile.url());
     }
 
@@ -89,16 +95,20 @@ public class ImageUploadService {
         fileValidationSupport.validateImage(file);
 
         StorageService.StoredFile storedFile = storageService.upload(file, PURCHASE_ITEM_DIRECTORY);
-        File savedFile = saveFile(
+        File savedFile = saveUploadedImage(file, storedFile);
+
+        log.debug("구매 대상 이미지 업로드 완료 (fileId={})", savedFile.getId());
+        return FileUploadResponse.from(savedFile, storedFile.url());
+    }
+
+    private File saveUploadedImage(MultipartFile file, StorageService.StoredFile storedFile) {
+        return saveFile(
             storedFile,
             file.getOriginalFilename(),
             file.getContentType(),
             file.getSize(),
             fileValidationSupport.extractExtension(file.getOriginalFilename())
         );
-
-        log.debug("구매 대상 이미지 업로드 완료 (fileId={})", savedFile.getId());
-        return FileUploadResponse.from(savedFile, storedFile.url());
     }
 
     private File saveFile(
