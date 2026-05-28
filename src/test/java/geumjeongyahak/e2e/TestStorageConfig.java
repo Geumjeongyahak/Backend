@@ -34,6 +34,7 @@ public class TestStorageConfig {
     public static class ControlledStorageService implements StorageService {
         private static final String TEST_BUCKET = "test-bucket";
         private final Set<String> failDeletePaths = new HashSet<>();
+        private final Set<String> deletedPaths = new HashSet<>();
 
         public void failDeleteFor(String path) {
             failDeletePaths.add(path);
@@ -41,6 +42,11 @@ public class TestStorageConfig {
 
         public void resetFailPaths() {
             failDeletePaths.clear();
+            deletedPaths.clear();
+        }
+
+        public Set<String> getDeletedPaths() {
+            return Set.copyOf(deletedPaths);
         }
 
         @Override
@@ -62,7 +68,11 @@ public class TestStorageConfig {
 
         @Override
         public boolean delete(String path) {
-            return !failDeletePaths.contains(path);
+            boolean deleted = !failDeletePaths.contains(path);
+            if (deleted) {
+                deletedPaths.add(path);
+            }
+            return deleted;
         }
 
         @Override
