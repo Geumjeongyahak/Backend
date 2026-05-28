@@ -13,6 +13,8 @@ import geumjeongyahak.domain.event.entity.Event;
 
 public interface EventRepository extends JpaRepository<Event, Long> {
 
+    long countByIsDeletedFalseAndEventDateGreaterThanEqual(LocalDate eventDate);
+
     @EntityGraph(attributePaths = {"createdBy", "updatedBy"})
     Page<Event> findAllByIsDeletedFalseAndEventDateBetween(
         LocalDate startDate,

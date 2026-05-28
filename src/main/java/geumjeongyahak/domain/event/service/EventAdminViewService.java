@@ -6,6 +6,7 @@ import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,8 +14,13 @@ import org.springframework.transaction.annotation.Transactional;
 import geumjeongyahak.domain.base.dto.response.AdminPage;
 import geumjeongyahak.domain.base.dto.response.AdminSorts;
 import geumjeongyahak.domain.event.entity.Event;
+import geumjeongyahak.domain.event.exception.EventFormValidationException;
 import geumjeongyahak.domain.event.exception.EventNotFoundException;
 import geumjeongyahak.domain.event.repository.EventRepository;
+import geumjeongyahak.domain.event.v1.dto.request.CreateEventRequest;
+import geumjeongyahak.domain.event.v1.dto.request.UpdateEventRequest;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -23,6 +29,8 @@ import lombok.RequiredArgsConstructor;
 public class EventAdminViewService {
 
     private final EventRepository eventRepository;
+    private final EventService eventService;
+    private final Validator validator;
 
     public AdminPage<AdminEventRow> getEvents(EventFilter filter) {
         List<AdminEventRow> rows = eventRepository.findAllByIsDeletedFalseOrderByEventDateAscStartTimeAscIdAsc()
@@ -40,12 +48,40 @@ public class EventAdminViewService {
             .orElseThrow(() -> new EventNotFoundException(eventId));
     }
 
+    @Transactional
+    public Long createEvent(Long requesterId, CreateEventRequest request) {
+        validate(request);
+        return eventService.createEvent(requesterId, request).id();
+    }
+
+    @Transactional
+    public void updateEvent(Long requesterId, Long eventId, UpdateEventRequest request) {
+        validate(request);
+        eventService.updateEvent(requesterId, eventId, request);
+    }
+
+    @Transactional
+    public void deleteEvent(Long requesterId, Long eventId) {
+        eventService.deleteEvent(requesterId, eventId);
+    }
+
     private boolean matchesDateRange(Event event, LocalDate startDate, LocalDate endDate) {
         LocalDate eventDate = event.getEventDate();
         if (startDate != null && eventDate.isBefore(startDate)) {
             return false;
         }
         return endDate == null || !eventDate.isAfter(endDate);
+    }
+
+    private <T> void validate(T request) {
+        Set<ConstraintViolation<T>> violations = validator.validate(request);
+        if (!violations.isEmpty()) {
+            String message = violations.stream()
+                .findFirst()
+                .map(ConstraintViolation::getMessage)
+                .orElse("행사 입력값이 올바르지 않습니다.");
+            throw new EventFormValidationException(message);
+        }
     }
 
     private List<AdminEventRow> sortEvents(List<AdminEventRow> rows, String sort) {
