@@ -372,6 +372,7 @@ CREATE TABLE files (
     content_type  VARCHAR(100) NOT NULL,
     file_size     BIGINT,
     ext           VARCHAR(20)  NOT NULL,
+    is_google_drive BOOLEAN NOT NULL DEFAULT FALSE,
     is_deleted    BOOLEAN NOT NULL DEFAULT FALSE,
     deleted_at    TIMESTAMP,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
