@@ -57,6 +57,7 @@ public abstract class BasePostTest extends BaseE2ETest {
                 .channelType(ChannelType.NOTICE)
                 .bindingType(ChannelBindingType.STANDALONE)
                 .accessLevel(ChannelAccessLevel.READ_ONLY)
+                .allowGuestRead(true)
                 .refId(null)
                 .isDefault(false)
                 .isActive(true)
