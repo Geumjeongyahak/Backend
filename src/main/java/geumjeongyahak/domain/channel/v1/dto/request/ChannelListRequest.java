@@ -30,7 +30,7 @@ public class ChannelListRequest {
     @Schema(
             description = """
                     채널 유형 필터입니다.
-                    NOTICE, CLASSROOM, DEPARTMENT, CUSTOM 중 하나를 입력하면 해당 유형만 조회합니다.
+                    NOTICE, EVENT, RESOURCE, CLASSROOM, DEPARTMENT, GUIDE, CUSTOM 중 하나를 입력하면 해당 유형만 조회합니다.
                     예를 들어 반 게시판만 보고 싶으면 CLASSROOM, 부서 게시판만 보고 싶으면 DEPARTMENT를 사용합니다.
                     """,
             example = "CLASSROOM"

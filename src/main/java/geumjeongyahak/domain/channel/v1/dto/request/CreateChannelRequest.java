@@ -37,11 +37,11 @@ public record CreateChannelRequest(
         @Schema(
                 description = """
                         수동 생성 채널 유형입니다.
-                        NOTICE, EVENT, RESOURCE, CUSTOM만 허용하며 생략하면 CUSTOM으로 생성됩니다.
+                        NOTICE, EVENT, RESOURCE, GUIDE, CUSTOM만 허용하며 생략하면 CUSTOM으로 생성됩니다.
                         CLASSROOM, DEPARTMENT는 도메인 연동 채널이므로 이 API로 만들 수 없습니다.
                         """,
                 example = "CUSTOM",
-                allowableValues = {"NOTICE", "EVENT", "RESOURCE", "CUSTOM"}
+                allowableValues = {"NOTICE", "EVENT", "RESOURCE", "GUIDE", "CUSTOM"}
         )
         String channelType,
 

@@ -22,7 +22,7 @@ public record ChannelResponse(
         @Schema(description = "채널의 목적과 사용 범위를 설명하는 문구입니다. 관리자 운영 메모나 화면 설명 영역에 사용할 수 있습니다.", example = "기관 전체 운영 공지와 일정 변경 공지를 게시하는 기본 채널입니다.")
         String description,
 
-        @Schema(description = "채널 유형입니다. NOTICE, CLASSROOM, DEPARTMENT, CUSTOM 중 하나입니다.", example = "NOTICE")
+        @Schema(description = "채널 유형입니다. NOTICE, EVENT, RESOURCE, CLASSROOM, DEPARTMENT, GUIDE, CUSTOM 중 하나입니다.", example = "NOTICE")
         String channelType,
 
         @Schema(description = "채널 연동 구분입니다. STANDALONE 또는 DOMAIN_LINKED 입니다.", example = "STANDALONE")

@@ -37,6 +37,7 @@ public class ChannelCrudService {
             ChannelType.NOTICE,
             ChannelType.EVENT,
             ChannelType.RESOURCE,
+            ChannelType.GUIDE,
             ChannelType.CUSTOM
     );
 
@@ -180,14 +181,14 @@ public class ChannelCrudService {
         } catch (IllegalArgumentException ex) {
             throw new BusinessException(
                     CommonErrorCode.INVALID_INPUT,
-                    "알 수 없는 채널 유형입니다. 허용 값: NOTICE, EVENT, RESOURCE, CUSTOM"
+                    "알 수 없는 채널 유형입니다. 허용 값: NOTICE, EVENT, RESOURCE, GUIDE, CUSTOM"
             );
         }
 
         if (!MANUALLY_CREATABLE_CHANNEL_TYPES.contains(resolved)) {
             throw new BusinessException(
                     CommonErrorCode.INVALID_INPUT,
-                    "수동 생성 채널 유형은 NOTICE, EVENT, RESOURCE, CUSTOM만 허용됩니다."
+                    "수동 생성 채널 유형은 NOTICE, EVENT, RESOURCE, GUIDE, CUSTOM만 허용됩니다."
             );
         }
         return resolved;
