@@ -149,6 +149,22 @@ public class FileUploadTest extends BaseFileTest {
     }
 
     @Test
+    @DisplayName("게스트는 Google Drive 파일 메타데이터를 등록할 수 없다")
+    void registerDriveFile_guest_forbidden() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(guestAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "driveUrl", "https://drive.google.com/file/d/drive-file-guest/view",
+                "originalName", "게스트자료.pdf"
+            ))
+        .when()
+            .post("/drive")
+        .then()
+            .statusCode(403);
+    }
+
+    @Test
     @DisplayName("첨부파일 삭제 요청 시 파일 메타데이터가 soft delete 된다")
     void deleteAttachment_softDeleteSuccess() {
         UUID fileId = UUID.fromString(

@@ -13,7 +13,7 @@
 ## Google Drive 파일 등록
 
 - **URL**: `POST /api/v1/files/drive`
-- **권한**: 인증 필요
+- **권한**: `VOLUNTEER`, `MANAGER`, `ADMIN`
 - **Content-Type**: `application/json`
 - **동작**: 프론트가 Google Drive API로 직접 업로드한 뒤 전달한 URL과 메타데이터만 `files` 테이블에 기록합니다.
 - **주의**: 백엔드는 Drive 클라이언트 라이브러리를 사용하지 않고, 실제 파일 업로드/삭제도 수행하지 않습니다.

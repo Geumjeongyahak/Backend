@@ -130,7 +130,7 @@ public class FileController {
             .body(attachmentUploadService.uploadAttachment(file));
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('VOLUNTEER', 'MANAGER', 'ADMIN')")
     @Operation(
         summary = "Google Drive 파일 등록",
         description = "프론트가 Google Drive API로 직접 업로드한 파일의 URL과 메타데이터만 files 테이블에 기록합니다. "
