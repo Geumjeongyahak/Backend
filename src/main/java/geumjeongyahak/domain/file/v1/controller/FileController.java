@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,9 +24,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.file.service.AttachmentUploadService;
+import geumjeongyahak.domain.file.service.DriveFileService;
 import geumjeongyahak.domain.file.service.ImageUploadService;
+import geumjeongyahak.domain.file.v1.dto.request.RegisterDriveFileRequest;
 import geumjeongyahak.domain.file.v1.dto.response.FileDownloadUrlResponse;
 import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
+import jakarta.validation.Valid;
 
 @Slf4j
 @RestController
@@ -42,6 +46,7 @@ public class FileController {
 
     private final ImageUploadService imageUploadService;
     private final AttachmentUploadService attachmentUploadService;
+    private final DriveFileService driveFileService;
 
     @PreAuthorize("isAuthenticated()")
     @Operation(
@@ -82,6 +87,25 @@ public class FileController {
         log.debug("POST /api/v1/files/images/posts - 게시글 이미지 업로드 요청");
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(imageUploadService.uploadPostImage(file));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "사이트 콘텐츠 이미지 업로드",
+        description = "연혁, 기관 소개처럼 공개 사이트 콘텐츠에서 사용할 이미지를 업로드합니다. "
+            + "업로드된 이미지는 site-contents 디렉터리에 저장되고 files 테이블에 메타데이터가 기록됩니다. "
+            + "응답의 url은 site-content 연혁 photos[].src 등에 그대로 저장해 사용할 수 있습니다."
+    )
+    @PostMapping(value = "/images/site-contents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<FileUploadResponse> uploadSiteContentImage(
+        @Parameter(
+            description = "사이트 콘텐츠에서 사용할 이미지 파일. JPG, PNG, GIF, WEBP 형식을 허용합니다."
+        )
+        @RequestPart("file") MultipartFile file
+    ) {
+        log.debug("POST /api/v1/files/images/site-contents - 사이트 콘텐츠 이미지 업로드 요청");
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(imageUploadService.uploadSiteContentImage(file));
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -125,13 +149,27 @@ public class FileController {
             .body(attachmentUploadService.uploadAttachment(file));
     }
 
+    @PreAuthorize("hasAnyRole('VOLUNTEER', 'MANAGER', 'ADMIN')")
+    @Operation(
+        summary = "Google Drive 파일 등록",
+        description = "프론트가 Google Drive API로 직접 업로드한 파일의 URL과 메타데이터만 files 테이블에 기록합니다. "
+            + "백엔드는 Drive 클라이언트를 사용하지 않고, 응답의 fileId는 기존 게시글 첨부 연결 API에서 그대로 사용할 수 있습니다."
+    )
+    @PostMapping("/drive")
+    public ResponseEntity<FileUploadResponse> registerDriveFile(
+        @Valid @RequestBody RegisterDriveFileRequest request
+    ) {
+        log.debug("POST /api/v1/files/drive - Google Drive 파일 메타데이터 등록 요청");
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(driveFileService.registerDriveFile(request));
+    }
+
     @PreAuthorize("isAuthenticated()")
     @Operation(
         summary = "첨부파일 다운로드 URL 조회",
         description = "업로드된 첨부파일에 대해 다운로드 가능한 임시 URL을 발급합니다. "
             + "주요 사용 사례는 첨부파일 목록 화면에서 사용자가 문서를 다운로드하려고 할 때입니다. "
-            + "이 API는 파일 메타데이터를 조회한 뒤 스토리지의 signed URL을 생성하며, "
-            + "응답 URL은 만료 시간이 있는 일회성 접근 링크로 동작합니다."
+            + "GCS 파일은 스토리지 signed URL을 생성하고, Google Drive 파일은 등록된 공유 URL을 그대로 반환합니다."
     )
     @GetMapping("/attachments/{fileId}/download-url")
     public ResponseEntity<FileDownloadUrlResponse> getAttachmentDownloadUrl(
@@ -151,7 +189,8 @@ public class FileController {
     @Operation(
         summary = "첨부파일 삭제",
         description = "업로드된 첨부파일을 삭제합니다. "
-            + "스토리지의 실제 객체를 제거하고, files 테이블의 메타데이터는 soft delete 처리합니다. "
+            + "GCS 파일은 스토리지의 실제 객체를 제거하고, Google Drive 파일은 외부 파일 삭제 없이 "
+            + "files 테이블의 메타데이터만 soft delete 처리합니다. "
             + "게시글이나 요청서와의 연결 정보가 추후 별도 매핑 테이블로 관리될 경우, "
             + "이 API는 해당 참조 정리 로직과 함께 확장될 수 있습니다."
     )

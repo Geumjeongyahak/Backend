@@ -52,13 +52,18 @@ public class AttachmentUploadService {
 
     public String getDownloadUrl(UUID fileId) {
         File file = getFile(fileId);
+        if (file.isGoogleDriveFile()) {
+            return file.getPublicUrl();
+        }
         return storageService.generateDownloadUrl(file.getStorageKey(), DOWNLOAD_URL_DURATION);
     }
 
     @Transactional
     public void deleteAttachment(UUID fileId) {
         File file = getFile(fileId);
-        storageService.delete(file.getStorageKey());
+        if (!file.isGoogleDriveFile()) {
+            storageService.delete(file.getStorageKey());
+        }
         file.delete();
     }
 
@@ -67,7 +72,9 @@ public class AttachmentUploadService {
         fileRepository.findById(fileId)
             .filter(file -> !file.isDeleted())
             .ifPresent(file -> {
-                storageService.delete(file.getStorageKey());
+                if (!file.isGoogleDriveFile()) {
+                    storageService.delete(file.getStorageKey());
+                }
                 file.delete();
             });
     }

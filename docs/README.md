@@ -14,6 +14,7 @@
 
 - [API 안내 문서](./api-spec/api_spec.md): API 문서 구조, 공통 응답 규칙, 참조 순서
 - [도메인별 API 문서](./api/README.md): 각 도메인의 엔드포인트, 권한, side effect, 실패 케이스, 시퀀스 다이어그램
+- [Site Content 도메인](./Domain/SiteContent/README.md): 기관 정보 정적 페이지 표시 콘텐츠 설계와 작업 순서
 
 ## 3. 에러 코드 문서
 

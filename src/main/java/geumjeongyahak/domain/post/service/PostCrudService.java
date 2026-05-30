@@ -111,12 +111,28 @@ public class PostCrudService {
     }
 
     @Transactional
-    public PostDetailResponse getPost(Long channelId, Long postId) {
+    public PostDetailResponse getPost(Long channelId, Long postId, CustomUserDetails userDetails) {
+        if (!channelAccessChecker.can("read", channelId, userDetails)) {
+            throw new AccessDeniedException("게시글 상세 조회 권한이 없습니다.");
+        }
+
         Post post = postRepository.findWithAttachmentsByIdAndChannelId(postId, channelId)
                 .filter(p -> !p.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException(PostErrorCode.POST_NOT_FOUND));
+
+        if (post.getStatus() != PostStatus.PUBLISHED && !canReadUnpublishedPost(post, userDetails)) {
+            throw new AccessDeniedException("미발행 게시글 상세 조회 권한이 없습니다.");
+        }
+
         post.incrementViewCount();
         return PostDetailResponse.from(post);
+    }
+
+    private boolean canReadUnpublishedPost(Post post, CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            return false;
+        }
+        return userDetails.isAdmin() || post.getAuthor().getId().equals(userDetails.getUserId());
     }
 
     @Transactional

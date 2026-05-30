@@ -25,6 +25,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class File {
 
+    public static final String GOOGLE_DRIVE_BUCKET = "google-drive";
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -50,6 +52,9 @@ public class File {
     @Column(name = "public_url", length = 1000)
     private String publicUrl;
 
+    @Column(name = "is_google_drive", nullable = false)
+    private boolean isGoogleDrive = false;
+
     @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;
 
@@ -68,7 +73,8 @@ public class File {
         String contentType,
         Long fileSize,
         String ext,
-        String publicUrl
+        String publicUrl,
+        Boolean isGoogleDrive
     ) {
         this.storageKey = storageKey;
         this.bucket = bucket;
@@ -77,10 +83,35 @@ public class File {
         this.fileSize = fileSize;
         this.ext = ext;
         this.publicUrl = publicUrl;
+        this.isGoogleDrive = isGoogleDrive != null && isGoogleDrive;
     }
 
     public void delete() {
         this.isDeleted = true;
         this.deletedAt = LocalDateTime.now();
+    }
+
+    public void updateDriveMetadata(
+        String storageKey,
+        String originalName,
+        String contentType,
+        Long fileSize,
+        String ext,
+        String publicUrl
+    ) {
+        this.storageKey = storageKey;
+        this.bucket = GOOGLE_DRIVE_BUCKET;
+        this.originalName = originalName;
+        this.contentType = contentType;
+        this.fileSize = fileSize;
+        this.ext = ext;
+        this.publicUrl = publicUrl;
+        this.isGoogleDrive = true;
+        this.isDeleted = false;
+        this.deletedAt = null;
+    }
+
+    public boolean isGoogleDriveFile() {
+        return this.isGoogleDrive;
     }
 }

@@ -65,6 +65,47 @@ VALUES
     (9, '겨울반', 'WEEKDAY', '계절 특강 운영반');
 ALTER SEQUENCE classrooms_id_seq RESTART WITH 10;
 
+-- 6-1. Site Contents
+INSERT INTO site_contents (id, content_type, ref_id, title, name, content_group, sort_order)
+VALUES
+    (1, 'PRINCIPAL', NULL, '교장', '정해웅', NULL, 1),
+    (2, 'DEPARTMENT', 1, '교무기획부', NULL, NULL, 2),
+    (3, 'DEPARTMENT', 2, '교육연구부', NULL, NULL, 3),
+    (4, 'DEPARTMENT', 3, '생활안전부', NULL, NULL, 4),
+    (5, 'DEPARTMENT', 4, '총무부', NULL, NULL, 5),
+    (6, 'DEPARTMENT', 5, '홍보부', NULL, NULL, 6),
+    (7, 'DEPARTMENT', 6, '편집부', NULL, NULL, 7),
+    (8, 'CLASSROOM', 1, '벚꽃반', NULL, 'WEEKDAY', 1),
+    (9, 'CLASSROOM', 2, '개나리반', NULL, 'WEEKDAY', 2),
+    (10, 'CLASSROOM', 3, '민들레반', NULL, 'WEEKDAY', 3),
+    (11, 'CLASSROOM', NULL, '주말 오전반', NULL, 'WEEKEND_MORNING', 1),
+    (12, 'CLASSROOM', NULL, '주말 오후반', NULL, 'WEEKEND_AFTERNOON', 1);
+ALTER SEQUENCE site_contents_id_seq RESTART WITH 13;
+
+INSERT INTO site_content_items (id, site_content_id, content, sort_order)
+VALUES
+    (1, 1, '금정열린배움터의 전반적인 운영을 총괄', 1),
+    (2, 2, '야학 행사 계획 및 교무 선생님 보조', 1),
+    (3, 3, '신입 선생님 면접', 1),
+    (4, 3, '생일 및 참관, 연구 수업 관리', 2),
+    (5, 3, '각종 일지 관리', 3),
+    (6, 4, '학생 생활 및 안전 관리', 1),
+    (7, 5, '기관 행정 및 총무 업무', 1),
+    (8, 6, '기관 홍보 및 대외 소통', 1),
+    (9, 7, '소식지 및 문서 편집', 1),
+    (10, 8, '평일 기초 학습반', 1),
+    (11, 9, '평일 초급 학습반', 1),
+    (12, 10, '평일 기초 심화반', 1),
+    (13, 11, '주말 오전 시간대에 운영되는 반', 1),
+    (14, 12, '주말 오후 시간대에 운영되는 반', 1);
+ALTER SEQUENCE site_content_items_id_seq RESTART WITH 15;
+
+INSERT INTO site_histories (id, title, detail, link_label, link_href, sort_order)
+VALUES
+    (1, '1997년', '금정열린배움터 설립', NULL, NULL, 1),
+    (2, '현재', '지역과 함께하는 배움터 운영', NULL, NULL, 2);
+ALTER SEQUENCE site_histories_id_seq RESTART WITH 3;
+
 -- 7. Channels
 INSERT INTO channels (id, name, description, channel_type, binding_type, ref_id, access_level, allow_guest_read, is_default, is_active)
 VALUES
@@ -88,8 +129,10 @@ VALUES
     (19, '편집부', '편집부 전용 채널', 'DEPARTMENT', 'DOMAIN_LINKED', 6, 'READ_WRITE', FALSE, FALSE, TRUE),
     (20, '인수인계서', '교원 인수인계서 자료를 공유하는 채널', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', FALSE, FALSE, TRUE),
     (21, '시험 문제 자료', '시험 문제와 평가 자료를 공유하는 채널', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', FALSE, FALSE, TRUE),
-    (22, '서류 양식', '운영에 필요한 각종 서류 양식을 공유하는 채널', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', FALSE, FALSE, TRUE);
-ALTER SEQUENCE channels_id_seq RESTART WITH 23;
+    (22, '서류 양식', '운영에 필요한 각종 서류 양식을 공유하는 채널', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', FALSE, FALSE, TRUE),
+    (23, '교칙', '교칙 안내문을 게시하는 기본 안내 채널', 'GUIDE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE, TRUE),
+    (24, '교사 신청 안내', '교사 신청 안내문을 게시하는 기본 안내 채널', 'GUIDE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE, TRUE);
+ALTER SEQUENCE channels_id_seq RESTART WITH 25;
 
 -- 8. Subjects
 INSERT INTO subjects (id, class_id, teacher_id, name, start_at, end_at, day_of_week, start_time, end_time, period, teacher_assigned_at, description)

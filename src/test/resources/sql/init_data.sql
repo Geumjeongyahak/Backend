@@ -56,11 +56,39 @@ VALUES
     (3, '스마트폰반', 'WEEKEND', '스마트폰 기능/앱 사용');
 ALTER TABLE classrooms ALTER COLUMN id RESTART WITH 4;
 
+-- 6-1. Site Contents
+INSERT INTO site_contents (id, content_type, ref_id, title, name, content_group, sort_order)
+VALUES
+    (1, 'PRINCIPAL', NULL, '교장', '정해웅', NULL, 1),
+    (2, 'DEPARTMENT', 1, '교무기획부', NULL, NULL, 2),
+    (3, 'DEPARTMENT', 2, '교육연구부', NULL, NULL, 3),
+    (4, 'CLASSROOM', 1, '벚꽃반', NULL, 'WEEKDAY', 1),
+    (5, 'CLASSROOM', NULL, '주말 오전반', NULL, 'WEEKEND_MORNING', 1),
+    (6, 'CLASSROOM', NULL, '주말 오후반', NULL, 'WEEKEND_AFTERNOON', 1);
+ALTER TABLE site_contents ALTER COLUMN id RESTART WITH 7;
+
+INSERT INTO site_content_items (id, site_content_id, content, sort_order)
+VALUES
+    (1, 1, '금정열린배움터의 전반적인 운영을 총괄', 1),
+    (2, 2, '야학 행사 계획 및 교무 선생님 보조', 1),
+    (3, 3, '신입 선생님 면접', 1),
+    (4, 3, '생일 및 참관, 연구 수업 관리', 2),
+    (5, 3, '각종 일지 관리', 3),
+    (6, 4, '평일 기초 학습반', 1),
+    (7, 5, '주말 오전 시간대에 운영되는 반', 1),
+    (8, 6, '주말 오후 시간대에 운영되는 반', 1);
+ALTER TABLE site_content_items ALTER COLUMN id RESTART WITH 9;
+
+INSERT INTO site_histories (id, title, detail, link_label, link_href, sort_order)
+VALUES
+    (1, '1997년', '금정열린배움터 설립', NULL, NULL, 1);
+ALTER TABLE site_histories ALTER COLUMN id RESTART WITH 2;
+
 -- 7. Channels
 INSERT INTO channels (id, name, description, channel_type, binding_type, ref_id, access_level, allow_guest_read, is_default, is_active)
 VALUES
     (1, '공지사항', '기관 전체 공지사항 채널', 'NOTICE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE, TRUE),
-    (2, '이벤트', '기관 전체 이벤트 채널', 'EVENT', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE, TRUE),
+    (2, '행사안내', '주요 행사 및 일정 안내', 'EVENT', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE, TRUE),
     (3, '자료실', '기관 공용 자료실 채널', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', FALSE, TRUE, TRUE),
     (4, '벚꽃반', '벚꽃반 게시판', 'CLASSROOM', 'DOMAIN_LINKED', 1, 'READ_WRITE', FALSE, TRUE, TRUE),
     (5, '장미반', '장미반 게시판', 'CLASSROOM', 'DOMAIN_LINKED', 2, 'READ_WRITE', FALSE, TRUE, TRUE),
@@ -70,8 +98,10 @@ VALUES
     (9, '생활안전부', '생활안전부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 3, 'READ_WRITE', FALSE, TRUE, TRUE),
     (10, '총무부', '총무부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 4, 'READ_WRITE', FALSE, TRUE, TRUE),
     (11, '홍보부', '홍보부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 5, 'READ_WRITE', FALSE, TRUE, TRUE),
-    (12, '편집부', '편집부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 6, 'READ_WRITE', FALSE, TRUE, TRUE);
-ALTER TABLE channels ALTER COLUMN id RESTART WITH 13;
+    (12, '편집부', '편집부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 6, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (13, '교칙', '교칙 안내문을 게시하는 기본 안내 채널', 'GUIDE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE, TRUE),
+    (14, '교사 신청 안내', '교사 신청 안내문을 게시하는 기본 안내 채널', 'GUIDE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE, TRUE);
+ALTER TABLE channels ALTER COLUMN id RESTART WITH 15;
 
 -- 8. Subjects
 INSERT INTO subjects (id, class_id, teacher_id, name, start_at, end_at, day_of_week, start_time, end_time, period, teacher_assigned_at, description)

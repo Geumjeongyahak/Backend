@@ -4,6 +4,7 @@ import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
 import geumjeongyahak.domain.classroom.repository.ClassroomRepository;
 import geumjeongyahak.domain.department.repository.DepartmentRepository;
+import geumjeongyahak.domain.event.repository.EventRepository;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
 import geumjeongyahak.domain.request.enums.RequestStatus;
@@ -34,6 +35,7 @@ public class AdminDashboardService {
     private final LessonRepository lessonRepository;
     private final SubjectRepository subjectRepository;
     private final TeacherApplicationRepository teacherApplicationRepository;
+    private final EventRepository eventRepository;
 
     public AdminDashboardSummary getSummary() {
         LocalDate today = LocalDate.now();
@@ -52,6 +54,7 @@ public class AdminDashboardService {
             lessonRepository.countByIsDeletedFalse(),
             lessonRepository.countByIsDeletedFalseAndDate(today),
             lessonRepository.countByStatusAndIsDeletedFalseAndDateBetween(LessonStatus.SCHEDULED, weekStart, weekEnd),
+            eventRepository.countByIsDeletedFalseAndEventDateGreaterThanEqual(today),
             today,
             weekStart,
             weekEnd
@@ -70,6 +73,7 @@ public class AdminDashboardService {
         long lessonCount,
         long todayLessonCount,
         long weeklyScheduledLessonCount,
+        long upcomingEventCount,
         LocalDate today,
         LocalDate weekStart,
         LocalDate weekEnd

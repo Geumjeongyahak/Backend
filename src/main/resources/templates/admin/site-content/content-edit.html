@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('사이트 콘텐츠 수정')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>사이트 콘텐츠 수정</h1>
+                <p th:text="|#${content.id} ${content.title}|">콘텐츠</p>
+            </div>
+        </div>
+        <form class="panel form-grid" th:action="@{/admin/site-content/contents/{contentId}(contentId=${content.id})}" method="post">
+            <label>유형
+                <select name="contentType" required>
+                    <option th:each="type : ${contentTypes}" th:value="${type.name()}" th:text="${type.name()}" th:selected="${content.contentType == type}">DEPARTMENT</option>
+                </select>
+            </label>
+            <label>제목 <input name="title" required maxlength="120" th:value="${content.title}"></label>
+            <label>이름 <input name="name" maxlength="80" th:value="${content.name}"></label>
+            <label>연결 ID <input type="number" name="refId" th:value="${content.refId}"></label>
+            <label>반 그룹
+                <select name="group">
+                    <option value="" th:selected="${content.group == null}">없음</option>
+                    <option th:each="group : ${groups}" th:value="${group.name()}" th:text="${group.name()}" th:selected="${content.group == group}">WEEKDAY</option>
+                </select>
+            </label>
+            <label>정렬 <input type="number" name="sortOrder" th:value="${content.sortOrder}"></label>
+            <label style="grid-column: 1 / -1;">문구 목록
+                <textarea name="itemsText" rows="6" th:text="${content.itemsText}"></textarea>
+            </label>
+            <button class="button" type="submit">저장</button>
+            <a class="reset-link" th:href="@{/admin/site-content/contents}">취소</a>
+        </form>
+        <form class="panel" th:action="@{/admin/site-content/contents/{contentId}/delete(contentId=${content.id})}" method="post">
+            <button class="button danger" type="submit">삭제</button>
+        </form>
+    </main>
+</div>
+</body>
+</html>
