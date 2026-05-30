@@ -68,7 +68,7 @@
 - **URL**: `/api/v1/files/images/site-contents`
 - **Method**: `POST`
 - **Content-Type**: `multipart/form-data`
-- **Authorization**: 로그인 필요
+- **Authorization**: `ADMIN`
 
 연혁, 기관 소개처럼 공개 사이트 콘텐츠에서 사용할 이미지를 GCS에 업로드합니다. 응답의 `url`은 연혁 `photos[].src`에 저장하고, `fileId`는 삭제/교체 시 파일 정리를 위해 `photos[].fileId`로 함께 전달할 수 있습니다.
 

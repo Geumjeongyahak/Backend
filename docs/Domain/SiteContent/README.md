@@ -81,7 +81,7 @@ Issue: [#118](https://github.com/Geumjeongyahak/Backend/issues/118)
 - `POST /api/v1/site-contents/history`
 - `PUT /api/v1/site-contents/history/{historyId}`
 - `DELETE /api/v1/site-contents/history/{historyId}`
-- `POST /api/v1/files/images/site-contents`
+- `POST /api/v1/files/images/site-contents` (`ADMIN`)
 
 REST 요청/응답은 프론트 렌더링 계약을 우선합니다.
 

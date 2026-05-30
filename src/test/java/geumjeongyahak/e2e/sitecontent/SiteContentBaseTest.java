@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 public abstract class SiteContentBaseTest extends BaseE2ETest {
 
     public static final String TEST_VOLUNTEER_USERNAME = "siteContentVolunteer";
+    public static final String TEST_MANAGER_USERNAME = "siteContentManager";
 
     public String adminAccessToken;
     public String volunteerAccessToken;
@@ -35,6 +36,7 @@ public abstract class SiteContentBaseTest extends BaseE2ETest {
         RestAssured.basePath = "/api/v1/site-contents";
         clearSiteContentData();
         userTestHelper.createTestUser(TEST_VOLUNTEER_USERNAME, RoleType.VOLUNTEER);
+        userTestHelper.createTestUser(TEST_MANAGER_USERNAME, RoleType.MANAGER);
         this.adminAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_ADMIN_USERNAME);
         this.volunteerAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_VOLUNTEER_USERNAME);
     }

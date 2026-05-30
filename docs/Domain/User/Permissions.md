@@ -225,6 +225,7 @@ permission code로는 표현되지 않습니다.
 |-----|---------|
 | `POST /api/v1/files/images/profile` | 인증만 |
 | `POST /api/v1/files/images/posts` | 인증만 |
+| `POST /api/v1/files/images/site-contents` | `ADMIN` |
 | `POST /api/v1/files/images/purchase-items` | 인증만 |
 | `POST /api/v1/files/attachments` | 인증만 |
 | `POST /api/v1/files/drive` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` |

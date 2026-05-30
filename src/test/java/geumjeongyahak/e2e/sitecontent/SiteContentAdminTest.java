@@ -1,8 +1,11 @@
 package geumjeongyahak.e2e.sitecontent;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 
 import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.sitecontent.entity.SiteContent;
@@ -479,6 +482,28 @@ class SiteContentAdminTest extends SiteContentBaseTest {
     }
 
     @Test
+    @DisplayName("매니저는 관리자 화면으로 사이트 콘텐츠를 수정할 수 없다")
+    void adminViewWriteSiteContent_Manager_Forbidden() {
+        String managerSessionId = loginAdminSession(TEST_MANAGER_USERNAME + "@test.com", "pw_" + TEST_MANAGER_USERNAME);
+
+        given()
+            .basePath("")
+            .cookie("JSESSIONID", managerSessionId)
+            .contentType(ContentType.URLENC)
+            .formParam("contentType", "DEPARTMENT")
+            .formParam("title", "교무기획부")
+            .formParam("itemsText", "야학 행사 계획")
+            .redirects()
+            .follow(false)
+        .when()
+            .post("/admin/site-content/contents")
+        .then()
+            .statusCode(anyOf(is(302), is(403)));
+
+        org.assertj.core.api.Assertions.assertThat(siteContentRepository.findAll()).isEmpty();
+    }
+
+    @Test
     @DisplayName("인증 없이 사이트 콘텐츠 쓰기가 거부된다")
     void writeSiteContent_Anonymous_Unauthorized() {
         Map<String, Object> departmentRequest = new HashMap<>();
@@ -517,5 +542,22 @@ class SiteContentAdminTest extends SiteContentBaseTest {
             .ext("png")
             .publicUrl("https://example.com/history.png")
             .build());
+    }
+
+    private String loginAdminSession(String username, String password) {
+        return given()
+            .basePath("")
+            .contentType(ContentType.URLENC)
+            .formParam("username", username)
+            .formParam("password", password)
+            .redirects()
+            .follow(false)
+        .when()
+            .post("/admin/auth/login")
+        .then()
+            .statusCode(302)
+            .header("Location", containsString("/admin"))
+            .extract()
+            .cookie("JSESSIONID");
     }
 }

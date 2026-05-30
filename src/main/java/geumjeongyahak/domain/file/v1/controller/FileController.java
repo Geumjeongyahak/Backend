@@ -89,7 +89,7 @@ public class FileController {
             .body(imageUploadService.uploadPostImage(file));
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(
         summary = "사이트 콘텐츠 이미지 업로드",
         description = "연혁, 기관 소개처럼 공개 사이트 콘텐츠에서 사용할 이미지를 업로드합니다. "
