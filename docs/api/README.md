@@ -16,6 +16,7 @@
 - [PurchaseRequests](./PurchaseRequests.md)
 - [Channels](./Channels.md)
 - [Posts](./Posts.md)
+- [Files](./Files.md)
 - [Comments](./Comments.md)
 
 ## 문서 기준

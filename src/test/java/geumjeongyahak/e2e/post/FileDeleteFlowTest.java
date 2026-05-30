@@ -204,6 +204,23 @@ class FileDeleteFlowTest extends BasePostTest {
     }
 
     @Test
+    @DisplayName("스케줄러 실행 시 Drive 파일은 storage 삭제 없이 DB 레코드만 hard delete된다")
+    void cleanupScheduler_hardDeletesDriveFileWithoutStorageDelete() {
+        Long postId = testPostHelper.createDraftAndRegister(noticeChannelId, adminAccessToken);
+        UUID fileId = testFileHelper.createDeletedDriveFile(
+            LocalDateTime.now().minusDays(8),
+            "https://drive.google.com/file/d/drive-file-id/view"
+        );
+        testFileHelper.linkAttachmentToPost(postId, fileId);
+
+        fileCleanupScheduler.cleanupDeletedFiles();
+
+        assertThat(fileRepository.findById(fileId)).isEmpty();
+        assertThat(postAttachmentRepository.findFileIdsByPostId(postId)).doesNotContain(fileId);
+        assertThat(controlledStorageService.getDeletedPaths()).isEmpty();
+    }
+
+    @Test
     @DisplayName("스케줄러 실행 시 storage 삭제 실패 파일은 DB 레코드가 유지된다")
     void cleanupScheduler_keepsDbRecordsOnStorageFailure() {
         Long postId = testPostHelper.createDraftAndRegister(noticeChannelId, adminAccessToken);

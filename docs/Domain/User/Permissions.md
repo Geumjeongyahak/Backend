@@ -227,6 +227,7 @@ permission code로는 표현되지 않습니다.
 | `POST /api/v1/files/images/posts` | 인증만 |
 | `POST /api/v1/files/images/purchase-items` | 인증만 |
 | `POST /api/v1/files/attachments` | 인증만 |
+| `POST /api/v1/files/drive` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` |
 | `GET /api/v1/files/attachments/{fileId}/download-url` | 인증만 |
 | `DELETE /api/v1/files/attachments/{fileId}` | 인증만 |
 

@@ -68,6 +68,8 @@
 #### 4.1.3 초안 이미지/첨부 연동
 - **이미지**: `POST /api/v1/channels/{channelId}/posts/{postId}/draft/images` (Multipart)
 - **첨부**: `POST /api/v1/channels/{channelId}/posts/{postId}/draft/attachments` (Multipart)
+- **등록 파일 첨부**: `POST /api/v1/channels/{channelId}/posts/{postId}/attachments` (`{ "fileId": "...", "sortOrder": 0 }`)
+  - `POST /api/v1/files/attachments`로 GCS 업로드한 파일과 `POST /api/v1/files/drive`로 등록한 Drive 파일을 동일하게 연결할 수 있습니다.
 
 ### 4.2 발행 (`PostPublishController`)
 

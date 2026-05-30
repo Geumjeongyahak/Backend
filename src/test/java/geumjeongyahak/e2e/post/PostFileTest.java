@@ -3,7 +3,9 @@ package geumjeongyahak.e2e.post;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 
+import java.util.Map;
 import java.util.UUID;
 
 import io.restassured.http.ContentType;
@@ -113,6 +115,51 @@ class PostFileTest extends BasePostTest {
         File removedFile = fileRepository.findById(removedFileId).orElseThrow();
         assertThat(removedFile.isDeleted()).isTrue();
         assertThat(removedFile.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("등록된 Google Drive 파일을 fileId로 게시글 첨부파일에 연동할 수 있다")
+    void attachRegisteredDriveFile_Success() {
+        Long postId = testPostHelper.createDraftAndRegister(noticeChannelId, adminAccessToken);
+        String driveUrl = "https://drive.google.com/file/d/post-drive-file-123/view?usp=sharing";
+
+        String fileId = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "driveUrl", driveUrl,
+                "originalName", "자료실 첨부.pdf",
+                "mimeType", "application/pdf",
+                "fileSize", 1024
+            ))
+        .when()
+            .post("/api/v1/files/drive")
+        .then()
+            .statusCode(201)
+            .extract().jsonPath().getString("fileId");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("fileId", fileId, "sortOrder", 3))
+        .when()
+            .post("/api/v1/channels/{channelId}/posts/{postId}/attachments", noticeChannelId, postId)
+        .then()
+            .statusCode(200)
+            .body("fileId", equalTo(fileId))
+            .body("isGoogleDrive", equalTo(true))
+            .body("url", equalTo(driveUrl));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/api/v1/channels/{channelId}/posts/{postId}", noticeChannelId, postId)
+        .then()
+            .statusCode(200)
+            .body("attachments.fileId", hasItem(fileId))
+            .body("attachments.isGoogleDrive", hasItem(true))
+            .body("attachments.downloadUrl", hasItem(driveUrl))
+            .body("attachments.sortOrder", hasItem(3));
     }
 
     private String imageTag(String imageUrl) {

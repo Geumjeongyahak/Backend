@@ -86,6 +86,7 @@ public record PostDetailResponse(
                                 pa.getFile().getContentType(),
                                 pa.getFile().getFileSize(),
                                 pa.getFile().getExt(),
+                                pa.getFile().isGoogleDrive(),
                                 pa.getFile().getPublicUrl(),
                                 pa.getSortOrder()))
                         .toList()
@@ -108,6 +109,9 @@ public record PostDetailResponse(
 
             @Schema(description = "파일 확장자입니다.", example = "pdf")
             String ext,
+
+            @Schema(description = "Google Drive에 저장된 외부 파일이면 true입니다.", example = "false")
+            boolean isGoogleDrive,
 
             @Schema(description = "다운로드 가능한 URL입니다.", example = "https://storage.googleapis.com/...")
             String downloadUrl,

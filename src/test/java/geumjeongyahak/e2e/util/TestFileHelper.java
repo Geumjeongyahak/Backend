@@ -71,6 +71,24 @@ public class TestFileHelper {
         return fileRepository.save(file).getId();
     }
 
+    public UUID createDeletedDriveFile(LocalDateTime deletedAt, String driveUrl) {
+        String storageKey = "drive-file-" + UUID.randomUUID();
+        File file = File.builder()
+                .storageKey(storageKey)
+                .bucket(File.GOOGLE_DRIVE_BUCKET)
+                .originalName("drive.pdf")
+                .contentType("application/pdf")
+                .fileSize(1024L)
+                .ext("pdf")
+                .publicUrl(driveUrl)
+                .isGoogleDrive(true)
+                .build();
+        file.delete();
+        fileRepository.save(file);
+        ReflectionTestUtils.setField(file, "deletedAt", deletedAt);
+        return fileRepository.save(file).getId();
+    }
+
     public void linkFileToPost(Long postId, UUID fileId) {
         postFileRepository.save(PostFile.builder()
                 .post(postRepository.getReferenceById(postId))

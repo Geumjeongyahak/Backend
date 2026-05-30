@@ -67,17 +67,28 @@ public class PostFileService {
         File savedFile = fileRepository.findById(uploaded.fileId())
                 .orElseThrow(() -> new ResourceNotFoundException(CommonErrorCode.RESOURCE_NOT_FOUND));
 
-        if (!postAttachmentRepository.existsByPostIdAndFileId(postId, savedFile.getId())) {
-            int nextSortOrder = Math.toIntExact(postAttachmentRepository.countByPostId(postId));
-            postAttachmentRepository.save(PostAttachment.builder()
-                    .post(post)
-                    .file(savedFile)
-                    .sortOrder(nextSortOrder)
-                    .build());
-        }
+        linkAttachmentIfAbsent(post, savedFile, null);
 
         log.info("게시글 첨부파일 연동 완료 - postId: {}, fileId: {}", postId, savedFile.getId());
         return uploaded;
+    }
+
+    @Transactional
+    public FileUploadResponse attachRegisteredAttachment(
+            Long channelId,
+            Long postId,
+            CustomUserDetails userDetails,
+            UUID fileId,
+            Integer sortOrder
+    ) {
+        Post post = getOwnedDraft(channelId, postId, userDetails);
+        File savedFile = fileRepository.findByIdAndIsDeletedFalse(fileId)
+                .orElseThrow(() -> new ResourceNotFoundException(CommonErrorCode.RESOURCE_NOT_FOUND));
+
+        linkAttachmentIfAbsent(post, savedFile, sortOrder);
+
+        log.info("등록 파일 게시글 첨부 연동 완료 - postId: {}, fileId: {}", postId, savedFile.getId());
+        return FileUploadResponse.from(savedFile, savedFile.getPublicUrl());
     }
 
     @Transactional
@@ -108,5 +119,19 @@ public class PostFileService {
         }
         return post;
     }
-}
 
+    private void linkAttachmentIfAbsent(Post post, File file, Integer sortOrder) {
+        if (postAttachmentRepository.existsByPostIdAndFileId(post.getId(), file.getId())) {
+            return;
+        }
+
+        int resolvedSortOrder = sortOrder == null
+                ? Math.toIntExact(postAttachmentRepository.countByPostId(post.getId()))
+                : sortOrder;
+        postAttachmentRepository.save(PostAttachment.builder()
+                .post(post)
+                .file(file)
+                .sortOrder(resolvedSortOrder)
+                .build());
+    }
+}
