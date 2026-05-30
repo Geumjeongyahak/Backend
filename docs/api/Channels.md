@@ -1,7 +1,7 @@
 # Channel API
 
 채널은 게시글이 소속되는 컨테이너입니다.  
-이 문서는 변경안 기준으로 `NOTICE / EVENT / RESOURCE / CLASSROOM / DEPARTMENT / CUSTOM`, 접근 수준 기반 권한, 연동형 채널 구분, `PUT` 기반 숨김 처리를 반영한 API 설계 문서입니다.
+이 문서는 변경안 기준으로 `NOTICE / EVENT / RESOURCE / CLASSROOM / DEPARTMENT / GUIDE / CUSTOM`, 접근 수준 기반 권한, 연동형 채널 구분, `PUT` 기반 숨김 처리를 반영한 API 설계 문서입니다.
 
 ## 1. 역할과 범위
 
@@ -20,6 +20,7 @@
 | `RESOURCE` | 자료실 게시판 |
 | `CLASSROOM` | 특정 분반 게시판 |
 | `DEPARTMENT` | 특정 부서 게시판 |
+| `GUIDE` | 교칙, 신청 안내 등 고정 안내문 게시판 |
 | `CUSTOM` | 일반 커스텀 게시판 |
 
 ### 2.2 채널 연동 구분 (`ChannelBindingType`)
@@ -31,7 +32,7 @@
 
 운영 기준:
 
-- `NOTICE`, `EVENT`, `RESOURCE`, `CUSTOM` -> `STANDALONE`
+- `NOTICE`, `EVENT`, `RESOURCE`, `GUIDE`, `CUSTOM` -> `STANDALONE`
 - `CLASSROOM`, `DEPARTMENT` -> `DOMAIN_LINKED`
 
 ### 2.3 접근 수준
@@ -52,6 +53,7 @@
 
 - 공지사항, 이벤트, 자료실은 seed 기반 기본 채널로 운영
 - 분반/부서 채널은 연동 도메인에서 보장
+- 교칙, 교사 신청 안내 등 고정 안내문 채널은 `GUIDE`
 - 일반 운영자가 만드는 채널은 `CUSTOM`
 
 ### 2.5 기본 목록 정책
@@ -95,7 +97,7 @@
 ### 동작 규칙
 
 - 이 API는 독립 채널 생성용
-- `channelType`은 `NOTICE`, `EVENT`, `RESOURCE`, `CUSTOM`만 허용
+- `channelType`은 `NOTICE`, `EVENT`, `RESOURCE`, `GUIDE`, `CUSTOM`만 허용
 - `channelType` 생략 시 `CUSTOM`으로 생성
 - 생성 결과는:
   - `channelType=요청값 또는 CUSTOM`
@@ -116,7 +118,7 @@
 | 파라미터 | 설명 |
 |---|---|
 | `name` | 채널 이름 부분 검색 |
-| `channelType` | `NOTICE`, `EVENT`, `RESOURCE`, `CLASSROOM`, `DEPARTMENT`, `CUSTOM` |
+| `channelType` | `NOTICE`, `EVENT`, `RESOURCE`, `CLASSROOM`, `DEPARTMENT`, `GUIDE`, `CUSTOM` |
 | `bindingType` | `STANDALONE`, `DOMAIN_LINKED` |
 | `isActive` | 활성 여부 |
 | `isDefault` | 기본 채널 여부 |

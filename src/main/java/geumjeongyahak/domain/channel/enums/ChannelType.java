@@ -6,5 +6,6 @@ public enum ChannelType {
     RESOURCE,
     CLASSROOM,
     DEPARTMENT,
+    GUIDE,
     CUSTOM
 }

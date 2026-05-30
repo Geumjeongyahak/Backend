@@ -40,7 +40,7 @@ public class ChannelAdminController {
                     - 기본 접근 수준만 다르게 둔 별도 게시판 생성
 
                     요청 시 확인할 핵심 규칙:
-                    - channelType은 NOTICE, EVENT, RESOURCE, CUSTOM만 허용됩니다.
+                    - channelType은 NOTICE, EVENT, RESOURCE, GUIDE, CUSTOM만 허용됩니다.
                     - channelType을 생략하면 CUSTOM으로 생성됩니다.
                     - 생성되는 채널은 항상 STANDALONE / refId=null 입니다.
                     - accessLevel이 기본 읽기/댓글/글쓰기 허용 범위를 결정합니다.
