@@ -56,6 +56,10 @@
                 <span>이번 주 예정 수업</span>
                 <strong th:text="${summary.weeklyScheduledLessonCount}">0</strong>
             </a>
+            <a class="metric" th:href="@{/admin/event/events(startDate=${summary.today})}">
+                <span>예정된 행사</span>
+                <strong th:text="${summary.upcomingEventCount}">0</strong>
+            </a>
         </section>
 
         <div class="dashboard-grid">
@@ -103,6 +107,10 @@
                     <a class="metric" th:href="@{/admin/lesson/lessons}">
                         <span>수업 관리</span>
                         <p style="font-size: 13px; margin: 4px 0 0;">수업 일정과 운영 상태 조회</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/event/events}">
+                        <span>행사 일정 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">캘린더 행사 일정 등록/수정</p>
                     </a>
                     <a class="metric" th:href="@{/admin/daily-schedule/daily-schedules}">
                         <span>하루 일정 관리</span>

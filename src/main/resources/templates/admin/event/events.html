@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('행사 일정 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>행사 일정</h1>
+                <p>캘린더에 표시되는 행사 일정을 날짜 기준으로 조회합니다.</p>
+            </div>
+            <a class="button" th:href="@{/admin/event/events/new}">행사 등록</a>
+        </div>
+
+        <form class="panel filter-grid" th:action="@{/admin/event/events}" method="get">
+            <label>시작일
+                <input name="startDate" type="date" th:value="${filter.startDate}">
+            </label>
+            <label>종료일
+                <input name="endDate" type="date" th:value="${filter.endDate}">
+            </label>
+            <label>페이지 크기
+                <select name="size">
+                    <option value="10" th:selected="${eventsPage.size == 10}">10</option>
+                    <option value="20" th:selected="${eventsPage.size == 20}">20</option>
+                    <option value="50" th:selected="${eventsPage.size == 50}">50</option>
+                    <option value="100" th:selected="${eventsPage.size == 100}">100</option>
+                </select>
+            </label>
+            <label>정렬
+                <select name="sort">
+                    <option value="eventDate,ASC;startTime,ASC;id,ASC" th:selected="${filter.sort == null || filter.sort == 'eventDate,ASC;startTime,ASC;id,ASC'}">날짜 오름차순</option>
+                    <option value="eventDate,DESC;startTime,ASC;id,ASC" th:selected="${filter.sort == 'eventDate,DESC;startTime,ASC;id,ASC'}">날짜 내림차순</option>
+                    <option value="title,ASC" th:selected="${filter.sort == 'title,ASC'}">제목 오름차순</option>
+                    <option value="updatedAt,DESC" th:selected="${filter.sort == 'updatedAt,DESC'}">수정일 최신순</option>
+                </select>
+            </label>
+            <button class="button" type="submit">조회</button>
+            <a class="reset-link" th:href="@{/admin/event/events}">초기화</a>
+        </form>
+
+        <section class="panel table-panel">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>행사일</th>
+                        <th>시간</th>
+                        <th>제목</th>
+                        <th>마지막 수정자</th>
+                        <th>수정일</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="event : ${eventsPage.content}">
+                        <td th:text="${event.id}">1</td>
+                        <td th:text="${event.eventDate}">2026-05-13</td>
+                        <td th:text="${event.startTime != null && event.endTime != null ? event.startTime + ' - ' + event.endTime : '-'}">19:00 - 21:00</td>
+                        <td><a class="link" th:href="@{/admin/event/events/{eventId}/edit(eventId=${event.id})}" th:text="${event.title}">문학의 밤</a></td>
+                        <td th:text="${event.lastModifiedByName}">관리자</td>
+                        <td th:text="${event.updatedAt != null ? #temporals.format(event.updatedAt, 'yyyy.MM.dd HH:mm') : '-'}">2026.05.01 10:00</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(eventsPage.content)}">
+                        <td colspan="6" class="empty">조회된 행사가 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pager">
+                <span th:text="|총 ${eventsPage.totalElements}건 · ${eventsPage.page + 1}/${eventsPage.totalPages == 0 ? 1 : eventsPage.totalPages} 페이지|">총 0건</span>
+                <div>
+                    <a class="reset-link" th:classappend="${!eventsPage.hasPrevious()} ? 'disabled'" th:href="@{/admin/event/events(startDate=${filter.startDate},endDate=${filter.endDate},size=${eventsPage.size},sort=${filter.sort},page=${eventsPage.previousPage()})}">이전</a>
+                    <a class="reset-link" th:classappend="${!eventsPage.hasNext()} ? 'disabled'" th:href="@{/admin/event/events(startDate=${filter.startDate},endDate=${filter.endDate},size=${eventsPage.size},sort=${filter.sort},page=${eventsPage.nextPage()})}">다음</a>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

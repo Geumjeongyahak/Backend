@@ -40,7 +40,7 @@
 
 | API | 권한 | 설명 |
 |---|---|---|
-| 조회 (Query) | `channel.can('read')` | 채널 읽기 권한 필요 |
+| 조회 (Query) | `channel.can('read')` | 채널 읽기 권한 필요. `allowGuestRead=true` 채널은 비로그인 조회 가능 |
 | 초안/발행 (Draft/Publish) | `channel.can('write')` + 소유권 | 작성 권한 및 본인 글 확인 |
 | 수정/삭제 (Write) | `channel.can('manage')` or 소유권 | 관리자 또는 본인 |
 | 고정 (Pin) | `channel.can('manage')` | 관리자 전용 |
@@ -109,6 +109,7 @@
 
 #### 4.4.2 게시글 상세 조회
 - **URL**: `GET /api/v1/channels/{channelId}/posts/{postId}`
+- `allowGuestRead=true` 채널의 발행 게시글은 비로그인 사용자도 조회할 수 있습니다.
 
 #### 4.4.3 통합 게시판 조회
 - **URL**: `GET /api/v1/posts`

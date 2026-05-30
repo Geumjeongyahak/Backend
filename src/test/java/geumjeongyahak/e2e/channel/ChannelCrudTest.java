@@ -120,6 +120,36 @@ public class ChannelCrudTest extends BaseChannelTest {
     }
 
     @Test
+    @DisplayName("관리자는 안내 채널을 생성할 수 있다")
+    void createChannel_GuideType_Success() {
+        CreateChannelRequest request = new CreateChannelRequest(
+                "테스트 안내 채널",
+                "안내 테스트용 채널",
+                "GUIDE",
+                false,
+                true,
+                "READ_ONLY",
+                true
+        );
+
+        Long channelId = given()
+                .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+                .contentType(ContentType.JSON)
+                .body(request)
+                .when()
+                .post()
+                .then()
+                .statusCode(201)
+                .body("channelType", equalTo("GUIDE"))
+                .body("bindingType", equalTo("STANDALONE"))
+                .extract()
+                .jsonPath()
+                .getLong("id");
+
+        testChannelHelper.registerChannel(channelId);
+    }
+
+    @Test
     @DisplayName("채널 유형을 생략하면 커스텀 채널로 생성된다")
     void createChannel_DefaultCustomType_Success() {
         CreateChannelRequest request = new CreateChannelRequest(
@@ -169,7 +199,7 @@ public class ChannelCrudTest extends BaseChannelTest {
                 .post()
                 .then()
                 .statusCode(400)
-                .body("detail", equalTo("수동 생성 채널 유형은 NOTICE, EVENT, RESOURCE, CUSTOM만 허용됩니다."));
+                .body("detail", equalTo("수동 생성 채널 유형은 NOTICE, EVENT, RESOURCE, GUIDE, CUSTOM만 허용됩니다."));
     }
 
     @Test
@@ -193,7 +223,7 @@ public class ChannelCrudTest extends BaseChannelTest {
                 .post()
                 .then()
                 .statusCode(400)
-                .body("detail", equalTo("알 수 없는 채널 유형입니다. 허용 값: NOTICE, EVENT, RESOURCE, CUSTOM"));
+                .body("detail", equalTo("알 수 없는 채널 유형입니다. 허용 값: NOTICE, EVENT, RESOURCE, GUIDE, CUSTOM"));
     }
 
     @Test

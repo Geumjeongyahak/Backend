@@ -6,6 +6,28 @@
 
 ## 1. 사용자 관리 API
 
+### 1.0. 교사 연락망 조회
+현재 활동 중인 교사 목록을 연락망 화면용으로 조회합니다.
+
+- **URL**: `/api/v1/teachers/contact-list`
+- **Method**: `GET`
+- **Authorization**: 교사 이상 권한 필요 (`VOLUNTEER`, `MANAGER`, `ADMIN`)
+- **Response**: `200 OK` (`List<TeacherContactResponse>`)
+  ```json
+  [
+    {
+      "id": 2,
+      "name": "홍길동",
+      "classroomName": "국화반",
+      "phoneNumber": "010-1234-5678"
+    }
+  ]
+  ```
+
+조회 기준:
+- `teacherStartAt`이 오늘 이전 또는 오늘인 사용자
+- `teacherEndAt`이 없거나 오늘 이후 또는 오늘인 사용자
+
 ### 1.1. 사용자 목록 조회
 전체 사용자 목록을 페이지네이션 및 검색 조건에 따라 조회합니다.
 

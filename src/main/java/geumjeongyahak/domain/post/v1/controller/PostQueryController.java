@@ -6,7 +6,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import geumjeongyahak.common.security.service.CustomUserDetails;
@@ -46,7 +45,6 @@ public class PostQueryController {
         return ResponseEntity.ok(postCrudService.getPosts(channelId, userDetails, request));
     }
 
-    @PreAuthorize("isAuthenticated() && @channelAccess.can('read', #channelId, principal)")
     @Operation(
             summary = "게시글 상세 조회",
             description = """
@@ -59,8 +57,9 @@ public class PostQueryController {
     @GetMapping("/{postId}")
     public ResponseEntity<PostDetailResponse> getPost(
             @PathVariable Long channelId,
-            @PathVariable Long postId
+            @PathVariable Long postId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ResponseEntity.ok(postCrudService.getPost(channelId, postId));
+        return ResponseEntity.ok(postCrudService.getPost(channelId, postId, userDetails));
     }
 }

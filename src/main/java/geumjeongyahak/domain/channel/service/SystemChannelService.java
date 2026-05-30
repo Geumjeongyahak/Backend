@@ -66,7 +66,8 @@ public class SystemChannelService {
                         ChannelType.NOTICE,
                         null,
                         isDefault,
-                        ChannelAccessLevel.READ_ONLY
+                        ChannelAccessLevel.READ_ONLY,
+                        true
                 ));
     }
 
@@ -79,7 +80,8 @@ public class SystemChannelService {
                         ChannelType.EVENT,
                         null,
                         isDefault,
-                        ChannelAccessLevel.READ_ONLY
+                        ChannelAccessLevel.READ_ONLY,
+                        true
                 ));
     }
 
@@ -92,7 +94,8 @@ public class SystemChannelService {
                         ChannelType.RESOURCE,
                         null,
                         isDefault,
-                        ChannelAccessLevel.READ_ONLY
+                        ChannelAccessLevel.READ_ONLY,
+                        false
                 ));
     }
 
@@ -125,7 +128,8 @@ public class SystemChannelService {
             ChannelType channelType,
             Long refId,
             boolean isDefault,
-            ChannelAccessLevel accessLevel
+            ChannelAccessLevel accessLevel,
+            boolean allowGuestRead
     ) {
         Channel channel = channelRepository.save(Channel.builder()
                 .name(name)
@@ -134,6 +138,7 @@ public class SystemChannelService {
                 .bindingType(ChannelBindingType.STANDALONE)
                 .refId(refId)
                 .accessLevel(accessLevel)
+                .allowGuestRead(allowGuestRead)
                 .isDefault(isDefault)
                 .isActive(true)
                 .build());
