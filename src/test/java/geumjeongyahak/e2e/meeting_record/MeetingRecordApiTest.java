@@ -29,6 +29,7 @@ class MeetingRecordApiTest extends BaseE2ETest {
 
     private static final String AUTHOR = "meeting-author@test.com";
     private static final String OTHER = "meeting-other@test.com";
+    private static final String MANAGER = "meeting-manager@test.com";
     private static final String GUEST = "meeting-guest@test.com";
 
     private String adminToken;
@@ -48,6 +49,7 @@ class MeetingRecordApiTest extends BaseE2ETest {
         super.setUp();
         userTestHelper.createTestUser(AUTHOR, "회의록 작성자", "password", RoleType.VOLUNTEER);
         userTestHelper.createTestUser(OTHER, "다른 스태프", "password", RoleType.VOLUNTEER);
+        userTestHelper.createTestUser(MANAGER, "매니저", "password", RoleType.MANAGER);
         userTestHelper.createTestUser(GUEST, "게스트", "password", RoleType.GUEST);
 
         adminToken = userTestHelper.generateAccessTokenByUserKey(TEST_ADMIN_EMAIL);
@@ -244,7 +246,7 @@ class MeetingRecordApiTest extends BaseE2ETest {
     @DisplayName("관리자 수정 화면 조회는 조회수를 증가시키지 않는다")
     void adminEditForm_doesNotIncrementViewCount() {
         Long recordId = createRecord(authorToken, "조회수 테스트", "안건");
-        String adminSessionId = loginAdminSession();
+        String adminSessionId = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
 
         given()
             .cookie("JSESSIONID", adminSessionId)
@@ -255,6 +257,35 @@ class MeetingRecordApiTest extends BaseE2ETest {
             .body(containsString("조회수 테스트"));
 
         assertThat(meetingRecordRepository.findById(recordId).orElseThrow().getViewCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("매니저는 관리자 화면으로 회의록을 조회하거나 생성할 수 없다")
+    void adminView_Manager_Forbidden() {
+        String managerSessionId = loginAdminSession(MANAGER, "password");
+
+        given()
+            .cookie("JSESSIONID", managerSessionId)
+            .redirects()
+            .follow(false)
+        .when()
+            .get("/admin/meeting-records")
+        .then()
+            .statusCode(403);
+
+        given()
+            .cookie("JSESSIONID", managerSessionId)
+            .contentType(ContentType.URLENC)
+            .formParam("title", "매니저 작성")
+            .formParam("agenda", "안건")
+            .redirects()
+            .follow(false)
+        .when()
+            .post("/admin/meeting-records")
+        .then()
+            .statusCode(403);
+
+        assertThat(meetingRecordRepository.findAll()).isEmpty();
     }
 
     private Long createRecord(String token, String title, String agenda) {
@@ -285,11 +316,11 @@ class MeetingRecordApiTest extends BaseE2ETest {
             .getLong("id");
     }
 
-    private String loginAdminSession() {
+    private String loginAdminSession(String username, String password) {
         return given()
             .contentType(ContentType.URLENC)
-            .formParam("username", TEST_ADMIN_EMAIL)
-            .formParam("password", TEST_ADMIN_PASSWORD)
+            .formParam("username", username)
+            .formParam("password", password)
             .redirects()
             .follow(false)
         .when()

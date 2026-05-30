@@ -219,7 +219,21 @@ permission code로는 표현되지 않습니다.
 | `GET /api/v1/channels/{channelId}/posts/{postId}/comments` | 인증만 |
 | `DELETE /api/v1/channels/{channelId}/posts/{postId}/comments/{commentId}` | 채널 manage 권한 \| 댓글 작성자 본인 |
 
-### 5.10 File
+### 5.10 MeetingRecord
+
+| API | 접근 조건 |
+|-----|---------|
+| `GET /api/v1/meeting-records` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` |
+| `GET /api/v1/meeting-records/{recordId}` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` |
+| `POST /api/v1/meeting-records` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` |
+| `PATCH /api/v1/meeting-records/{recordId}` | `ADMIN` \| 작성자 본인 |
+| `DELETE /api/v1/meeting-records/{recordId}` | `ADMIN` \| 작성자 본인 |
+| `POST /api/v1/meeting-records/{recordId}/absence-reports` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` (회의 전 상태만) |
+| `PATCH /api/v1/meeting-records/{recordId}/absence-reports/{absenceReportId}` | 작성자 본인 (회의 전 상태만) |
+| `DELETE /api/v1/meeting-records/{recordId}/absence-reports/{absenceReportId}` | 작성자 본인 (회의 전 상태만) |
+| `/admin/meeting-records/**` | `ADMIN` |
+
+### 5.11 File
 
 | API | 접근 조건 |
 |-----|---------|
