@@ -1,6 +1,8 @@
 package geumjeongyahak.e2e.meeting_record;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
@@ -147,11 +149,21 @@ class MeetingRecordApiTest extends BaseE2ETest {
             .body("discussion", equalTo("논의 사항"))
             .body("suggestion", equalTo("제안 사항"))
             .body("status", equalTo("AFTER_MEETING"));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("status", "BEFORE_MEETING"))
+        .when()
+            .patch("/api/v1/meeting-records/{recordId}", recordId)
+        .then()
+            .statusCode(409)
+            .body("code", equalTo("MR-005"));
     }
 
     @Test
-    @DisplayName("AFTER_MEETING에서도 불참 사유서는 추가 가능하지만 수정과 삭제는 불가능하다")
-    void absenceReport_afterMeeting_allowsCreateOnly() {
+    @DisplayName("AFTER_MEETING에서는 불참 사유서를 생성, 수정, 삭제할 수 없다")
+    void absenceReport_afterMeeting_blocksAllWrites() {
         Long recordId = createRecord(authorToken, "회의록", "안건");
         Long reportId = createAbsenceReport(recordId, otherToken, "기존 사유", "기존 의견");
 
@@ -172,8 +184,8 @@ class MeetingRecordApiTest extends BaseE2ETest {
         .when()
             .post("/api/v1/meeting-records/{recordId}/absence-reports", recordId)
         .then()
-            .statusCode(201)
-            .body("reason", equalTo("추가 사유"));
+            .statusCode(409)
+            .body("code", equalTo("MR-005"));
 
         given()
             .header(AUTH_HEADER, getAuthHeader(otherToken))
@@ -228,6 +240,23 @@ class MeetingRecordApiTest extends BaseE2ETest {
             .statusCode(204);
     }
 
+    @Test
+    @DisplayName("관리자 수정 화면 조회는 조회수를 증가시키지 않는다")
+    void adminEditForm_doesNotIncrementViewCount() {
+        Long recordId = createRecord(authorToken, "조회수 테스트", "안건");
+        String adminSessionId = loginAdminSession();
+
+        given()
+            .cookie("JSESSIONID", adminSessionId)
+        .when()
+            .get("/admin/meeting-records/{recordId}/edit", recordId)
+        .then()
+            .statusCode(200)
+            .body(containsString("조회수 테스트"));
+
+        assertThat(meetingRecordRepository.findById(recordId).orElseThrow().getViewCount()).isZero();
+    }
+
     private Long createRecord(String token, String title, String agenda) {
         return given()
             .header(AUTH_HEADER, getAuthHeader(token))
@@ -254,5 +283,21 @@ class MeetingRecordApiTest extends BaseE2ETest {
             .extract()
             .jsonPath()
             .getLong("id");
+    }
+
+    private String loginAdminSession() {
+        return given()
+            .contentType(ContentType.URLENC)
+            .formParam("username", TEST_ADMIN_EMAIL)
+            .formParam("password", TEST_ADMIN_PASSWORD)
+            .redirects()
+            .follow(false)
+        .when()
+            .post("/admin/auth/login")
+        .then()
+            .statusCode(302)
+            .header("Location", containsString("/admin"))
+            .extract()
+            .cookie("JSESSIONID");
     }
 }

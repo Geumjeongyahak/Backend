@@ -40,6 +40,10 @@ public class MeetingRecordAdminViewService {
         return meetingRecordService.getMeetingRecord(requesterId, recordId);
     }
 
+    public MeetingRecordDetailResponse getMeetingRecordForEdit(Long requesterId, Long recordId) {
+        return meetingRecordService.getMeetingRecordWithoutViewCount(requesterId, recordId);
+    }
+
     @Transactional
     public Long createMeetingRecord(Long requesterId, String title, String agenda) {
         return meetingRecordService.createMeetingRecord(

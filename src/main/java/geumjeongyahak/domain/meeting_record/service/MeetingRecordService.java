@@ -67,6 +67,11 @@ public class MeetingRecordService {
         return MeetingRecordDetailResponse.from(record);
     }
 
+    public MeetingRecordDetailResponse getMeetingRecordWithoutViewCount(Long requesterId, Long recordId) {
+        getStaffUser(requesterId);
+        return MeetingRecordDetailResponse.from(getActiveRecord(recordId));
+    }
+
     @Transactional
     public MeetingRecordDetailResponse updateMeetingRecord(
         Long requesterId,
@@ -77,6 +82,7 @@ public class MeetingRecordService {
         getStaffUser(requesterId);
         MeetingRecord record = getActiveRecord(recordId);
         assertRecordOwnerOrAdmin(record, requesterId, isAdmin);
+        assertValidStatusTransition(record, request.status());
 
         record.update(
             normalizeRequiredIfPresent(request.title()),
@@ -104,6 +110,7 @@ public class MeetingRecordService {
     ) {
         User author = getStaffUser(requesterId);
         MeetingRecord record = getActiveRecord(recordId);
+        assertBeforeMeeting(record);
         MeetingAbsenceReport report = new MeetingAbsenceReport(
             author,
             requireText(request.reason()),
@@ -178,6 +185,15 @@ public class MeetingRecordService {
 
     private void assertBeforeMeeting(MeetingRecord record) {
         if (record.getStatus() != MeetingRecordStatus.BEFORE_MEETING) {
+            throw new BusinessException(MeetingRecordErrorCode.INVALID_STATUS);
+        }
+    }
+
+    private void assertValidStatusTransition(MeetingRecord record, MeetingRecordStatus nextStatus) {
+        if (nextStatus == null || nextStatus == record.getStatus()) {
+            return;
+        }
+        if (record.getStatus() == MeetingRecordStatus.AFTER_MEETING && nextStatus == MeetingRecordStatus.BEFORE_MEETING) {
             throw new BusinessException(MeetingRecordErrorCode.INVALID_STATUS);
         }
     }

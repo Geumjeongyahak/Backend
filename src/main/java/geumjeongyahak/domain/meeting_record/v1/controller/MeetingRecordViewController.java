@@ -100,7 +100,7 @@ public class MeetingRecordViewController {
         Model model,
         Authentication authentication
     ) {
-        MeetingRecordDetailResponse record = meetingRecordAdminViewService.getMeetingRecord(userDetails.getUserId(), recordId);
+        MeetingRecordDetailResponse record = meetingRecordAdminViewService.getMeetingRecordForEdit(userDetails.getUserId(), recordId);
         MeetingRecordForm form = new MeetingRecordForm();
         form.setTitle(record.title());
         form.setAgenda(record.agenda());
@@ -127,7 +127,7 @@ public class MeetingRecordViewController {
     ) {
         if (bindingResult.hasErrors()) {
             addBaseModel(model, authentication);
-            model.addAttribute("record", meetingRecordAdminViewService.getMeetingRecord(userDetails.getUserId(), recordId));
+            model.addAttribute("record", meetingRecordAdminViewService.getMeetingRecordForEdit(userDetails.getUserId(), recordId));
             model.addAttribute("statuses", meetingRecordAdminViewService.getStatuses());
             return "admin/meeting-record/meeting-records-edit";
         }
