@@ -1,6 +1,7 @@
 package geumjeongyahak.e2e.file;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
@@ -8,6 +9,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
@@ -65,6 +67,101 @@ public class FileUploadTest extends BaseFileTest {
             .statusCode(200)
             .body("downloadUrl", containsString("/documents/attachments/"))
             .body("downloadUrl", containsString("expires=30"));
+    }
+
+    @Test
+    @DisplayName("인증된 사용자는 Google Drive 파일 메타데이터를 등록하고 다운로드 URL로 Drive 링크를 조회할 수 있다")
+    void registerDriveFile_andGetDownloadUrl_success() {
+        String driveUrl = "https://drive.google.com/file/d/drive-file-123/view?usp=sharing";
+
+        UUID fileId = UUID.fromString(
+            given()
+                .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+                .contentType(ContentType.JSON)
+                .body(Map.of(
+                    "driveUrl", driveUrl,
+                    "originalName", "자료집.pdf",
+                    "mimeType", "application/pdf",
+                    "fileSize", 204800
+                ))
+            .when()
+                .post("/drive")
+            .then()
+                .statusCode(201)
+                .body("fileId", notNullValue())
+                .body("originalName", equalTo("자료집.pdf"))
+                .body("contentType", equalTo("application/pdf"))
+                .body("fileSize", equalTo(204800))
+                .body("ext", equalTo("pdf"))
+                .body("isGoogleDrive", equalTo(true))
+                .body("url", equalTo(driveUrl))
+                .extract()
+                .path("fileId")
+        );
+
+        File file = fileRepository.findById(fileId).orElseThrow();
+        assertThat(file.getBucket()).isEqualTo(File.GOOGLE_DRIVE_BUCKET);
+        assertThat(file.isGoogleDrive()).isTrue();
+        assertThat(file.getStorageKey()).isEqualTo("drive-file-123");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+        .when()
+            .get("/attachments/{fileId}/download-url", fileId)
+        .then()
+            .statusCode(200)
+            .body("downloadUrl", equalTo(driveUrl));
+    }
+
+    @Test
+    @DisplayName("확장자가 없는 Google Drive 파일명은 drive 확장자로 등록된다")
+    void registerDriveFile_withoutExtension_usesDriveExtension() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "driveUrl", "https://docs.google.com/document/d/document-123/edit",
+                "originalName", "운영 회의록",
+                "mimeType", "application/vnd.google-apps.document"
+            ))
+        .when()
+            .post("/drive")
+        .then()
+            .statusCode(201)
+            .body("originalName", equalTo("운영 회의록"))
+            .body("contentType", equalTo("application/vnd.google-apps.document"))
+            .body("ext", equalTo("drive"));
+    }
+
+    @Test
+    @DisplayName("인증 없이 Google Drive 파일 등록을 호출하면 실패한다")
+    void registerDriveFile_unauthorized() {
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "driveUrl", "https://drive.google.com/file/d/drive-file-123/view",
+                "originalName", "자료집.pdf"
+            ))
+        .when()
+            .post("/drive")
+        .then()
+            .statusCode(401);
+    }
+
+    @Test
+    @DisplayName("게스트는 Google Drive 파일 메타데이터를 등록할 수 없다")
+    void registerDriveFile_guest_forbidden() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(guestAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "driveUrl", "https://drive.google.com/file/d/drive-file-guest/view",
+                "originalName", "게스트자료.pdf"
+            ))
+        .when()
+            .post("/drive")
+        .then()
+            .statusCode(403);
     }
 
     @Test

@@ -10,11 +10,13 @@
 - [Subjects](./Subjects.md)
 - [TeacherApplications](./TeacherApplications.md)
 - [Lessons](./Lessons.md)
+- [Events](./Events.md)
 - [DailySchedules](./DailySchedules.md)
 - [Requests](./Requests.md)
 - [PurchaseRequests](./PurchaseRequests.md)
 - [Channels](./Channels.md)
 - [Posts](./Posts.md)
+- [Files](./Files.md)
 - [Comments](./Comments.md)
 - [SiteContent](./SiteContent.md)
 

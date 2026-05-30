@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('행사 등록')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>행사 등록</h1>
+                <p>캘린더에 표시할 행사 일정을 등록합니다.</p>
+            </div>
+            <a class="reset-link" th:href="@{/admin/event/events}">목록으로</a>
+        </div>
+
+        <p class="flash"
+           style="margin: 0; background: #fff0ed; color: var(--danger);"
+           th:if="${errorMessage}"
+           th:text="${errorMessage}">
+            요청을 처리할 수 없습니다.
+        </p>
+
+        <form class="panel form-grid" th:action="@{/admin/event/events}" method="post">
+            <label>제목
+                <input name="title" maxlength="100" required th:value="${form != null ? form.title : ''}">
+            </label>
+            <label>행사일
+                <input name="eventDate" type="date" required th:value="${form != null ? form.eventDate : ''}">
+            </label>
+            <label>시작 시간
+                <input name="startTime" type="time" th:value="${form != null ? form.startTime : ''}">
+            </label>
+            <label>종료 시간
+                <input name="endTime" type="time" th:value="${form != null ? form.endTime : ''}">
+            </label>
+            <label>설명
+                <textarea name="description" th:text="${form != null ? form.description : ''}"></textarea>
+            </label>
+            <button class="button" type="submit">등록</button>
+        </form>
+    </main>
+</div>
+</body>
+</html>

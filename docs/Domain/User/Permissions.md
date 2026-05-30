@@ -208,7 +208,7 @@ permission code로는 표현되지 않습니다.
 |-----|---------|
 | `GET /api/v1/posts` (전체 게시글) | 인증만 |
 | `GET /api/v1/channels/{channelId}/posts` | `channel:read:{channelId}` \| `channel:read:*` \| accessLevel ≥ READ_ONLY |
-| `GET /api/v1/channels/{channelId}/posts/{postId}` | 인증만 |
+| `GET /api/v1/channels/{channelId}/posts/{postId}` | `channel:read:{channelId}` \| `channel:read:*` \| accessLevel ≥ READ_ONLY \| allowGuestRead |
 | `POST /api/v1/channels/{channelId}/posts` (게시) | `channel:write:{channelId}` \| `channel:write:*` \| accessLevel ≥ READ_WRITE |
 | `POST /api/v1/channels/{channelId}/posts/drafts` | 채널 write 권한 동일 |
 | `PUT /api/v1/channels/{channelId}/posts/{postId}/publish` | 채널 write 권한 동일 |
@@ -227,6 +227,7 @@ permission code로는 표현되지 않습니다.
 | `POST /api/v1/files/images/posts` | 인증만 |
 | `POST /api/v1/files/images/purchase-items` | 인증만 |
 | `POST /api/v1/files/attachments` | 인증만 |
+| `POST /api/v1/files/drive` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` |
 | `GET /api/v1/files/attachments/{fileId}/download-url` | 인증만 |
 | `DELETE /api/v1/files/attachments/{fileId}` | 인증만 |
 

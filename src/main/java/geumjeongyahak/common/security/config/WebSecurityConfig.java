@@ -117,6 +117,7 @@ public class WebSecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/site-contents/departments").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/site-contents/classes").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/lessons").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/events", "/api/v1/events/*").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/channels").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/posts").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/channels/*/posts", "/api/v1/channels/*/posts/**").permitAll()
