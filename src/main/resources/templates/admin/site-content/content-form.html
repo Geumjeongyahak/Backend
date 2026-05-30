@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('사이트 콘텐츠 등록')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>사이트 콘텐츠 등록</h1>
+                <p>교장, 부서, 반 소개 콘텐츠를 등록합니다.</p>
+            </div>
+        </div>
+        <form class="panel form-grid" th:action="@{/admin/site-content/contents}" method="post">
+            <label>유형
+                <select name="contentType" required>
+                    <option th:each="type : ${contentTypes}" th:value="${type.name()}" th:text="${type.name()}">DEPARTMENT</option>
+                </select>
+            </label>
+            <label>제목 <input name="title" required maxlength="120"></label>
+            <label>이름 <input name="name" maxlength="80" placeholder="교장 이름처럼 별도 표시가 필요할 때"></label>
+            <label>연결 ID <input type="number" name="refId" placeholder="department/classroom ID"></label>
+            <label>반 그룹
+                <select name="group">
+                    <option value="">없음</option>
+                    <option th:each="group : ${groups}" th:value="${group.name()}" th:text="${group.name()}">WEEKDAY</option>
+                </select>
+            </label>
+            <label>정렬 <input type="number" name="sortOrder" value="0"></label>
+            <label style="grid-column: 1 / -1;">문구 목록
+                <textarea name="itemsText" rows="6" placeholder="한 줄에 하나씩 입력"></textarea>
+            </label>
+            <button class="button" type="submit">등록</button>
+            <a class="reset-link" th:href="@{/admin/site-content/contents}">취소</a>
+        </form>
+    </main>
+</div>
+</body>
+</html>

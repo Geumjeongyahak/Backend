@@ -70,6 +70,37 @@ public class FileUploadTest extends BaseFileTest {
     }
 
     @Test
+    @DisplayName("관리자는 사이트 콘텐츠 이미지를 업로드할 수 있다")
+    void uploadSiteContentImage_admin_success() throws IOException {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.MULTIPART)
+            .multiPart("file", "history.jpg", "fake-image".getBytes(StandardCharsets.UTF_8), "image/jpeg")
+        .when()
+            .post("/images/site-contents")
+        .then()
+            .statusCode(201)
+            .body("fileId", notNullValue())
+            .body("originalName", equalTo("history.jpg"))
+            .body("contentType", equalTo("image/jpeg"))
+            .body("ext", equalTo("jpg"))
+            .body("url", containsString("/site-contents/"));
+    }
+
+    @Test
+    @DisplayName("봉사자는 사이트 콘텐츠 이미지를 업로드할 수 없다")
+    void uploadSiteContentImage_volunteer_forbidden() throws IOException {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+            .contentType(ContentType.MULTIPART)
+            .multiPart("file", "history.jpg", "fake-image".getBytes(StandardCharsets.UTF_8), "image/jpeg")
+        .when()
+            .post("/images/site-contents")
+        .then()
+            .statusCode(403);
+    }
+
+    @Test
     @DisplayName("인증된 사용자는 Google Drive 파일 메타데이터를 등록하고 다운로드 URL로 Drive 링크를 조회할 수 있다")
     void registerDriveFile_andGetDownloadUrl_success() {
         String driveUrl = "https://drive.google.com/file/d/drive-file-123/view?usp=sharing";

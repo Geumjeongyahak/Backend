@@ -89,6 +89,25 @@ public class FileController {
             .body(imageUploadService.uploadPostImage(file));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "사이트 콘텐츠 이미지 업로드",
+        description = "연혁, 기관 소개처럼 공개 사이트 콘텐츠에서 사용할 이미지를 업로드합니다. "
+            + "업로드된 이미지는 site-contents 디렉터리에 저장되고 files 테이블에 메타데이터가 기록됩니다. "
+            + "응답의 url은 site-content 연혁 photos[].src 등에 그대로 저장해 사용할 수 있습니다."
+    )
+    @PostMapping(value = "/images/site-contents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<FileUploadResponse> uploadSiteContentImage(
+        @Parameter(
+            description = "사이트 콘텐츠에서 사용할 이미지 파일. JPG, PNG, GIF, WEBP 형식을 허용합니다."
+        )
+        @RequestPart("file") MultipartFile file
+    ) {
+        log.debug("POST /api/v1/files/images/site-contents - 사이트 콘텐츠 이미지 업로드 요청");
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(imageUploadService.uploadSiteContentImage(file));
+    }
+
     @PreAuthorize("isAuthenticated()")
     @Operation(
         summary = "구매 대상 이미지 업로드",

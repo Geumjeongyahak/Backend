@@ -18,6 +18,7 @@ public abstract class BaseFileTest extends BaseE2ETest {
 
     protected String userAccessToken;
     protected String guestAccessToken;
+    protected String adminAccessToken;
 
     @Autowired
     protected FileRepository fileRepository;
@@ -32,6 +33,7 @@ public abstract class BaseFileTest extends BaseE2ETest {
         userTestHelper.createTestUser(TEST_FILE_GUEST, RoleType.GUEST);
         userAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_FILE_USER);
         guestAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_FILE_GUEST);
+        adminAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_ADMIN_USERNAME);
     }
 
     @AfterEach
