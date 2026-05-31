@@ -7,10 +7,12 @@
         <div class="page-title"><div><h1>연혁 수정</h1><p th:text="|#${history.id} ${history.title}|">연혁</p></div></div>
         <form class="panel form-grid" th:action="@{/admin/site-content/history/{historyId}(historyId=${history.id})}" method="post" enctype="multipart/form-data">
             <label>제목 <input name="title" required maxlength="120" th:value="${history.title}"></label>
+            <label>날짜 <input type="date" name="historyDate" required th:value="${history.historyDate}"></label>
             <label>정렬 <input type="number" name="sortOrder" th:value="${history.sortOrder}"></label>
-            <label>링크 라벨 <input name="linkLabel" maxlength="120" th:value="${history.linkLabel}"></label>
-            <label>링크 URL <input name="linkHref" th:value="${history.linkHref}"></label>
             <label style="grid-column: 1 / -1;">상세 <textarea name="detail" rows="4" th:text="${history.detail}"></textarea></label>
+            <label style="grid-column: 1 / -1;">링크
+                <textarea name="linksText" rows="4" th:text="${history.linksText}" placeholder="한 줄에 label|href 형식으로 입력"></textarea>
+            </label>
             <label style="grid-column: 1 / -1;">사진
                 <textarea name="photosText" rows="5" th:text="${history.photosText}"></textarea>
             </label>
