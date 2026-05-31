@@ -48,9 +48,15 @@
     {
       "id": 1,
       "title": "금정열린배움터 시작",
+      "historyDate": "1997-01-01",
       "detail": "첫 수업을 시작했습니다.",
-      "linkLabel": "소개",
-      "linkHref": "https://example.com/history",
+      "links": [
+        {
+          "id": 1,
+          "label": "소개",
+          "href": "https://example.com/history"
+        }
+      ],
       "photos": [
         {
           "id": 1,
@@ -94,9 +100,18 @@
 ```json
 {
   "title": "금정열린배움터 시작",
+  "historyDate": "1997-01-01",
   "detail": "첫 수업을 시작했습니다.",
-  "linkLabel": "소개",
-  "linkHref": "https://example.com/history",
+  "links": [
+    {
+      "label": "소개",
+      "href": "https://example.com/history"
+    },
+    {
+      "label": "사진첩",
+      "href": "https://example.com/photos"
+    }
+  ],
   "photos": [
     {
       "fileId": "550e8400-e29b-41d4-a716-446655440000",
@@ -113,7 +128,20 @@
 - **Method**: `PUT`
 - **Authorization**: `ADMIN`
 
+`historyDate`는 연혁의 실제 발생 날짜이며, 공개 조회는 `historyDate` 오름차순으로 반환합니다. 같은 날짜의 항목은 기존 운영 순서를 보존하기 위해 `sortOrder`, `id` 오름차순으로 안정 정렬합니다.
+
+`links`는 요청값 기준으로 전체 교체합니다. `links: []`는 링크 전체 삭제입니다.
+
 `photos`는 요청값 기준으로 전체 교체합니다. `photos: []`는 사진 전체 삭제입니다. 기존 사진을 유지하려면 조회 응답의 `photos[].id`를 그대로 보내면 연결된 파일 정보를 보존합니다. 새로 업로드한 사진은 업로드 응답의 `fileId`를 함께 보내야 삭제/교체 시 파일이 soft delete 됩니다.
+
+수정 요청에서 사용하는 링크 원소:
+
+```json
+{
+  "label": "소개",
+  "href": "https://example.com/history"
+}
+```
 
 수정 요청에서 사용하는 사진 원소:
 
