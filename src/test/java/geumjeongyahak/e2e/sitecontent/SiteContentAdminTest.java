@@ -26,9 +26,12 @@ class SiteContentAdminTest extends SiteContentBaseTest {
     void historyCrud_Admin_Success() {
         Map<String, Object> createRequest = new HashMap<>();
         createRequest.put("title", "금정열린배움터 시작");
+        createRequest.put("historyDate", "1997-01-01");
         createRequest.put("detail", "첫 수업을 시작했습니다.");
-        createRequest.put("linkLabel", "소개");
-        createRequest.put("linkHref", "https://example.com/history");
+        createRequest.put("links", List.of(
+            Map.of("label", "소개", "href", "https://example.com/history"),
+            Map.of("label", "사진첩", "href", "https://example.com/photos")
+        ));
         createRequest.put("photos", List.of(Map.of(
             "src", "https://example.com/photo.jpg",
             "alt", "첫 수업 사진"
@@ -43,15 +46,29 @@ class SiteContentAdminTest extends SiteContentBaseTest {
         .then()
             .statusCode(201)
             .body("title", equalTo("금정열린배움터 시작"))
+            .body("historyDate", equalTo("1997-01-01"))
+            .body("links", hasSize(2))
+            .body("links[1].label", equalTo("사진첩"))
             .body("photos", hasSize(1))
             .extract()
             .path("id");
 
+        Map<String, Object> createResponse = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/history")
+        .then()
+            .statusCode(200)
+            .extract()
+            .path("history[0]");
+        org.assertj.core.api.Assertions.assertThat(createResponse)
+            .doesNotContainKeys("linkLabel", "linkHref");
+
         Map<String, Object> updateRequest = new HashMap<>();
         updateRequest.put("title", "금정열린배움터 확장");
+        updateRequest.put("historyDate", "1998-02-01");
         updateRequest.put("detail", null);
-        updateRequest.put("linkLabel", null);
-        updateRequest.put("linkHref", null);
+        updateRequest.put("links", List.of());
         updateRequest.put("photos", List.of());
 
         given()
@@ -63,7 +80,9 @@ class SiteContentAdminTest extends SiteContentBaseTest {
         .then()
             .statusCode(200)
             .body("title", equalTo("금정열린배움터 확장"))
+            .body("historyDate", equalTo("1998-02-01"))
             .body("detail", equalTo(null))
+            .body("links", hasSize(0))
             .body("photos", hasSize(0));
 
         given()
@@ -82,10 +101,67 @@ class SiteContentAdminTest extends SiteContentBaseTest {
     }
 
     @Test
+    @DisplayName("연혁 생성 날짜에 따라 기존 연혁 사이에 조회된다")
+    void createHistory_WithMiddleDate_SortedByHistoryDate() {
+        Map<String, Object> latestRequest = new HashMap<>();
+        latestRequest.put("title", "세 번째");
+        latestRequest.put("historyDate", "2001-01-01");
+        latestRequest.put("photos", List.of());
+
+        Map<String, Object> earliestRequest = new HashMap<>();
+        earliestRequest.put("title", "첫 번째");
+        earliestRequest.put("historyDate", "1997-01-01");
+        earliestRequest.put("photos", List.of());
+
+        Map<String, Object> middleRequest = new HashMap<>();
+        middleRequest.put("title", "두 번째");
+        middleRequest.put("historyDate", "1999-01-01");
+        middleRequest.put("photos", List.of());
+
+        given()
+            .contentType(ContentType.JSON)
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .body(latestRequest)
+        .when()
+            .post("/history")
+        .then()
+            .statusCode(201);
+
+        given()
+            .contentType(ContentType.JSON)
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .body(earliestRequest)
+        .when()
+            .post("/history")
+        .then()
+            .statusCode(201);
+
+        given()
+            .contentType(ContentType.JSON)
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .body(middleRequest)
+        .when()
+            .post("/history")
+        .then()
+            .statusCode(201);
+
+        given()
+        .when()
+            .get("/history")
+        .then()
+            .statusCode(200)
+            .body("history", hasSize(3))
+            .body("history[0].title", equalTo("첫 번째"))
+            .body("history[1].title", equalTo("두 번째"))
+            .body("history[2].title", equalTo("세 번째"));
+    }
+
+    @Test
     @DisplayName("연혁 수정 시 사진 목록은 요청값 기준으로 전체 교체된다")
     void updateHistory_ReplacesPhotos_Success() {
         Map<String, Object> createRequest = new HashMap<>();
         createRequest.put("title", "금정열린배움터 시작");
+        createRequest.put("historyDate", "1997-01-01");
         createRequest.put("photos", List.of(
             Map.of("src", "https://example.com/old-1.jpg", "alt", "기존 사진 1"),
             Map.of("src", "https://example.com/old-2.jpg", "alt", "기존 사진 2")
@@ -105,6 +181,7 @@ class SiteContentAdminTest extends SiteContentBaseTest {
 
         Map<String, Object> updateRequest = new HashMap<>();
         updateRequest.put("title", "금정열린배움터 시작");
+        updateRequest.put("historyDate", "1997-01-01");
         updateRequest.put("photos", List.of(Map.of(
             "src", "https://example.com/new.jpg",
             "alt", "새 사진"
@@ -129,6 +206,7 @@ class SiteContentAdminTest extends SiteContentBaseTest {
         File file = saveSiteContentImageFile();
         Map<String, Object> createRequest = new HashMap<>();
         createRequest.put("title", "금정열린배움터 시작");
+        createRequest.put("historyDate", "1997-01-01");
         createRequest.put("photos", List.of(Map.of(
             "fileId", file.getId().toString(),
             "src", file.getPublicUrl(),
@@ -148,6 +226,7 @@ class SiteContentAdminTest extends SiteContentBaseTest {
 
         Map<String, Object> updateRequest = new HashMap<>();
         updateRequest.put("title", "금정열린배움터 시작");
+        updateRequest.put("historyDate", "1997-01-01");
         updateRequest.put("photos", List.of());
 
         given()
@@ -170,6 +249,7 @@ class SiteContentAdminTest extends SiteContentBaseTest {
         File file = saveSiteContentImageFile();
         Map<String, Object> createRequest = new HashMap<>();
         createRequest.put("title", "금정열린배움터 시작");
+        createRequest.put("historyDate", "1997-01-01");
         createRequest.put("photos", List.of(Map.of(
             "fileId", file.getId().toString(),
             "src", file.getPublicUrl(),
@@ -203,6 +283,7 @@ class SiteContentAdminTest extends SiteContentBaseTest {
     void createHistory_InvalidRequest_BadRequest() {
         Map<String, Object> blankTitleRequest = new HashMap<>();
         blankTitleRequest.put("title", " ");
+        blankTitleRequest.put("historyDate", "1997-01-01");
         blankTitleRequest.put("photos", List.of());
 
         given()
@@ -216,6 +297,7 @@ class SiteContentAdminTest extends SiteContentBaseTest {
 
         Map<String, Object> blankPhotoSrcRequest = new HashMap<>();
         blankPhotoSrcRequest.put("title", "금정열린배움터 시작");
+        blankPhotoSrcRequest.put("historyDate", "1997-01-01");
         blankPhotoSrcRequest.put("photos", List.of(Map.of(
             "src", " ",
             "alt", "빈 URL"
@@ -229,6 +311,162 @@ class SiteContentAdminTest extends SiteContentBaseTest {
             .post("/history")
         .then()
             .statusCode(400);
+
+        Map<String, Object> blankLinkRequest = new HashMap<>();
+        blankLinkRequest.put("title", "금정열린배움터 시작");
+        blankLinkRequest.put("historyDate", "1997-01-01");
+        blankLinkRequest.put("links", List.of(Map.of(
+            "label", " ",
+            "href", "https://example.com/history"
+        )));
+        blankLinkRequest.put("photos", List.of());
+
+        given()
+            .contentType(ContentType.JSON)
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .body(blankLinkRequest)
+        .when()
+            .post("/history")
+        .then()
+            .statusCode(400);
+
+        Map<String, Object> missingHistoryDateRequest = new HashMap<>();
+        missingHistoryDateRequest.put("title", "금정열린배움터 시작");
+        missingHistoryDateRequest.put("photos", List.of());
+
+        given()
+            .contentType(ContentType.JSON)
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .body(missingHistoryDateRequest)
+        .when()
+            .post("/history")
+        .then()
+            .statusCode(400);
+
+        Map<String, Object> legacyLinkRequest = new HashMap<>();
+        legacyLinkRequest.put("title", "금정열린배움터 시작");
+        legacyLinkRequest.put("historyDate", "1997-01-01");
+        legacyLinkRequest.put("linkLabel", "소개");
+        legacyLinkRequest.put("linkHref", "https://example.com/history");
+        legacyLinkRequest.put("photos", List.of());
+
+        given()
+            .contentType(ContentType.JSON)
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .body(legacyLinkRequest)
+        .when()
+            .post("/history")
+        .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("연혁 수정 요청은 제거된 단일 링크 필드를 거부하고 기존 링크를 유지한다")
+    void updateHistory_LegacyLinkFields_BadRequestAndKeepsLinks() {
+        Map<String, Object> createRequest = new HashMap<>();
+        createRequest.put("title", "금정열린배움터 시작");
+        createRequest.put("historyDate", "1997-01-01");
+        createRequest.put("links", List.of(Map.of(
+            "label", "소개",
+            "href", "https://example.com/history"
+        )));
+        createRequest.put("photos", List.of());
+
+        Integer id = given()
+            .contentType(ContentType.JSON)
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .body(createRequest)
+        .when()
+            .post("/history")
+        .then()
+            .statusCode(201)
+            .extract()
+            .path("id");
+
+        Map<String, Object> legacyUpdateRequest = new HashMap<>();
+        legacyUpdateRequest.put("title", "금정열린배움터 수정");
+        legacyUpdateRequest.put("historyDate", "1997-01-01");
+        legacyUpdateRequest.put("linkLabel", "변경 링크");
+        legacyUpdateRequest.put("linkHref", "https://example.com/changed");
+        legacyUpdateRequest.put("photos", List.of());
+
+        given()
+            .contentType(ContentType.JSON)
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .body(legacyUpdateRequest)
+        .when()
+            .put("/history/{id}", id)
+        .then()
+            .statusCode(400);
+
+        given()
+        .when()
+            .get("/history")
+        .then()
+            .statusCode(200)
+            .body("history[0].title", equalTo("금정열린배움터 시작"))
+            .body("history[0].links", hasSize(1))
+            .body("history[0].links[0].label", equalTo("소개"))
+            .body("history[0].links[0].href", equalTo("https://example.com/history"));
+    }
+
+    @Test
+    @DisplayName("관리자 화면 연혁 링크 입력은 잘못된 형식을 저장하지 않는다")
+    void createHistory_AdminViewInvalidLinks_BadRequest() {
+        String adminSessionId = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+
+        given()
+            .basePath("")
+            .cookie("JSESSIONID", adminSessionId)
+            .contentType(ContentType.URLENC)
+            .formParam("title", "금정열린배움터 시작")
+            .formParam("historyDate", "1997-01-01")
+            .formParam("linksText", "소개 https://example.com/history")
+            .redirects()
+            .follow(false)
+        .when()
+            .post("/admin/site-content/history")
+        .then()
+            .statusCode(400);
+
+        org.assertj.core.api.Assertions.assertThat(siteHistoryRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("관리자 화면 연혁 링크 입력은 빈 URL과 긴 라벨을 저장하지 않는다")
+    void createHistory_AdminViewBlankHrefAndLongLabel_BadRequest() {
+        String adminSessionId = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        String longLabel = "가".repeat(121);
+
+        given()
+            .basePath("")
+            .cookie("JSESSIONID", adminSessionId)
+            .contentType(ContentType.URLENC)
+            .formParam("title", "금정열린배움터 시작")
+            .formParam("historyDate", "1997-01-01")
+            .formParam("linksText", "소개|")
+            .redirects()
+            .follow(false)
+        .when()
+            .post("/admin/site-content/history")
+        .then()
+            .statusCode(400);
+
+        given()
+            .basePath("")
+            .cookie("JSESSIONID", adminSessionId)
+            .contentType(ContentType.URLENC)
+            .formParam("title", "금정열린배움터 시작")
+            .formParam("historyDate", "1997-01-01")
+            .formParam("linksText", longLabel + "|https://example.com/history")
+            .redirects()
+            .follow(false)
+        .when()
+            .post("/admin/site-content/history")
+        .then()
+            .statusCode(400);
+
+        org.assertj.core.api.Assertions.assertThat(siteHistoryRepository.findAll()).isEmpty();
     }
 
     @Test
@@ -469,6 +707,7 @@ class SiteContentAdminTest extends SiteContentBaseTest {
 
         Map<String, Object> historyRequest = new HashMap<>();
         historyRequest.put("title", "금정열린배움터 시작");
+        historyRequest.put("historyDate", "1997-01-01");
         historyRequest.put("photos", List.of());
 
         given()
