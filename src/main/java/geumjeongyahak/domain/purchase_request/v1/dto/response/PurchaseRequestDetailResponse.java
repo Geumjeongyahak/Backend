@@ -95,7 +95,7 @@ public record PurchaseRequestDetailResponse(
                 transaction.getId(),
                 transaction.getVendor().getId(),
                 transaction.getVendor().getName(),
-                transaction.getItemNames(),
+                List.copyOf(transaction.getItemNames()),
                 transaction.getAmount(),
                 transaction.getReceiptFile() != null ? transaction.getReceiptFile().getId() : null,
                 transaction.getReceiptFile() != null ? transaction.getReceiptFile().getPublicUrl() : null

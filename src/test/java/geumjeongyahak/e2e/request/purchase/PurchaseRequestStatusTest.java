@@ -571,6 +571,25 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("구매 완료 거래가 있는 단건 조회 → itemNames 직렬화")
+    void getDetail_withPurchasedTransactions_serializesItemNames() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = setupPurchasedRequest(createdVendorId, 20000L, null);
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("PURCHASED"))
+            .body("transactions", hasSize(1))
+            .body("transactions[0].itemNames", hasSize(2))
+            .body("transactions[0].itemNames[0]", equalTo("교재"))
+            .body("transactions[0].itemNames[1]", equalTo("복사용지"));
+    }
+
+    @Test
     @DisplayName("인증 없이 목록 조회 → 401")
     void getList_unauthenticated_returns401() {
         given()
