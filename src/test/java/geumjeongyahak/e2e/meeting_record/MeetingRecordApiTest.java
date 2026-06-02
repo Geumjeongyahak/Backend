@@ -130,6 +130,39 @@ class MeetingRecordApiTest extends BaseE2ETest {
     }
 
     @Test
+    @DisplayName("목록 조회는 keyword 없이도 전체 회의록을 조회한다")
+    void getMeetingRecords_withoutKeyword_returnsRecords() {
+        createRecord(authorToken, "나의 교학 회의", "안건");
+        createRecord(otherToken, "다른 교학 회의", "안건");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(authorToken))
+            .queryParam("size", 9)
+        .when()
+            .get("/api/v1/meeting-records")
+        .then()
+            .statusCode(200)
+            .body("content", hasSize(2));
+    }
+
+    @Test
+    @DisplayName("목록 조회는 공백 keyword를 검색 조건으로 사용하지 않는다")
+    void getMeetingRecords_blankKeyword_ignoresKeywordFilter() {
+        createRecord(authorToken, "나의 교학 회의", "안건");
+        createRecord(otherToken, "다른 교학 회의", "안건");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(authorToken))
+            .queryParam("keyword", "   ")
+            .queryParam("size", 9)
+        .when()
+            .get("/api/v1/meeting-records")
+        .then()
+            .statusCode(200)
+            .body("content", hasSize(2));
+    }
+
+    @Test
     @DisplayName("잘못된 회의록 status 조회 파라미터는 400을 반환한다")
     void getMeetingRecords_invalidStatus_returns400() {
         given()
@@ -290,6 +323,21 @@ class MeetingRecordApiTest extends BaseE2ETest {
             .statusCode(200)
             .body(containsString("관리자 조회 테스트"))
             .body(containsString("불참 사유"));
+    }
+
+    @Test
+    @DisplayName("관리자 회의록 목록은 keyword 없이도 조회할 수 있다")
+    void adminView_withoutKeyword_returns200() {
+        createRecord(authorToken, "관리자 keyword 없음", "안건");
+        String adminSessionId = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+
+        given()
+            .cookie("JSESSIONID", adminSessionId)
+        .when()
+            .get("/admin/meeting-records")
+        .then()
+            .statusCode(200)
+            .body(containsString("관리자 keyword 없음"));
     }
 
     @Test

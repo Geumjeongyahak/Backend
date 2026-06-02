@@ -9,6 +9,7 @@ import geumjeongyahak.domain.meeting_record.enums.MeetingRecordStatus;
 import geumjeongyahak.domain.meeting_record.exception.MeetingRecordErrorCode;
 import geumjeongyahak.domain.meeting_record.repository.MeetingAbsenceReportRepository;
 import geumjeongyahak.domain.meeting_record.repository.MeetingRecordRepository;
+import geumjeongyahak.domain.meeting_record.repository.specification.MeetingRecordSpecs;
 import geumjeongyahak.domain.meeting_record.v1.dto.request.CreateAbsenceReportRequest;
 import geumjeongyahak.domain.meeting_record.v1.dto.request.CreateMeetingRecordRequest;
 import geumjeongyahak.domain.meeting_record.v1.dto.request.MeetingRecordSearchRequest;
@@ -20,6 +21,7 @@ import geumjeongyahak.domain.meeting_record.v1.dto.response.MeetingRecordSummary
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,14 +40,15 @@ public class MeetingRecordService {
     ) {
         User requester = getStaffUser(requesterId);
         Long authorId = Boolean.TRUE.equals(request.getMineOnly()) ? requester.getId() : null;
+        Specification<MeetingRecord> spec = Specification.allOf(
+            MeetingRecordSpecs.isNotDeleted(),
+            MeetingRecordSpecs.containsTitle(request.getKeyword()),
+            MeetingRecordSpecs.hasAuthorId(authorId),
+            MeetingRecordSpecs.hasStatus(request.getStatus())
+        );
 
         return PaginationResponse.from(
-            meetingRecordRepository.search(
-                normalizeKeyword(request.getKeyword()),
-                authorId,
-                request.getStatus(),
-                request.toRequest()
-            ),
+            meetingRecordRepository.findAll(spec, request.toRequest()),
             MeetingRecordSummaryResponse::from
         );
     }
@@ -196,10 +199,6 @@ public class MeetingRecordService {
         if (record.getStatus() == MeetingRecordStatus.AFTER_MEETING && nextStatus == MeetingRecordStatus.BEFORE_MEETING) {
             throw new BusinessException(MeetingRecordErrorCode.INVALID_STATUS);
         }
-    }
-
-    private String normalizeKeyword(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
     }
 
     private String normalizeRequiredIfPresent(String value) {
