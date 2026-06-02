@@ -2,6 +2,9 @@ package geumjeongyahak.e2e.request.lessonexchange;
 
 import geumjeongyahak.domain.request.repository.LessonExchangeProposalRepository;
 import geumjeongyahak.domain.request.repository.LessonExchangeRequestRepository;
+import geumjeongyahak.domain.lesson.dto.LessonTeacherDate;
+import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
+import geumjeongyahak.domain.request.service.LessonExchangeRequestProxyService;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 import io.restassured.http.ContentType;
 import java.time.LocalDate;
@@ -17,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.not;
@@ -31,6 +35,9 @@ class LessonExchangeProposalCreateTest extends RequestBaseTest {
 
     @Autowired
     private LessonExchangeProposalRepository lessonExchangeProposalRepository;
+
+    @Autowired
+    private LessonExchangeRequestProxyService lessonExchangeRequestProxyService;
 
     private final List<Long> subjectIds = new ArrayList<>();
     private final List<Long> lessonIds = new ArrayList<>();
@@ -89,6 +96,38 @@ class LessonExchangeProposalCreateTest extends RequestBaseTest {
             .getLong("id");
 
         proposalIds.add(proposalId);
+    }
+
+    @Test
+    @DisplayName("종료된 요청에 남은 ACTIVE 제안은 일정 변경 차단 대상으로 보지 않는다")
+    void activeProposalOnClosedRequest_isNotBlockingTeacherScheduleChange() {
+        LocalDate requestDate = LocalDate.now().plusDays(6);
+        LocalDate proposalDate = LocalDate.now().plusDays(7);
+        Long requestId = createApprovedRequest(requestDate);
+
+        Long proposerSubjectId = registerSubject(CLASSROOM_ID, TEACHER2_ID);
+        registerLesson(proposerSubjectId, TEACHER2_ID, proposalDate, "09:00:00", "10:00:00", 1);
+
+        Long proposalId = createProposal(
+            requestId,
+            getAuthHeader(volunteer2Token),
+            Map.of(
+                "lessonDate", proposalDate.toString(),
+                "content", "종료 상태 차단 검증용 제안"
+            )
+        );
+        proposalIds.add(proposalId);
+
+        LessonTeacherDate proposalTeacherDate = new LessonTeacherDate(TEACHER2_ID, proposalDate);
+        assertThat(lessonExchangeRequestProxyService.existsActiveExchangeByLessonTeacherDates(List.of(proposalTeacherDate)))
+            .isTrue();
+
+        var exchangeRequest = lessonExchangeRequestRepository.findById(requestId).orElseThrow();
+        ReflectionTestUtils.setField(exchangeRequest, "status", LessonExchangeRequestStatus.CANCELLED);
+        lessonExchangeRequestRepository.save(exchangeRequest);
+
+        assertThat(lessonExchangeRequestProxyService.existsActiveExchangeByLessonTeacherDates(List.of(proposalTeacherDate)))
+            .isFalse();
     }
 
     @Test

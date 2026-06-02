@@ -211,6 +211,7 @@ public class LessonExchangeRequestService {
         }
 
         exchangeRequest.cancel();
+        closeActiveProposals(exchangeRequest);
 
         log.debug("수업 교환 요청 취소 완료 (requestId={}, requesterId={})", requestId, requesterId);
         return LessonExchangeRequestDetailResponse.from(exchangeRequest);
@@ -230,6 +231,7 @@ public class LessonExchangeRequestService {
 
         User approver = userProxyService.getById(approverId);
         exchangeRequest.reject(approver, note);
+        closeActiveProposals(exchangeRequest);
         eventPublisher.publish(RequestReviewedPushEvent.rejected(
             exchangeRequest.getRequestedBy().getId(),
             exchangeRequest.getId(),

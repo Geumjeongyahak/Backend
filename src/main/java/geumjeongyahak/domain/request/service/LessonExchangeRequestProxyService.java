@@ -45,11 +45,12 @@ public class LessonExchangeRequestProxyService {
                     lesson.date(),
                     requestStatuses
                 )
-                    || lessonExchangeProposalRepository.existsByProposedBy_IdAndLessonDateAndStatusIn(
-                    lesson.teacherId(),
-                    lesson.date(),
-                    proposalStatuses
-                )
+                    || lessonExchangeProposalRepository.existsBlockingProposalByProposedByAndLessonDate(
+                        lesson.teacherId(),
+                        lesson.date(),
+                        proposalStatuses,
+                        requestStatuses
+                    )
             );
     }
 }

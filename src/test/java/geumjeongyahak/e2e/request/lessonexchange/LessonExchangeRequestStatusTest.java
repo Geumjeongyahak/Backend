@@ -179,6 +179,32 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("반려된 요청 이후 같은 날짜로 새 교환 요청 생성 가능 -> 201")
+    void createNewRequest_afterReject_returns201() {
+        LocalDate lessonDate = LocalDate.now().plusDays(16);
+        Long rejectedRequestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, lessonDate);
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "재요청 확인을 위한 반려"))
+            .patch("/{id}/reject", rejectedRequestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("REJECTED"));
+
+        Long newRequestId = createLessonExchangeRequest(
+            getAuthHeader(volunteerToken),
+            lessonDate,
+            "반려 후 재요청",
+            "반려된 요청은 같은 날짜 재요청을 막지 않습니다.",
+            lessonDate.minusDays(3).atTime(22, 0)
+        );
+        requestIds.add(newRequestId);
+    }
+
+    @Test
     @DisplayName("승인 후 상세 재조회 시 processed 정보가 유지된다")
     void getDetail_afterApprove_containsProcessedInfo() {
         Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(10));
