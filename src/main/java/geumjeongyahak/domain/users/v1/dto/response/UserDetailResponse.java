@@ -77,4 +77,20 @@ public record UserDetailResponse(
             user.getUpdatedAt()
         );
     }
+
+    public Long departmentId() {
+        return department != null ? department.id() : null;
+    }
+
+    public String departmentName() {
+        return department != null ? department.name() : null;
+    }
+
+    public Long classroomId() {
+        return classroom != null ? classroom.id() : null;
+    }
+
+    public String classroomName() {
+        return classroom != null ? classroom.name() : null;
+    }
 }

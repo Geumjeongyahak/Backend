@@ -23,6 +23,12 @@
                 <option th:each="department : ${departments}" th:value="${department.id}" th:text="${department.name}">부서</option>
             </select>
         </label>
+        <label>분반
+            <select name="classroomId">
+                <option value="">없음</option>
+                <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}">분반</option>
+            </select>
+        </label>
         <button class="button" type="submit">등록</button>
     </form>
 </main>

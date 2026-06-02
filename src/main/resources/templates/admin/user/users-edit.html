@@ -22,6 +22,12 @@
                 <option th:each="department : ${departments}" th:value="${department.id}" th:text="${department.name}" th:selected="${user.departmentId == department.id}">부서</option>
             </select>
         </label>
+        <label>분반
+            <select name="classroomId">
+                <option value="">없음</option>
+                <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}" th:selected="${user.classroomId == classroom.id}">분반</option>
+            </select>
+        </label>
         <button class="button" type="submit">수정</button>
     </form>
 </main>

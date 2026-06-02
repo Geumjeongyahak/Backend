@@ -31,7 +31,19 @@ public record CreateUserRequest(
     String role,
 
     @Schema(description = "초기 소속 부서 ID. 없으면 null로 둘 수 있습니다.", example = "1")
-    Long departmentId
-) {
+    Long departmentId,
 
+    @Schema(description = "초기 배정 분반 ID. 없으면 null로 둘 수 있습니다.", example = "1")
+    Long classroomId
+) {
+    public CreateUserRequest(
+        String email,
+        String name,
+        String password,
+        String phoneNumber,
+        String role,
+        Long departmentId
+    ) {
+        this(email, name, password, phoneNumber, role, departmentId, null);
+    }
 }

@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.users.service;
 
 import geumjeongyahak.domain.department.service.DepartmentProxyService;
+import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ import java.util.Optional;
 public class UserCrudService {
     private final UserRepository userRepository;
     private final DepartmentProxyService departmentProxyService;
+    private final ClassroomProxyService classroomProxyService;
     private final PasswordEncoder passwordEncoder;
     private final UserCredentialService credentialService;
     private final UserProxyService userProxyService;
@@ -87,6 +89,9 @@ public class UserCrudService {
         if (request.departmentId() != null) {
             userBuilder.department(departmentProxyService.getById(request.departmentId()));
         }
+        if (request.classroomId() != null) {
+            userBuilder.classroom(classroomProxyService.getActiveById(request.classroomId()));
+        }
 
         User savedUser = userRepository.save(userBuilder.build());
 
@@ -115,7 +120,8 @@ public class UserCrudService {
             Optional.ofNullable(request.password()),
             Optional.ofNullable(request.email()),
             Optional.ofNullable(request.role()),
-            Optional.ofNullable(request.departmentId())
+            Optional.ofNullable(request.departmentId()),
+            Optional.ofNullable(request.classroomId())
         );
         log.info("사용자 수정 완료 - ID: {}, email: {}", user.getId(), user.getEmail());
         return UserDetailResponse.from(user);
@@ -136,7 +142,8 @@ public class UserCrudService {
                 Optional.ofNullable(request.password()),
                 Optional.ofNullable(request.email()),
                 Optional.empty(), // 본인 수정 시 역할 변경 불가
-                Optional.empty()  // 본인 수정 시 부서 변경 불가
+                Optional.empty(), // 본인 수정 시 부서 변경 불가
+                Optional.empty()  // 본인 수정 시 분반 변경 불가
         );
         log.debug("본인 사용자 수정 완료 - ID: {}, email: {}", user.getId(), user.getEmail());
         return UserDetailResponse.from(user);
@@ -149,7 +156,8 @@ public class UserCrudService {
             Optional<String> password,
             Optional<String> email,
             Optional<String> role,
-            Optional<Long> departmentId
+            Optional<Long> departmentId,
+            Optional<Long> classroomId
     ) {
         name.ifPresent(user::setName);
         phoneNumber.ifPresent(user::setPhoneNumber);
@@ -168,6 +176,9 @@ public class UserCrudService {
         role.map(RoleType::valueOf).ifPresent(user::setRole);
         departmentId.ifPresent(deptId -> {
             user.setDepartment(departmentProxyService.getById(deptId));
+        });
+        classroomId.ifPresent(classroomIdValue -> {
+            user.setClassroom(classroomProxyService.getActiveById(classroomIdValue));
         });
     }
 
