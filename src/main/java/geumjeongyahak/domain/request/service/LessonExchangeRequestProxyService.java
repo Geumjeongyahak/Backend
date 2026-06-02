@@ -40,7 +40,7 @@ public class LessonExchangeRequestProxyService {
 
         return lessonTeacherDates.stream()
             .anyMatch(lesson ->
-                lessonExchangeRequestRepository.existsByRequestedBy_IdAndLessonDateAndStatusIn(
+                lessonExchangeRequestRepository.existsBlockingActiveRequestByRequesterAndLessonDate(
                     lesson.teacherId(),
                     lesson.date(),
                     requestStatuses

@@ -205,6 +205,25 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("cancelledAt 이 기록된 과거 요청은 상태가 남아 있어도 재요청을 막지 않는다")
+    void createNewRequest_withStaleCancelledAtRequest_returns201() {
+        LocalDate lessonDate = LocalDate.now().plusDays(17);
+        Long staleRequestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, lessonDate);
+        var staleRequest = lessonExchangeRequestRepository.findById(staleRequestId).orElseThrow();
+        ReflectionTestUtils.setField(staleRequest, "cancelledAt", LocalDateTime.now());
+        lessonExchangeRequestRepository.save(staleRequest);
+
+        Long newRequestId = createLessonExchangeRequest(
+            getAuthHeader(volunteerToken),
+            lessonDate,
+            "취소 기록 후 재요청",
+            "cancelledAt 이 있는 요청은 진행 중 요청으로 보지 않습니다.",
+            lessonDate.minusDays(3).atTime(22, 0)
+        );
+        requestIds.add(newRequestId);
+    }
+
+    @Test
     @DisplayName("승인 후 상세 재조회 시 processed 정보가 유지된다")
     void getDetail_afterApprove_containsProcessedInfo() {
         Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(10));

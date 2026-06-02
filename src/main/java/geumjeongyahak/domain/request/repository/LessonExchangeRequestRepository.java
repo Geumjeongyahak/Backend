@@ -6,6 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -36,16 +38,32 @@ public interface LessonExchangeRequestRepository extends JpaRepository<LessonExc
         Pageable pageable
     );
 
-    List<LessonExchangeRequest> findAllByRequestedBy_IdAndDailySchedule_IdAndStatusIn(
-        Long requesterId,
-        Long dailyScheduleId,
-        Collection<LessonExchangeRequestStatus> activeStatuses
+    @Query("""
+        select r
+        from LessonExchangeRequest r
+        where r.requestedBy.id = :requesterId
+          and r.dailySchedule.id = :dailyScheduleId
+          and r.status in :activeStatuses
+          and r.cancelledAt is null
+        """)
+    List<LessonExchangeRequest> findBlockingActiveRequests(
+        @Param("requesterId") Long requesterId,
+        @Param("dailyScheduleId") Long dailyScheduleId,
+        @Param("activeStatuses") Collection<LessonExchangeRequestStatus> activeStatuses
     );
 
-    boolean existsByRequestedBy_IdAndLessonDateAndStatusIn(
-        Long requesterId,
-        LocalDate lessonDate,
-        Collection<LessonExchangeRequestStatus> statuses
+    @Query("""
+        select count(r) > 0
+        from LessonExchangeRequest r
+        where r.requestedBy.id = :requesterId
+          and r.lessonDate = :lessonDate
+          and r.status in :statuses
+          and r.cancelledAt is null
+        """)
+    boolean existsBlockingActiveRequestByRequesterAndLessonDate(
+        @Param("requesterId") Long requesterId,
+        @Param("lessonDate") LocalDate lessonDate,
+        @Param("statuses") Collection<LessonExchangeRequestStatus> statuses
     );
 
     List<LessonExchangeRequest> findAllByStatusInAndExpiresAtBefore(

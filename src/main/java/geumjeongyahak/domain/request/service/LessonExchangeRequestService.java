@@ -319,7 +319,7 @@ public class LessonExchangeRequestService {
         );
 
         List<LessonExchangeRequest> existingRequests =
-            lessonExchangeRequestRepository.findAllByRequestedBy_IdAndDailySchedule_IdAndStatusIn(
+            lessonExchangeRequestRepository.findBlockingActiveRequests(
                 requesterId,
                 dailyScheduleId,
                 activeStatuses
@@ -331,6 +331,20 @@ public class LessonExchangeRequestService {
             .isPresent();
 
         if (hasDuplicate) {
+            log.warn(
+                "수업 교환 요청 중복 감지 (requesterId={}, dailyScheduleId={}, excludedRequestId={}, existingRequests={})",
+                requesterId,
+                dailyScheduleId,
+                excludedRequestId,
+                existingRequests.stream()
+                    .filter(existing -> excludedRequestId == null || !existing.getId().equals(excludedRequestId))
+                    .map(existing -> "id=%d,status=%s,cancelledAt=%s".formatted(
+                        existing.getId(),
+                        existing.getStatus(),
+                        existing.getCancelledAt()
+                    ))
+                    .toList()
+            );
             throw new DuplicateActiveRequestException();
         }
     }
