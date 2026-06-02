@@ -40,8 +40,18 @@ Issue: [#118](https://github.com/Geumjeongyahak/Backend/issues/118)
 |--------|---------|
 | `title` | 연혁 제목. 공개 응답의 필수 필드 |
 | `detail` | 상세 설명 |
-| `link_label` | 링크 표시 텍스트 |
-| `link_href` | 링크 URL |
+| `history_date` | 연혁 날짜. 공개 조회 정렬 기준 |
+| `sort_order` | 표시 순서 |
+
+### `site_history_links`
+
+연혁 항목의 링크 목록을 저장합니다.
+
+| Column | Purpose |
+|--------|---------|
+| `history_id` | `site_histories.id` |
+| `label` | 링크 표시 텍스트 |
+| `href` | 링크 URL |
 | `sort_order` | 표시 순서 |
 
 ### `site_history_photos`
@@ -89,7 +99,8 @@ REST 요청/응답은 프론트 렌더링 계약을 우선합니다.
 - 부서 관리 요청은 `{ title, name, responsibilities }`만 받습니다.
 - 반 관리 요청은 `{ groupId, name, description }`만 받습니다.
 - `groupId`는 `weekday`, `weekendMorning`, `weekendAfternoon`입니다.
-- 연혁 관리 요청은 `{ title, detail, linkLabel, linkHref, photos }`만 받습니다.
+- 연혁 관리 요청은 `{ title, historyDate, detail, links, photos }`만 받습니다.
+- `links[]`는 `{ label, href }` 형식입니다.
 - 연혁 사진은 URL-only로 저장할 수 있지만, GCS 정리를 위해 업로드 응답의 `fileId`를 `photos[].fileId`로 함께 보내는 것을 권장합니다.
 - 연혁 수정에서 빠진 사진 파일과 연혁 삭제 시 연결된 사진 파일은 soft delete 처리됩니다.
 - `contentType`, `refId`, `sortOrder`는 REST 요청 DTO에서 제외합니다.

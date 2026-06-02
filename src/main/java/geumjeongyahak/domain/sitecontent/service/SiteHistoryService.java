@@ -1,19 +1,24 @@
 package geumjeongyahak.domain.sitecontent.service;
 
+import geumjeongyahak.common.exception.BadRequestException;
 import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.file.repository.FileRepository;
 import geumjeongyahak.domain.sitecontent.entity.SiteHistory;
+import geumjeongyahak.domain.sitecontent.entity.SiteHistory.LinkValue;
 import geumjeongyahak.domain.sitecontent.entity.SiteHistory.PhotoValue;
+import geumjeongyahak.domain.sitecontent.entity.SiteHistoryLink;
 import geumjeongyahak.domain.sitecontent.entity.SiteHistoryPhoto;
 import geumjeongyahak.domain.sitecontent.exception.SiteContentErrorCode;
 import geumjeongyahak.domain.sitecontent.repository.SiteHistoryRepository;
 import geumjeongyahak.domain.sitecontent.v1.dto.request.CreateSiteHistoryRequest;
+import geumjeongyahak.domain.sitecontent.v1.dto.request.SiteHistoryLinkRequest;
 import geumjeongyahak.domain.sitecontent.v1.dto.request.SiteHistoryPhotoRequest;
 import geumjeongyahak.domain.sitecontent.v1.dto.request.UpdateSiteHistoryRequest;
 import geumjeongyahak.domain.sitecontent.v1.dto.response.SiteHistoriesResponse;
 import geumjeongyahak.domain.sitecontent.v1.dto.response.SiteHistoryResponse;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -32,18 +37,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class SiteHistoryService {
 
+    private static final int LINK_LABEL_MAX_LENGTH = 120;
+
     private final SiteHistoryRepository siteHistoryRepository;
     private final FileRepository fileRepository;
 
     public SiteHistoriesResponse getHistories() {
-        return new SiteHistoriesResponse(siteHistoryRepository.findAllByOrderBySortOrderAscIdAsc()
+        return new SiteHistoriesResponse(siteHistoryRepository.findAllByOrderByHistoryDateAscSortOrderAscIdAsc()
             .stream()
             .map(SiteHistoryResponse::from)
             .toList());
     }
 
     public List<SiteHistoryAdminRow> getAdminHistories() {
-        return siteHistoryRepository.findAllByOrderBySortOrderAscIdAsc()
+        return siteHistoryRepository.findAllByOrderByHistoryDateAscSortOrderAscIdAsc()
             .stream()
             .map(SiteHistoryAdminRow::from)
             .toList();
@@ -57,10 +64,10 @@ public class SiteHistoryService {
     public SiteHistoryResponse createHistory(CreateSiteHistoryRequest request) {
         SiteHistory history = SiteHistory.builder()
             .title(request.title())
+            .historyDate(request.historyDate())
             .detail(request.detail())
-            .linkLabel(request.linkLabel())
-            .linkHref(request.linkHref())
             .build();
+        history.replaceLinks(toLinkValues(request.links()));
         history.replacePhotos(toPhotoValues(Map.of(), request.photos()));
 
         SiteHistory saved = siteHistoryRepository.save(history);
@@ -72,18 +79,18 @@ public class SiteHistoryService {
     public Long createAdminHistory(
         String title,
         String detail,
-        String linkLabel,
-        String linkHref,
+        LocalDate historyDate,
         Integer sortOrder,
+        String linksText,
         List<SiteHistoryPhotoRequest> photos
     ) {
         SiteHistory history = SiteHistory.builder()
             .title(title)
+            .historyDate(historyDate)
             .detail(detail)
-            .linkLabel(linkLabel)
-            .linkHref(linkHref)
             .sortOrder(sortOrder)
             .build();
+        history.replaceLinks(toLinkValues(parseLinkRequests(linksText)));
         history.replacePhotos(toPhotoValues(Map.of(), photos));
         return siteHistoryRepository.save(history).getId();
     }
@@ -93,7 +100,8 @@ public class SiteHistoryService {
         SiteHistory history = findHistory(historyId);
         Set<UUID> oldFileIds = collectFileIds(history);
         List<PhotoValue> photoValues = toPhotoValues(toPhotoMap(history), request.photos());
-        history.update(request.title(), request.detail(), request.linkLabel(), request.linkHref(), null);
+        history.update(request.title(), request.detail(), request.historyDate(), null);
+        history.replaceLinks(toLinkValues(request.links()));
         history.replacePhotos(photoValues);
         markRemovedFilesDeleted(oldFileIds, collectPhotoValueFileIds(photoValues));
 
@@ -107,15 +115,16 @@ public class SiteHistoryService {
         Long historyId,
         String title,
         String detail,
-        String linkLabel,
-        String linkHref,
+        LocalDate historyDate,
         Integer sortOrder,
+        String linksText,
         List<SiteHistoryPhotoRequest> photos
     ) {
         SiteHistory history = findHistory(historyId);
         Set<UUID> oldFileIds = collectFileIds(history);
         List<PhotoValue> photoValues = toPhotoValues(toPhotoMap(history), photos);
-        history.update(title, detail, linkLabel, linkHref, sortOrder);
+        history.update(title, detail, historyDate, sortOrder);
+        history.replaceLinks(toLinkValues(parseLinkRequests(linksText)));
         history.replacePhotos(photoValues);
         markRemovedFilesDeleted(oldFileIds, collectPhotoValueFileIds(photoValues));
         siteHistoryRepository.save(history);
@@ -142,6 +151,45 @@ public class SiteHistoryService {
         return photos.stream()
             .map(photo -> new PhotoValue(resolvePhotoFile(existingPhotoFiles, photo), photo.src(), photo.alt()))
             .toList();
+    }
+
+    private List<LinkValue> toLinkValues(List<SiteHistoryLinkRequest> links) {
+        if (links == null) {
+            return List.of();
+        }
+        return links.stream()
+            .map(link -> toLinkValue(link.label(), link.href()))
+            .toList();
+    }
+
+    private List<SiteHistoryLinkRequest> parseLinkRequests(String linksText) {
+        if (linksText == null || linksText.isBlank()) {
+            return null;
+        }
+        return linksText.lines()
+            .map(String::trim)
+            .filter(line -> !line.isBlank())
+            .map(line -> {
+                String[] parts = line.split("\\|", 2);
+                if (parts.length < 2) {
+                    throw new BadRequestException(CommonErrorCode.INVALID_INPUT, "링크는 label|href 형식으로 입력해야 합니다.");
+                }
+                return new SiteHistoryLinkRequest(parts[0].trim(), parts[1].trim());
+            })
+            .toList();
+    }
+
+    private LinkValue toLinkValue(String label, String href) {
+        if (label == null || label.isBlank()) {
+            throw new BadRequestException(CommonErrorCode.INVALID_INPUT, "링크 라벨은 필수입니다.");
+        }
+        if (label.length() > LINK_LABEL_MAX_LENGTH) {
+            throw new BadRequestException(CommonErrorCode.INVALID_INPUT, "링크 라벨은 120자를 초과할 수 없습니다.");
+        }
+        if (href == null || href.isBlank()) {
+            throw new BadRequestException(CommonErrorCode.INVALID_INPUT, "링크 URL은 필수입니다.");
+        }
+        return new LinkValue(label.trim(), href.trim());
     }
 
     private File resolvePhotoFile(Map<Long, File> existingPhotoFiles, SiteHistoryPhotoRequest photo) {
@@ -193,13 +241,19 @@ public class SiteHistoryService {
     public record SiteHistoryAdminRow(
         Long id,
         String title,
+        LocalDate historyDate,
         String detail,
-        String linkLabel,
-        String linkHref,
+        String linksText,
         int sortOrder,
         String photosText
     ) {
         public static SiteHistoryAdminRow from(SiteHistory history) {
+            String linksText = history.getLinks().stream()
+                .sorted(Comparator
+                    .comparingInt(SiteHistoryLink::getSortOrder)
+                    .thenComparing(SiteHistoryLink::getId))
+                .map(link -> link.getLabel() + "|" + link.getHref())
+                .collect(Collectors.joining("\n"));
             String photosText = history.getPhotos().stream()
                 .sorted(Comparator
                     .comparingInt(SiteHistoryPhoto::getSortOrder)
@@ -209,9 +263,9 @@ public class SiteHistoryService {
             return new SiteHistoryAdminRow(
                 history.getId(),
                 history.getTitle(),
+                history.getHistoryDate(),
                 history.getDetail(),
-                history.getLinkLabel(),
-                history.getLinkHref(),
+                linksText,
                 history.getSortOrder(),
                 photosText
             );

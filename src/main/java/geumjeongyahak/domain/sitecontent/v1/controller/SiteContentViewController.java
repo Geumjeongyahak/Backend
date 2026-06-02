@@ -7,6 +7,7 @@ import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
 import geumjeongyahak.domain.sitecontent.service.SiteContentService;
 import geumjeongyahak.domain.sitecontent.service.SiteHistoryService;
 import geumjeongyahak.domain.sitecontent.v1.dto.request.SiteHistoryPhotoRequest;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -113,10 +114,10 @@ public class SiteContentViewController {
     @PostMapping("/history")
     public String createHistory(
         @RequestParam String title,
+        @RequestParam LocalDate historyDate,
         @RequestParam(required = false) String detail,
-        @RequestParam(required = false) String linkLabel,
-        @RequestParam(required = false) String linkHref,
         @RequestParam(required = false) Integer sortOrder,
+        @RequestParam(required = false) String linksText,
         @RequestParam(required = false) String photosText,
         @RequestParam(required = false) MultipartFile photoFile,
         @RequestParam(required = false) String photoAlt,
@@ -125,9 +126,9 @@ public class SiteContentViewController {
         siteHistoryService.createAdminHistory(
             title,
             emptyToNull(detail),
-            emptyToNull(linkLabel),
-            emptyToNull(linkHref),
+            historyDate,
             sortOrder,
+            linksText,
             parsePhotos(photosText, photoFile, photoAlt)
         );
         redirectAttributes.addFlashAttribute("message", "연혁을 등록했습니다.");
@@ -145,10 +146,10 @@ public class SiteContentViewController {
     public String updateHistory(
         @PathVariable Long historyId,
         @RequestParam String title,
+        @RequestParam LocalDate historyDate,
         @RequestParam(required = false) String detail,
-        @RequestParam(required = false) String linkLabel,
-        @RequestParam(required = false) String linkHref,
         @RequestParam(required = false) Integer sortOrder,
+        @RequestParam(required = false) String linksText,
         @RequestParam(required = false) String photosText,
         @RequestParam(required = false) MultipartFile photoFile,
         @RequestParam(required = false) String photoAlt,
@@ -158,9 +159,9 @@ public class SiteContentViewController {
             historyId,
             title,
             emptyToNull(detail),
-            emptyToNull(linkLabel),
-            emptyToNull(linkHref),
+            historyDate,
             sortOrder,
+            linksText,
             parsePhotos(photosText, photoFile, photoAlt)
         );
         redirectAttributes.addFlashAttribute("message", "연혁을 수정했습니다.");

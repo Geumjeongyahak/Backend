@@ -100,10 +100,10 @@ VALUES
     (14, 12, '주말 오후 시간대에 운영되는 반', 1);
 ALTER SEQUENCE site_content_items_id_seq RESTART WITH 15;
 
-INSERT INTO site_histories (id, title, detail, link_label, link_href, sort_order)
+INSERT INTO site_histories (id, title, detail, history_date, sort_order)
 VALUES
-    (1, '1997년', '금정열린배움터 설립', NULL, NULL, 1),
-    (2, '현재', '지역과 함께하는 배움터 운영', NULL, NULL, 2);
+    (1, '1997년', '금정열린배움터 설립', DATE '1997-01-01', 1),
+    (2, '현재', '지역과 함께하는 배움터 운영', DATE '2026-01-01', 2);
 ALTER SEQUENCE site_histories_id_seq RESTART WITH 3;
 
 -- 7. Channels

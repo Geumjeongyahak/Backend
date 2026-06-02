@@ -79,9 +79,9 @@ VALUES
     (8, 6, '주말 오후 시간대에 운영되는 반', 1);
 ALTER TABLE site_content_items ALTER COLUMN id RESTART WITH 9;
 
-INSERT INTO site_histories (id, title, detail, link_label, link_href, sort_order)
+INSERT INTO site_histories (id, title, detail, history_date, sort_order)
 VALUES
-    (1, '1997년', '금정열린배움터 설립', NULL, NULL, 1);
+    (1, '1997년', '금정열린배움터 설립', DATE '1997-01-01', 1);
 ALTER TABLE site_histories ALTER COLUMN id RESTART WITH 2;
 
 -- 7. Channels

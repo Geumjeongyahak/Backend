@@ -14,14 +14,14 @@
         <section class="panel table-panel">
             <div class="table-scroll">
                 <table>
-                    <thead><tr><th>ID</th><th>제목</th><th>상세</th><th>링크</th><th>정렬</th><th>관리</th></tr></thead>
+                    <thead><tr><th>ID</th><th>날짜</th><th>제목</th><th>상세</th><th>링크</th><th>관리</th></tr></thead>
                     <tbody>
                     <tr th:each="history : ${histories}">
                         <td th:text="${history.id}">1</td>
+                        <td th:text="${history.historyDate}">1997-01-01</td>
                         <td th:text="${history.title}">1997년</td>
                         <td th:text="${history.detail ?: '-'}">설립</td>
-                        <td th:text="${history.linkLabel ?: '-'}">-</td>
-                        <td th:text="${history.sortOrder}">1</td>
+                        <td th:text="${history.linksText ?: '-'}">-</td>
                         <td><a class="button secondary" th:href="@{/admin/site-content/history/{historyId}/edit(historyId=${history.id})}">수정</a></td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(histories)}"><td colspan="6" class="empty">등록된 연혁이 없습니다.</td></tr>

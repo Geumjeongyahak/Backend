@@ -10,6 +10,7 @@ import geumjeongyahak.domain.sitecontent.entity.SiteContent;
 import geumjeongyahak.domain.sitecontent.entity.SiteHistory;
 import geumjeongyahak.domain.sitecontent.enums.SiteContentGroup;
 import geumjeongyahak.domain.sitecontent.enums.SiteContentType;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,13 +23,16 @@ class SiteContentReadTest extends SiteContentBaseTest {
     void getHistories_WithoutAuth_Success() {
         SiteHistory history = SiteHistory.builder()
             .title("금정열린배움터 시작")
+            .historyDate(LocalDate.of(1997, 1, 1))
             .detail("첫 수업을 시작했습니다.")
-            .linkLabel("소개")
-            .linkHref("https://example.com/history")
             .sortOrder(1)
             .build();
         history.replacePhotos(java.util.List.of(
             new SiteHistory.PhotoValue(null, "https://example.com/photo.jpg", "첫 수업 사진")
+        ));
+        history.replaceLinks(List.of(
+            new SiteHistory.LinkValue("소개", "https://example.com/history"),
+            new SiteHistory.LinkValue("사진첩", "https://example.com/photos")
         ));
         siteHistoryRepository.save(history);
 
@@ -40,25 +44,30 @@ class SiteContentReadTest extends SiteContentBaseTest {
             .body("history", hasSize(1))
             .body("history[0].title", equalTo("금정열린배움터 시작"))
             .body("history[0].detail", equalTo("첫 수업을 시작했습니다."))
-            .body("history[0].linkLabel", equalTo("소개"))
-            .body("history[0].linkHref", equalTo("https://example.com/history"))
+            .body("history[0].historyDate", equalTo("1997-01-01"))
+            .body("history[0].links", hasSize(2))
+            .body("history[0].links[0].label", equalTo("소개"))
+            .body("history[0].links[0].href", equalTo("https://example.com/history"))
+            .body("history[0].links[1].label", equalTo("사진첩"))
             .body("history[0].photos", hasSize(1))
             .body("history[0].photos[0].src", equalTo("https://example.com/photo.jpg"))
             .body("history[0].photos[0].alt", equalTo("첫 수업 사진"));
     }
 
     @Test
-    @DisplayName("연혁은 정렬 순서대로 반환하고 사진이 없으면 빈 배열로 반환")
+    @DisplayName("연혁은 날짜순으로 반환하고 사진과 링크가 없으면 빈 배열로 반환")
     void getHistories_SortedAndEmptyPhotos_Success() {
         SiteHistory second = SiteHistory.builder()
             .title("두 번째")
-            .sortOrder(2)
+            .historyDate(LocalDate.of(2000, 1, 1))
+            .sortOrder(1)
             .build();
         siteHistoryRepository.save(second);
 
         SiteHistory first = SiteHistory.builder()
             .title("첫 번째")
-            .sortOrder(1)
+            .historyDate(LocalDate.of(1998, 1, 1))
+            .sortOrder(99)
             .build();
         siteHistoryRepository.save(first);
 
@@ -70,10 +79,11 @@ class SiteContentReadTest extends SiteContentBaseTest {
             .body("history", hasSize(2))
             .body("history[0].title", equalTo("첫 번째"))
             .body("history[0].detail", nullValue())
-            .body("history[0].linkLabel", nullValue())
-            .body("history[0].linkHref", nullValue())
+            .body("history[0].historyDate", equalTo("1998-01-01"))
+            .body("history[0].links", hasSize(0))
             .body("history[0].photos", hasSize(0))
-            .body("history[1].title", equalTo("두 번째"));
+            .body("history[1].title", equalTo("두 번째"))
+            .body("history[1].historyDate", equalTo("2000-01-01"));
     }
 
     @Test
