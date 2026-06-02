@@ -3,6 +3,7 @@ package geumjeongyahak.common.advice;
 import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -10,11 +11,16 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -149,6 +155,82 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ProblemDetail> handleBindException(BindException ex) {
+        String errorMessages = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .collect(Collectors.joining(", "));
+
+        log.warn("요청 바인딩 실패 - {}", errorMessages);
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                CommonErrorCode.VALIDATION_ERROR.getMessage()
+        );
+        problemDetail.setTitle(CommonErrorCode.VALIDATION_ERROR.getCode());
+        problemDetail.setProperty("code", CommonErrorCode.VALIDATION_ERROR.getCode());
+        problemDetail.setProperty("errors", ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> new FieldError(error.getField(), error.getDefaultMessage()))
+                .toList());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ProblemDetail> handleMethodArgumentTypeMismatchException(
+            MethodArgumentTypeMismatchException ex
+    ) {
+        String parameterName = ex.getName();
+        String value = ex.getValue() != null ? ex.getValue().toString() : null;
+        log.warn("요청 파라미터 타입 변환 실패 - parameter: {}, value: {}, requiredType: {}",
+                parameterName, value, ex.getRequiredType());
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                CommonErrorCode.INVALID_INPUT.getMessage()
+        );
+        problemDetail.setTitle(CommonErrorCode.INVALID_INPUT.getCode());
+        problemDetail.setProperty("code", CommonErrorCode.INVALID_INPUT.getCode());
+        problemDetail.setProperty("parameter", parameterName);
+        problemDetail.setProperty("value", value);
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ProblemDetail> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+        log.warn("요청 본문 파싱 실패 - {}", ex.getMessage());
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                CommonErrorCode.INVALID_INPUT.getMessage()
+        );
+        problemDetail.setTitle(CommonErrorCode.INVALID_INPUT.getCode());
+        problemDetail.setProperty("code", CommonErrorCode.INVALID_INPUT.getCode());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
+    @ExceptionHandler({
+            MissingServletRequestParameterException.class,
+            MissingRequestHeaderException.class,
+            MissingServletRequestPartException.class
+    })
+    public ResponseEntity<ProblemDetail> handleMissingRequestValueException(Exception ex) {
+        String fieldName = getMissingRequestValueName(ex);
+        log.warn("필수 요청 값 누락 - field: {}, exception: {}", fieldName, ex.getClass().getSimpleName());
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                CommonErrorCode.MISSING_REQUIRED_FIELD.getMessage()
+        );
+        problemDetail.setTitle(CommonErrorCode.MISSING_REQUIRED_FIELD.getCode());
+        problemDetail.setProperty("code", CommonErrorCode.MISSING_REQUIRED_FIELD.getCode());
+        problemDetail.setProperty("field", fieldName);
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ProblemDetail> handleHttpRequestMethodNotSupportedException(
             HttpRequestMethodNotSupportedException ex
@@ -257,6 +339,19 @@ public class GlobalExceptionHandler {
     }
 
     // ============ 내부 클래스 ============
+
+    private String getMissingRequestValueName(Exception ex) {
+        if (ex instanceof MissingServletRequestParameterException missingParameter) {
+            return missingParameter.getParameterName();
+        }
+        if (ex instanceof MissingRequestHeaderException missingHeader) {
+            return missingHeader.getHeaderName();
+        }
+        if (ex instanceof MissingServletRequestPartException missingPart) {
+            return missingPart.getRequestPartName();
+        }
+        return null;
+    }
 
     private record FieldError(String field, String message) {}
 }

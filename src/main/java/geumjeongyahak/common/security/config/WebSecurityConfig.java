@@ -55,6 +55,7 @@ public class WebSecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/admin/auth/login").permitAll()
+                .requestMatchers("/admin/meeting-records/**").hasRole("ADMIN")
                 .anyRequest().hasAnyRole("ADMIN", "MANAGER")
             )
             .formLogin(form -> form
@@ -69,7 +70,7 @@ public class WebSecurityConfig {
                 .logoutSuccessUrl("/admin/auth/login?logout")
             )
             .exceptionHandling(exception -> exception
-                .accessDeniedPage("/admin/auth/login?denied")
+                .accessDeniedHandler(accessDeniedHandler)
             )
             .build();
     }
@@ -121,6 +122,7 @@ public class WebSecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/channels").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/posts").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/channels/*/posts", "/api/v1/channels/*/posts/**").permitAll()
+                .requestMatchers("/api/v1/meeting-records/**").hasAnyRole("VOLUNTEER", "MANAGER", "ADMIN")
                 // 그 외는 인증 필요
                 .anyRequest().authenticated()
             )
