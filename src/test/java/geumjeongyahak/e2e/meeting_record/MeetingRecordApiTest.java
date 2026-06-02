@@ -97,6 +97,18 @@ class MeetingRecordApiTest extends BaseE2ETest {
     }
 
     @Test
+    @DisplayName("GUEST의 잘못된 회의록 status 조회 파라미터도 권한 없음으로 처리된다")
+    void getMeetingRecords_invalidStatusAsGuest_returns403() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .queryParam("status", "before")
+        .when()
+            .get("/api/v1/meeting-records")
+        .then()
+            .statusCode(403);
+    }
+
+    @Test
     @DisplayName("목록 조회는 title 검색과 mineOnly 필터를 지원한다")
     void getMeetingRecords_filtersByKeywordAndMineOnly() {
         createRecord(authorToken, "나의 교학 회의", "안건");
@@ -115,6 +127,19 @@ class MeetingRecordApiTest extends BaseE2ETest {
             .body("content[0].title", equalTo("나의 교학 회의"))
             .body("content[0].authorId", not(equalTo(null)))
             .body("content[0].viewCount", equalTo(0));
+    }
+
+    @Test
+    @DisplayName("잘못된 회의록 status 조회 파라미터는 400을 반환한다")
+    void getMeetingRecords_invalidStatus_returns400() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(authorToken))
+            .queryParam("status", "before")
+        .when()
+            .get("/api/v1/meeting-records")
+        .then()
+            .statusCode(400)
+            .body("code", equalTo("VAL001"));
     }
 
     @Test
@@ -240,6 +265,62 @@ class MeetingRecordApiTest extends BaseE2ETest {
             .delete("/api/v1/meeting-records/{recordId}/absence-reports/{reportId}", recordId, reportId)
         .then()
             .statusCode(204);
+    }
+
+    @Test
+    @DisplayName("관리자는 관리자 화면에서 회의록 목록과 상세를 조회할 수 있다")
+    void adminView_listAndDetail_returns200() {
+        Long recordId = createRecord(authorToken, "관리자 조회 테스트", "안건");
+        createAbsenceReport(recordId, otherToken, "불참 사유", "의견");
+        String adminSessionId = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+
+        given()
+            .cookie("JSESSIONID", adminSessionId)
+        .when()
+            .get("/admin/meeting-records")
+        .then()
+            .statusCode(200)
+            .body(containsString("관리자 조회 테스트"));
+
+        given()
+            .cookie("JSESSIONID", adminSessionId)
+        .when()
+            .get("/admin/meeting-records/{recordId}", recordId)
+        .then()
+            .statusCode(200)
+            .body(containsString("관리자 조회 테스트"))
+            .body(containsString("불참 사유"));
+    }
+
+    @Test
+    @DisplayName("관리자 회의록 목록의 잘못된 status 파라미터는 400을 반환한다")
+    void adminView_invalidStatus_returns400() {
+        String adminSessionId = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+
+        given()
+            .cookie("JSESSIONID", adminSessionId)
+            .queryParam("status", "before")
+        .when()
+            .get("/admin/meeting-records")
+        .then()
+            .statusCode(400)
+            .body("code", equalTo("VAL002"));
+    }
+
+    @Test
+    @DisplayName("MANAGER의 잘못된 관리자 회의록 status 조회 파라미터도 권한 없음으로 처리된다")
+    void adminView_invalidStatusAsManager_returns403() {
+        String managerSessionId = loginAdminSession(MANAGER, "password");
+
+        given()
+            .cookie("JSESSIONID", managerSessionId)
+            .queryParam("status", "before")
+            .redirects()
+            .follow(false)
+        .when()
+            .get("/admin/meeting-records")
+        .then()
+            .statusCode(403);
     }
 
     @Test
