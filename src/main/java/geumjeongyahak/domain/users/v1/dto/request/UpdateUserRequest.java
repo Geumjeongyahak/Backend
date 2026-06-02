@@ -28,6 +28,19 @@ public record UpdateUserRequest(
     String role,
 
     @Schema(description = "변경할 소속 부서 ID", example = "1")
-    Long departmentId
+    Long departmentId,
+
+    @Schema(description = "변경할 배정 분반 ID", example = "1")
+    Long classroomId
 ) {
+    public UpdateUserRequest(
+        String name,
+        String phoneNumber,
+        String email,
+        String password,
+        String role,
+        Long departmentId
+    ) {
+        this(name, phoneNumber, email, password, role, departmentId, null);
+    }
 }

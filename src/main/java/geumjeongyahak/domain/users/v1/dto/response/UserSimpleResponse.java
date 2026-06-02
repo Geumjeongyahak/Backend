@@ -23,8 +23,22 @@ public record UserSimpleResponse(
     String role,
 
     @Schema(description = "소속 부서 ID. 소속 부서가 없으면 null일 수 있습니다.", example = "2", nullable = true)
-    Long departmentId
+    Long departmentId,
+
+    @Schema(description = "배정 분반 ID. 배정 분반이 없으면 null일 수 있습니다.", example = "1", nullable = true)
+    Long classroomId
 ) {
+    public UserSimpleResponse(
+        Long id,
+        String name,
+        String email,
+        String phoneNumber,
+        String role,
+        Long departmentId
+    ) {
+        this(id, name, email, phoneNumber, role, departmentId, null);
+    }
+
     public static UserSimpleResponse from(User user) {
         return new UserSimpleResponse(
             user.getId(),
@@ -32,7 +46,8 @@ public record UserSimpleResponse(
             user.getEmail(),
             user.getPhoneNumber(),
             user.getRole().name(),
-            user.getDepartment() != null ? user.getDepartment().getId() : null
+            user.getDepartment() != null ? user.getDepartment().getId() : null,
+            user.getClassroom() != null ? user.getClassroom().getId() : null
         );
     }
 }

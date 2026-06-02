@@ -30,6 +30,12 @@
                     <option th:each="department : ${departments}" th:value="${department.id}" th:text="${department.name}" th:selected="${filter.departmentId == department.id}">부서</option>
                 </select>
             </label>
+            <label>분반
+                <select name="classroomId">
+                    <option value="">전체</option>
+                    <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}" th:selected="${filter.classroomId == classroom.id}">분반</option>
+                </select>
+            </label>
             <label>권한 코드
                 <input name="permissionCode" th:value="${filter.permissionCode}" placeholder="user:manage">
             </label>
@@ -65,6 +71,7 @@
                         <th>연락처</th>
                         <th>역할</th>
                         <th>부서</th>
+                        <th>분반</th>
                         <th>직접 권한</th>
                         <th>운영</th>
                         <th>생성일</th>
@@ -80,6 +87,10 @@
                         <td>
                             <a class="link" th:if="${user.departmentId != null}" th:href="@{/admin/department/departments/{departmentId}(departmentId=${user.departmentId})}" th:text="${user.departmentName}">학사</a>
                             <span th:if="${user.departmentId == null}">-</span>
+                        </td>
+                        <td>
+                            <a class="link" th:if="${user.classroomId != null}" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${user.classroomId})}" th:text="${user.classroomName}">벚꽃반</a>
+                            <span th:if="${user.classroomId == null}">-</span>
                         </td>
                         <td>
                             <span th:if="${#lists.isEmpty(user.permissions)}">-</span>
@@ -99,8 +110,8 @@
             <div class="pager">
                 <span th:text="|총 ${usersPage.totalElements}명 · ${usersPage.page + 1}/${usersPage.totalPages == 0 ? 1 : usersPage.totalPages} 페이지|">총 0명</span>
                 <div>
-                    <a class="reset-link" th:classappend="${!usersPage.hasPrevious()} ? 'disabled'" th:href="@{/admin/user/users(keyword=${filter.keyword},role=${filter.role},departmentId=${filter.departmentId},permissionCode=${filter.permissionCode},size=${usersPage.size},sort=${filter.sort},page=${usersPage.previousPage()})}">이전</a>
-                    <a class="reset-link" th:classappend="${!usersPage.hasNext()} ? 'disabled'" th:href="@{/admin/user/users(keyword=${filter.keyword},role=${filter.role},departmentId=${filter.departmentId},permissionCode=${filter.permissionCode},size=${usersPage.size},sort=${filter.sort},page=${usersPage.nextPage()})}">다음</a>
+                    <a class="reset-link" th:classappend="${!usersPage.hasPrevious()} ? 'disabled'" th:href="@{/admin/user/users(keyword=${filter.keyword},role=${filter.role},departmentId=${filter.departmentId},classroomId=${filter.classroomId},permissionCode=${filter.permissionCode},size=${usersPage.size},sort=${filter.sort},page=${usersPage.previousPage()})}">이전</a>
+                    <a class="reset-link" th:classappend="${!usersPage.hasNext()} ? 'disabled'" th:href="@{/admin/user/users(keyword=${filter.keyword},role=${filter.role},departmentId=${filter.departmentId},classroomId=${filter.classroomId},permissionCode=${filter.permissionCode},size=${usersPage.size},sort=${filter.sort},page=${usersPage.nextPage()})}">다음</a>
                 </div>
             </div>
         </section>

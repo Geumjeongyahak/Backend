@@ -2,6 +2,8 @@ package geumjeongyahak.domain.users.service;
 
 import geumjeongyahak.domain.base.dto.response.AdminPage;
 import geumjeongyahak.domain.base.dto.response.AdminSorts;
+import geumjeongyahak.domain.classroom.entity.Classroom;
+import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
 import geumjeongyahak.domain.department.entity.Department;
 import geumjeongyahak.domain.department.repository.DepartmentRepository;
 import geumjeongyahak.domain.users.entity.User;
@@ -28,6 +30,7 @@ public class UserAdminViewService {
 
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
+    private final ClassroomProxyService classroomProxyService;
     private final UserCrudService userCrudService;
     private final UserPermissionService userPermissionService;
 
@@ -38,6 +41,8 @@ public class UserAdminViewService {
             .filter(user -> isBlank(filter.role()) || user.getRole().name().equals(filter.role()))
             .filter(user -> filter.departmentId() == null
                 || (user.getDepartment() != null && user.getDepartment().getId().equals(filter.departmentId())))
+            .filter(user -> filter.classroomId() == null
+                || (user.getClassroom() != null && user.getClassroom().getId().equals(filter.classroomId())))
             .filter(user -> isBlank(filter.permissionCode())
                 || user.getPermissions().stream()
                     .anyMatch(permission -> permission.getPermissionCode().contains(filter.permissionCode().trim())))
@@ -54,6 +59,7 @@ public class UserAdminViewService {
             "email", Comparator.comparing(AdminUserRow::email, Comparator.nullsLast(String::compareToIgnoreCase)),
             "role", Comparator.comparing(AdminUserRow::role, Comparator.nullsLast(String::compareToIgnoreCase)),
             "departmentName", Comparator.comparing(AdminUserRow::departmentName, Comparator.nullsLast(String::compareToIgnoreCase)),
+            "classroomName", Comparator.comparing(AdminUserRow::classroomName, Comparator.nullsLast(String::compareToIgnoreCase)),
             "createdAt", Comparator.comparing(AdminUserRow::createdAt, Comparator.nullsLast(LocalDateTime::compareTo))
         ), "createdAt,DESC");
     }
@@ -83,6 +89,13 @@ public class UserAdminViewService {
             .toList();
     }
 
+    public List<ClassroomOption> getClassroomOptions() {
+        return classroomProxyService.getActiveClassroomsOrderByName()
+            .stream()
+            .map(ClassroomOption::from)
+            .toList();
+    }
+
     public UserDetailResponse getUser(Long userId) {
         return userCrudService.getUserById(userId);
     }
@@ -94,7 +107,8 @@ public class UserAdminViewService {
         String password,
         String phoneNumber,
         String role,
-        Long departmentId
+        Long departmentId,
+        Long classroomId
     ) {
         return userCrudService.createUser(new CreateUserRequest(
             email,
@@ -102,7 +116,8 @@ public class UserAdminViewService {
             password,
             phoneNumber,
             role,
-            departmentId
+            departmentId,
+            classroomId
         )).id();
     }
 
@@ -113,7 +128,8 @@ public class UserAdminViewService {
         String name,
         String phoneNumber,
         String role,
-        Long departmentId
+        Long departmentId,
+        Long classroomId
     ) {
         userCrudService.updateUser(userId, new UpdateUserRequest(
             name,
@@ -121,7 +137,8 @@ public class UserAdminViewService {
             email,
             null,
             role,
-            departmentId
+            departmentId,
+            classroomId
         ));
     }
 
@@ -133,6 +150,7 @@ public class UserAdminViewService {
             null,
             null,
             role,
+            null,
             null
         ));
     }
@@ -145,7 +163,21 @@ public class UserAdminViewService {
             null,
             null,
             null,
-            departmentId
+            departmentId,
+            null
+        ));
+    }
+
+    @Transactional
+    public void updateClassroom(Long userId, Long classroomId) {
+        userCrudService.updateUser(userId, new UpdateUserRequest(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            classroomId
         ));
     }
 
@@ -163,10 +195,20 @@ public class UserAdminViewService {
         }
     }
 
+    public record ClassroomOption(
+        Long id,
+        String name
+    ) {
+        private static ClassroomOption from(Classroom classroom) {
+            return new ClassroomOption(classroom.getId(), classroom.getName());
+        }
+    }
+
     public record UserFilter(
         String keyword,
         String role,
         Long departmentId,
+        Long classroomId,
         String permissionCode,
         Integer page,
         Integer size,
@@ -182,6 +224,8 @@ public class UserAdminViewService {
         String role,
         Long departmentId,
         String departmentName,
+        Long classroomId,
+        String classroomName,
         List<String> permissions,
         LocalDateTime createdAt
     ) {
@@ -194,6 +238,8 @@ public class UserAdminViewService {
                 user.getRole().name(),
                 user.getDepartment() != null ? user.getDepartment().getId() : null,
                 user.getDepartment() != null ? user.getDepartment().getName() : "-",
+                user.getClassroom() != null ? user.getClassroom().getId() : null,
+                user.getClassroom() != null ? user.getClassroom().getName() : "-",
                 user.getPermissions().stream()
                     .map(UserPermission::toAuthorityCode)
                     .sorted()

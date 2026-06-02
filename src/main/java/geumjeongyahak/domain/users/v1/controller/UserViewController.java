@@ -27,6 +27,7 @@ public class UserViewController {
         @RequestParam(required = false) String keyword,
         @RequestParam(required = false) String role,
         @RequestParam(required = false) Long departmentId,
+        @RequestParam(required = false) Long classroomId,
         @RequestParam(required = false) String permissionCode,
         @RequestParam(required = false) Integer page,
         @RequestParam(required = false) Integer size,
@@ -34,12 +35,13 @@ public class UserViewController {
         Model model,
         Authentication authentication
     ) {
-        UserFilter filter = new UserFilter(keyword, role, departmentId, permissionCode, page, size, sort);
+        UserFilter filter = new UserFilter(keyword, role, departmentId, classroomId, permissionCode, page, size, sort);
         model.addAttribute("active", "users");
         model.addAttribute("adminName", authentication.getName());
         model.addAttribute("filter", filter);
         model.addAttribute("usersPage", userAdminViewService.getUsers(filter));
         model.addAttribute("departments", userAdminViewService.getDepartmentOptions());
+        model.addAttribute("classrooms", userAdminViewService.getClassroomOptions());
         model.addAttribute("permissionOptions", permissionRegistryViewService.getAssignablePermissions());
         return "admin/user/users";
     }
@@ -49,6 +51,7 @@ public class UserViewController {
         model.addAttribute("active", "users");
         model.addAttribute("adminName", authentication.getName());
         model.addAttribute("departments", userAdminViewService.getDepartmentOptions());
+        model.addAttribute("classrooms", userAdminViewService.getClassroomOptions());
         return "admin/user/users-form";
     }
 
@@ -60,9 +63,10 @@ public class UserViewController {
         @RequestParam(required = false) String phoneNumber,
         @RequestParam String role,
         @RequestParam(required = false) Long departmentId,
+        @RequestParam(required = false) Long classroomId,
         RedirectAttributes redirectAttributes
     ) {
-        Long userId = userAdminViewService.createUser(email, name, password, phoneNumber, role, departmentId);
+        Long userId = userAdminViewService.createUser(email, name, password, phoneNumber, role, departmentId, classroomId);
         redirectAttributes.addFlashAttribute("message", "사용자를 등록했습니다.");
         return "redirect:/admin/user/users/" + userId;
     }
@@ -77,6 +81,7 @@ public class UserViewController {
         model.addAttribute("adminName", authentication.getName());
         model.addAttribute("user", userAdminViewService.getUser(userId));
         model.addAttribute("departments", userAdminViewService.getDepartmentOptions());
+        model.addAttribute("classrooms", userAdminViewService.getClassroomOptions());
         model.addAttribute("permissionOptions", permissionRegistryViewService.getAssignablePermissions());
         model.addAttribute("permissionScopeOptions", permissionRegistryViewService.getAssignableScopes());
         return "admin/user/users-detail";
@@ -92,6 +97,7 @@ public class UserViewController {
         model.addAttribute("adminName", authentication.getName());
         model.addAttribute("user", userAdminViewService.getUser(userId));
         model.addAttribute("departments", userAdminViewService.getDepartmentOptions());
+        model.addAttribute("classrooms", userAdminViewService.getClassroomOptions());
         return "admin/user/users-edit";
     }
 
@@ -103,9 +109,10 @@ public class UserViewController {
         @RequestParam(required = false) String phoneNumber,
         @RequestParam String role,
         @RequestParam(required = false) Long departmentId,
+        @RequestParam(required = false) Long classroomId,
         RedirectAttributes redirectAttributes
     ) {
-        userAdminViewService.updateUser(userId, email, name, phoneNumber, role, departmentId);
+        userAdminViewService.updateUser(userId, email, name, phoneNumber, role, departmentId, classroomId);
         redirectAttributes.addFlashAttribute("message", "사용자 정보를 수정했습니다.");
         return "redirect:/admin/user/users/" + userId;
     }
@@ -129,6 +136,17 @@ public class UserViewController {
     ) {
         userAdminViewService.updateDepartment(userId, departmentId);
         redirectAttributes.addFlashAttribute("message", "사용자 소속 부서를 변경했습니다.");
+        return "redirect:/admin/user/users/" + userId;
+    }
+
+    @PostMapping("/{userId}/classroom")
+    public String updateClassroom(
+        @PathVariable Long userId,
+        @RequestParam Long classroomId,
+        RedirectAttributes redirectAttributes
+    ) {
+        userAdminViewService.updateClassroom(userId, classroomId);
+        redirectAttributes.addFlashAttribute("message", "사용자 배정 분반을 변경했습니다.");
         return "redirect:/admin/user/users/" + userId;
     }
 

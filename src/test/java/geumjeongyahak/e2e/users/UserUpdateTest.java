@@ -119,6 +119,50 @@ class UserUpdateTest extends UserBaseTest {
     }
 
     @Test
+    @DisplayName("관리자가 사용자의 분반을 변경 성공(200 OK)")
+    void updateUser_Classroom_Success() {
+        CreateUserRequest createReq = new CreateUserRequest(
+            "classroom-update@test.com",
+            "Classroom Update User",
+            "pw_classroom",
+            "010-1111-3333",
+            "VOLUNTEER",
+            null,
+            null
+        );
+
+        var createdUser = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(createReq)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .body("classroom", nullValue())
+            .extract()
+            .as(UserDetailResponse.class);
+
+        userTestHelper.setUser(createdUser.email());
+
+        UpdateUserRequest updateReq = new UpdateUserRequest(
+            null, null, null, null, null, null, 2L
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(updateReq)
+        .when()
+            .patch("/{userId}", createdUser.id())
+        .then()
+            .statusCode(200)
+            .body("classroom.id", equalTo(2))
+            .body("classroom.name", equalTo("장미반"))
+            .log().all();
+    }
+
+    @Test
     @DisplayName("일반 사용자 권한으로 다른 User 수정 실패(403 Forbidden)")
     void updateUser_Forbidden() {
         UpdateUserRequest updateReq = new UpdateUserRequest(

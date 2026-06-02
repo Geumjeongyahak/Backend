@@ -74,6 +74,36 @@ class UserCreateTest extends UserBaseTest {
     }
 
     @Test
+    @DisplayName("관리자 권한으로 User 생성 시 분반 배정 성공(201 Created)")
+    void createUser_WithClassroom_Success() {
+        String uniqueUsername = "classroom" + System.currentTimeMillis();
+        CreateUserRequest req = new CreateUserRequest(
+            uniqueUsername + "@test.com",
+            "Classroom User",
+            "password123!",
+            "010-4444-5555",
+            "VOLUNTEER",
+            null,
+            1L
+        );
+
+        var res = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .body("classroom.id", equalTo(1))
+            .body("classroom.name", equalTo("벚꽃반"))
+            .extract()
+            .as(UserDetailResponse.class);
+
+        userTestHelper.setUser(res.email());
+    }
+
+    @Test
     @DisplayName("관리자 권한으로 User 생성 성공 - GUEST 역할(201 Created)")
     void createUser_Success_Guest() {
         String uniqueUsername = "guest" + System.currentTimeMillis();
