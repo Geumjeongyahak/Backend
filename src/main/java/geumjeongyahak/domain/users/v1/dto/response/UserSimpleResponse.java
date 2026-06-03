@@ -3,6 +3,7 @@ package geumjeongyahak.domain.users.v1.dto.response;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import geumjeongyahak.domain.users.entity.User;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 
 @Schema(description = "사용자 목록 응답용 기본 정보 DTO. 상세 권한 목록과 생성/수정 시각은 포함하지 않습니다.")
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -26,7 +27,13 @@ public record UserSimpleResponse(
     Long departmentId,
 
     @Schema(description = "배정 분반 ID. 배정 분반이 없으면 null일 수 있습니다.", example = "1", nullable = true)
-    Long classroomId
+    Long classroomId,
+
+    @Schema(description = "교사로 담당 중인 활성 과목 수", example = "2")
+    long teacherAssignmentCount,
+
+    @Schema(description = "교사로 담당 중인 활성 과목의 분반명 목록")
+    List<String> teacherAssignmentClassroomNames
 ) {
     public UserSimpleResponse(
         Long id,
@@ -36,10 +43,14 @@ public record UserSimpleResponse(
         String role,
         Long departmentId
     ) {
-        this(id, name, email, phoneNumber, role, departmentId, null);
+        this(id, name, email, phoneNumber, role, departmentId, null, 0L, List.of());
     }
 
     public static UserSimpleResponse from(User user) {
+        return from(user, List.of());
+    }
+
+    public static UserSimpleResponse from(User user, List<TeacherAssignmentResponse> teacherAssignments) {
         return new UserSimpleResponse(
             user.getId(),
             user.getName(),
@@ -47,7 +58,12 @@ public record UserSimpleResponse(
             user.getPhoneNumber(),
             user.getRole().name(),
             user.getDepartment() != null ? user.getDepartment().getId() : null,
-            user.getClassroom() != null ? user.getClassroom().getId() : null
+            user.getClassroom() != null ? user.getClassroom().getId() : null,
+            teacherAssignments.size(),
+            teacherAssignments.stream()
+                .map(TeacherAssignmentResponse::classroomName)
+                .distinct()
+                .toList()
         );
     }
 }

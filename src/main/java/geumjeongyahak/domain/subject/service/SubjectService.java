@@ -168,6 +168,15 @@ public class SubjectService {
         return responses;
     }
 
+    public List<SubjectDetailResponse> getMyAssignedSubjects(Long teacherId) {
+        log.debug("내 담당 과목 목록 조회 요청 (teacherId={})", teacherId);
+
+        return subjectRepository.findAllByTeacherIdAndIsActiveTrueOrderByStartAtAscIdAsc(teacherId)
+            .stream()
+            .map(SubjectDetailResponse::from)
+            .toList();
+    }
+
     @Transactional
     public SubjectDetailResponse updateSubject(Long subjectId, UpdateSubjectBasicRequest request) {
         log.debug("과목 기본 정보 수정 요청 (id={})", subjectId);

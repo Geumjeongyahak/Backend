@@ -26,4 +26,10 @@ public class DailyScheduleProxyService {
                 "teacherId=" + teacherId + ", lessonDate=" + lessonDate
             ));
     }
+
+    public Long findActiveIdByClassroomIdAndLessonDate(Long classroomId, LocalDate lessonDate) {
+        return dailyScheduleRepository.findByClassroomIdAndLessonDateAndIsDeletedFalse(classroomId, lessonDate)
+            .map(DailySchedule::getId)
+            .orElse(null);
+    }
 }

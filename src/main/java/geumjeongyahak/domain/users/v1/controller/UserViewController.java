@@ -2,7 +2,7 @@ package geumjeongyahak.domain.users.v1.controller;
 
 import geumjeongyahak.domain.base.service.PermissionRegistryViewService;
 import geumjeongyahak.domain.users.service.UserAdminViewService;
-import geumjeongyahak.domain.users.service.UserAdminViewService.UserFilter;
+import geumjeongyahak.domain.users.service.dto.UserFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;

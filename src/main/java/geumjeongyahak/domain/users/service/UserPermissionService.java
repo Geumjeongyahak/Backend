@@ -53,6 +53,6 @@ public class UserPermissionService {
     }
 
     private PermissionResponse toResponse(UserPermission permission) {
-        return new PermissionResponse(permission.toAuthorityCode(), permission.toAuthorityCode());
+        return PermissionResponse.from(permission.getId(), permission.toAuthorityCode());
     }
 }

@@ -5,14 +5,17 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 
+import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.subject.entity.Subject;
 import geumjeongyahak.domain.subject.service.SubjectProxyService;
+import geumjeongyahak.domain.teacher_assignment.service.TeacherAssignmentService;
 import geumjeongyahak.domain.teacher_application.entity.TeacherApplication;
 import geumjeongyahak.domain.teacher_application.enums.TeacherApplicationStatus;
 import geumjeongyahak.domain.teacher_application.event.TeacherApprovedEvent;
 import geumjeongyahak.domain.teacher_application.exception.DuplicatePendingTeacherApplicationException;
+import geumjeongyahak.domain.teacher_application.exception.InvalidAssignedSubjectException;
 import geumjeongyahak.domain.teacher_application.exception.InvalidPreferredSubjectException;
 import geumjeongyahak.domain.teacher_application.exception.InvalidTeacherApplicationStatusException;
 import geumjeongyahak.domain.teacher_application.exception.TeacherApplicationApplicantNotGuestException;
@@ -25,7 +28,9 @@ import geumjeongyahak.domain.teacher_application.v1.dto.request.CreateTeacherApp
 import geumjeongyahak.domain.teacher_application.v1.dto.request.RejectTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.TeacherApplicationPaginationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.UpdateTeacherApplicationRequest;
+import geumjeongyahak.domain.teacher_application.v1.dto.response.AvailableTeacherScheduleResponse;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.MyTeacherApplicationResponse;
+import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationListResponse;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
@@ -50,6 +55,8 @@ public class TeacherApplicationService {
     private final TeacherApplicationRepository teacherApplicationRepository;
     private final UserProxyService userProxyService;
     private final SubjectProxyService subjectProxyService;
+    private final TeacherAssignmentService teacherAssignmentService;
+    private final AvailableTeacherScheduleService availableTeacherScheduleService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -98,6 +105,10 @@ public class TeacherApplicationService {
             .orElseGet(MyTeacherApplicationResponse::empty);
     }
 
+    public List<AvailableTeacherScheduleResponse> getAvailableTeacherSchedules() {
+        return availableTeacherScheduleService.getAvailableTeacherSchedules();
+    }
+
     public TeacherApplicationResponse getTeacherApplication(Long applicationId) {
         log.debug("교원 신청 상세 조회 요청 (applicationId={})", applicationId);
 
@@ -107,7 +118,7 @@ public class TeacherApplicationService {
         return TeacherApplicationResponse.from(application);
     }
 
-    public PaginationResponse<TeacherApplicationResponse> getTeacherApplications(
+    public PaginationResponse<TeacherApplicationListResponse> getTeacherApplications(
         TeacherApplicationStatus status,
         TeacherApplicationPaginationRequest request
     ) {
@@ -123,7 +134,7 @@ public class TeacherApplicationService {
         );
         Page<TeacherApplication> page = teacherApplicationRepository.findAll(specification, request.toRequest());
 
-        return PaginationResponse.from(page, TeacherApplicationResponse::from);
+        return PaginationResponse.from(page, TeacherApplicationListResponse::from);
     }
 
     @Transactional
@@ -189,14 +200,20 @@ public class TeacherApplicationService {
         validatePending(application);
         validateApplicantRole(application.getApplicant());
 
+        List<Subject> assignedSubjects = teacherAssignmentService.getSubjects(request.assignedSubjectIds());
+        validateAssignableSubjects(assignedSubjects);
+
         User reviewer = userProxyService.getById(reviewerId);
-        application.approve(reviewer, request.note());
+        application.approve(reviewer, assignedSubjects, request.note());
         eventPublisher.publishEvent(new TeacherApprovedEvent(
             application.getApplicant().getId(),
-            request.classroomId(),
             request.teacherStartAt(),
             request.teacherEndAt()
         ));
+        teacherAssignmentService.assignScheduleToUnassignedSubjects(
+            assignedSubjects,
+            application.getApplicant().getId()
+        );
 
         log.debug(
             "교원 신청 승인 완료 (applicationId={}, applicantId={})",
@@ -243,6 +260,17 @@ public class TeacherApplicationService {
     private void validatePreferredSubject(Subject preferredSubject) {
         if (!Boolean.TRUE.equals(preferredSubject.getIsActive()) || preferredSubject.getTeacher() != null) {
             throw new InvalidPreferredSubjectException();
+        }
+    }
+
+    private void validateAssignableSubjects(List<Subject> assignedSubjects) {
+        try {
+            teacherAssignmentService.validateSameSchedule(assignedSubjects);
+        } catch (BusinessException exception) {
+            throw new InvalidAssignedSubjectException();
+        }
+        if (assignedSubjects.stream().anyMatch(subject -> subject.getTeacher() != null)) {
+            throw new InvalidAssignedSubjectException();
         }
     }
 

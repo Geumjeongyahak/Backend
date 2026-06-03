@@ -49,6 +49,9 @@ public record UserDetailResponse(
     @Schema(description = "사용자에게 직접 부여된 authority 목록. role 기반 권한이나 부서 권한은 포함하지 않습니다.")
     List<PermissionResponse> permissions,
 
+    @Schema(description = "사용자가 교사로 담당 중인 활성 과목 목록")
+    List<TeacherAssignmentResponse> teacherAssignments,
+
     @Schema(description = "사용자 계정 생성 일시", example = "2024-01-01T12:00:00")
     LocalDateTime createdAt,
 
@@ -56,6 +59,10 @@ public record UserDetailResponse(
     LocalDateTime updatedAt
 ) {
     public static UserDetailResponse from(User user) {
+        return from(user, List.of());
+    }
+
+    public static UserDetailResponse from(User user, List<TeacherAssignmentResponse> teacherAssignments) {
         return new UserDetailResponse(
             user.getId(),
             user.getName(),
@@ -68,11 +75,9 @@ public record UserDetailResponse(
             user.getTeacherStartAt(),
             user.getTeacherEndAt(),
             user.getPermissions().stream()
-                .map(permission -> new PermissionResponse(
-                    permission.toAuthorityCode(),
-                    permission.toAuthorityCode()
-                ))
+                .map(permission -> PermissionResponse.from(permission.getId(), permission.toAuthorityCode()))
                 .toList(),
+            teacherAssignments,
             user.getCreatedAt(),
             user.getUpdatedAt()
         );

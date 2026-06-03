@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-label="상반기 수업 회고 mock image">
+  <rect width="960" height="540" fill="#f7f5ef"/>
+  <rect x="80" y="86" width="800" height="368" rx="20" fill="#ffffff" stroke="#ded6c7" stroke-width="3"/>
+  <rect x="130" y="132" width="700" height="54" rx="12" fill="#6d7f5f"/>
+  <rect x="130" y="224" width="210" height="154" rx="16" fill="#f0c36a"/>
+  <rect x="374" y="224" width="210" height="154" rx="16" fill="#77aeb5"/>
+  <rect x="618" y="224" width="210" height="154" rx="16" fill="#d58d72"/>
+  <circle cx="235" cy="300" r="40" fill="#ffffff" opacity=".8"/>
+  <circle cx="479" cy="300" r="40" fill="#ffffff" opacity=".8"/>
+  <circle cx="723" cy="300" r="40" fill="#ffffff" opacity=".8"/>
+  <text x="152" y="168" fill="#ffffff" font-family="Arial, sans-serif" font-size="28" font-weight="700">Class Review Meeting</text>
+</svg>

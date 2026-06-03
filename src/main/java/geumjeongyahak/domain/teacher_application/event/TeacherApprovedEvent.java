@@ -4,7 +4,6 @@ import java.time.LocalDate;
 
 public record TeacherApprovedEvent(
     Long userId,
-    Long classroomId,
     LocalDate teacherStartAt,
     LocalDate teacherEndAt
 ) {

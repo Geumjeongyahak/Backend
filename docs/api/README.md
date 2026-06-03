@@ -9,6 +9,7 @@
 - [Students](./Students.md)
 - [Subjects](./Subjects.md)
 - [TeacherApplications](./TeacherApplications.md)
+- [TeacherAssignmentFrontendGuide](./TeacherAssignmentFrontendGuide.md)
 - [Lessons](./Lessons.md)
 - [Events](./Events.md)
 - [DailySchedules](./DailySchedules.md)

@@ -82,7 +82,16 @@ class UserSubRoleTest extends UserBaseTest {
         .then()
             .statusCode(200)
             .body("size()", equalTo(1))
+            .body("[0].id", notNullValue())
             .body("[0].code", equalTo("channel:write:*"))
+            .body("[0].permissionCode", equalTo("channel:write:*"))
+            .body("[0].resourceCode", equalTo("channel"))
+            .body("[0].resourceLabel", equalTo("채널"))
+            .body("[0].actionCode", equalTo("write"))
+            .body("[0].actionLabel", equalTo("작성"))
+            .body("[0].scope", equalTo("global"))
+            .body("[0].targetId", nullValue())
+            .body("[0].targetName", equalTo("전체"))
             .log().all();
     }
 

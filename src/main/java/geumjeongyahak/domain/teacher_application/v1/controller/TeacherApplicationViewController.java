@@ -3,7 +3,7 @@ package geumjeongyahak.domain.teacher_application.v1.controller;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.teacher_application.enums.TeacherApplicationStatus;
 import geumjeongyahak.domain.teacher_application.service.TeacherApplicationAdminViewService;
-import geumjeongyahak.domain.teacher_application.service.TeacherApplicationAdminViewService.TeacherApplicationFilter;
+import geumjeongyahak.domain.teacher_application.service.dto.TeacherApplicationFilter;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.ApproveTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.RejectTeacherApplicationRequest;
 import jakarta.validation.Valid;
@@ -84,7 +84,7 @@ public class TeacherApplicationViewController {
         teacherApplicationAdminViewService.approve(
             userDetails.getUserId(),
             applicationId,
-            request.classroomId(),
+            request.assignedSubjectIds(),
             request.teacherStartAt(),
             request.teacherEndAt(),
             request.note()

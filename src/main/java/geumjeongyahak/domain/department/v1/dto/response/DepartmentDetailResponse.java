@@ -41,10 +41,7 @@ public record DepartmentDetailResponse (
                     department.getName(),
                     department.getDescription(),
                     department.getPermissions().stream()
-                            .map(permission -> new PermissionResponse(
-                                    permission.toAuthorityCode(),
-                                    permission.toAuthorityCode()
-                            ))
+                            .map(permission -> PermissionResponse.from(permission.getId(), permission.toAuthorityCode()))
                             .toList(),
                     users.stream()
                             .map(UserSimpleResponse::from)

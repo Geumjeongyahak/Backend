@@ -21,6 +21,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @ResourceLock("teacher-application-e2e-shared-state")
 class TeacherApplicationAdminViewTest extends BaseE2ETest {
 
+    private static final long ASSIGNED_SUBJECT_ID = 171L;
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -31,6 +33,8 @@ class TeacherApplicationAdminViewTest extends BaseE2ETest {
     protected void setUp() {
         super.setUp();
         cleanupTeacherApplications();
+        cleanupTeacherAssignmentFixture();
+        insertTeacherAssignmentFixture();
         resetApplicant();
         sessionId = loginAdminSession();
     }
@@ -38,6 +42,7 @@ class TeacherApplicationAdminViewTest extends BaseE2ETest {
     @AfterEach
     void cleanup() {
         cleanupTeacherApplications();
+        cleanupTeacherAssignmentFixture();
         resetApplicant();
     }
 
@@ -73,7 +78,7 @@ class TeacherApplicationAdminViewTest extends BaseE2ETest {
             .body(containsString("이영희 교원 신청"))
             .body(containsString("금정열린배움터에서 함께 배우고 싶습니다."))
             .body(containsString("신청 처리"))
-            .body(containsString("배정 분반"))
+            .body(containsString("배정 과목"))
             .body(containsString("반려 사유"));
     }
 
@@ -102,7 +107,7 @@ class TeacherApplicationAdminViewTest extends BaseE2ETest {
         given()
             .cookie("JSESSIONID", sessionId)
             .contentType(ContentType.URLENC)
-            .formParam("classroomId", 2)
+            .formParam("assignedSubjectIds", ASSIGNED_SUBJECT_ID)
             .formParam("teacherStartAt", "2026-06-01")
             .formParam("teacherEndAt", "2026-12-31")
             .formParam("note", "면접 후 승인")
@@ -191,6 +196,25 @@ class TeacherApplicationAdminViewTest extends BaseE2ETest {
 
     private void cleanupTeacherApplications() {
         jdbcTemplate.update("DELETE FROM teacher_applications");
+    }
+
+    private void insertTeacherAssignmentFixture() {
+        jdbcTemplate.update("""
+            MERGE INTO subjects (
+                id, class_id, teacher_id, name, start_at, end_at, day_of_week,
+                start_time, end_time, period, teacher_assigned_at, description, is_active
+            )
+            KEY(id)
+            VALUES (
+                ?, 2, NULL, '관리자 화면 배정 과목', DATE '2099-03-02', DATE '2099-06-30', 'MONDAY',
+                TIME '19:20:00', TIME '20:00:00', 1, NULL, '관리자 화면 승인 배정 테스트', TRUE
+            )
+            """, ASSIGNED_SUBJECT_ID);
+    }
+
+    private void cleanupTeacherAssignmentFixture() {
+        jdbcTemplate.update("DELETE FROM lessons WHERE subject_id = ?", ASSIGNED_SUBJECT_ID);
+        jdbcTemplate.update("DELETE FROM subjects WHERE id = ?", ASSIGNED_SUBJECT_ID);
     }
 
     private void resetApplicant() {

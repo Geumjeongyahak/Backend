@@ -35,6 +35,8 @@ public class LessonReadTest extends LessonBaseTest {
             .body("lessonId", everyItem(notNullValue()))
             .body("date", everyItem(notNullValue()))
             .body("period", everyItem(allOf(notNullValue(), anyOf(is(1), is(2), is(3)))))
+            .body("classroomId", everyItem(notNullValue()))
+            .body("classroomName", everyItem(notNullValue()))
             .body("[0].date", notNullValue())
             .log().all();
     }
@@ -72,6 +74,8 @@ public class LessonReadTest extends LessonBaseTest {
             .body("lessonId", everyItem(notNullValue()))
             .body("teacherName", everyItem(notNullValue()))
             .body("subjectName", everyItem(notNullValue()))
+            .body("classroomId", everyItem(notNullValue()))
+            .body("classroomName", everyItem(notNullValue()))
             .log().all();
     }
 
@@ -142,6 +146,8 @@ public class LessonReadTest extends LessonBaseTest {
             .body("lessonId", everyItem(notNullValue()))
             .body("date", everyItem(notNullValue()))
             .body("period", everyItem(anyOf(is(1), is(2), is(3))))
+            .body("classroomId", everyItem(is((int) CLASSROOM_ID)))
+            .body("classroomName", everyItem(notNullValue()))
             .log().all();
     }
 
@@ -218,6 +224,9 @@ public class LessonReadTest extends LessonBaseTest {
             .body("status", notNullValue())
             .body("teacherName", notNullValue())
             .body("subjectName", notNullValue())
+            .body("dailyScheduleId", notNullValue())
+            .body("classroomId", is((int) CLASSROOM_ID))
+            .body("classroomName", notNullValue())
             .log().all();
     }
 
