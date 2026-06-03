@@ -114,6 +114,13 @@ public class User extends BaseEntity {
         this.role = RoleType.VOLUNTEER;
     }
 
+    public void releaseTeacherProfile(LocalDate teacherEndAt) {
+        this.department = null;
+        this.classroom = null;
+        this.teacherEndAt = teacherEndAt;
+        this.role = RoleType.GUEST;
+    }
+
     public String getUsername() {
         return findLocalCredential()
             .map(UserCredential::getCredentialEmail)

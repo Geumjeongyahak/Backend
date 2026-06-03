@@ -38,6 +38,7 @@ public class UserCrudService {
     private final UserCredentialService credentialService;
     private final UserProxyService userProxyService;
     private final DepartmentPermissionProxyService departmentPermissionProxyService;
+    private final UserPermissionService userPermissionService;
 
 
     @Transactional(readOnly = true)
@@ -179,13 +180,26 @@ public class UserCrudService {
             user.setEmail(em);
             credentialService.updateLocalCredentialEmail(user, em);
         });
-        role.map(RoleType::valueOf).ifPresent(user::setRole);
+        Optional<RoleType> requestedRole = role.map(RoleType::valueOf);
+        requestedRole.ifPresent(roleType -> updateRole(user, roleType));
+        if (requestedRole.filter(RoleType.GUEST::equals).isPresent()) {
+            return;
+        }
         departmentId.ifPresent(deptId -> {
             user.setDepartment(departmentProxyService.getById(deptId));
         });
         classroomId.ifPresent(classroomIdValue -> {
             user.setClassroom(classroomProxyService.getActiveById(classroomIdValue));
         });
+    }
+
+    private void updateRole(User user, RoleType roleType) {
+        if (roleType == RoleType.GUEST) {
+            user.releaseTeacherProfile(LocalDate.now());
+            userPermissionService.removeAllPermissions(user.getId());
+            return;
+        }
+        user.setRole(roleType);
     }
 
     @Transactional
