@@ -40,6 +40,11 @@ public class UserProxyService {
     public boolean existsByDepartmentId(Long departmentId) {
         return userRepository.existsByDepartmentId(departmentId);
     }
+
+    @Transactional(readOnly = true)
+    public boolean existsByClassroomId(Long classroomId) {
+        return userRepository.existsByClassroomId(classroomId);
+    }
     
 
     @Transactional(readOnly = true)

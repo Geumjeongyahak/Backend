@@ -2,6 +2,9 @@ package geumjeongyahak.domain.users.service;
 
 import geumjeongyahak.domain.department.service.DepartmentProxyService;
 import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
+import geumjeongyahak.common.exception.BusinessException;
+import geumjeongyahak.common.exception.CommonErrorCode;
+import geumjeongyahak.domain.subject.service.SubjectProxyService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -15,6 +18,7 @@ import geumjeongyahak.domain.users.v1.dto.request.UpdateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UserPaginationRequest;
 import geumjeongyahak.domain.users.v1.dto.response.UserSimpleResponse;
 import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
+import geumjeongyahak.domain.users.v1.dto.response.TeacherAssignmentResponse;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.exception.DuplicateEmailException;
@@ -24,7 +28,10 @@ import geumjeongyahak.domain.users.repository.specification.UserSpecs;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -36,6 +43,7 @@ public class UserCrudService {
     private final PasswordEncoder passwordEncoder;
     private final UserCredentialService credentialService;
     private final UserProxyService userProxyService;
+    private final SubjectProxyService subjectProxyService;
 
 
     @Transactional(readOnly = true)
@@ -44,7 +52,8 @@ public class UserCrudService {
         User user = userProxyService.getById(userId);
         log.debug("사용자 조회 요청 완료 - ID: {}", userId);
 
-        return UserDetailResponse.from(user);
+        List<TeacherAssignmentResponse> assignments = getTeacherAssignments(user.getId());
+        return UserDetailResponse.from(user, assignments);
     }
 
     @Transactional(readOnly = true)
@@ -65,10 +74,17 @@ public class UserCrudService {
         }
 
         var users = userRepository.findAll(spec, request.toRequest());
-        var pageResponse = new PaginationResponse<>(users);
-        log.debug("전체 사용자 목록 조회 완료 - 총 {}명", pageResponse.getTotalElements());
+        Map<Long, List<TeacherAssignmentResponse>> assignmentsByTeacherId =
+            getTeacherAssignmentsByTeacherId(users.getContent());
 
-        return PaginationResponse.mapTo(pageResponse, UserSimpleResponse::from);
+        log.debug("전체 사용자 목록 조회 완료 - 총 {}명", users.getTotalElements());
+        return PaginationResponse.from(
+            users,
+            user -> UserSimpleResponse.from(
+                user,
+                assignmentsByTeacherId.getOrDefault(user.getId(), List.of())
+            )
+        );
     }
 
     @Transactional
@@ -102,7 +118,7 @@ public class UserCrudService {
         );
         log.info("사용자 생성 완료 - ID: {}, email: {}", savedUser.getId(), savedUser.getEmail());
 
-        return UserDetailResponse.from(savedUser);
+        return UserDetailResponse.from(savedUser, List.of());
     }
 
     @Transactional
@@ -114,6 +130,7 @@ public class UserCrudService {
                 log.debug("사용자 수정 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
                 return new UserNotFoundException(userId);
             });
+        validateTeacherAssignmentRoleChange(user, request.role());
         updateUserInternal(user,
             Optional.ofNullable(request.name()),
             Optional.ofNullable(request.phoneNumber()),
@@ -124,7 +141,7 @@ public class UserCrudService {
             Optional.ofNullable(request.classroomId())
         );
         log.info("사용자 수정 완료 - ID: {}, email: {}", user.getId(), user.getEmail());
-        return UserDetailResponse.from(user);
+        return UserDetailResponse.from(user, getTeacherAssignments(user.getId()));
     }
 
     @Transactional
@@ -146,7 +163,7 @@ public class UserCrudService {
                 Optional.empty()  // 본인 수정 시 분반 변경 불가
         );
         log.debug("본인 사용자 수정 완료 - ID: {}, email: {}", user.getId(), user.getEmail());
-        return UserDetailResponse.from(user);
+        return UserDetailResponse.from(user, getTeacherAssignments(user.getId()));
     }
 
     private void updateUserInternal(
@@ -182,12 +199,58 @@ public class UserCrudService {
         });
     }
 
+    private List<TeacherAssignmentResponse> getTeacherAssignments(Long teacherId) {
+        return subjectProxyService.getActiveSubjectsByTeacherId(teacherId).stream()
+            .map(TeacherAssignmentResponse::from)
+            .toList();
+    }
+
+    private Map<Long, List<TeacherAssignmentResponse>> getTeacherAssignmentsByTeacherId(List<User> users) {
+        List<Long> userIds = users.stream()
+            .map(User::getId)
+            .toList();
+        if (userIds.isEmpty()) {
+            return Map.of();
+        }
+        return subjectProxyService.getActiveSubjectsByTeacherIds(userIds).stream()
+            .collect(Collectors.groupingBy(
+                subject -> subject.getTeacher().getId(),
+                Collectors.mapping(TeacherAssignmentResponse::from, Collectors.toList())
+            ));
+    }
+
+    private void validateTeacherAssignmentRoleChange(User user, String requestedRole) {
+        if (requestedRole == null) {
+            return;
+        }
+        RoleType nextRole = RoleType.valueOf(requestedRole);
+        if (isTeacherAssignableRole(nextRole)) {
+            return;
+        }
+        if (subjectProxyService.existsActiveSubjectByTeacherId(user.getId())) {
+            throw new BusinessException(
+                CommonErrorCode.INVALID_STATE,
+                "담당 중인 활성 과목이 있는 사용자는 교사 배정이 불가능한 역할로 변경할 수 없습니다."
+            );
+        }
+    }
+
+    private boolean isTeacherAssignableRole(RoleType role) {
+        return role == RoleType.VOLUNTEER || role == RoleType.MANAGER || role == RoleType.ADMIN;
+    }
+
     @Transactional
     public void deleteUserById(Long userId) {
         log.debug("사용자 삭제 요청 - ID: {}", userId);
         if (!userRepository.existsById(userId)) {
             log.debug("사용자 삭제 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
             throw new UserNotFoundException(userId);
+        }
+        if (subjectProxyService.existsActiveSubjectByTeacherId(userId)) {
+            throw new BusinessException(
+                CommonErrorCode.INVALID_STATE,
+                "담당 중인 활성 과목이 있는 사용자는 삭제할 수 없습니다."
+            );
         }
         userRepository.deleteById(userId);
         log.info("사용자 삭제 완료 - ID: {}", userId);
