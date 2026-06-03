@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import geumjeongyahak.common.event.EventPublisher;
+import geumjeongyahak.common.exception.BusinessException;
+import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.DuplicateResourceException;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
@@ -24,6 +26,8 @@ import geumjeongyahak.domain.classroom.v1.dto.request.CreateClassroomRequest;
 import geumjeongyahak.domain.classroom.v1.dto.request.UpdateClassroomRequest;
 import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomDetailResponse;
 import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomSummaryResponse;
+import geumjeongyahak.domain.subject.service.SubjectProxyService;
+import geumjeongyahak.domain.users.service.UserProxyService;
 
 @Slf4j
 @Service
@@ -32,6 +36,8 @@ import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomSummaryResponse;
 public class ClassroomCrudService {
     private final ClassroomRepository classroomRepository;
     private final EventPublisher eventPublisher;
+    private final SubjectProxyService subjectProxyService;
+    private final UserProxyService userProxyService;
 
     @Transactional
     public ClassroomDetailResponse createClassroom(CreateClassroomRequest request) {
@@ -125,6 +131,7 @@ public class ClassroomCrudService {
     public void deleteClassroom(Long id) {
         log.debug("분반 삭제 시도: {}", id);
         Classroom classroom = getClassroomWithoutDeleted(id);
+        validateClassroomDeletable(id);
         classroom.setDeleted(true);
         classroomRepository.save(classroom);
         eventPublisher.publish(new ClassroomDeletedEvent(id));
@@ -138,5 +145,20 @@ public class ClassroomCrudService {
             throw new ResourceNotFoundException(ClassroomErrorCode.CLASSROOM_NOT_FOUND);
         }
         return classroom;
+    }
+
+    private void validateClassroomDeletable(Long classroomId) {
+        if (subjectProxyService.existsActiveSubjectByClassroomId(classroomId)) {
+            throw new BusinessException(
+                CommonErrorCode.INVALID_STATE,
+                "활성 과목이 연결된 분반은 삭제할 수 없습니다."
+            );
+        }
+        if (userProxyService.existsByClassroomId(classroomId)) {
+            throw new BusinessException(
+                CommonErrorCode.INVALID_STATE,
+                "기본 분반으로 사용 중인 사용자가 있는 분반은 삭제할 수 없습니다."
+            );
+        }
     }
 }
