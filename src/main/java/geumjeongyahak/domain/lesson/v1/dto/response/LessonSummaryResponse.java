@@ -25,7 +25,13 @@ public record LessonSummaryResponse(
     String teacherName,
 
     @Schema(description = "과목 이름", example = "수학")
-    String subjectName
+    String subjectName,
+
+    @Schema(description = "분반 식별자", example = "1")
+    Long classroomId,
+
+    @Schema(description = "분반 이름", example = "벚꽃반")
+    String classroomName
 ) {
 
     public static LessonSummaryResponse from(Lesson lesson) {
@@ -36,7 +42,9 @@ public record LessonSummaryResponse(
             lesson.getStartTime(),
             lesson.getEndTime(),
             lesson.getTeacher().getName(),
-            lesson.getSubject().getName()
+            lesson.getSubject().getName(),
+            lesson.getSubject().getClassroom().getId(),
+            lesson.getSubject().getClassroom().getName()
         );
     }
 }
