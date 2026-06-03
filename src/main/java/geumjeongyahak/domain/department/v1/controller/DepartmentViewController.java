@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.department.v1.controller;
 
 import geumjeongyahak.domain.base.service.PermissionRegistryViewService;
+import geumjeongyahak.domain.department.enums.DepartmentRoleType;
 import geumjeongyahak.domain.file.service.DepartmentAdminViewService;
 import geumjeongyahak.domain.file.service.DepartmentAdminViewService.DepartmentFilter;
 import lombok.RequiredArgsConstructor;
@@ -99,12 +100,13 @@ public class DepartmentViewController {
     @PostMapping("/{departmentId}/permissions")
     public String addPermission(
         @PathVariable Long departmentId,
+        @RequestParam(required = false) DepartmentRoleType roleType,
         @RequestParam String permissionKey,
         @RequestParam String scopeTarget,
         RedirectAttributes redirectAttributes
     ) {
         String permissionCode = permissionRegistryViewService.buildPermissionCode(permissionKey, scopeTarget);
-        departmentAdminViewService.addPermission(departmentId, permissionCode);
+        departmentAdminViewService.addPermission(departmentId, roleType, permissionCode);
         redirectAttributes.addFlashAttribute("message", "부서 권한을 추가했습니다.");
         return "redirect:/admin/department/departments/" + departmentId;
     }

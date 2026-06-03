@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import geumjeongyahak.domain.auth.v1.dto.response.PermissionResponse;
 import geumjeongyahak.domain.department.entity.Department;
+import geumjeongyahak.domain.department.entity.DepartmentPermission;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.v1.dto.response.UserSimpleResponse;
 
@@ -35,16 +36,24 @@ public record DepartmentDetailResponse (
         @Schema(description = "수정 일시", example = "2024-01-02T15:30:00")
         LocalDateTime updatedAt
 ) {
-        public static DepartmentDetailResponse from(Department department, Collection<User> users) {
+        public static DepartmentDetailResponse from(
+                Department department,
+                Collection<User> users,
+                Collection<DepartmentPermission> permissions
+        ) {
             return new DepartmentDetailResponse(
                     department.getId(),
                     department.getName(),
                     department.getDescription(),
-                    department.getPermissions().stream()
-                            .map(permission -> new PermissionResponse(
-                                    permission.toAuthorityCode(),
-                                    permission.toAuthorityCode()
-                            ))
+                    permissions.stream()
+                            .map(permission -> {
+                                    String authorityCode = permission.toAuthorityCode();
+                                    return new PermissionResponse(
+                                            authorityCode,
+                                            authorityCode,
+                                            permission.getRoleType().name()
+                                    );
+                            })
                             .toList(),
                     users.stream()
                             .map(UserSimpleResponse::from)

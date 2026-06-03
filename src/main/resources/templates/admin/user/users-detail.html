@@ -4,7 +4,7 @@
 <body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
 <main class="stack">
     <div class="page-title">
-        <div><h1 th:text="${user.name}">사용자</h1><p>사용자 상세 정보와 직접 권한을 관리합니다.</p></div>
+        <div><h1 th:text="${user.name}">사용자</h1><p>사용자 상세 정보와 권한을 관리합니다.</p></div>
         <a class="button secondary" th:href="@{/admin/user/users/{userId}/edit(userId=${user.id})}">수정</a>
     </div>
     <section class="panel detail-grid">
@@ -35,8 +35,8 @@
         </div>
     </section>
     <section class="panel stack">
-        <h2>직접 권한</h2>
-        <div><span class="tag" th:each="permission : ${user.permissions}" th:text="${permission.code}">user:manage:*</span><span th:if="${#lists.isEmpty(user.permissions)}">-</span></div>
+        <h2>권한</h2>
+        <div><span class="tag" th:each="permission : ${user.permissions}" th:text="|${permission.source}: ${permission.code}|">user:manage:*</span><span th:if="${#lists.isEmpty(user.permissions)}">-</span></div>
         <form class="inline-form permission-form" th:action="@{/admin/user/users/{userId}/permissions(userId=${user.id})}" method="post">
             <select name="permissionKey" required>
                 <option value="">권한 선택</option>

@@ -11,9 +11,11 @@ public record PermissionResponse(
     @Schema(description = "코드", example = "department:write:*")
     String code,
 
-    @Schema(description = "권한 출처. 사용자 직접 권한에서만 값이 있을 수 있습니다.", example = "MANUAL", nullable = true)
+    @Schema(description = "권한 출처. 사용자 예외 권한은 MANUAL, 부서 직책 권한은 MEMBER/MANAGER로 내려갑니다.", example = "MANUAL", nullable = true)
     String source
 ) {
+    public static final String SOURCE_MANUAL = "MANUAL";
+
     public PermissionResponse(String name, String code) {
         this(name, code, null);
     }

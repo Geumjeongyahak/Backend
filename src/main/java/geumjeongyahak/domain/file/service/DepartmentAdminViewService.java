@@ -5,6 +5,7 @@ import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.base.dto.response.AdminSorts;
 import geumjeongyahak.domain.department.entity.Department;
 import geumjeongyahak.domain.department.entity.DepartmentPermission;
+import geumjeongyahak.domain.department.enums.DepartmentRoleType;
 import geumjeongyahak.domain.department.repository.DepartmentRepository;
 import geumjeongyahak.domain.department.service.DepartmentCrudService;
 import geumjeongyahak.domain.department.service.DepartmentPermissionService;
@@ -38,11 +39,12 @@ public class DepartmentAdminViewService {
             .stream()
             .filter(department -> matchesKeyword(department, filter.keyword()))
             .filter(department -> isBlank(filter.permissionCode())
-                || department.getPermissions().stream()
+                || departmentPermissionService.getAllPermissions(department.getId()).stream()
                     .anyMatch(permission -> permission.getPermissionCode().contains(filter.permissionCode().trim())))
             .map(department -> AdminDepartmentRow.from(
                 department,
-                userRepository.countByDepartmentId(department.getId())
+                userRepository.countByDepartmentId(department.getId()),
+                departmentPermissionService.getAllPermissions(department.getId())
             ))
             .filter(row -> filter.minMemberCount() == null || row.memberCount() >= filter.minMemberCount())
             .toList();
@@ -87,13 +89,17 @@ public class DepartmentAdminViewService {
     }
 
     @Transactional
-    public void addPermission(Long departmentId, String permissionCode) {
+    public void addPermission(Long departmentId, DepartmentRoleType roleType, String permissionCode) {
         Department department = departmentRepository.findById(departmentId)
             .orElseThrow(() -> new ResourceNotFoundException(
                 CommonErrorCode.RESOURCE_NOT_FOUND,
                 "부서를 찾을 수 없습니다 - ID: " + departmentId
             ));
-        departmentPermissionService.addPermission(department, permissionCode);
+        departmentPermissionService.addPermission(
+            department,
+            roleType != null ? roleType : DepartmentRoleType.MEMBER,
+            permissionCode
+        );
     }
 
     public record AdminDepartmentRow(
@@ -104,14 +110,16 @@ public class DepartmentAdminViewService {
         List<String> permissions,
         LocalDateTime createdAt
     ) {
-        private static AdminDepartmentRow from(Department department, long memberCount) {
+        private static AdminDepartmentRow from(
+            Department department, long memberCount, List<DepartmentPermission> permissions
+        ) {
             return new AdminDepartmentRow(
                 department.getId(),
                 department.getName(),
                 department.getDescription(),
                 memberCount,
-                department.getPermissions().stream()
-                    .map(DepartmentPermission::toAuthorityCode)
+                permissions.stream()
+                    .map(permission -> permission.getRoleType().name() + ":" + permission.toAuthorityCode())
                     .sorted()
                     .toList(),
                 department.getCreatedAt()

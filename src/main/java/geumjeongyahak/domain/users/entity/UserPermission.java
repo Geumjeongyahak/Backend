@@ -1,11 +1,8 @@
 package geumjeongyahak.domain.users.entity;
 
 import geumjeongyahak.domain.base.entity.BaseEntity;
-import geumjeongyahak.domain.users.enums.PermissionSource;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -38,22 +35,11 @@ public class UserPermission extends BaseEntity {
     @Column(name = "permission_code", nullable = false, length = 100)
     private String permissionCode;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "source", nullable = false, length = 20)
-    private PermissionSource source = PermissionSource.MANUAL;
-
     public UserPermission(
         User user, String permissionCode
     ) {
-        this(user, permissionCode, PermissionSource.MANUAL);
-    }
-
-    public UserPermission(
-        User user, String permissionCode, PermissionSource source
-    ) {
         this.user = user;
         this.permissionCode = permissionCode;
-        this.source = source != null ? source : PermissionSource.MANUAL;
     }
 
     public boolean isGlobalScope() {

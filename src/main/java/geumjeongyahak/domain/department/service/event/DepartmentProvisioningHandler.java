@@ -26,10 +26,10 @@ public class DepartmentProvisioningHandler {
     public void handleDepartmentChannelProvisioned(DepartmentChannelProvisionedEvent event) {
         Department department = departmentProxyService.getById(event.departmentId());
 
-        departmentPermissionService.addPermission(department, PermissionCode.of(
+        departmentPermissionService.addMemberPermission(department, PermissionCode.of(
                 ResourceType.CHANNEL, ActionType.READ, event.channelId()).toString());
 
-        departmentPermissionService.addPermission(department, PermissionCode.of(
+        departmentPermissionService.addMemberPermission(department, PermissionCode.of(
                 ResourceType.CHANNEL, ActionType.WRITE, event.channelId()).toString());
 
         log.info("부서 기본 권한 추가 완료 - departmentId: {}", department.getId());

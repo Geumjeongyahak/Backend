@@ -35,18 +35,50 @@ INSERT INTO user_credentials (id, user_id, provider, credential_email, password_
     (4, 4, 'LOCAL', 'guest01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE);
 ALTER TABLE user_credentials ALTER COLUMN id RESTART WITH 5;
 
--- 4. Department Permissions
-INSERT INTO department_permissions (department_id, permission_code) VALUES
-    (1, 'department:write:*'),
-    (1, 'department:manage:*'),
-    (2, 'channel:read:*'),
-    (2, 'channel:write:*'),
-    (4, 'purchase-request:read:*'),
-    (4, 'purchase-request:review:*');
-
--- 5. User Permissions
+-- 4. User Permissions
 INSERT INTO user_permissions (user_id, permission_code) VALUES
     (2, 'channel:write:1');
+
+-- 5. Department Permissions
+INSERT INTO department_permissions (department_id, role_type, permission_code) VALUES
+    (1, 'MEMBER', 'subject:read:*'),
+    (1, 'MEMBER', 'lesson:read:*'),
+    (1, 'MEMBER', 'channel:write:7'),
+    (1, 'MANAGER', 'subject:write:*'),
+    (1, 'MANAGER', 'subject:manage:*'),
+    (1, 'MANAGER', 'lesson:write:*'),
+    (1, 'MANAGER', 'lesson:manage:*'),
+    (1, 'MANAGER', 'event:manage:*'),
+    (1, 'MANAGER', 'lesson-exchange-request:manage:*'),
+    (1, 'MANAGER', 'channel:manage:7'),
+
+    (2, 'MEMBER', 'teacher-application:read:*'),
+    (2, 'MEMBER', 'daily-schedule:read:*'),
+    (2, 'MEMBER', 'absence-request:read:*'),
+    (2, 'MEMBER', 'channel:write:8'),
+    (2, 'MANAGER', 'student:write:*'),
+    (2, 'MANAGER', 'student:manage:*'),
+    (2, 'MANAGER', 'teacher-application:manage:*'),
+    (2, 'MANAGER', 'daily-schedule:manage:*'),
+    (2, 'MANAGER', 'absence-request:manage:*'),
+    (2, 'MANAGER', 'channel:manage:8'),
+
+    (3, 'MEMBER', 'purchase-request:read:*'),
+    (3, 'MEMBER', 'channel:write:9'),
+    (3, 'MANAGER', 'purchase-request:review:*'),
+    (3, 'MANAGER', 'channel:manage:9'),
+
+    (4, 'MEMBER', 'purchase-request:read:*'),
+    (4, 'MEMBER', 'vendor:read:*'),
+    (4, 'MEMBER', 'channel:write:10'),
+    (4, 'MANAGER', 'purchase-request:review:*'),
+    (4, 'MANAGER', 'purchase-request:manage:*'),
+    (4, 'MANAGER', 'vendor:manage:*'),
+    (4, 'MANAGER', 'channel:manage:10'),
+
+    (5, 'MEMBER', 'teacher-application:read:*'),
+    (5, 'MEMBER', 'channel:write:11'),
+    (5, 'MANAGER', 'channel:manage:11');
 
 -- 6. Classrooms
 INSERT INTO classrooms (id, name, type, description)
