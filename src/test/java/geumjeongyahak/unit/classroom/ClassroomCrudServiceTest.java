@@ -12,6 +12,8 @@ import geumjeongyahak.domain.classroom.enums.ClassroomType;
 import geumjeongyahak.domain.classroom.event.ClassroomDeletedEvent;
 import geumjeongyahak.domain.classroom.repository.ClassroomRepository;
 import geumjeongyahak.domain.classroom.service.ClassroomCrudService;
+import geumjeongyahak.domain.subject.service.SubjectProxyService;
+import geumjeongyahak.domain.users.service.UserProxyService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -29,6 +31,12 @@ class ClassroomCrudServiceTest {
     @Mock
     private EventPublisher eventPublisher;
 
+    @Mock
+    private SubjectProxyService subjectProxyService;
+
+    @Mock
+    private UserProxyService userProxyService;
+
     @InjectMocks
     private ClassroomCrudService classroomCrudService;
 
@@ -42,6 +50,8 @@ class ClassroomCrudServiceTest {
         ReflectionTestUtils.setField(classroom, "id", 10L);
 
         given(classroomRepository.findById(10L)).willReturn(Optional.of(classroom));
+        given(subjectProxyService.existsActiveSubjectByClassroomId(10L)).willReturn(false);
+        given(userProxyService.existsByClassroomId(10L)).willReturn(false);
 
         classroomCrudService.deleteClassroom(10L);
 

@@ -1,7 +1,10 @@
 package geumjeongyahak.e2e.classroom;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import geumjeongyahak.domain.channel.entity.Channel;
 import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
 import geumjeongyahak.domain.channel.enums.ChannelBindingType;
@@ -14,6 +17,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("E2E: Classroom 삭제 테스트")
 public class ClassroomDeleteTest extends BaseClassroomTest {
+
+    private Long subjectLinkedClassroomId;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @AfterEach
+    void cleanupSubjectFixture() {
+        if (subjectLinkedClassroomId != null) {
+            jdbcTemplate.update("DELETE FROM subjects WHERE class_id = ?", subjectLinkedClassroomId);
+        }
+    }
 
     @Test
     @DisplayName("관리자 권한으로 Classroom 삭제 성공(204 No Content)")
@@ -86,6 +101,33 @@ public class ClassroomDeleteTest extends BaseClassroomTest {
             .get("/{id}", classroomId)
         .then()
             .statusCode(200)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("활성 과목이 연결된 Classroom 삭제 실패(409 Conflict)")
+    void deleteClassroom_withActiveSubjects_returns409() {
+        Classroom classroom = testClassroomHelper.createTestClassroom(
+            "Test Classroom Delete With Subject",
+            ClassroomType.WEEKDAY,
+            "활성 과목 연결 삭제 차단 테스트"
+        );
+        subjectLinkedClassroomId = classroom.getId();
+        jdbcTemplate.update("""
+            INSERT INTO subjects (
+                class_id, teacher_id, name, start_at, end_at, day_of_week,
+                start_time, end_time, period, teacher_assigned_at, description, is_active
+            )
+            VALUES (?, NULL, '삭제 차단 과목', DATE '2099-03-02', DATE '2099-06-30', 'MONDAY',
+                    TIME '19:20:00', TIME '20:00:00', 1, NULL, '분반 삭제 차단 테스트', TRUE)
+            """, subjectLinkedClassroomId);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/{id}", subjectLinkedClassroomId)
+        .then()
+            .statusCode(409)
             .log().all();
     }
 

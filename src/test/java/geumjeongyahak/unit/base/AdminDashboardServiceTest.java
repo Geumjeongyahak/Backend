@@ -17,6 +17,9 @@ import geumjeongyahak.domain.request.enums.RequestStatus;
 import geumjeongyahak.domain.request.repository.AbsenceRequestRepository;
 import geumjeongyahak.domain.student.repository.StudentRepository;
 import geumjeongyahak.domain.subject.repository.SubjectRepository;
+import geumjeongyahak.domain.teacher_application.enums.TeacherApplicationStatus;
+import geumjeongyahak.domain.teacher_application.repository.TeacherApplicationRepository;
+import geumjeongyahak.domain.event.repository.EventRepository;
 import geumjeongyahak.domain.users.repository.UserRepository;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
@@ -52,6 +55,12 @@ class AdminDashboardServiceTest {
     @Mock
     private SubjectRepository subjectRepository;
 
+    @Mock
+    private TeacherApplicationRepository teacherApplicationRepository;
+
+    @Mock
+    private EventRepository eventRepository;
+
     @InjectMocks
     private AdminDashboardService adminDashboardService;
 
@@ -62,6 +71,7 @@ class AdminDashboardServiceTest {
         given(classroomRepository.count()).willReturn(9L);
         given(purchaseRequestRepository.countByStatus(PurchaseRequestStatus.PENDING)).willReturn(2L);
         given(absenceRequestRepository.countByStatus(RequestStatus.PENDING)).willReturn(5L);
+        given(teacherApplicationRepository.countByStatus(TeacherApplicationStatus.PENDING)).willReturn(13L);
         given(studentRepository.count()).willReturn(11L);
         given(subjectRepository.countByIsActiveTrue()).willReturn(7L);
         given(lessonRepository.countByIsDeletedFalse()).willReturn(20L);
@@ -71,6 +81,7 @@ class AdminDashboardServiceTest {
             any(LocalDate.class),
             any(LocalDate.class)
         )).willReturn(8L);
+        given(eventRepository.countByIsDeletedFalseAndEventDateGreaterThanEqual(any(LocalDate.class))).willReturn(12L);
 
         AdminDashboardSummary summary = adminDashboardService.getSummary();
 
@@ -79,11 +90,13 @@ class AdminDashboardServiceTest {
         assertThat(summary.classroomCount()).isEqualTo(9L);
         assertThat(summary.pendingPurchaseRequestCount()).isEqualTo(2L);
         assertThat(summary.pendingAbsenceRequestCount()).isEqualTo(5L);
+        assertThat(summary.pendingTeacherApplicationCount()).isEqualTo(13L);
         assertThat(summary.studentCount()).isEqualTo(11L);
         assertThat(summary.subjectCount()).isEqualTo(7L);
         assertThat(summary.lessonCount()).isEqualTo(20L);
         assertThat(summary.todayLessonCount()).isEqualTo(3L);
         assertThat(summary.weeklyScheduledLessonCount()).isEqualTo(8L);
+        assertThat(summary.upcomingEventCount()).isEqualTo(12L);
         assertThat(summary.today()).isNotNull();
         assertThat(summary.weekStart()).isNotNull();
         assertThat(summary.weekEnd()).isNotNull();
