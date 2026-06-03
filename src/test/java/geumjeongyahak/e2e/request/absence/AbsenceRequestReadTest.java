@@ -163,8 +163,8 @@ class AbsenceRequestReadTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("봉사자1 목록 조회 → 본인 요청만 포함, 봉사자2 요청 미포함")
-    void getList_asVolunteer_seesOnlyOwn() {
+    @DisplayName("교육연구부 MEMBER 목록 조회 → 부서 권한으로 두 요청 모두 포함")
+    void getList_asDepartmentMemberWithReadPermission_seesAllRequests() {
         List<Long> ids = given()
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
@@ -175,8 +175,7 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             .jsonPath()
             .getList("content.id", Long.class);
 
-        assertThat(ids).contains(requestIdByVolunteer1);
-        assertThat(ids).doesNotContain(requestIdByVolunteer2);
+        assertThat(ids).contains(requestIdByVolunteer1, requestIdByVolunteer2);
     }
 
     @Test
@@ -313,14 +312,15 @@ class AbsenceRequestReadTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("타인(봉사자2)이 봉사자1 요청 단건 조회 → 403")
-    void getDetail_asOtherVolunteer_returns403() {
+    @DisplayName("교육연구부 MEMBER가 타인 요청 단건 조회 → 부서 권한으로 200")
+    void getDetail_asDepartmentMemberWithReadPermission_returns200() {
         given()
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .get("/{id}", requestIdByVolunteer1)
             .then()
-            .statusCode(403);
+            .statusCode(200)
+            .body("id", equalTo(requestIdByVolunteer1.intValue()));
     }
 
     @Test
