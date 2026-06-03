@@ -2,6 +2,7 @@ package geumjeongyahak.domain.subject.repository;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -37,11 +38,26 @@ public interface SubjectRepository extends JpaRepository<Subject, Long> {
     List<Subject> findByClassroomId(Long classroomId);
 
     @EntityGraph(attributePaths = {"classroom", "teacher"})
+    List<Subject> findAllByIdIn(Collection<Long> subjectIds);
+
+    @EntityGraph(attributePaths = {"classroom", "teacher"})
     List<Subject> findAllByTeacherIsNullAndIsActiveTrueOrderByStartAtAscIdAsc();
+
+    @EntityGraph(attributePaths = {"classroom", "teacher"})
+    List<Subject> findAllByTeacherIdAndIsActiveTrueOrderByStartAtAscIdAsc(Long teacherId);
+
+    @EntityGraph(attributePaths = {"classroom", "teacher"})
+    List<Subject> findAllByTeacherIdInAndIsActiveTrueOrderByTeacherIdAscStartAtAscIdAsc(Collection<Long> teacherIds);
 
     long countByIsActiveTrue();
 
     boolean existsByClassroomIdAndTeacherId(Long classroomId, Long teacherId);
+
+    boolean existsByClassroomIdAndTeacherIdAndIsActiveTrue(Long classroomId, Long teacherId);
+
+    boolean existsByClassroomIdAndIsActiveTrue(Long classroomId);
+
+    boolean existsByTeacherIdAndIsActiveTrue(Long teacherId);
 
     @Override
     @EntityGraph(attributePaths = {"classroom", "teacher"})
