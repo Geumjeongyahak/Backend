@@ -10,7 +10,21 @@ INSERT INTO departments (id, name, description) VALUES
     (6, '편집부', '소식지, 게시글, 각종 문서와 콘텐츠의 편집 및 제작을 담당하는 부서');
 ALTER SEQUENCE departments_id_seq RESTART WITH 7;
 
--- 2. Users
+-- 2. Classrooms (moved before users to satisfy FK constraint)
+INSERT INTO classrooms (id, name, type, description)
+VALUES
+    (1, '벚꽃반', 'WEEKDAY', '평일 기초 학습반'),
+    (2, '개나리반', 'WEEKDAY', '평일 초급 학습반'),
+    (3, '민들레반', 'WEEKDAY', '평일 기초 심화반'),
+    (4, '동백반', 'WEEKDAY', '평일 보충 학습반'),
+    (5, '해바라기반', 'WEEKDAY', '평일 활동 중심 학습반'),
+    (6, '국화반', 'WEEKDAY', '평일 맞춤 학습반'),
+    (7, '주말 영어반', 'WEEKEND', '주말 영어 학습반'),
+    (8, '주말 스마트폰반', 'WEEKEND', '주말 스마트폰 활용반'),
+    (9, '겨울반', 'WEEKDAY', '계절 특강 운영반');
+ALTER SEQUENCE classrooms_id_seq RESTART WITH 10;
+
+-- 3. Users
 -- admin1234 / admin1234
 INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
     (1, '관리자', 'admin@test.com', 'ADMIN', 4, NULL, NULL, NULL, NULL);
@@ -76,20 +90,6 @@ INSERT INTO department_permissions (department_id, permission_code) VALUES
 INSERT INTO user_permissions (user_id, permission_code) VALUES
     (2, 'lesson:write:1'),
     (6, 'channel:write:6');
-
--- 6. Classrooms
-INSERT INTO classrooms (id, name, type, description)
-VALUES
-    (1, '벚꽃반', 'WEEKDAY', '평일 기초 학습반'),
-    (2, '개나리반', 'WEEKDAY', '평일 초급 학습반'),
-    (3, '민들레반', 'WEEKDAY', '평일 기초 심화반'),
-    (4, '동백반', 'WEEKDAY', '평일 보충 학습반'),
-    (5, '해바라기반', 'WEEKDAY', '평일 활동 중심 학습반'),
-    (6, '국화반', 'WEEKDAY', '평일 맞춤 학습반'),
-    (7, '주말 영어반', 'WEEKEND', '주말 영어 학습반'),
-    (8, '주말 스마트폰반', 'WEEKEND', '주말 스마트폰 활용반'),
-    (9, '겨울반', 'WEEKDAY', '계절 특강 운영반');
-ALTER SEQUENCE classrooms_id_seq RESTART WITH 10;
 
 -- 6-1. Site Contents
 INSERT INTO site_contents (id, content_type, ref_id, title, name, content_group, sort_order)
