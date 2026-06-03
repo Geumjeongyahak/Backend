@@ -75,10 +75,7 @@ public record UserDetailResponse(
             user.getTeacherStartAt(),
             user.getTeacherEndAt(),
             user.getPermissions().stream()
-                .map(permission -> new PermissionResponse(
-                    permission.toAuthorityCode(),
-                    permission.toAuthorityCode()
-                ))
+                .map(permission -> PermissionResponse.from(permission.getId(), permission.toAuthorityCode()))
                 .toList(),
             teacherAssignments,
             user.getCreatedAt(),
