@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.CommonErrorCode;
+import geumjeongyahak.domain.daily_schedule.service.DailyScheduleProxyService;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.event.LessonDailyScheduleSyncRequestedEvent;
@@ -43,6 +44,7 @@ public class LessonService {
     private final SubjectRepository subjectRepository;
     private final UserRepository userRepository;
     private final EventPublisher eventPublisher;
+    private final DailyScheduleProxyService dailyScheduleProxyService;
 
 
     @Transactional
@@ -124,7 +126,7 @@ public class LessonService {
             : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId);
 
         return lessonOpt
-            .map(LessonDetailResponse::from)
+            .map(lesson -> LessonDetailResponse.from(lesson, findDailyScheduleId(lesson)))
             .orElseThrow(() -> {
                 log.warn("수업 상세 조회 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
                 return new LessonNotFoundException(lessonId);
@@ -406,5 +408,12 @@ public class LessonService {
 
     private void publishDailyScheduleSync(Long classroomId, LocalDate lessonDate) {
         eventPublisher.publish(new LessonDailyScheduleSyncRequestedEvent(classroomId, lessonDate));
+    }
+
+    private Long findDailyScheduleId(Lesson lesson) {
+        return dailyScheduleProxyService.findActiveIdByClassroomIdAndLessonDate(
+            lesson.getSubject().getClassroom().getId(),
+            lesson.getDate()
+        );
     }
 }
