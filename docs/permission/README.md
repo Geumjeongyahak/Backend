@@ -9,3 +9,4 @@
 ## 도메인 문서
 
 - [users.md](./users.md)
+- [departments.md](./departments.md)

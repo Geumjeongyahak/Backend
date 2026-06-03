@@ -32,10 +32,10 @@ public record UserDetailResponse(
     @Schema(description = "사용자 기본 역할(role)", examples = { "ADMIN", "MANAGER", "VOLUNTEER", "GUEST" })
     String role,
 
-    @Schema(description = "소속 부서. 소속 부서가 없으면 null일 수 있습니다.", nullable = true)
+    @Schema(description = "소속 부서. 소속 부서가 없거나 교원 해제 상태이면 null일 수 있습니다.", nullable = true)
     DepartmentSimpleResponse department,
 
-    @Schema(description = "교원으로 배정된 분반. 교원 승인 전이면 null일 수 있습니다.", nullable = true)
+    @Schema(description = "교원으로 배정된 분반. 교원 승인 전이거나 교원 해제 상태이면 null일 수 있습니다.", nullable = true)
     ClassroomSummaryResponse classroom,
 
     @Schema(description = "주민등록번호 앞자리", example = "900101")
@@ -46,7 +46,7 @@ public record UserDetailResponse(
     LocalDate teacherStartAt,
 
     @JsonInclude(JsonInclude.Include.ALWAYS)
-    @Schema(description = "교원 활동 종료일. 교원 승인 전이면 null입니다.", example = "2026-06-30", nullable = true)
+    @Schema(description = "교원 활동 종료일. role=GUEST로 교원 해제 처리된 경우 처리일로 설정됩니다.", example = "2026-06-30", nullable = true)
     LocalDate teacherEndAt,
 
     @Schema(description = "사용자에게 부여된 직접 권한과 부서 직책 권한 목록. 직접 권한은 MANUAL, 부서 권한은 MEMBER/MANAGER로 source가 표시됩니다.")

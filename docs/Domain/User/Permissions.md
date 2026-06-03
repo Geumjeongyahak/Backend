@@ -16,10 +16,18 @@
 |------|------|------|
 | 기본 역할 (role) | `ROLE_{ROLE_NAME}` | `ROLE_ADMIN`, `ROLE_MANAGER` |
 | 사용자 직접 권한 | `{resource}:{action}:{target}` | `user:manage:*` |
-| 부서 권한 | `{resource}:{action}:{target}` | `channel:write:3` |
+| 부서 직책 권한 | `{resource}:{action}:{target}` | `channel:write:3` |
 
 세 출처는 Spring Security의 `GrantedAuthority` 컬렉션으로 합산됩니다.  
 `ADMIN` 역할 보유자는 모든 권한 검사를 우선 통과합니다.
+
+사용자 상세 응답에서는 권한 출처를 `source`로 구분합니다.
+
+| source | 의미 | 저장 위치 |
+|--------|------|----------|
+| `MANUAL` | 사용자에게 직접 부여된 수동 예외 권한 | `user_permissions` |
+| `MEMBER` | 부서 일반 부서원 권한 | `department_permissions(role_type=MEMBER)` |
+| `MANAGER` | 부서장 추가 권한 | `department_permissions(role_type=MANAGER)` |
 
 ---
 
@@ -39,7 +47,9 @@
 
 | 코드 | 의미 |
 |------|------|
-| `user:write:*` | 사용자 생성/수정 |
+| `user:write:*` | 사용자 생성 |
+| `user:manage:*` | 사용자 수정/삭제 |
+| `user:grant:*` | 사용자 직접 권한 부여/회수 |
 | `channel:manage:3` | ID=3 채널 관리 |
 | `purchase-request:review:*` | 모든 구입 요청 승인/반려 처리 |
 
@@ -61,9 +71,15 @@ API로 사용자에게 부여할 수 있는 코드는 아래 조합으로만 제
 | `user` | `read`, `write`, `manage`, `grant` | `user:{action}:*` | 불가 |
 | `department` | `write`, `manage`, `grant` | `department:{action}:*` | 불가 |
 | `student` | `write`, `manage` | `student:{action}:*` | 불가 |
+| `subject` | `read`, `write`, `manage` | `subject:{action}:*` | 불가 |
+| `lesson` | `read`, `write`, `manage` | `lesson:{action}:*` | 불가 |
+| `daily-schedule` | `read`, `manage` | `daily-schedule:{action}:*` | 불가 |
 | `channel` | `read`, `write`, `manage` | `channel:{action}:*` | `channel:{action}:{id}` |
 | `absence-request` | `read`, `manage` | `absence-request:{action}:*` | 불가 |
 | `purchase-request` | `read`, `manage`, `review` | `purchase-request:{action}:*` | 불가 |
+| `vendor` | `read`, `manage` | `vendor:{action}:*` | 불가 |
+| `event` | `manage` | `event:manage:*` | 불가 |
+| `teacher-application` | `read`, `manage` | `teacher-application:{action}:*` | 불가 |
 | `lesson-exchange-request` | `manage` | `lesson-exchange-request:manage:*` | 불가 |
 
 Registry는 실제 운영에서 부여할 권한만 유지합니다. 게시글/댓글 권한은 별도 `post`, `comment` 리소스로 만들지 않고 `channel` 권한과 `accessLevel` 정책으로 판정합니다.
@@ -273,16 +289,27 @@ permission code로는 표현되지 않습니다.
 ### 방법 2: 사용자 직접 권한 부여
 
 `POST /api/v1/users/{userId}/permissions`로 특정 permission code를 직접 부여합니다.  
-역할로 표현하기 어려운 세부 예외 권한을 부여할 때 사용합니다.
+역할과 부서 권한으로 표현하기 어려운 세부 예외 권한을 부여할 때 사용합니다.
+이 권한은 `user_permissions`에 저장되며 사용자 상세 응답에서는 `source=MANUAL`로 표시됩니다.
 
 ```json
 { "permissionCode": "channel:manage:3" }
 ```
 
-### 방법 3: 부서 권한 (Department)
+### 방법 3: 부서 직책 권한 (Department)
 
-사용자를 특정 부서에 소속시키면 해당 부서에 설정된 permission code들이 자동으로 적용됩니다.  
+사용자를 특정 부서에 소속시키면 해당 부서에 설정된 직책별 permission code들이 자동으로 적용됩니다.
 부서 소속 변경은 `PATCH /api/v1/users/{userId}` (`departmentId` 필드)로 수행합니다.
+
+| 사용자 상태 | 적용 권한 |
+|-------------|----------|
+| `VOLUNTEER` + 부서 소속 | 해당 부서 `MEMBER` 권한 |
+| `MANAGER` + 부서 소속 | 해당 부서 `MEMBER` + `MANAGER` 권한 |
+| `GUEST` 또는 부서 없음 | 부서 권한 없음 |
+
+부서 권한은 `department_permissions`에 저장되며 사용자 상세 응답에서는 `source=MEMBER` 또는 `source=MANAGER`로 표시됩니다.
+
+`PUT /api/v1/departments/{id}`에서 `permissions`를 보내면 해당 부서 권한 전체를 교체합니다.
 
 ---
 

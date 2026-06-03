@@ -33,7 +33,7 @@
 
 - **URL**: `/api/v1/users`
 - **Method**: `GET`
-- **Authorization**: 관리자 권한 필요 (`hasRole('ADMIN')`)
+- **Authorization**: `ADMIN` 또는 `user:read:*`
 - **Query Parameters**:
     - `page` (optional): 페이지 번호 (0-based)
     - `size` (optional): 페이지 크기
@@ -61,11 +61,11 @@
   ```
 
 ### 1.2. 사용자 상세 조회
-특정 사용자의 상세 정보를 조회합니다. 세부 권한 목록을 포함합니다.
+특정 사용자의 상세 정보를 조회합니다. 직접 권한과 부서 직책 권한을 합친 권한 목록을 포함합니다.
 
 - **URL**: `/api/v1/users/{userId}`
 - **Method**: `GET`
-- **Authorization**: 관리자 권한 필요 (`hasRole('ADMIN')`)
+- **Authorization**: `ADMIN` 또는 `user:read:*`
 - **Path Parameters**:
   - `userId` (Long): 사용자 ID
 - **Response**: `200 OK` (UserDetailResponse)
@@ -76,9 +76,15 @@
     "email": "user@example.com",
     "phoneNumber": "010-1234-5678",
     "role": "VOLUNTEER",
-    "departmentId": 2,
+    "department": {
+      "id": 2,
+      "name": "교육연구부",
+      "description": "교육 프로그램 연구..."
+    },
+    "classroom": null,
     "permissions": [
-      { "name": "lesson:write:1", "code": "lesson:write:1" }
+      { "name": "lesson:write:1", "code": "lesson:write:1", "source": "MANUAL" },
+      { "name": "channel:write:15", "code": "channel:write:15", "source": "MEMBER" }
     ],
     "createdAt": "2024-01-01T12:00:00",
     "updatedAt": "2024-01-02T15:30:00"
@@ -98,7 +104,7 @@
 
 - **URL**: `/api/v1/users`
 - **Method**: `POST`
-- **Authorization**: 관리자 권한 필요 (`hasRole('ADMIN')`)
+- **Authorization**: `ADMIN` 또는 `user:write:*`
 - **Request Body**: (CreateUserRequest)
   ```json
   {
@@ -117,7 +123,7 @@
 
 - **URL**: `/api/v1/users/{userId}`
 - **Method**: `PATCH`
-- **Authorization**: 관리자 권한 필요 (`hasRole('ADMIN')`)
+- **Authorization**: `ADMIN` 또는 `user:manage:*`
 - **Request Body**: (UpdateUserRequest)
   ```json
   {
@@ -127,6 +133,11 @@
   }
   ```
 - **Response**: `200 OK` (UserDetailResponse)
+- **Side Effect**:
+  - `role`을 `GUEST`로 변경하면 교원 해제로 처리합니다.
+  - 교원 해제 시 `departmentId`, `classroomId`는 `null`이 되고 `teacherEndAt`은 처리일로 설정됩니다.
+  - 교원 해제 시 `user_permissions`의 직접 권한이 모두 삭제됩니다.
+  - `role=GUEST` 요청에 `departmentId`나 `classroomId`를 함께 보내도 소속/분반은 비워진 상태로 유지됩니다.
 
 ### 1.6. 사용자 본인 수정
 사용자가 자신의 정보를 직접 수정합니다. 역할 및 부서 정보는 수정할 수 없습니다.
@@ -147,7 +158,7 @@
 
 - **URL**: `/api/v1/users/{userId}`
 - **Method**: `DELETE`
-- **Authorization**: 관리자 권한 필요 (`hasRole('ADMIN')`)
+- **Authorization**: `ADMIN` 또는 `user:manage:*`
 - **Response**: `204 No Content`
 
 ---
@@ -155,19 +166,22 @@
 ## 2. 사용자 권한 관리 API
 
 ### 2.1. 사용자 권한 목록 조회
-특정 사용자의 세부 권한 목록을 조회합니다.
+특정 사용자에게 직접 부여된 수동 예외 권한 목록을 조회합니다.
 
 - **URL**: `/api/v1/users/{userId}/permissions`
 - **Method**: `GET`
-- **Authorization**: 관리자 권한 필요 (`hasRole('ADMIN')`)
-- **Response**: `200 OK` (List<RoleResponse>)
+- **Authorization**: `ADMIN` 또는 `user:read:*` 또는 `user:grant:*`
+- **Response**: `200 OK` (List<PermissionResponse>)
+- **Note**:
+  - `user_permissions`에 저장된 직접 권한만 반환합니다.
+  - 부서 직책 권한(`source=MEMBER`, `source=MANAGER`)은 사용자 상세 조회 응답에서 확인합니다.
 
 ### 2.2. 사용자 권한 추가
-사용자에게 특정 세부 권한을 추가합니다.
+사용자에게 수동 예외 권한을 추가합니다.
 
 - **URL**: `/api/v1/users/{userId}/permissions`
 - **Method**: `POST`
-- **Authorization**: 관리자 권한 필요 (`hasRole('ADMIN')`)
+- **Authorization**: `ADMIN` 또는 `user:grant:*`
 - **Request Body**:
   ```json
   {
@@ -175,13 +189,16 @@
   }
   ```
 - **Response**: `200 OK` (갱신된 권한 목록)
+- **Side Effect**:
+  - `user_permissions`에 직접 권한이 추가됩니다.
+  - 응답의 `source`는 `MANUAL`입니다.
 
 ### 2.3. 사용자 권한 제거
-사용자의 특정 세부 권한을 제거합니다.
+사용자의 특정 수동 예외 권한을 제거합니다.
 
 - **URL**: `/api/v1/users/{userId}/permissions`
 - **Method**: `DELETE`
-- **Authorization**: 관리자 권한 필요 (`hasRole('ADMIN')`)
+- **Authorization**: `ADMIN` 또는 `user:grant:*`
 - **Request Body**:
   ```json
   {
@@ -189,3 +206,5 @@
   }
   ```
 - **Response**: `200 OK` (갱신된 권한 목록)
+- **Side Effect**:
+  - `user_permissions`에서 직접 권한이 제거됩니다.

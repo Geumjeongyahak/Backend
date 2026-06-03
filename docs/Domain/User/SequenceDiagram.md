@@ -79,6 +79,7 @@ sequenceDiagram
     participant DepartmentProxyService
     participant UserCredentialService
     participant CredentialRepository
+    participant UserPermissionRepository
 
     Client->>JwtFilter: POST /api/v1/users (CreateUserRequest)
     JwtFilter->>JwtFilter: JWT 검증 및 SecurityContext 설정
@@ -122,6 +123,7 @@ sequenceDiagram
 ## 4. 사용자 수정 - 관리자 `PATCH /api/v1/users/{userId}`
 
 **Side Effect**: `users` 변경, 이메일/비밀번호 변경 시 `user_credentials` 함께 갱신
+`role=GUEST` 변경 시 교원 해제로 처리되어 소속 부서/분반 제거, `teacherEndAt` 설정, `user_permissions` 직접 권한 전체 삭제가 함께 발생
 
 ```mermaid
 sequenceDiagram
@@ -170,6 +172,12 @@ sequenceDiagram
     opt role 변경 요청
         UserCrudService->>UserCrudService: user.setRole(newRole)
         Note right of UserCrudService: [Side Effect] 인가 범위 변경
+    end
+
+    opt role=GUEST 변경 요청
+        UserCrudService->>UserCrudService: releaseTeacherProfile(today)
+        UserCrudService->>UserPermissionRepository: deleteAllByUserId(userId)
+        Note right of UserCrudService: [Side Effect] department/classroom 제거<br/>teacherEndAt 처리일 설정<br/>직접 권한 전체 회수
     end
 
     opt departmentId 변경 요청

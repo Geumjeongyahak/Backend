@@ -77,7 +77,7 @@ public class UserAdminController {
             - 이름, 이메일, 전화번호
             - 기본 역할(role)
             - 소속 부서 ID
-            - 사용자에게 직접 부여된 세부 권한 목록
+            - 사용자에게 직접 부여된 권한과 부서 직책 권한 목록
             - 생성/수정 시각
 
             사이드 이펙트:
@@ -143,11 +143,14 @@ public class UserAdminController {
             - 이메일이 변경되면 중복 여부를 다시 검사합니다.
             - 비밀번호가 전달되면 Local credential의 비밀번호 해시를 갱신합니다.
             - 이메일이 변경되면 사용자 기본 이메일과 Local credential 이메일을 함께 갱신합니다.
+            - role을 GUEST로 변경하면 교원 해제 처리로 간주하여 소속 부서, 배정 분반을 비우고 teacherEndAt을 현재 날짜로 설정합니다.
+            - role이 GUEST인 요청에 departmentId/classroomId가 함께 전달되어도 소속 및 분반은 비워진 상태로 유지됩니다.
 
             사이드 이펙트:
             - users 테이블의 기본 정보가 변경됩니다.
             - 이메일 또는 비밀번호 변경 시 인증 정보도 함께 변경됩니다.
             - 역할/부서 변경은 이후 인증 및 운영 화면 접근 범위에 직접 영향을 줄 수 있습니다.
+            - role을 GUEST로 변경하면 user_permissions 테이블의 직접 권한이 모두 삭제됩니다.
             """
     )
     @PatchMapping("/{userId}")
