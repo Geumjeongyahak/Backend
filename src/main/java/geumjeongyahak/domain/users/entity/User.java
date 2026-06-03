@@ -107,8 +107,7 @@ public class User extends BaseEntity {
         this.role = (role != null) ? role : RoleType.GUEST;
     }
 
-    public void approveTeacherProfile(Classroom classroom, LocalDate teacherStartAt, LocalDate teacherEndAt) {
-        this.classroom = classroom;
+    public void approveTeacherProfile(LocalDate teacherStartAt, LocalDate teacherEndAt) {
         this.teacherStartAt = teacherStartAt;
         this.teacherEndAt = teacherEndAt;
         this.role = RoleType.VOLUNTEER;
