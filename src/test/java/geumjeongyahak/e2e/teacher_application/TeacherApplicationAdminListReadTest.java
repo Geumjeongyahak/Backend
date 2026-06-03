@@ -24,6 +24,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class TeacherApplicationAdminListReadTest extends BaseE2ETest {
 
     private static final String READ_PERMISSION = "teacher-application:read:*";
+    private static final long TEST_CLASSROOM_ID = 150L;
+    private static final long KOREAN_SUBJECT_ID = 150L;
+    private static final long MATH_SUBJECT_ID = 151L;
+    private static final long ENGLISH_SUBJECT_ID = 152L;
 
     private String adminToken;
     private String guestToken;
@@ -41,9 +45,11 @@ class TeacherApplicationAdminListReadTest extends BaseE2ETest {
         super.setUp();
         RestAssured.basePath = "/api/v1/admin/teacher-applications";
         cleanupTeacherApplications();
-        insertTeacherApplication(50L, "PENDING", "이영희", "guest01@test.com", "010-1111-1111", 1L, "2026-05-20T10:00:00");
-        insertTeacherApplication(51L, "REJECTED", "김지원", "applicant-kim@test.com", "010-2222-2222", 2L, "2026-05-21T10:00:00");
-        insertTeacherApplication(52L, "APPROVED", "박나눔", "applicant-park@test.com", "010-3333-3333", 3L, "2026-05-22T10:00:00");
+        cleanupTeacherApplicationFixtures();
+        insertTeacherApplicationFixtures();
+        insertTeacherApplication(50L, "PENDING", "이영희", "guest01@test.com", "010-1111-1111", KOREAN_SUBJECT_ID, "2026-05-20T10:00:00");
+        insertTeacherApplication(51L, "REJECTED", "김지원", "applicant-kim@test.com", "010-2222-2222", MATH_SUBJECT_ID, "2026-05-21T10:00:00");
+        insertTeacherApplication(52L, "APPROVED", "박나눔", "applicant-park@test.com", "010-3333-3333", ENGLISH_SUBJECT_ID, "2026-05-22T10:00:00");
 
         adminToken = userTestHelper.generateAccessTokenByUserKey(TEST_ADMIN_USERNAME);
         guestToken = userTestHelper.generateAccessTokenByUserKey("guest01");
@@ -57,6 +63,7 @@ class TeacherApplicationAdminListReadTest extends BaseE2ETest {
     @AfterEach
     void cleanup() {
         cleanupTeacherApplications();
+        cleanupTeacherApplicationFixtures();
     }
 
     @Test
@@ -111,6 +118,19 @@ class TeacherApplicationAdminListReadTest extends BaseE2ETest {
             .body("content.id", contains(51))
             .body("content[0].applicantName", equalTo("김지원"))
             .body("totalElements", equalTo(1));
+    }
+
+    @Test
+    @DisplayName("공백 검색어는 검색 조건으로 사용하지 않는다")
+    void getTeacherApplications_blankKeyword_ignoresKeywordFilter() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .queryParam("keyword", "   ")
+            .get()
+            .then()
+            .statusCode(200)
+            .body("content.id", contains(52, 51, 50))
+            .body("totalElements", equalTo(3));
     }
 
     @Test
@@ -183,5 +203,41 @@ class TeacherApplicationAdminListReadTest extends BaseE2ETest {
 
     private void cleanupTeacherApplications() {
         jdbcTemplate.update("DELETE FROM teacher_applications");
+    }
+
+    private void insertTeacherApplicationFixtures() {
+        jdbcTemplate.update("""
+            MERGE INTO classrooms (id, name, type, description)
+            KEY(id)
+            VALUES (?, '교원 신청 테스트반', 'WEEKDAY', '교원 신청 목록 테스트 전용 분반')
+            """, TEST_CLASSROOM_ID);
+
+        insertSubject(KOREAN_SUBJECT_ID, "교원 신청 국어");
+        insertSubject(MATH_SUBJECT_ID, "교원 신청 수학");
+        insertSubject(ENGLISH_SUBJECT_ID, "교원 신청 영어");
+    }
+
+    private void insertSubject(Long subjectId, String name) {
+        jdbcTemplate.update("""
+            MERGE INTO subjects (
+                id, class_id, teacher_id, name, start_at, end_at, day_of_week,
+                start_time, end_time, period, teacher_assigned_at, description, is_active
+            )
+            KEY(id)
+            VALUES (
+                ?, ?, NULL, ?, DATE '2026-02-01', DATE '2026-06-30', 'WEDNESDAY',
+                TIME '19:20:00', TIME '20:00:00', 1, NULL, '교원 신청 목록 테스트 전용 과목', TRUE
+            )
+            """, subjectId, TEST_CLASSROOM_ID, name);
+    }
+
+    private void cleanupTeacherApplicationFixtures() {
+        jdbcTemplate.update(
+            "DELETE FROM subjects WHERE id IN (?, ?, ?)",
+            KOREAN_SUBJECT_ID,
+            MATH_SUBJECT_ID,
+            ENGLISH_SUBJECT_ID
+        );
+        jdbcTemplate.update("DELETE FROM classrooms WHERE id = ?", TEST_CLASSROOM_ID);
     }
 }
