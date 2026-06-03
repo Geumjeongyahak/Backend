@@ -30,6 +30,7 @@ import geumjeongyahak.domain.teacher_application.v1.dto.request.TeacherApplicati
 import geumjeongyahak.domain.teacher_application.v1.dto.request.UpdateTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.AvailableTeacherScheduleResponse;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.MyTeacherApplicationResponse;
+import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationListResponse;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
@@ -117,7 +118,7 @@ public class TeacherApplicationService {
         return TeacherApplicationResponse.from(application);
     }
 
-    public PaginationResponse<TeacherApplicationResponse> getTeacherApplications(
+    public PaginationResponse<TeacherApplicationListResponse> getTeacherApplications(
         TeacherApplicationStatus status,
         TeacherApplicationPaginationRequest request
     ) {
@@ -133,7 +134,7 @@ public class TeacherApplicationService {
         );
         Page<TeacherApplication> page = teacherApplicationRepository.findAll(specification, request.toRequest());
 
-        return PaginationResponse.from(page, TeacherApplicationResponse::from);
+        return PaginationResponse.from(page, TeacherApplicationListResponse::from);
     }
 
     @Transactional

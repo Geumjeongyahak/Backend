@@ -21,6 +21,7 @@ import geumjeongyahak.domain.teacher_application.service.dto.TeacherApplicationS
 import geumjeongyahak.domain.teacher_application.v1.dto.request.ApproveTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.RejectTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.TeacherApplicationPaginationRequest;
+import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationListResponse;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationResponse;
 import lombok.RequiredArgsConstructor;
 
@@ -42,9 +43,9 @@ public class TeacherApplicationAdminViewService {
         }
         request.setKeyword(filter.keyword());
 
-        PaginationResponse<TeacherApplicationResponse> response =
+        PaginationResponse<TeacherApplicationListResponse> response =
             teacherApplicationService.getTeacherApplications(filter.status(), request);
-        AdminPage<TeacherApplicationResponse> sourcePage = AdminPage.from(response);
+        AdminPage<TeacherApplicationListResponse> sourcePage = AdminPage.from(response);
         AdminPage<TeacherApplicationRow> page = new AdminPage<>(
             sourcePage.content().stream()
                 .map(this::toRow)
@@ -122,7 +123,7 @@ public class TeacherApplicationAdminViewService {
         );
     }
 
-    private TeacherApplicationRow toRow(TeacherApplicationResponse application) {
+    private TeacherApplicationRow toRow(TeacherApplicationListResponse application) {
         return new TeacherApplicationRow(
             application,
             statusLabel(application.status())

@@ -3,6 +3,7 @@ package geumjeongyahak.e2e.teacher_application;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
 
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.users.entity.User;
@@ -75,6 +76,7 @@ class TeacherApplicationAdminListReadTest extends BaseE2ETest {
             .then()
             .statusCode(200)
             .body("content.id", contains(52, 51, 50))
+            .body("content[0]", not(org.hamcrest.Matchers.hasKey("assignedSubjects")))
             .body("page", equalTo(0))
             .body("size", equalTo(10))
             .body("totalElements", equalTo(3))
