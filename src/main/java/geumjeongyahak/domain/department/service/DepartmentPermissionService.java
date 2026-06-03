@@ -43,6 +43,6 @@ public class DepartmentPermissionService {
     }
 
     private PermissionResponse toResponse(DepartmentPermission permission) {
-        return new PermissionResponse(permission.toAuthorityCode(), permission.toAuthorityCode());
+        return PermissionResponse.from(permission.getId(), permission.toAuthorityCode());
     }
 }
