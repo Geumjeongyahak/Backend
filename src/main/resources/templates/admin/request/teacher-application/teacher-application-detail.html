@@ -73,6 +73,28 @@
             </div>
         </section>
 
+        <section class="panel detail-grid" th:if="${!#lists.isEmpty(detail.application.assignedSubjects)}">
+            <div class="detail-item" style="grid-column: 1 / -1;">
+                <span>실제 배정 시간표</span>
+                <strong>
+                    <span th:each="subject, stat : ${detail.application.assignedSubjects}"
+                          th:text="|${subject.subjectName}(${subject.period}교시)${stat.last ? '' : ', '}|">국어(1교시)</span>
+                </strong>
+            </div>
+            <div class="detail-item">
+                <span>실제 배정 분반</span>
+                <strong th:text="${detail.application.assignedClassroomName}">국화반</strong>
+            </div>
+            <div class="detail-item">
+                <span>배정 요일</span>
+                <strong th:text="${detail.application.assignedDayOfWeek}">FRIDAY</strong>
+            </div>
+            <div class="detail-item">
+                <span>배정 시간</span>
+                <strong th:text="|${detail.application.assignedStartTime} - ${detail.application.assignedEndTime}|">19:00 - 22:00</strong>
+            </div>
+        </section>
+
         <section class="panel detail-grid">
             <div class="detail-item">
                 <span>선호 과목</span>
@@ -113,12 +135,11 @@
             <form class="form-grid"
                   th:action="@{/admin/request/teacher-applications/{applicationId}/approve(applicationId=${detail.application.id})}"
                   method="post">
-                <label>배정 분반
-                    <select name="classroomId" required>
-                        <option value="">분반 선택</option>
-                        <option th:each="classroom : ${detail.classroomOptions}"
-                                th:value="${classroom.id}"
-                                th:text="${classroom.name}">국화반</option>
+                <label>배정 시간표 과목
+                    <select name="assignedSubjectIds" multiple required>
+                        <option th:each="subject : ${detail.subjectOptions}"
+                                th:value="${subject.id}"
+                                th:text="|${subject.name} / ${subject.classroomName} / ${subject.dayOfWeek} ${subject.startTime}-${subject.endTime}|">국어 / 국화반</option>
                     </select>
                 </label>
                 <label>교원 활동 시작일

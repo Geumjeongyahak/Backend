@@ -9,9 +9,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import geumjeongyahak.domain.base.dto.response.AdminPage;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
-import geumjeongyahak.domain.classroom.entity.Classroom;
-import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
+import geumjeongyahak.domain.subject.service.SubjectProxyService;
+import geumjeongyahak.domain.subject.v1.dto.response.SubjectDetailResponse;
 import geumjeongyahak.domain.teacher_application.enums.TeacherApplicationStatus;
+import geumjeongyahak.domain.teacher_application.service.dto.TeacherApplicationDetail;
+import geumjeongyahak.domain.teacher_application.service.dto.TeacherApplicationFilter;
+import geumjeongyahak.domain.teacher_application.service.dto.TeacherApplicationPage;
+import geumjeongyahak.domain.teacher_application.service.dto.TeacherApplicationRow;
+import geumjeongyahak.domain.teacher_application.service.dto.TeacherApplicationStatusOption;
+import geumjeongyahak.domain.teacher_application.service.dto.TeacherApplicationSubjectOption;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.ApproveTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.RejectTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.TeacherApplicationPaginationRequest;
@@ -24,7 +30,7 @@ import lombok.RequiredArgsConstructor;
 public class TeacherApplicationAdminViewService {
 
     private final TeacherApplicationService teacherApplicationService;
-    private final ClassroomProxyService classroomProxyService;
+    private final SubjectProxyService subjectProxyService;
 
     public TeacherApplicationPage getTeacherApplications(TeacherApplicationFilter filter) {
         TeacherApplicationPaginationRequest request = new TeacherApplicationPaginationRequest();
@@ -63,20 +69,21 @@ public class TeacherApplicationAdminViewService {
             application,
             statusLabel(application.status()),
             application.status() == TeacherApplicationStatus.PENDING,
-            getActiveClassrooms()
+            getAssignableSubjects()
         );
     }
 
-    public List<StatusOption> getStatusOptions() {
+    public List<TeacherApplicationStatusOption> getStatusOptions() {
         return Arrays.stream(TeacherApplicationStatus.values())
-            .map(status -> new StatusOption(status, statusLabel(status)))
+            .map(status -> new TeacherApplicationStatusOption(status, statusLabel(status)))
             .toList();
     }
 
-    public List<ClassroomOption> getActiveClassrooms() {
-        return classroomProxyService.getActiveClassroomsOrderByName()
+    public List<TeacherApplicationSubjectOption> getAssignableSubjects() {
+        return subjectProxyService.getUnassignedActiveSubjectsOrderByStartAtAndId()
             .stream()
-            .map(this::toClassroomOption)
+            .map(SubjectDetailResponse::from)
+            .map(this::toSubjectOption)
             .toList();
     }
 
@@ -94,7 +101,7 @@ public class TeacherApplicationAdminViewService {
     public void approve(
         Long reviewerId,
         Long applicationId,
-        Long classroomId,
+        List<Long> assignedSubjectIds,
         LocalDate teacherStartAt,
         LocalDate teacherEndAt,
         String note
@@ -102,7 +109,7 @@ public class TeacherApplicationAdminViewService {
         teacherApplicationService.approveTeacherApplication(
             reviewerId,
             applicationId,
-            new ApproveTeacherApplicationRequest(classroomId, teacherStartAt, teacherEndAt, note)
+            new ApproveTeacherApplicationRequest(assignedSubjectIds, teacherStartAt, teacherEndAt, note)
         );
     }
 
@@ -122,10 +129,14 @@ public class TeacherApplicationAdminViewService {
         );
     }
 
-    private ClassroomOption toClassroomOption(Classroom classroom) {
-        return new ClassroomOption(
-            classroom.getId(),
-            classroom.getName()
+    private TeacherApplicationSubjectOption toSubjectOption(SubjectDetailResponse subject) {
+        return new TeacherApplicationSubjectOption(
+            subject.id(),
+            subject.name(),
+            subject.classroomName(),
+            subject.dayOfWeek(),
+            subject.startTime(),
+            subject.endTime()
         );
     }
 
@@ -136,46 +147,5 @@ public class TeacherApplicationAdminViewService {
             case REJECTED -> "반려";
             case CANCELLED -> "취소";
         };
-    }
-
-    public record TeacherApplicationFilter(
-        TeacherApplicationStatus status,
-        String keyword,
-        Integer page,
-        Integer size
-    ) {
-    }
-
-    public record TeacherApplicationPage(
-        AdminPage<TeacherApplicationRow> applications,
-        TeacherApplicationFilter filter,
-        List<StatusOption> statusOptions
-    ) {
-    }
-
-    public record TeacherApplicationRow(
-        TeacherApplicationResponse application,
-        String statusLabel
-    ) {
-    }
-
-    public record TeacherApplicationDetail(
-        TeacherApplicationResponse application,
-        String statusLabel,
-        boolean pending,
-        List<ClassroomOption> classroomOptions
-    ) {
-    }
-
-    public record StatusOption(
-        TeacherApplicationStatus status,
-        String label
-    ) {
-    }
-
-    public record ClassroomOption(
-        Long id,
-        String name
-    ) {
     }
 }
