@@ -2,6 +2,8 @@ package geumjeongyahak.domain.teacher_application.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import geumjeongyahak.domain.base.entity.BaseEntity;
 import geumjeongyahak.domain.subject.entity.Subject;
@@ -13,7 +15,10 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -50,6 +55,15 @@ public class TeacherApplication extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "preferred_subject_id", nullable = false)
     private Subject preferredSubject;
+
+    @ManyToMany
+    @JoinTable(
+        name = "teacher_schedule_assignments",
+        joinColumns = @JoinColumn(name = "teacher_application_id"),
+        inverseJoinColumns = @JoinColumn(name = "subject_id")
+    )
+    @OrderBy("period ASC, startTime ASC, id ASC")
+    private List<Subject> assignedSubjects = new ArrayList<>();
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String motivation;
@@ -123,11 +137,13 @@ public class TeacherApplication extends BaseEntity {
         this.meaningOfSharing = meaningOfSharing;
     }
 
-    public void approve(User reviewer, String reviewNote) {
+    public void approve(User reviewer, List<Subject> assignedSubjects, String reviewNote) {
         this.status = TeacherApplicationStatus.APPROVED;
         this.reviewedBy = reviewer;
         this.reviewedAt = LocalDateTime.now();
         this.reviewNote = reviewNote;
+        this.assignedSubjects.clear();
+        this.assignedSubjects.addAll(assignedSubjects);
     }
 
     public void reject(User reviewer, String reviewNote) {
