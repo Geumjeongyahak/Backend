@@ -70,7 +70,8 @@ public record UserDetailResponse(
             user.getPermissions().stream()
                 .map(permission -> new PermissionResponse(
                     permission.toAuthorityCode(),
-                    permission.toAuthorityCode()
+                    permission.toAuthorityCode(),
+                    permission.getSource().name()
                 ))
                 .toList(),
             user.getCreatedAt(),

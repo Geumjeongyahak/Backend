@@ -4,6 +4,7 @@ import geumjeongyahak.domain.auth.v1.dto.response.PermissionResponse;
 import geumjeongyahak.domain.base.model.PermissionCode;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.entity.UserPermission;
+import geumjeongyahak.domain.users.enums.PermissionSource;
 import geumjeongyahak.domain.users.repository.UserPermissionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +36,9 @@ public class UserPermissionService {
         
         User user = userProxyService.getById(userId);
         userPermissionRepository.findByUserIdAndPermissionCode(userId, validatedPermissionCode)
-            .orElseGet(() -> userPermissionRepository.save(new UserPermission(user, validatedPermissionCode)));
+            .orElseGet(() -> userPermissionRepository.save(
+                new UserPermission(user, validatedPermissionCode, PermissionSource.MANUAL)
+            ));
         
         log.info("사용자 권한 추가 완료 - UserID: {}, PermissionCode: {}", userId, validatedPermissionCode);
         return getAllPermissions(userId);
@@ -53,6 +56,10 @@ public class UserPermissionService {
     }
 
     private PermissionResponse toResponse(UserPermission permission) {
-        return new PermissionResponse(permission.toAuthorityCode(), permission.toAuthorityCode());
+        return new PermissionResponse(
+            permission.toAuthorityCode(),
+            permission.toAuthorityCode(),
+            permission.getSource().name()
+        );
     }
 }

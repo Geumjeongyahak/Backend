@@ -9,8 +9,15 @@ public record PermissionResponse(
     String name,
 
     @Schema(description = "코드", example = "department:write:*")
-    String code
+    String code,
+
+    @Schema(description = "권한 출처. 사용자 직접 권한에서만 값이 있을 수 있습니다.", example = "MANUAL", nullable = true)
+    String source
 ) {
+    public PermissionResponse(String name, String code) {
+        this(name, code, null);
+    }
+
     public static PermissionResponse from(RoleType roleType) {
         return new PermissionResponse(roleType.name(), null);
     }
