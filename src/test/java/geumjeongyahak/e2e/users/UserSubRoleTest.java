@@ -83,6 +83,7 @@ class UserSubRoleTest extends UserBaseTest {
             .statusCode(200)
             .body("size()", equalTo(1))
             .body("[0].code", equalTo("channel:write:*"))
+            .body("[0].source", equalTo("MANUAL"))
             .log().all();
     }
 
@@ -109,6 +110,8 @@ class UserSubRoleTest extends UserBaseTest {
         .then()
             .statusCode(200)
             .body("size()", equalTo(2))
+            .body("find { it.code == 'channel:write:*' }.source", equalTo("MANUAL"))
+            .body("find { it.code == 'department:write:*' }.source", equalTo("MANUAL"))
             .log().all();
     }
 

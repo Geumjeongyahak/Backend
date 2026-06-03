@@ -3,17 +3,26 @@ package geumjeongyahak.e2e.users;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
+import geumjeongyahak.domain.users.v1.dto.request.UserPermissionRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UpdateSelfRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UpdateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
 
+import java.time.LocalDate;
+
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
 
 @DisplayName("E2E: User 수정 테스트")
 class UserUpdateTest extends UserBaseTest {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     @DisplayName("관리자 권한으로 User 정보 수정 성공(200 OK)")
@@ -160,6 +169,72 @@ class UserUpdateTest extends UserBaseTest {
             .body("classroom.id", equalTo(2))
             .body("classroom.name", equalTo("장미반"))
             .log().all();
+    }
+
+    @Test
+    @DisplayName("role을 GUEST로 변경하면 교원 정보와 직접 권한을 회수한다(200 OK)")
+    void updateUser_ToGuest_ReleasesTeacherProfileAndPermissions() {
+        CreateUserRequest createReq = new CreateUserRequest(
+            "release-teacher@test.com",
+            "Release Teacher User",
+            "password123!",
+            "010-2222-3333",
+            "MANAGER",
+            2L,
+            2L
+        );
+
+        var createdUser = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(createReq)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .body("role", equalTo("MANAGER"))
+            .body("department.id", equalTo(2))
+            .body("classroom.id", equalTo(2))
+            .extract()
+            .as(UserDetailResponse.class);
+
+        userTestHelper.setUser(createdUser.email());
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new UserPermissionRequest("channel:write:*"))
+        .when()
+            .post("/{userId}/permissions", createdUser.id())
+        .then()
+            .statusCode(200)
+            .body("size()", equalTo(1));
+
+        UpdateUserRequest updateReq = new UpdateUserRequest(
+            null, null, null, null, "GUEST", 1L, 1L
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(updateReq)
+        .when()
+            .patch("/{userId}", createdUser.id())
+        .then()
+            .statusCode(200)
+            .body("role", equalTo("GUEST"))
+            .body("department", nullValue())
+            .body("classroom", nullValue())
+            .body("teacherEndAt", equalTo(LocalDate.now().toString()))
+            .body("permissions", empty())
+            .log().all();
+
+        Integer permissionCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM user_permissions WHERE user_id = ?",
+            Integer.class,
+            createdUser.id()
+        );
+        org.assertj.core.api.Assertions.assertThat(permissionCount).isZero();
     }
 
     @Test

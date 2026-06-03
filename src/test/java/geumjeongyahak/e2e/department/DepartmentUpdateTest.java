@@ -4,17 +4,27 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import geumjeongyahak.domain.department.entity.Department;
+import geumjeongyahak.domain.department.enums.DepartmentRoleType;
+import geumjeongyahak.domain.department.v1.dto.request.DepartmentPermissionRequest;
 import geumjeongyahak.domain.department.v1.dto.request.UpdateDepartmentRequest;
+
+import java.util.List;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 @DisplayName("E2E: Department 수정 테스트")
 class DepartmentUpdateTest extends DepartmentBaseTest {
 
     private Department testDepartment;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void setUpDepartment() {
@@ -89,6 +99,72 @@ class DepartmentUpdateTest extends DepartmentBaseTest {
             .body("description", equalTo("설명만 수정"))
             .body("name", notNullValue())
             .log().all();
+    }
+
+    @Test
+    @DisplayName("부서 권한 수정 시 roleType 기본값을 적용하고 기존 권한을 전체 교체한다(200 OK)")
+    void updateDepartment_Permissions_ReplacesAllWithRoleType() {
+        UpdateDepartmentRequest firstReq = new UpdateDepartmentRequest(
+            null,
+            null,
+            List.of(
+                new DepartmentPermissionRequest(null, "channel:write:*"),
+                new DepartmentPermissionRequest(DepartmentRoleType.MANAGER, "channel:manage:*")
+            )
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(firstReq)
+        .when()
+            .put("/{id}", testDepartment.getId())
+        .then()
+            .statusCode(200);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/{id}", testDepartment.getId())
+        .then()
+            .statusCode(200)
+            .body("permissions.size()", equalTo(2))
+            .body("permissions.find { it.code == 'channel:write:*' }.source", equalTo("MEMBER"))
+            .body("permissions.find { it.code == 'channel:manage:*' }.source", equalTo("MANAGER"));
+
+        UpdateDepartmentRequest replaceReq = new UpdateDepartmentRequest(
+            null,
+            null,
+            List.of(new DepartmentPermissionRequest(DepartmentRoleType.MANAGER, "event:manage:*"))
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(replaceReq)
+        .when()
+            .put("/{id}", testDepartment.getId())
+        .then()
+            .statusCode(200);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/{id}", testDepartment.getId())
+        .then()
+            .statusCode(200)
+            .body("permissions.size()", equalTo(1))
+            .body("permissions.find { it.code == 'event:manage:*' }.source", equalTo("MANAGER"))
+            .body("permissions.find { it.code == 'channel:write:*' }", nullValue())
+            .body("permissions.find { it.code == 'channel:manage:*' }", nullValue())
+            .log().all();
+
+        Integer permissionCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM department_permissions WHERE department_id = ?",
+            Integer.class,
+            testDepartment.getId()
+        );
+        org.assertj.core.api.Assertions.assertThat(permissionCount).isEqualTo(1);
     }
 
     @Test

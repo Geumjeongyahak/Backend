@@ -197,6 +197,7 @@ public class UserCrudService {
         if (roleType == RoleType.GUEST) {
             user.releaseTeacherProfile(LocalDate.now());
             userPermissionService.removeAllPermissions(user.getId());
+            user.clearPermissions();
             return;
         }
         user.setRole(roleType);

@@ -141,6 +141,10 @@ public class User extends BaseEntity {
         this.permissions.add(permission);
     }
 
+    public void clearPermissions() {
+        this.permissions.clear();
+    }
+
     private Optional<UserCredential> findLocalCredential() {
         return credentials.stream()
             .filter(credential -> credential.getProvider() == ProviderType.LOCAL)
