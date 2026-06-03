@@ -12,12 +12,17 @@ Subject는 특정 분반의 특정 요일/교시 정기 수업 편성입니다.
 - 수정/삭제는 `ADMIN` 또는 `subject:manage:*` 권한이 필요합니다.
 - 교사 미배정 과목 목록은 교원 신청 지원서에서 사용하므로 인증된 사용자는 모두 조회할 수 있습니다.
 - 담당 교사는 `VOLUNTEER`, `MANAGER`, `ADMIN` 역할 사용자만 배정할 수 있습니다.
+- `User.classroomId`는 기본/소속 분반이며, 실제 담당 분반은 담당 중인 Subject의 분반으로 판단합니다.
+- 한 교원은 여러 분반의 과목을 담당할 수 있습니다.
+- 분반이 다르다는 이유만으로 충돌 처리하지 않으며, 충돌은 같은 날짜의 수업 시간 겹침 기준으로 판단합니다.
 - 담당 교사가 없는 Subject는 생성할 수 있으며, 이 경우 Lesson을 자동 생성하지 않습니다.
 - 과목 생성 시 운영 기간은 시작일과 종료일을 포함해 최대 365일까지 허용합니다.
 - Lesson 자동 변경은 과거 Lesson을 건드리지 않고 미래 Lesson만 대상으로 합니다.
 - 미래 Lesson 중 운영 기록이 없는 `SCHEDULED` 상태만 자동 변경 대상입니다.
 - 운영 기록은 note, 학생 출석, 결석 요청, 진행 중인 수업 교환 요청/제안을 의미합니다.
 - 이미 완료된 수업 교환 결과는 현재 Lesson 상태로 존중하며 자동 변경 차단 조건으로 보지 않습니다.
+- 담당 교사가 있는 User를 삭제하거나 교사 배정이 불가능한 역할로 변경하려면 먼저 담당 과목을 해제해야 합니다.
+- 활성 과목이 연결된 분반은 삭제할 수 없습니다.
 
 ## SubjectDetailResponse
 
@@ -80,7 +85,18 @@ Subject는 특정 분반의 특정 요일/교시 정기 수업 편성입니다.
 - 응답 구조는 `SubjectDetailResponse` 배열과 동일합니다.
 - 정렬은 운영 시작일 오름차순, 과목 ID 오름차순입니다.
 
-## 4. 과목 생성
+## 4. 내 담당 과목 목록 조회
+
+- **URL**: `/api/v1/subjects/me`
+- **Method**: `GET`
+- **Auth**: 필요
+- **Roles**: `VOLUNTEER`, `MANAGER`, `ADMIN`
+- **Description**: 현재 로그인 사용자가 담당 교사로 배정된 활성 과목 목록을 조회합니다.
+
+기본/소속 분반과 무관하게 `Subject.teacherId`가 현재 사용자 ID인 활성 과목을 반환합니다.
+응답 구조는 `SubjectDetailResponse` 배열과 동일합니다.
+
+## 5. 과목 생성
 
 - **URL**: `/api/v1/subjects`
 - **Method**: `POST`
@@ -108,7 +124,7 @@ Subject는 특정 분반의 특정 요일/교시 정기 수업 편성입니다.
 `times`는 요청으로 받지 않고 `startAt`, `endAt`, `dayOfWeek`를 기준으로 계산해 응답합니다.
 `startAt`과 `endAt`은 시작일과 종료일을 포함해 최대 365일까지 설정할 수 있습니다. 365일을 초과하면 `400 Bad Request`를 반환합니다.
 
-## 5. 과목 기본 정보 수정
+## 6. 과목 기본 정보 수정
 
 - **URL**: `/api/v1/subjects/{subjectId}`
 - **Method**: `PATCH`
@@ -126,7 +142,7 @@ Subject는 특정 분반의 특정 요일/교시 정기 수업 편성입니다.
 
 기본 정보 수정은 Lesson에 영향을 주지 않습니다.
 
-## 6. 담당 교사 배정
+## 7. 담당 교사 배정
 
 - **URL**: `/api/v1/subjects/{subjectId}/teacher`
 - **Method**: `PATCH`
@@ -154,7 +170,46 @@ Subject는 특정 분반의 특정 요일/교시 정기 수업 편성입니다.
 
 이 경우 Subject의 담당 교사와 `teacherAssignedAt`을 비우고, 운영 기록이 없는 미래 `SCHEDULED` Lesson을 soft delete합니다.
 
-## 7. 과목 일정 수정
+## 8. 관리자 교사 시간표 임의 배정
+
+- **URL**: `/api/v1/admin/teacher-schedule-assignments`
+- **Method**: `PATCH`
+- **Auth**: 필요
+- **Roles**: `ADMIN` 또는 `subject:manage:*`
+
+### Request Body
+
+```json
+{
+  "teacherId": 4,
+  "subjectIds": [3, 4],
+  "confirmTeacherReplacement": false
+}
+```
+
+- `subjectIds`는 같은 분반, 요일, 운영기간의 하루 시간표 과목 ID 목록입니다. 하루 1과목이면 1개, 하루 2과목이면 2개를 전달합니다.
+- 시간표 과목에 담당 교사가 없으면 지정 교원을 배정합니다.
+- 시간표 과목에 기존 담당 교사가 있고 다른 교원으로 바꾸려면 `confirmTeacherReplacement=true`가 필요합니다. 확인 없이 요청하면 `409 Conflict`를 반환합니다.
+- 대상 교원의 기본 분반이 없으면 배정 시간표 분반을 기본 분반으로 채웁니다. 이미 기본 분반이 있으면 변경하지 않습니다.
+- 배정 시간표 분반 채널 쓰기 권한을 추가합니다.
+- 담당 교사를 해제해도 기존 채널 권한은 자동 제거하지 않습니다. 같은 분반의 다른 시간표를 계속 담당할 수 있으므로 권한 회수는 별도 사용자 권한 관리에서 처리합니다.
+- 미래 Lesson 생성/변경 정책은 기존 담당 교사 배정 정책과 동일합니다.
+
+담당 교사를 해제하려면 아래 API를 사용합니다.
+
+- **URL**: `/api/v1/admin/teacher-schedule-assignments`
+- **Method**: `DELETE`
+- **Roles**: `ADMIN` 또는 `subject:manage:*`
+
+### Request Body
+
+```json
+{
+  "subjectIds": [3, 4]
+}
+```
+
+## 9. 과목 일정 수정
 
 - **URL**: `/api/v1/subjects/{subjectId}/schedule`
 - **Method**: `PATCH`
@@ -180,7 +235,7 @@ Subject는 특정 분반의 특정 요일/교시 정기 수업 편성입니다.
 - `dayOfWeek`, `startAt`, `endAt`이 바뀌면 미래 `SCHEDULED` Lesson을 soft delete한 뒤 새 일정으로 미래 Lesson을 재생성합니다.
 - 담당 교사가 없는 과목은 Subject 일정만 수정하고 Lesson은 생성하지 않습니다.
 
-## 8. 과목 삭제
+## 10. 과목 삭제
 
 - **URL**: `/api/v1/subjects/{subjectId}`
 - **Method**: `DELETE`
@@ -189,6 +244,7 @@ Subject는 특정 분반의 특정 요일/교시 정기 수업 편성입니다.
 - **Description**: 과목을 비활성화합니다.
 
 현재 과목 삭제는 Subject만 soft delete하며 이미 생성된 Lesson은 삭제하지 않습니다.
+과목이 비활성화되면 User 응답의 `teacherAssignments`와 `/subjects/me` 조회에서는 제외됩니다.
 
 ## 대표 실패 케이스
 
