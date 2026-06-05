@@ -238,6 +238,24 @@ class UserUpdateTest extends UserBaseTest {
     }
 
     @Test
+    @DisplayName("담당 중인 활성 과목이 있는 User는 교사 배정 불가 역할로 변경 실패(409 Conflict)")
+    void updateUser_withActiveTeacherAssignmentsToGuest_returns409() {
+        UpdateUserRequest updateReq = new UpdateUserRequest(
+            null, null, null, null, "GUEST", null, null
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(updateReq)
+        .when()
+            .patch("/{userId}", 2L)
+        .then()
+            .statusCode(409)
+            .log().all();
+    }
+
+    @Test
     @DisplayName("일반 사용자 권한으로 다른 User 수정 실패(403 Forbidden)")
     void updateUser_Forbidden() {
         UpdateUserRequest updateReq = new UpdateUserRequest(

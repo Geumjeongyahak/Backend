@@ -1,13 +1,31 @@
 package geumjeongyahak.e2e.users;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
 @DisplayName("E2E: User 조회 테스트")
 class UserReadTest extends UserBaseTest {
+
+    private static final long TEACHER_ASSIGNMENT_SUBJECT_ID = 190L;
+    private static final long SECOND_TEACHER_ASSIGNMENT_SUBJECT_ID = 191L;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @AfterEach
+    void cleanupTeacherAssignmentFixture() {
+        jdbcTemplate.update(
+            "DELETE FROM subjects WHERE id IN (?, ?)",
+            TEACHER_ASSIGNMENT_SUBJECT_ID,
+            SECOND_TEACHER_ASSIGNMENT_SUBJECT_ID
+        );
+    }
 
     @Test
     @DisplayName("관리자 권한으로 특정 User 조회 성공(200 OK)")
@@ -120,5 +138,85 @@ class UserReadTest extends UserBaseTest {
         .then()
             .statusCode(401)
             .log().all();
+    }
+
+    @Test
+    @DisplayName("사용자 상세 조회에 교사 담당 과목 목록이 포함된다")
+    void getUserById_includesTeacherAssignments() {
+        Long volunteerId = getVolunteerUserId();
+        insertTeacherAssignmentFixture(volunteerId);
+        insertSecondTeacherAssignmentFixture(volunteerId);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/{userId}", volunteerId)
+        .then()
+            .statusCode(200)
+            .body("classroom.id", nullValue())
+            .body("teacherAssignments.size()", equalTo(2))
+            .body(
+                "teacherAssignments.find { it.subjectId == " + TEACHER_ASSIGNMENT_SUBJECT_ID + " }.subjectName",
+                equalTo("사용자 응답 배정 과목")
+            )
+            .body(
+                "teacherAssignments.find { it.subjectId == " + SECOND_TEACHER_ASSIGNMENT_SUBJECT_ID + " }.classroomName",
+                equalTo("스마트폰반")
+            );
+    }
+
+    @Test
+    @DisplayName("사용자 목록 조회에 교사 담당 과목 요약이 포함된다")
+    void getUsers_includesTeacherAssignmentSummary() {
+        Long volunteerId = getVolunteerUserId();
+        insertTeacherAssignmentFixture(volunteerId);
+        insertSecondTeacherAssignmentFixture(volunteerId);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .queryParam("role", "VOLUNTEER")
+            .queryParam("size", 50)
+        .when()
+            .get()
+        .then()
+            .statusCode(200)
+            .body("content.find { it.id == " + volunteerId + " }.teacherAssignmentCount", equalTo(2))
+            .body("content.find { it.id == " + volunteerId + " }.teacherAssignmentClassroomNames", hasItems("장미반", "스마트폰반"));
+    }
+
+    private Long getVolunteerUserId() {
+        return jdbcTemplate.queryForObject(
+            "SELECT id FROM users WHERE primary_email = ?",
+            Long.class,
+            TEST_VOLUNTEER_USERNAME
+        );
+    }
+
+    private void insertTeacherAssignmentFixture(Long teacherId) {
+        jdbcTemplate.update("""
+            MERGE INTO subjects (
+                id, class_id, teacher_id, name, start_at, end_at, day_of_week,
+                start_time, end_time, period, teacher_assigned_at, description, is_active
+            )
+            KEY(id)
+            VALUES (
+                ?, 2, ?, '사용자 응답 배정 과목', DATE '2099-03-02', DATE '2099-06-30', 'MONDAY',
+                TIME '19:20:00', TIME '20:00:00', 1, CURRENT_TIMESTAMP, '사용자 응답 테스트', TRUE
+            )
+            """, TEACHER_ASSIGNMENT_SUBJECT_ID, teacherId);
+    }
+
+    private void insertSecondTeacherAssignmentFixture(Long teacherId) {
+        jdbcTemplate.update("""
+            MERGE INTO subjects (
+                id, class_id, teacher_id, name, start_at, end_at, day_of_week,
+                start_time, end_time, period, teacher_assigned_at, description, is_active
+            )
+            KEY(id)
+            VALUES (
+                ?, 3, ?, '사용자 응답 두 번째 배정 과목', DATE '2099-03-06', DATE '2099-06-30', 'SATURDAY',
+                TIME '10:00:00', TIME '11:00:00', 1, CURRENT_TIMESTAMP, '사용자 응답 테스트', TRUE
+            )
+            """, SECOND_TEACHER_ASSIGNMENT_SUBJECT_ID, teacherId);
     }
 }

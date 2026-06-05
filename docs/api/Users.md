@@ -50,7 +50,10 @@
         "email": "user@example.com",
         "phoneNumber": "010-1234-5678",
         "role": "VOLUNTEER",
-        "departmentId": 2
+        "departmentId": 2,
+        "classroomId": 1,
+        "teacherAssignmentCount": 2,
+        "teacherAssignmentClassroomNames": ["국화반", "장미반"]
       }
     ],
     "totalElements": 1,
@@ -81,15 +84,65 @@
       "name": "교육연구부",
       "description": "교육 프로그램 연구..."
     },
-    "classroom": null,
+    "classroom": {
+      "id": 1,
+      "name": "국화반",
+      "type": "WEEKDAY"
+    },
+    "teacherStartAt": "2026-06-01",
+    "teacherEndAt": "2026-12-31",
     "permissions": [
-      { "name": "lesson:write:1", "code": "lesson:write:1", "source": "MANUAL" },
-      { "name": "channel:write:15", "code": "channel:write:15", "source": "MEMBER" }
+      {
+        "id": 1,
+        "name": "lesson:write:1",
+        "code": "lesson:write:1",
+        "permissionCode": "lesson:write:1",
+        "resourceCode": "lesson",
+        "resourceLabel": "수업",
+        "actionCode": "write",
+        "actionLabel": "작성",
+        "scope": "target",
+        "targetId": 1,
+        "targetName": "1",
+        "source": "MANUAL"
+      },
+      {
+        "id": 15,
+        "name": "channel:write:15",
+        "code": "channel:write:15",
+        "permissionCode": "channel:write:15",
+        "resourceCode": "channel",
+        "resourceLabel": "채널",
+        "actionCode": "write",
+        "actionLabel": "작성",
+        "scope": "target",
+        "targetId": 15,
+        "targetName": "15",
+        "source": "MEMBER"
+      }
+    ],
+    "teacherAssignments": [
+      {
+        "subjectId": 3,
+        "subjectName": "국어",
+        "classroomId": 2,
+        "classroomName": "장미반",
+        "dayOfWeek": "MONDAY",
+        "startTime": "19:20:00",
+        "endTime": "20:00:00",
+        "period": 1,
+        "startAt": "2026-06-01",
+        "endAt": "2026-12-31",
+        "teacherAssignedAt": "2026-06-01T10:15:30"
+      }
     ],
     "createdAt": "2024-01-01T12:00:00",
     "updatedAt": "2024-01-02T15:30:00"
   }
-  ```
+```
+
+`classroom`은 사용자의 기본/소속 분반입니다. 실제 담당 분반은 `teacherAssignments[].classroomId`로 확인합니다.
+담당 중인 활성 과목이 있는 사용자는 삭제하거나 `GUEST`처럼 교사 배정이 불가능한 역할로 변경할 수 없습니다. 먼저 과목 담당 교사를 해제해야 합니다.
 
 ### 1.3. 사용자 본인 조회
 현재 로그인한 사용자의 정보를 조회합니다.

@@ -86,11 +86,10 @@ public class DepartmentPermissionService {
         return roleTypes;
     }
 
-    public PermissionResponse toResponse(DepartmentPermission permission) {
-        String authorityCode = permission.toAuthorityCode();
-        return new PermissionResponse(
-            authorityCode,
-            authorityCode,
+    private PermissionResponse toResponse(DepartmentPermission permission) {
+        return PermissionResponse.from(
+            permission.getId(),
+            permission.toAuthorityCode(),
             permission.getRoleType().name()
         );
     }

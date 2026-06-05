@@ -2,10 +2,12 @@ package geumjeongyahak.e2e.teacher_application;
 
 import static io.restassured.RestAssured.given;
 import static java.util.Map.entry;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
 import geumjeongyahak.e2e.BaseE2ETest;
+import geumjeongyahak.e2e.util.TestTeacherApplicationHelper;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import java.util.Map;
@@ -15,20 +17,20 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 @Tag("teacher-application")
 @DisplayName("E2E: 교원 신청 생성 테스트")
 class TeacherApplicationCreateTest extends BaseE2ETest {
 
     private static final long UNASSIGNED_SUBJECT_ID = 100L;
+    private static final long UNASSIGNED_SECOND_SUBJECT_ID = 101L;
     private static final long ASSIGNED_SUBJECT_ID = 1L;
 
     private String guestToken;
     private String volunteerToken;
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private TestTeacherApplicationHelper teacherApplicationHelper;
 
     @BeforeEach
     @Override
@@ -36,7 +38,7 @@ class TeacherApplicationCreateTest extends BaseE2ETest {
         super.setUp();
         RestAssured.basePath = "/api/v1/teacher-applications";
         cleanupTeacherApplicationData();
-        insertUnassignedSubject();
+        insertUnassignedSubjects();
         guestToken = userTestHelper.generateAccessTokenByUserKey("guest01");
         volunteerToken = userTestHelper.generateAccessTokenByUserKey("teacher01");
     }
@@ -65,6 +67,26 @@ class TeacherApplicationCreateTest extends BaseE2ETest {
             .body("preferredSubjectName", equalTo("교원 신청용 미배정 과목"))
             .body("preferredClassroomName", equalTo("벚꽃반"))
             .body("status", equalTo("PENDING"));
+    }
+
+    @Test
+    @DisplayName("인증 사용자가 교원 신청 가능 시간표 목록 조회 → 미배정 과목을 분반/요일/기간 단위로 묶어 반환")
+    void getAvailableTeacherSchedules_returnsGroupedUnassignedSubjects() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .get("/available-schedules")
+            .then()
+            .statusCode(200)
+            .body("size()", equalTo(1))
+            .body("[0].classroomId", equalTo(1))
+            .body("[0].classroomName", equalTo("벚꽃반"))
+            .body("[0].dayOfWeek", equalTo("FRIDAY"))
+            .body("[0].startAt", equalTo("2026-03-01"))
+            .body("[0].endAt", equalTo("2026-06-30"))
+            .body("[0].startTime", equalTo("19:00:00"))
+            .body("[0].endTime", equalTo("20:50:00"))
+            .body("[0].subjectIds", contains((int) UNASSIGNED_SUBJECT_ID, (int) UNASSIGNED_SECOND_SUBJECT_ID))
+            .body("[0].subjects.subjectId", contains((int) UNASSIGNED_SUBJECT_ID, (int) UNASSIGNED_SECOND_SUBJECT_ID));
     }
 
     @Test
@@ -136,19 +158,33 @@ class TeacherApplicationCreateTest extends BaseE2ETest {
         );
     }
 
-    private void insertUnassignedSubject() {
-        jdbcTemplate.update("""
-            INSERT INTO subjects (
-                id, class_id, teacher_id, name, start_at, end_at, day_of_week,
-                start_time, end_time, period, teacher_assigned_at, description, is_active
-            )
-            VALUES (?, 1, NULL, '교원 신청용 미배정 과목', '2026-03-01', '2026-06-30',
-                    'FRIDAY', '19:00:00', '22:00:00', 1, NULL, '교원 신청 E2E 테스트 과목', TRUE)
-            """, UNASSIGNED_SUBJECT_ID);
+    private void insertUnassignedSubjects() {
+        teacherApplicationHelper.insertUnassignedSubject(
+            UNASSIGNED_SUBJECT_ID,
+            1L,
+            "교원 신청용 미배정 과목",
+            "2026-03-01",
+            "2026-06-30",
+            "FRIDAY",
+            "19:00:00",
+            "20:00:00",
+            1
+        );
+        teacherApplicationHelper.insertUnassignedSubject(
+            UNASSIGNED_SECOND_SUBJECT_ID,
+            1L,
+            "교원 신청용 미배정 두 번째 과목",
+            "2026-03-01",
+            "2026-06-30",
+            "FRIDAY",
+            "20:10:00",
+            "20:50:00",
+            2
+        );
     }
 
     private void cleanupTeacherApplicationData() {
-        jdbcTemplate.update("DELETE FROM teacher_applications");
-        jdbcTemplate.update("DELETE FROM subjects WHERE id = ?", UNASSIGNED_SUBJECT_ID);
+        teacherApplicationHelper.cleanupApplications();
+        teacherApplicationHelper.cleanupSubjects(UNASSIGNED_SUBJECT_ID, UNASSIGNED_SECOND_SUBJECT_ID);
     }
 }

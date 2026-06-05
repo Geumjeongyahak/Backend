@@ -38,6 +38,11 @@ public enum TeacherApplicationErrorCode implements ErrorCode {
         HttpStatus.BAD_REQUEST,
         "VAL-12-001",
         "교사가 미배정된 활성 과목만 선호 과목으로 신청할 수 있습니다."
+    ),
+    INVALID_ASSIGNED_SUBJECT(
+        HttpStatus.BAD_REQUEST,
+        "VAL-12-002",
+        "교사가 미배정된 활성 과목만 배정 과목으로 지정할 수 있습니다."
     );
 
     private final HttpStatus status;

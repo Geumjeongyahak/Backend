@@ -52,6 +52,9 @@ public record UserDetailResponse(
     @Schema(description = "사용자에게 부여된 직접 권한과 부서 직책 권한 목록. 직접 권한은 MANUAL, 부서 권한은 MEMBER/MANAGER로 source가 표시됩니다.")
     List<PermissionResponse> permissions,
 
+    @Schema(description = "사용자가 교사로 담당 중인 활성 과목 목록")
+    List<TeacherAssignmentResponse> teacherAssignments,
+
     @Schema(description = "사용자 계정 생성 일시", example = "2024-01-01T12:00:00")
     LocalDateTime createdAt,
 
@@ -59,10 +62,22 @@ public record UserDetailResponse(
     LocalDateTime updatedAt
 ) {
     public static UserDetailResponse from(User user) {
-        return from(user, List.of());
+        return from(user, List.of(), List.of());
     }
 
     public static UserDetailResponse from(User user, Collection<DepartmentPermission> departmentPermissions) {
+        return from(user, departmentPermissions, List.of());
+    }
+
+    public static UserDetailResponse from(User user, List<TeacherAssignmentResponse> teacherAssignments) {
+        return from(user, List.of(), teacherAssignments);
+    }
+
+    public static UserDetailResponse from(
+        User user,
+        Collection<DepartmentPermission> departmentPermissions,
+        List<TeacherAssignmentResponse> teacherAssignments
+    ) {
         return new UserDetailResponse(
             user.getId(),
             user.getName(),
@@ -75,6 +90,7 @@ public record UserDetailResponse(
             user.getTeacherStartAt(),
             user.getTeacherEndAt(),
             buildPermissions(user, departmentPermissions),
+            teacherAssignments,
             user.getCreatedAt(),
             user.getUpdatedAt()
         );
@@ -85,18 +101,16 @@ public record UserDetailResponse(
     ) {
         List<PermissionResponse> permissions = new ArrayList<>();
         user.getPermissions().forEach(permission -> {
-            String authorityCode = permission.toAuthorityCode();
-            permissions.add(new PermissionResponse(
-                authorityCode,
-                authorityCode,
+            permissions.add(PermissionResponse.from(
+                permission.getId(),
+                permission.toAuthorityCode(),
                 PermissionResponse.SOURCE_MANUAL
             ));
         });
         departmentPermissions.forEach(permission -> {
-            String authorityCode = permission.toAuthorityCode();
-            permissions.add(new PermissionResponse(
-                authorityCode,
-                authorityCode,
+            permissions.add(PermissionResponse.from(
+                permission.getId(),
+                permission.toAuthorityCode(),
                 permission.getRoleType().name()
             ));
         });

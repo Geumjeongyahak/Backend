@@ -7,6 +7,7 @@ import geumjeongyahak.domain.teacher_application.service.TeacherApplicationServi
 import geumjeongyahak.domain.teacher_application.v1.dto.request.ApproveTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.RejectTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.TeacherApplicationPaginationRequest;
+import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationListResponse;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,7 +41,7 @@ public class TeacherApplicationAdminController {
     @PreAuthorize(READ_PERMISSION)
     @Operation(summary = "교원 신청 목록 조회")
     @GetMapping
-    public ResponseEntity<PaginationResponse<TeacherApplicationResponse>> getTeacherApplications(
+    public ResponseEntity<PaginationResponse<TeacherApplicationListResponse>> getTeacherApplications(
         @ParameterObject @Valid TeacherApplicationPaginationRequest request,
         @RequestParam(required = false) TeacherApplicationStatus status
     ) {

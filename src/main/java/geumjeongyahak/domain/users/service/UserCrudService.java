@@ -1,36 +1,42 @@
 package geumjeongyahak.domain.users.service;
 
-import geumjeongyahak.domain.department.service.DepartmentProxyService;
-import geumjeongyahak.domain.department.service.DepartmentPermissionProxyService;
-import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import lombok.RequiredArgsConstructor;
+import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.auth.service.UserCredentialService;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
+import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
+import geumjeongyahak.domain.department.service.DepartmentPermissionProxyService;
+import geumjeongyahak.domain.department.service.DepartmentProxyService;
+import geumjeongyahak.domain.subject.service.SubjectProxyService;
+import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.users.exception.DuplicateEmailException;
+import geumjeongyahak.domain.users.exception.UserNotFoundException;
+import geumjeongyahak.domain.users.exception.UserTeacherAssignmentConflictException;
+import geumjeongyahak.domain.users.repository.UserRepository;
+import geumjeongyahak.domain.users.repository.specification.UserSpecs;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UpdateSelfRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UpdateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UserPaginationRequest;
-import geumjeongyahak.domain.users.v1.dto.response.UserSimpleResponse;
+import geumjeongyahak.domain.users.v1.dto.response.TeacherAssignmentResponse;
 import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
-import geumjeongyahak.domain.auth.enums.RoleType;
-import geumjeongyahak.domain.users.entity.User;
-import geumjeongyahak.domain.users.exception.DuplicateEmailException;
-import geumjeongyahak.domain.users.exception.UserNotFoundException;
-import geumjeongyahak.domain.users.repository.UserRepository;
-import geumjeongyahak.domain.users.repository.specification.UserSpecs;
-import org.springframework.data.jpa.domain.Specification;
-
+import geumjeongyahak.domain.users.v1.dto.response.UserSimpleResponse;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserCrudService {
+
     private final UserRepository userRepository;
     private final DepartmentProxyService departmentProxyService;
     private final ClassroomProxyService classroomProxyService;
@@ -39,7 +45,7 @@ public class UserCrudService {
     private final UserProxyService userProxyService;
     private final DepartmentPermissionProxyService departmentPermissionProxyService;
     private final UserPermissionService userPermissionService;
-
+    private final SubjectProxyService subjectProxyService;
 
     @Transactional(readOnly = true)
     public UserDetailResponse getUserById(Long userId) {
@@ -68,10 +74,17 @@ public class UserCrudService {
         }
 
         var users = userRepository.findAll(spec, request.toRequest());
-        var pageResponse = new PaginationResponse<>(users);
-        log.debug("전체 사용자 목록 조회 완료 - 총 {}명", pageResponse.getTotalElements());
+        Map<Long, List<TeacherAssignmentResponse>> assignmentsByTeacherId =
+            getTeacherAssignmentsByTeacherId(users.getContent());
 
-        return PaginationResponse.mapTo(pageResponse, UserSimpleResponse::from);
+        log.debug("전체 사용자 목록 조회 완료 - 총 {}명", users.getTotalElements());
+        return PaginationResponse.from(
+            users,
+            user -> UserSimpleResponse.from(
+                user,
+                assignmentsByTeacherId.getOrDefault(user.getId(), List.of())
+            )
+        );
     }
 
     @Transactional
@@ -117,6 +130,7 @@ public class UserCrudService {
                 log.debug("사용자 수정 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
                 return new UserNotFoundException(userId);
             });
+        validateTeacherAssignmentRoleChange(user, request.role());
         updateUserInternal(user,
             Optional.ofNullable(request.name()),
             Optional.ofNullable(request.phoneNumber()),
@@ -153,7 +167,11 @@ public class UserCrudService {
     }
 
     private UserDetailResponse toDetailResponse(User user) {
-        return UserDetailResponse.from(user, departmentPermissionProxyService.getEffectivePermissions(user));
+        return UserDetailResponse.from(
+            user,
+            departmentPermissionProxyService.getEffectivePermissions(user),
+            getTeacherAssignments(user.getId())
+        );
     }
 
     private void updateUserInternal(
@@ -203,12 +221,52 @@ public class UserCrudService {
         user.setRole(roleType);
     }
 
+    private List<TeacherAssignmentResponse> getTeacherAssignments(Long teacherId) {
+        return subjectProxyService.getActiveSubjectsByTeacherId(teacherId).stream()
+            .map(TeacherAssignmentResponse::from)
+            .toList();
+    }
+
+    private Map<Long, List<TeacherAssignmentResponse>> getTeacherAssignmentsByTeacherId(List<User> users) {
+        List<Long> userIds = users.stream()
+            .map(User::getId)
+            .toList();
+        if (userIds.isEmpty()) {
+            return Map.of();
+        }
+        return subjectProxyService.getActiveSubjectsByTeacherIds(userIds).stream()
+            .collect(Collectors.groupingBy(
+                subject -> subject.getTeacher().getId(),
+                Collectors.mapping(TeacherAssignmentResponse::from, Collectors.toList())
+            ));
+    }
+
+    private void validateTeacherAssignmentRoleChange(User user, String requestedRole) {
+        if (requestedRole == null) {
+            return;
+        }
+        RoleType nextRole = RoleType.valueOf(requestedRole);
+        if (isTeacherAssignableRole(nextRole)) {
+            return;
+        }
+        if (subjectProxyService.existsActiveSubjectByTeacherId(user.getId())) {
+            throw UserTeacherAssignmentConflictException.roleChangeBlocked();
+        }
+    }
+
+    private boolean isTeacherAssignableRole(RoleType role) {
+        return role == RoleType.VOLUNTEER || role == RoleType.MANAGER || role == RoleType.ADMIN;
+    }
+
     @Transactional
     public void deleteUserById(Long userId) {
         log.debug("사용자 삭제 요청 - ID: {}", userId);
         if (!userRepository.existsById(userId)) {
             log.debug("사용자 삭제 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
             throw new UserNotFoundException(userId);
+        }
+        if (subjectProxyService.existsActiveSubjectByTeacherId(userId)) {
+            throw UserTeacherAssignmentConflictException.deletionBlocked();
         }
         userRepository.deleteById(userId);
         log.info("사용자 삭제 완료 - ID: {}", userId);

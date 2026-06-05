@@ -4,11 +4,13 @@ import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.teacher_application.service.TeacherApplicationService;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.CreateTeacherApplicationRequest;
 import geumjeongyahak.domain.teacher_application.v1.dto.request.UpdateTeacherApplicationRequest;
+import geumjeongyahak.domain.teacher_application.v1.dto.response.AvailableTeacherScheduleResponse;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.MyTeacherApplicationResponse;
 import geumjeongyahak.domain.teacher_application.v1.dto.response.TeacherApplicationResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -46,6 +48,23 @@ public class TeacherApplicationController {
         log.debug("POST /api/v1/teacher-applications (preferredSubjectId={})", request.preferredSubjectId());
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(teacherApplicationService.createTeacherApplication(userDetails.getUserId(), request));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+        summary = "교원 신청 가능 시간표 목록 조회",
+        description = """
+            교원 신청 화면에서 선택할 수 있는 교사 미배정 시간표 후보를 조회합니다.
+
+            같은 분반, 요일, 운영기간의 미배정 과목 슬롯을 하나의 시간표 후보로 묶어 반환합니다.
+            신청자는 응답의 subjectIds 중 하나를 preferredSubjectId로 선택할 수 있고,
+            관리자는 승인 시 같은 subjectIds 묶음을 assignedSubjectIds로 사용할 수 있습니다.
+            """
+    )
+    @GetMapping("/available-schedules")
+    public ResponseEntity<List<AvailableTeacherScheduleResponse>> getAvailableTeacherSchedules() {
+        log.debug("GET /api/v1/teacher-applications/available-schedules");
+        return ResponseEntity.ok(teacherApplicationService.getAvailableTeacherSchedules());
     }
 
     @PreAuthorize("isAuthenticated()")

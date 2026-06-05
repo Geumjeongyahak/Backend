@@ -2,16 +2,17 @@ package geumjeongyahak.domain.users.service;
 
 import geumjeongyahak.domain.base.dto.response.AdminPage;
 import geumjeongyahak.domain.base.dto.response.AdminSorts;
-import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
-import geumjeongyahak.domain.department.entity.Department;
 import geumjeongyahak.domain.department.repository.DepartmentRepository;
 import geumjeongyahak.domain.users.entity.User;
-import geumjeongyahak.domain.users.entity.UserPermission;
 import geumjeongyahak.domain.users.repository.UserRepository;
 import geumjeongyahak.domain.users.v1.dto.request.UpdateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
+import geumjeongyahak.domain.users.service.dto.AdminUserRow;
+import geumjeongyahak.domain.users.service.dto.ClassroomOption;
+import geumjeongyahak.domain.users.service.dto.DepartmentOption;
+import geumjeongyahak.domain.users.service.dto.UserFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -184,68 +185,5 @@ public class UserAdminViewService {
     @Transactional
     public void addPermission(Long userId, String permissionCode) {
         userPermissionService.addPermission(userId, permissionCode);
-    }
-
-    public record DepartmentOption(
-        Long id,
-        String name
-    ) {
-        private static DepartmentOption from(Department department) {
-            return new DepartmentOption(department.getId(), department.getName());
-        }
-    }
-
-    public record ClassroomOption(
-        Long id,
-        String name
-    ) {
-        private static ClassroomOption from(Classroom classroom) {
-            return new ClassroomOption(classroom.getId(), classroom.getName());
-        }
-    }
-
-    public record UserFilter(
-        String keyword,
-        String role,
-        Long departmentId,
-        Long classroomId,
-        String permissionCode,
-        Integer page,
-        Integer size,
-        String sort
-    ) {
-    }
-
-    public record AdminUserRow(
-        Long id,
-        String name,
-        String email,
-        String phoneNumber,
-        String role,
-        Long departmentId,
-        String departmentName,
-        Long classroomId,
-        String classroomName,
-        List<String> permissions,
-        LocalDateTime createdAt
-    ) {
-        private static AdminUserRow from(User user) {
-            return new AdminUserRow(
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
-                user.getPhoneNumber(),
-                user.getRole().name(),
-                user.getDepartment() != null ? user.getDepartment().getId() : null,
-                user.getDepartment() != null ? user.getDepartment().getName() : "-",
-                user.getClassroom() != null ? user.getClassroom().getId() : null,
-                user.getClassroom() != null ? user.getClassroom().getName() : "-",
-                user.getPermissions().stream()
-                    .map(UserPermission::toAuthorityCode)
-                    .sorted()
-                    .toList(),
-                user.getCreatedAt()
-            );
-        }
     }
 }

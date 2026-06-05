@@ -66,6 +66,18 @@ class UserDeleteTest extends UserBaseTest {
     }
 
     @Test
+    @DisplayName("담당 중인 활성 과목이 있는 User 삭제 실패(409 Conflict)")
+    void deleteUser_withActiveTeacherAssignments_returns409() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/{userId}", 2L)
+        .then()
+            .statusCode(409)
+            .log().all();
+    }
+
+    @Test
     @DisplayName("존재하지 않는 User 삭제 실패(404 Not Found)")
     void deleteUser_NotFound() {
         given()

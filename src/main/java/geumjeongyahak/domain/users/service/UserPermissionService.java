@@ -60,10 +60,9 @@ public class UserPermissionService {
     }
 
     private PermissionResponse toResponse(UserPermission permission) {
-        String authorityCode = permission.toAuthorityCode();
-        return new PermissionResponse(
-            authorityCode,
-            authorityCode,
+        return PermissionResponse.from(
+            permission.getId(),
+            permission.toAuthorityCode(),
             PermissionResponse.SOURCE_MANUAL
         );
     }

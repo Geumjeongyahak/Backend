@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.subject.v1.controller;
 
+import geumjeongyahak.common.security.service.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -91,6 +93,23 @@ public class SubjectController {
     public ResponseEntity<List<SubjectDetailResponse>> getUnassignedSubjects() {
         log.debug("GET /api/v1/subjects/unassigned - 교사 미배정 과목 목록 조회 요청");
         return ResponseEntity.ok(subjectService.getUnassignedSubjects());
+    }
+
+    @PreAuthorize(SUBJECT_READ_ACCESS)
+    @Operation(
+        summary = "내 담당 과목 목록 조회",
+        description = """
+            현재 로그인한 교원이 담당 교사로 배정된 활성 과목 목록을 조회합니다.
+
+            기본/소속 분반과 무관하게 Subject.teacherId가 현재 사용자 ID인 과목을 반환합니다.
+            """
+    )
+    @GetMapping("/me")
+    public ResponseEntity<List<SubjectDetailResponse>> getMyAssignedSubjects(
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("GET /api/v1/subjects/me - 내 담당 과목 목록 조회 요청");
+        return ResponseEntity.ok(subjectService.getMyAssignedSubjects(userDetails.getUserId()));
     }
 
     @PreAuthorize(SUBJECT_READ_ACCESS)
