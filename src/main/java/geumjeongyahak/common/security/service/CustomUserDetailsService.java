@@ -4,9 +4,10 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
 
-import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.entity.UserCredential;
+import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
+import geumjeongyahak.domain.department.service.DepartmentPermissionProxyService;
 import geumjeongyahak.domain.users.entity.User;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.GrantedAuthority;
@@ -23,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserCredentialRepository userCredentialRepository;
+    private final DepartmentPermissionProxyService departmentPermissionProxyService;
 
     @Override
     @Transactional(readOnly = true)
@@ -48,12 +50,10 @@ public class CustomUserDetailsService implements UserDetailsService {
             .map(permission -> new SimpleGrantedAuthority(permission.toAuthorityCode()))
             .collect(Collectors.toSet()));
 
-        if (user.getDepartment() != null) {
-            authorities.addAll(user.getDepartment().getPermissions()
+        authorities.addAll(departmentPermissionProxyService.getEffectivePermissions(user)
                 .stream()
                 .map(permission -> new SimpleGrantedAuthority(permission.toAuthorityCode()))
                 .collect(Collectors.toSet()));
-        }
 
         return new CustomUserDetails(
             user.getId(),

@@ -33,15 +33,16 @@ public class UserPermissionController {
     @Operation(
         summary = "사용자 권한 목록 조회",
         description = """
-            특정 사용자에게 직접 부여된 세부 권한 목록을 조회합니다.
+            특정 사용자에게 직접 부여된 수동 예외 권한 목록을 조회합니다.
 
             사용 사례:
             - 운영 권한 부여 전 현재 권한 상태 확인
-            - 사용자 상세 화면에서 authority 목록 표시
+            - 사용자 상세 화면에서 MANUAL 권한 목록 확인
 
             동작 방식:
             - 역할(role) 기반 권한이 아니라 사용자에 직접 저장된 permission code만 반환합니다.
-            - 부서 권한이나 role 기반 권한은 이 API 응답에 포함되지 않습니다.
+            - 부서 직책 권한이나 role 기반 권한은 이 API 응답에 포함되지 않습니다.
+            - 반환되는 권한의 source는 MANUAL입니다.
 
             사이드 이펙트:
             - 읽기 전용 API이며 권한 상태를 변경하지 않습니다.

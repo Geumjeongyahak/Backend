@@ -1,50 +1,51 @@
 package geumjeongyahak.domain.users.service;
 
-import geumjeongyahak.domain.department.service.DepartmentProxyService;
-import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
-import geumjeongyahak.common.exception.BusinessException;
-import geumjeongyahak.common.exception.CommonErrorCode;
-import geumjeongyahak.domain.subject.service.SubjectProxyService;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import lombok.RequiredArgsConstructor;
+import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.auth.service.UserCredentialService;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
+import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
+import geumjeongyahak.domain.department.service.DepartmentPermissionProxyService;
+import geumjeongyahak.domain.department.service.DepartmentProxyService;
+import geumjeongyahak.domain.subject.service.SubjectProxyService;
+import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.users.exception.DuplicateEmailException;
+import geumjeongyahak.domain.users.exception.UserNotFoundException;
+import geumjeongyahak.domain.users.exception.UserTeacherAssignmentConflictException;
+import geumjeongyahak.domain.users.repository.UserRepository;
+import geumjeongyahak.domain.users.repository.specification.UserSpecs;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UpdateSelfRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UpdateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UserPaginationRequest;
-import geumjeongyahak.domain.users.v1.dto.response.UserSimpleResponse;
-import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
 import geumjeongyahak.domain.users.v1.dto.response.TeacherAssignmentResponse;
-import geumjeongyahak.domain.auth.enums.RoleType;
-import geumjeongyahak.domain.users.entity.User;
-import geumjeongyahak.domain.users.exception.DuplicateEmailException;
-import geumjeongyahak.domain.users.exception.UserNotFoundException;
-import geumjeongyahak.domain.users.repository.UserRepository;
-import geumjeongyahak.domain.users.repository.specification.UserSpecs;
-import org.springframework.data.jpa.domain.Specification;
-
+import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
+import geumjeongyahak.domain.users.v1.dto.response.UserSimpleResponse;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserCrudService {
+
     private final UserRepository userRepository;
     private final DepartmentProxyService departmentProxyService;
     private final ClassroomProxyService classroomProxyService;
     private final PasswordEncoder passwordEncoder;
     private final UserCredentialService credentialService;
     private final UserProxyService userProxyService;
+    private final DepartmentPermissionProxyService departmentPermissionProxyService;
+    private final UserPermissionService userPermissionService;
     private final SubjectProxyService subjectProxyService;
-
 
     @Transactional(readOnly = true)
     public UserDetailResponse getUserById(Long userId) {
@@ -52,8 +53,7 @@ public class UserCrudService {
         User user = userProxyService.getById(userId);
         log.debug("사용자 조회 요청 완료 - ID: {}", userId);
 
-        List<TeacherAssignmentResponse> assignments = getTeacherAssignments(user.getId());
-        return UserDetailResponse.from(user, assignments);
+        return toDetailResponse(user);
     }
 
     @Transactional(readOnly = true)
@@ -118,7 +118,7 @@ public class UserCrudService {
         );
         log.info("사용자 생성 완료 - ID: {}, email: {}", savedUser.getId(), savedUser.getEmail());
 
-        return UserDetailResponse.from(savedUser, List.of());
+        return toDetailResponse(savedUser);
     }
 
     @Transactional
@@ -141,7 +141,7 @@ public class UserCrudService {
             Optional.ofNullable(request.classroomId())
         );
         log.info("사용자 수정 완료 - ID: {}, email: {}", user.getId(), user.getEmail());
-        return UserDetailResponse.from(user, getTeacherAssignments(user.getId()));
+        return toDetailResponse(user);
     }
 
     @Transactional
@@ -163,7 +163,15 @@ public class UserCrudService {
                 Optional.empty()  // 본인 수정 시 분반 변경 불가
         );
         log.debug("본인 사용자 수정 완료 - ID: {}, email: {}", user.getId(), user.getEmail());
-        return UserDetailResponse.from(user, getTeacherAssignments(user.getId()));
+        return toDetailResponse(user);
+    }
+
+    private UserDetailResponse toDetailResponse(User user) {
+        return UserDetailResponse.from(
+            user,
+            departmentPermissionProxyService.getEffectivePermissions(user),
+            getTeacherAssignments(user.getId())
+        );
     }
 
     private void updateUserInternal(
@@ -190,13 +198,27 @@ public class UserCrudService {
             user.setEmail(em);
             credentialService.updateLocalCredentialEmail(user, em);
         });
-        role.map(RoleType::valueOf).ifPresent(user::setRole);
+        Optional<RoleType> requestedRole = role.map(RoleType::valueOf);
+        requestedRole.ifPresent(roleType -> updateRole(user, roleType));
+        if (requestedRole.filter(RoleType.GUEST::equals).isPresent()) {
+            return;
+        }
         departmentId.ifPresent(deptId -> {
             user.setDepartment(departmentProxyService.getById(deptId));
         });
         classroomId.ifPresent(classroomIdValue -> {
             user.setClassroom(classroomProxyService.getActiveById(classroomIdValue));
         });
+    }
+
+    private void updateRole(User user, RoleType roleType) {
+        if (roleType == RoleType.GUEST) {
+            user.releaseTeacherProfile(LocalDate.now());
+            userPermissionService.removeAllPermissions(user.getId());
+            user.clearPermissions();
+            return;
+        }
+        user.setRole(roleType);
     }
 
     private List<TeacherAssignmentResponse> getTeacherAssignments(Long teacherId) {
@@ -228,10 +250,7 @@ public class UserCrudService {
             return;
         }
         if (subjectProxyService.existsActiveSubjectByTeacherId(user.getId())) {
-            throw new BusinessException(
-                CommonErrorCode.INVALID_STATE,
-                "담당 중인 활성 과목이 있는 사용자는 교사 배정이 불가능한 역할로 변경할 수 없습니다."
-            );
+            throw UserTeacherAssignmentConflictException.roleChangeBlocked();
         }
     }
 
@@ -247,10 +266,7 @@ public class UserCrudService {
             throw new UserNotFoundException(userId);
         }
         if (subjectProxyService.existsActiveSubjectByTeacherId(userId)) {
-            throw new BusinessException(
-                CommonErrorCode.INVALID_STATE,
-                "담당 중인 활성 과목이 있는 사용자는 삭제할 수 없습니다."
-            );
+            throw UserTeacherAssignmentConflictException.deletionBlocked();
         }
         userRepository.deleteById(userId);
         log.info("사용자 삭제 완료 - ID: {}", userId);

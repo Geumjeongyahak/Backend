@@ -10,14 +10,14 @@
 |---|--------|-----|------|---------|
 | 1 | GET | `/api/v1/users` | `ADMIN` \| `user:read:*` | 200 |
 | 2 | GET | `/api/v1/users/{userId}` | `ADMIN` \| `user:read:*` | 200 |
-| 3 | POST | `/api/v1/users` | `ADMIN` \| `user:manage:*` | 201 |
+| 3 | POST | `/api/v1/users` | `ADMIN` \| `user:write:*` | 201 |
 | 4 | PATCH | `/api/v1/users/{userId}` | `ADMIN` \| `user:manage:*` | 200 |
 | 5 | DELETE | `/api/v1/users/{userId}` | `ADMIN` \| `user:manage:*` | 204 |
 | 6 | GET | `/api/v1/users/me` | 인증만 | 200 |
 | 7 | PATCH | `/api/v1/users/me` | 인증만 | 200 |
-| 8 | GET | `/api/v1/users/{userId}/permissions` | `ADMIN` \| `user:read:*` | 200 |
-| 9 | POST | `/api/v1/users/{userId}/permissions` | `ADMIN` \| `user:manage:*` | 200 |
-| 10 | DELETE | `/api/v1/users/{userId}/permissions` | `ADMIN` \| `user:manage:*` | 200 |
+| 8 | GET | `/api/v1/users/{userId}/permissions` | `ADMIN` \| `user:read:*` \| `user:grant:*` | 200 |
+| 9 | POST | `/api/v1/users/{userId}/permissions` | `ADMIN` \| `user:grant:*` | 200 |
+| 10 | DELETE | `/api/v1/users/{userId}/permissions` | `ADMIN` \| `user:grant:*` | 200 |
 
 ---
 
@@ -79,7 +79,7 @@ sequenceDiagram
 ## 2. 사용자 상세 조회 `GET /api/v1/users/{userId}`
 
 **권한** `ADMIN` | `user:read:*`  
-**특이점** 직접 부여된 `permissions` 포함. role·부서 기반 권한은 미포함
+**특이점** 직접 권한(`MANUAL`)과 부서 직책 권한(`MEMBER`, `MANAGER`)을 합산한 `permissions` 포함
 
 #### Request — Path Parameters
 
@@ -96,8 +96,11 @@ sequenceDiagram
 | `email` | string | N | 기본 이메일 |
 | `phoneNumber` | string | Y | 전화번호 |
 | `role` | string | N | 기본 역할 |
-| `departmentId` | Long | Y | 소속 부서 ID |
-| `permissions` | `PermissionResponse[]` | N | 직접 부여된 세부 권한 목록 |
+| `department` | `DepartmentSimpleResponse` | Y | 소속 부서. 없거나 교원 해제 상태이면 null |
+| `classroom` | `ClassroomSummaryResponse` | Y | 배정 분반. 없거나 교원 해제 상태이면 null |
+| `teacherStartAt` | date | Y | 교원 활동 시작일 |
+| `teacherEndAt` | date | Y | 교원 활동 종료일. 교원 해제 시 처리일로 설정 |
+| `permissions` | `PermissionResponse[]` | N | 직접 권한과 부서 직책 권한 목록 |
 | `createdAt` | datetime | N | 계정 생성 일시 (ISO 8601) |
 | `updatedAt` | datetime | N | 마지막 수정 일시 (ISO 8601) |
 
@@ -107,6 +110,7 @@ sequenceDiagram
 |------|------|:--------:|------|
 | `name` | string | N | 권한 표시명 (현재 code와 동일) |
 | `code` | string | N | 권한 코드 (예: `user:manage:*`) |
+| `source` | string | Y | 권한 출처 (`MANUAL`, `MEMBER`, `MANAGER`) |
 
 ```mermaid
 sequenceDiagram
@@ -138,7 +142,7 @@ sequenceDiagram
 
 ## 3. 사용자 생성 `POST /api/v1/users`
 
-**권한** `ADMIN` | `user:manage:*`  
+**권한** `ADMIN` | `user:write:*`
 **특이점** `users` 저장과 `user_credentials(LOCAL)` 생성이 단일 트랜잭션
 
 #### Request — Body
@@ -159,7 +163,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor Client
-    participant Security as Spring Security<br/>[ADMIN | user:manage:*]
+    participant Security as Spring Security<br/>[ADMIN | user:write:*]
     participant Controller as UserAdminController
     participant Service as UserCrudService
     participant DeptProxy as DepartmentProxyService
@@ -168,7 +172,7 @@ sequenceDiagram
 
     Client->>Security: POST /api/v1/users
     Security-->>Client: 403 (권한 없음)
-    note right of Security: ADMIN 또는 user:manage:* 없으면 차단
+    note right of Security: ADMIN 또는 user:write:* 없으면 차단
 
     Security->>Controller: 권한 통과
     Controller->>Service: createUser(request)
@@ -204,6 +208,7 @@ sequenceDiagram
 
 **권한** `ADMIN` | `user:manage:*`  
 **특이점** 전달한 필드만 반영. `email`/`password` 변경 시 `user_credentials`도 함께 갱신. `role` 변경은 다음 토큰 발급 시점부터 반영
+`role`을 `GUEST`로 변경하면 교원 해제로 처리하며 소속 부서, 배정 분반, 직접 권한을 함께 정리
 
 #### Request — Path Parameters
 
@@ -221,6 +226,9 @@ sequenceDiagram
 | `password` | string | N | 최소 8자 | 비밀번호. 변경 시 BCrypt 해시 갱신 |
 | `role` | string | N | `ADMIN` \| `MANAGER` \| `VOLUNTEER` \| `GUEST` | 기본 역할 |
 | `departmentId` | Long | N | 존재하는 부서 ID | 소속 부서 |
+
+> `role=GUEST`는 교원 해제 동작입니다. 소속 부서와 배정 분반을 비우고, `teacherEndAt`을 처리일로 설정하며, `user_permissions`의 직접 권한을 모두 삭제합니다.
+> 같은 요청에 `departmentId`나 `classroomId`가 포함되어도 교원 해제 시에는 소속/분반을 다시 설정하지 않습니다.
 
 #### Response `200 OK` — `UserDetailResponse`
 
@@ -274,6 +282,12 @@ sequenceDiagram
     opt role 변경
         Service->>Service: user.setRole()
         note right of Service: 인가 범위 변경 (다음 토큰 발급부터 반영)
+    end
+
+    opt role=GUEST 변경
+        Service->>Service: releaseTeacherProfile(today)
+        Service->>DB: user_permissions 전체 삭제
+        note right of Service: [Side Effect] 소속 부서/분반 제거<br/>teacherEndAt 처리일 설정<br/>직접 권한 전체 회수
     end
 
     opt departmentId 변경
@@ -447,8 +461,8 @@ sequenceDiagram
 
 ## 8. 사용자 권한 목록 조회 `GET /api/v1/users/{userId}/permissions`
 
-**권한** `ADMIN` | `user:read:*`  
-**특이점** 직접 부여된 permission code만 반환. role 기반 권한(`ROLE_ADMIN` 등)과 부서 권한은 미포함
+**권한** `ADMIN` | `user:read:*` | `user:grant:*`
+**특이점** `user_permissions`에 저장된 직접 권한만 반환. role 기반 권한(`ROLE_ADMIN` 등)과 부서 직책 권한은 미포함
 
 #### Request — Path Parameters
 
@@ -462,18 +476,19 @@ sequenceDiagram
 |------|------|:--------:|------|
 | `name` | string | N | 권한 표시명 (현재 code와 동일) |
 | `code` | string | N | 권한 코드 (예: `user:manage:*`) |
+| `source` | string | N | 직접 권한 출처 (`MANUAL`) |
 
 ```mermaid
 sequenceDiagram
     actor Client
-    participant Security as Spring Security<br/>[ADMIN | user:read:*]
+    participant Security as Spring Security<br/>[ADMIN | user:read:* | user:grant:*]
     participant Controller as UserPermissionController
     participant Service as UserPermissionService
     participant DB as UserPermissionRepository
 
     Client->>Security: GET /api/v1/users/1/permissions
     Security-->>Client: 403 (권한 없음)
-    note right of Security: ADMIN 또는 user:read:* 없으면 차단
+    note right of Security: ADMIN, user:read:* 또는 user:grant:* 없으면 차단
 
     Security->>Controller: 권한 통과
     Controller->>Service: getAllPermissions(userId)
@@ -487,7 +502,7 @@ sequenceDiagram
 
 ## 9. 사용자 권한 추가 `POST /api/v1/users/{userId}/permissions`
 
-**권한** `ADMIN` | `user:manage:*`  
+**권한** `ADMIN` | `user:grant:*`
 **특이점** 동일 코드 이미 존재 시 저장 없이 현재 목록 반환 (멱등). 추가 후 **갱신된 전체 목록** 반환
 
 #### Request — Path Parameters
@@ -509,14 +524,14 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor Client
-    participant Security as Spring Security<br/>[ADMIN | user:manage:*]
+    participant Security as Spring Security<br/>[ADMIN | user:grant:*]
     participant Controller as UserPermissionController
     participant Service as UserPermissionService
     participant DB as DB
 
     Client->>Security: POST /api/v1/users/1/permissions<br/>{"permissionCode": "user:manage:*"}
     Security-->>Client: 403 (권한 없음)
-    note right of Security: ADMIN 또는 user:manage:* 없으면 차단
+    note right of Security: ADMIN 또는 user:grant:* 없으면 차단
 
     Security->>Controller: 권한 통과
     Controller->>Service: addPermission(userId, permissionCode)
@@ -547,7 +562,7 @@ sequenceDiagram
 
 ## 10. 사용자 권한 제거 `DELETE /api/v1/users/{userId}/permissions`
 
-**권한** `ADMIN` | `user:manage:*`  
+**권한** `ADMIN` | `user:grant:*`
 **특이점** 존재하지 않는 코드 제거는 오류 없이 무시 (멱등). `DELETE`임에도 `@RequestBody`로 permissionCode 수신
 
 #### Request — Path Parameters
@@ -569,14 +584,14 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor Client
-    participant Security as Spring Security<br/>[ADMIN | user:manage:*]
+    participant Security as Spring Security<br/>[ADMIN | user:grant:*]
     participant Controller as UserPermissionController
     participant Service as UserPermissionService
     participant DB as DB
 
     Client->>Security: DELETE /api/v1/users/1/permissions<br/>{"permissionCode": "user:manage:*"}
     Security-->>Client: 403 (권한 없음)
-    note right of Security: ADMIN 또는 user:manage:* 없으면 차단
+    note right of Security: ADMIN 또는 user:grant:* 없으면 차단
 
     Security->>Controller: 권한 통과
     Controller->>Service: removePermission(userId, permissionCode)

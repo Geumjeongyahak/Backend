@@ -37,7 +37,10 @@ Authorization: Bearer <access_token>
 | 표기 | 의미 |
 |------|------|
 | `ADMIN` | 기본 역할 ADMIN |
-| `user:read:*` | 개별 권한 코드 직접 부여된 경우 |
+| `user:read:*` | 사용자 조회 권한 |
+| `user:write:*` | 사용자 생성 권한 |
+| `user:manage:*` | 사용자 수정/삭제 권한 |
+| `user:grant:*` | 사용자 직접 권한 조회/부여/회수 권한 |
 | `ADMIN \| user:manage:*` | 둘 중 하나 이상 보유 |
 | `인증만` | 로그인 상태면 누구든 가능 |
 
@@ -116,9 +119,15 @@ GET /api/v1/users/{userId}
   "email": "user@example.com",
   "phoneNumber": "010-1234-5678",
   "role": "VOLUNTEER",
-  "departmentId": 2,
+  "department": {
+    "id": 2,
+    "name": "교육연구부",
+    "description": "교육 프로그램 연구..."
+  },
+  "classroom": null,
   "permissions": [
-    { "name": "lesson:write:1", "code": "lesson:write:1" }
+    { "name": "lesson:write:1", "code": "lesson:write:1", "source": "MANUAL" },
+    { "name": "channel:write:15", "code": "channel:write:15", "source": "MEMBER" }
   ],
   "createdAt": "2024-01-01T12:00:00",
   "updatedAt": "2024-01-02T15:30:00"
@@ -140,7 +149,7 @@ GET /api/v1/users/{userId}
 POST /api/v1/users
 ```
 
-**권한**: `ADMIN` | `user:manage:*`
+**권한**: `ADMIN` | `user:write:*`
 
 #### Request Body
 
@@ -222,6 +231,10 @@ PATCH /api/v1/users/{userId}
 | `role` | string | N | `ADMIN`, `MANAGER`, `VOLUNTEER`, `GUEST` | 기본 역할 |
 | `departmentId` | Long | N | - | 소속 부서 ID |
 
+> `role`을 `GUEST`로 변경하면 교원 해제로 처리합니다.
+> 이 경우 소속 부서와 배정 분반은 `null`로 비워지고, `teacherEndAt`은 처리일로 설정되며, `user_permissions`의 직접 권한은 모두 삭제됩니다.
+> 같은 요청에 `departmentId` 또는 `classroomId`를 함께 보내도 소속/분반은 비워진 상태로 유지됩니다.
+
 #### Response `200 OK`
 
 `UserDetailResponse` (1.2 상세 조회 응답과 동일한 구조)
@@ -232,6 +245,7 @@ PATCH /api/v1/users/{userId}
 - `email` 변경 시: `user_credentials` 테이블의 credential_email 함께 갱신
 - `password` 변경 시: `user_credentials` 테이블의 password_hash 갱신
 - `role`/`departmentId` 변경 시: 해당 사용자의 인가 범위에 즉시 영향
+- `role`을 `GUEST`로 변경 시: 교원 해제 처리, 소속/분반 제거, `teacherEndAt` 설정, `user_permissions` 직접 권한 전체 삭제
 
 #### Error
 
@@ -363,9 +377,9 @@ PATCH /api/v1/users/me
 GET /api/v1/users/{userId}/permissions
 ```
 
-**권한**: `ADMIN` | `user:read:*`
+**권한**: `ADMIN` | `user:read:*` | `user:grant:*`
 
-사용자에게 직접 저장된 permission code만 반환합니다. role 기반 권한은 포함되지 않습니다.
+사용자에게 직접 저장된 permission code만 반환합니다. role 기반 권한과 부서 직책 권한은 포함되지 않습니다.
 
 #### Path Parameters
 
@@ -377,8 +391,8 @@ GET /api/v1/users/{userId}/permissions
 
 ```json
 [
-  { "name": "user:manage:*", "code": "user:manage:*" },
-  { "name": "lesson:write:1", "code": "lesson:write:1" }
+  { "name": "user:manage:*", "code": "user:manage:*", "source": "MANUAL" },
+  { "name": "lesson:write:1", "code": "lesson:write:1", "source": "MANUAL" }
 ]
 ```
 
@@ -397,7 +411,7 @@ GET /api/v1/users/{userId}/permissions
 POST /api/v1/users/{userId}/permissions
 ```
 
-**권한**: `ADMIN` | `user:manage:*`
+**권한**: `ADMIN` | `user:grant:*`
 
 이미 동일한 권한이 존재하면 중복 저장하지 않고 현재 목록을 그대로 반환합니다.
 
@@ -444,7 +458,7 @@ POST /api/v1/users/{userId}/permissions
 DELETE /api/v1/users/{userId}/permissions
 ```
 
-**권한**: `ADMIN` | `user:manage:*`
+**권한**: `ADMIN` | `user:grant:*`
 
 요청한 권한이 존재하지 않아도 오류 없이 현재 목록을 반환합니다.
 
@@ -507,8 +521,11 @@ DELETE /api/v1/users/{userId}/permissions
 | `email` | string | N | 기본 이메일 |
 | `phoneNumber` | string | Y | 전화번호 |
 | `role` | string | N | 기본 역할 |
-| `departmentId` | Long | Y | 소속 부서 ID |
-| `permissions` | `PermissionResponse[]` | N | 직접 부여된 세부 권한 목록 |
+| `department` | `DepartmentSimpleResponse` | Y | 소속 부서. 없거나 교원 해제 상태이면 null |
+| `classroom` | `ClassroomSummaryResponse` | Y | 배정 분반. 없거나 교원 해제 상태이면 null |
+| `teacherStartAt` | date | Y | 교원 활동 시작일 |
+| `teacherEndAt` | date | Y | 교원 활동 종료일. 교원 해제 시 처리일로 설정 |
+| `permissions` | `PermissionResponse[]` | N | 직접 권한과 부서 직책 권한 목록 |
 | `createdAt` | datetime | N | 계정 생성 일시 (ISO 8601) |
 | `updatedAt` | datetime | N | 마지막 수정 일시 (ISO 8601) |
 
@@ -518,6 +535,7 @@ DELETE /api/v1/users/{userId}/permissions
 |------|------|------|
 | `name` | string | 권한 표시명 (현재 code와 동일) |
 | `code` | string | 권한 코드 (예: `user:manage:*`, `lesson:write:1`) |
+| `source` | string | 권한 출처. 직접 권한은 `MANUAL`, 부서 권한은 `MEMBER` 또는 `MANAGER` |
 
 ### RoleType
 

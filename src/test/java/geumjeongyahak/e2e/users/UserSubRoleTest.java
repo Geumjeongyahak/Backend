@@ -92,6 +92,7 @@ class UserSubRoleTest extends UserBaseTest {
             .body("[0].scope", equalTo("global"))
             .body("[0].targetId", nullValue())
             .body("[0].targetName", equalTo("전체"))
+            .body("[0].source", equalTo("MANUAL"))
             .log().all();
     }
 
@@ -118,6 +119,8 @@ class UserSubRoleTest extends UserBaseTest {
         .then()
             .statusCode(200)
             .body("size()", equalTo(2))
+            .body("find { it.code == 'channel:write:*' }.source", equalTo("MANUAL"))
+            .body("find { it.code == 'department:write:*' }.source", equalTo("MANUAL"))
             .log().all();
     }
 

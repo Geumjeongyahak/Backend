@@ -5,9 +5,9 @@ import geumjeongyahak.domain.base.model.PermissionCode;
 import geumjeongyahak.domain.base.model.PermissionRegistry;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-@Schema(description = "역할/권한 정보")
+@Schema(description = "역할/권한 정보. 사용자 상세에서는 권한 메타데이터와 권한 출처를 함께 표현합니다.")
 public record PermissionResponse(
-    @Schema(description = "직접 부여 권한 식별자. 역할 권한이면 null입니다.", example = "1")
+    @Schema(description = "권한 식별자. 역할 권한이면 null입니다.", example = "1")
     Long id,
 
     @Schema(description = "이름", example = "ADMIN")
@@ -38,8 +38,13 @@ public record PermissionResponse(
     Long targetId,
 
     @Schema(description = "대상 이름. 전체 권한이면 '전체', 개별 대상이면 현재는 대상 ID 문자열입니다.", example = "전체")
-    String targetName
+    String targetName,
+
+    @Schema(description = "권한 출처. 사용자 직접 권한은 MANUAL, 부서 일반 부서원 권한은 MEMBER, 부서장 추가 권한은 MANAGER로 내려갑니다. 출처 구분이 없는 응답에서는 null일 수 있습니다.", example = "MANUAL", nullable = true)
+    String source
 ) {
+    public static final String SOURCE_MANUAL = "MANUAL";
+
     public PermissionResponse(String name, String code) {
         this(code == null ? empty(name, null) : from(null, code));
     }
@@ -56,7 +61,8 @@ public record PermissionResponse(
             response.actionLabel(),
             response.scope(),
             response.targetId(),
-            response.targetName()
+            response.targetName(),
+            response.source()
         );
     }
 
@@ -76,11 +82,16 @@ public record PermissionResponse(
             null,
             null,
             null,
+            null,
             null
         );
     }
 
     public static PermissionResponse from(Long id, String authorityCode) {
+        return from(id, authorityCode, null);
+    }
+
+    public static PermissionResponse from(Long id, String authorityCode, String source) {
         PermissionCode permissionCode = new PermissionCode(authorityCode);
         return new PermissionResponse(
             id,
@@ -93,7 +104,8 @@ public record PermissionResponse(
             PermissionRegistry.getActionLabel(permissionCode.action()),
             permissionCode.isGlobal() ? "global" : "target",
             permissionCode.targetId(),
-            permissionCode.isGlobal() ? "전체" : String.valueOf(permissionCode.targetId())
+            permissionCode.isGlobal() ? "전체" : String.valueOf(permissionCode.targetId()),
+            source
         );
     }
 }

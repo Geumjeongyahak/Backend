@@ -16,11 +16,14 @@ import geumjeongyahak.domain.department.v1.dto.response.DepartmentListResponse;
 @RestController
 @RequestMapping("/api/v1/departments")
 @RequiredArgsConstructor
-@Tag(name = "Department", description = "부서 관리 API")
+@Tag(
+    name = "Department",
+    description = "부서 조회 API입니다. 상세 조회 응답에는 부서 직책별 권한과 소속 사용자 목록이 포함됩니다."
+)
 public class DepartmentController {
     private final DepartmentCrudService departmentCrudService;
 
-    @Operation(summary = "부서 목록 조회", description = "참여 가능한 부서 목록을 조회합니다.")
+    @Operation(summary = "부서 목록 조회", description = "참여 가능한 부서 목록을 조회합니다. 부서 권한 목록은 상세 조회에서 확인합니다.")
     @GetMapping
     public ResponseEntity<DepartmentListResponse> getAllDepartments() {
         log.debug("GET /api/v1/departments - 부서 목록 조회 요청");
@@ -29,7 +32,7 @@ public class DepartmentController {
     }
 
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "부서 상세 조회", description = "ID로 부서를 조회합니다. 할당된 역할과 소속 사용자 목록을 포함합니다.")
+    @Operation(summary = "부서 상세 조회", description = "ID로 부서를 조회합니다. department_permissions에 저장된 MEMBER/MANAGER 직책별 권한과 소속 사용자 목록을 포함합니다.")
     @GetMapping("/{id}")
     public ResponseEntity<DepartmentDetailResponse> getDepartmentById(
             @Parameter(description = "부서 ID", example = "1")

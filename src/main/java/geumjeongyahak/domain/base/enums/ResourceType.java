@@ -19,6 +19,7 @@ public enum ResourceType {
     PURCHASE_REQUEST("purchase-request"),
     VENDOR("vendor"),
     EVENT("event"),
+    TEACHER_APPLICATION("teacher-application"),
     LESSON_EXCHANGE_REQUEST("lesson-exchange-request");
 
     private final String code;

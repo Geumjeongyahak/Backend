@@ -44,6 +44,23 @@ class UserReadTest extends UserBaseTest {
     }
 
     @Test
+    @DisplayName("사용자 상세 조회 시 직접 권한과 부서 직책 권한 source를 함께 반환한다(200 OK)")
+    void getUserById_IncludesManualAndDepartmentPermissionSources() {
+        Long userId = 2L; // teacher01: user_permissions + 교육연구부 MEMBER 권한 보유
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/{userId}", userId)
+        .then()
+            .statusCode(200)
+            .body("permissions.find { it.code == 'channel:write:1' }.source", equalTo("MANUAL"))
+            .body("permissions.find { it.code == 'teacher-application:read:*' }.source", equalTo("MEMBER"))
+            .body("permissions.find { it.code == 'daily-schedule:read:*' }.source", equalTo("MEMBER"))
+            .log().all();
+    }
+
+    @Test
     @DisplayName("존재하지 않는 User 조회 실패(404 Not Found)")
     void getUserById_NotFound() {
         Long nonExistentId = 99999L;

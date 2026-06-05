@@ -3,12 +3,15 @@ package geumjeongyahak.domain.users.v1.dto.response;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import geumjeongyahak.domain.auth.v1.dto.response.PermissionResponse;
 import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomSummaryResponse;
+import geumjeongyahak.domain.department.entity.DepartmentPermission;
 import geumjeongyahak.domain.department.v1.dto.response.DepartmentSimpleResponse;
 import geumjeongyahak.domain.users.entity.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 @Schema(description = "사용자 상세 응답 DTO. 관리자 상세 화면과 본인 정보 조회 응답에 공통으로 사용합니다.")
@@ -29,10 +32,10 @@ public record UserDetailResponse(
     @Schema(description = "사용자 기본 역할(role)", examples = { "ADMIN", "MANAGER", "VOLUNTEER", "GUEST" })
     String role,
 
-    @Schema(description = "소속 부서. 소속 부서가 없으면 null일 수 있습니다.", nullable = true)
+    @Schema(description = "소속 부서. 소속 부서가 없거나 교원 해제 상태이면 null일 수 있습니다.", nullable = true)
     DepartmentSimpleResponse department,
 
-    @Schema(description = "교원으로 배정된 분반. 교원 승인 전이면 null일 수 있습니다.", nullable = true)
+    @Schema(description = "교원으로 배정된 분반. 교원 승인 전이거나 교원 해제 상태이면 null일 수 있습니다.", nullable = true)
     ClassroomSummaryResponse classroom,
 
     @Schema(description = "주민등록번호 앞자리", example = "900101")
@@ -43,10 +46,10 @@ public record UserDetailResponse(
     LocalDate teacherStartAt,
 
     @JsonInclude(JsonInclude.Include.ALWAYS)
-    @Schema(description = "교원 활동 종료일. 교원 승인 전이면 null입니다.", example = "2026-06-30", nullable = true)
+    @Schema(description = "교원 활동 종료일. role=GUEST로 교원 해제 처리된 경우 처리일로 설정됩니다.", example = "2026-06-30", nullable = true)
     LocalDate teacherEndAt,
 
-    @Schema(description = "사용자에게 직접 부여된 authority 목록. role 기반 권한이나 부서 권한은 포함하지 않습니다.")
+    @Schema(description = "사용자에게 부여된 직접 권한과 부서 직책 권한 목록. 직접 권한은 MANUAL, 부서 권한은 MEMBER/MANAGER로 source가 표시됩니다.")
     List<PermissionResponse> permissions,
 
     @Schema(description = "사용자가 교사로 담당 중인 활성 과목 목록")
@@ -59,10 +62,22 @@ public record UserDetailResponse(
     LocalDateTime updatedAt
 ) {
     public static UserDetailResponse from(User user) {
-        return from(user, List.of());
+        return from(user, List.of(), List.of());
+    }
+
+    public static UserDetailResponse from(User user, Collection<DepartmentPermission> departmentPermissions) {
+        return from(user, departmentPermissions, List.of());
     }
 
     public static UserDetailResponse from(User user, List<TeacherAssignmentResponse> teacherAssignments) {
+        return from(user, List.of(), teacherAssignments);
+    }
+
+    public static UserDetailResponse from(
+        User user,
+        Collection<DepartmentPermission> departmentPermissions,
+        List<TeacherAssignmentResponse> teacherAssignments
+    ) {
         return new UserDetailResponse(
             user.getId(),
             user.getName(),
@@ -74,13 +89,32 @@ public record UserDetailResponse(
             user.getResidentRegistrationNumberPrefix(),
             user.getTeacherStartAt(),
             user.getTeacherEndAt(),
-            user.getPermissions().stream()
-                .map(permission -> PermissionResponse.from(permission.getId(), permission.toAuthorityCode()))
-                .toList(),
+            buildPermissions(user, departmentPermissions),
             teacherAssignments,
             user.getCreatedAt(),
             user.getUpdatedAt()
         );
+    }
+
+    private static List<PermissionResponse> buildPermissions(
+        User user, Collection<DepartmentPermission> departmentPermissions
+    ) {
+        List<PermissionResponse> permissions = new ArrayList<>();
+        user.getPermissions().forEach(permission -> {
+            permissions.add(PermissionResponse.from(
+                permission.getId(),
+                permission.toAuthorityCode(),
+                PermissionResponse.SOURCE_MANUAL
+            ));
+        });
+        departmentPermissions.forEach(permission -> {
+            permissions.add(PermissionResponse.from(
+                permission.getId(),
+                permission.toAuthorityCode(),
+                permission.getRoleType().name()
+            ));
+        });
+        return permissions;
     }
 
     public Long departmentId() {

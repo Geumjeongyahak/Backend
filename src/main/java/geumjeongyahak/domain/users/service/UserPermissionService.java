@@ -52,7 +52,18 @@ public class UserPermissionService {
         return getAllPermissions(userId);
     }
 
+    @Transactional
+    public void removeAllPermissions(Long userId) {
+        log.debug("사용자 권한 전체 제거 요청 - UserID: {}", userId);
+        userPermissionRepository.deleteAllByUserId(userId);
+        log.info("사용자 권한 전체 제거 완료 - UserID: {}", userId);
+    }
+
     private PermissionResponse toResponse(UserPermission permission) {
-        return PermissionResponse.from(permission.getId(), permission.toAuthorityCode());
+        return PermissionResponse.from(
+            permission.getId(),
+            permission.toAuthorityCode(),
+            PermissionResponse.SOURCE_MANUAL
+        );
     }
 }

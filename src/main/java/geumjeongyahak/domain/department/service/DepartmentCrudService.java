@@ -39,8 +39,8 @@ public class DepartmentCrudService {
                 .name(request.name())
                 .description(request.description())
                 .build();
-        departmentPermissionService.replacePermissions(department, request.permissions());
         Department savedDepartment = departmentRepository.save(department);
+        departmentPermissionService.replacePermissions(savedDepartment, request.permissions());
         
         eventPublisher.publish(new DepartmentCreatedEvent(savedDepartment.getId(), savedDepartment.getName()));
         
@@ -53,7 +53,11 @@ public class DepartmentCrudService {
         Department department = findDepartmentById(deptId);
         List<User> users = userProxyService.getAllByDepartmentId(deptId);
         log.debug("부서 상세 조회 완료 - ID: {}, 사용자 수: {}", deptId, users.size());
-        return DepartmentDetailResponse.from(department, users);
+        return DepartmentDetailResponse.from(
+                department,
+                users,
+                departmentPermissionService.getAllPermissions(deptId)
+        );
     }
 
     public DepartmentListResponse getAllDepartments() {

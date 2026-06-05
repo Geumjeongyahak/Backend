@@ -44,6 +44,8 @@ public class PermissionRegistry {
             ActionType.READ, ActionType.MANAGE);
         allow(ResourceType.EVENT, PermissionScope.GLOBAL_ONLY,
             ActionType.MANAGE);
+        allow(ResourceType.TEACHER_APPLICATION, PermissionScope.GLOBAL_ONLY,
+            ActionType.READ, ActionType.MANAGE);
         allow(ResourceType.LESSON_EXCHANGE_REQUEST, PermissionScope.GLOBAL_ONLY,
             ActionType.MANAGE);
 
@@ -58,6 +60,7 @@ public class PermissionRegistry {
         RESOURCE_LABELS.put(ResourceType.PURCHASE_REQUEST, "구입 요청");
         RESOURCE_LABELS.put(ResourceType.VENDOR, "거래처");
         RESOURCE_LABELS.put(ResourceType.EVENT, "행사");
+        RESOURCE_LABELS.put(ResourceType.TEACHER_APPLICATION, "교원 신청");
         RESOURCE_LABELS.put(ResourceType.LESSON_EXCHANGE_REQUEST, "수업 교환 요청");
 
         ACTION_LABELS.put(ActionType.READ, "조회");

@@ -1,8 +1,11 @@
 package geumjeongyahak.domain.department.entity;
 
 import geumjeongyahak.domain.base.entity.BaseEntity;
+import geumjeongyahak.domain.department.enums.DepartmentRoleType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -20,7 +23,7 @@ import java.util.Objects;
     uniqueConstraints = {
         @UniqueConstraint(
             name = "uk_department_permission",
-            columnNames = {"department_id", "permission_code"}
+            columnNames = {"department_id", "role_type", "permission_code"}
         )
     }
 )
@@ -32,18 +35,19 @@ public class DepartmentPermission extends BaseEntity {
     @JoinColumn(name = "department_id", nullable = false)
     private Department department;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role_type", nullable = false, length = 20)
+    private DepartmentRoleType roleType;
+
     @Column(name = "permission_code", nullable = false, length = 100)
     private String permissionCode;
 
     public DepartmentPermission(
-        Department department, String permissionCode
+        Department department, DepartmentRoleType roleType, String permissionCode
     ) {
         this.department = department;
+        this.roleType = roleType;
         this.permissionCode = permissionCode;
-    }
-
-    public boolean isGlobalScope() {
-        return permissionCode != null && permissionCode.endsWith(":*");
     }
 
     public String toAuthorityCode() {
@@ -58,11 +62,12 @@ public class DepartmentPermission extends BaseEntity {
         Long thisDepartmentId = department != null ? department.getId() : null;
         Long thatDepartmentId = that.department != null ? that.department.getId() : null;
         return Objects.equals(thisDepartmentId, thatDepartmentId)
+            && roleType == that.roleType
             && Objects.equals(permissionCode, that.permissionCode);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(department != null ? department.getId() : null, permissionCode);
+        return Objects.hash(department != null ? department.getId() : null, roleType, permissionCode);
     }
 }

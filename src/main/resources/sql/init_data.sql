@@ -77,19 +77,51 @@ INSERT INTO user_credentials (id, user_id, provider, credential_email, password_
 
 ALTER SEQUENCE user_credentials_id_seq RESTART WITH 10;
 
--- 4. Department Permissions
-INSERT INTO department_permissions (department_id, permission_code) VALUES
-    (1, 'department:read:*'),
-    (1, 'department:write:*'),
-    (2, 'post:read:*'),
-    (2, 'post:write:*'),
-    (4, 'file:read:*'),
-    (4, 'file:write:*');
-
--- 5. User Permissions
+-- 4. User Permissions
 INSERT INTO user_permissions (user_id, permission_code) VALUES
     (2, 'lesson:write:1'),
     (6, 'channel:write:6');
+
+-- 5. Department Permissions
+INSERT INTO department_permissions (department_id, role_type, permission_code) VALUES
+    (1, 'MEMBER', 'subject:read:*'),
+    (1, 'MEMBER', 'lesson:read:*'),
+    (1, 'MEMBER', 'channel:write:14'),
+    (1, 'MANAGER', 'subject:write:*'),
+    (1, 'MANAGER', 'subject:manage:*'),
+    (1, 'MANAGER', 'lesson:write:*'),
+    (1, 'MANAGER', 'lesson:manage:*'),
+    (1, 'MANAGER', 'event:manage:*'),
+    (1, 'MANAGER', 'lesson-exchange-request:manage:*'),
+    (1, 'MANAGER', 'channel:manage:14'),
+
+    (2, 'MEMBER', 'teacher-application:read:*'),
+    (2, 'MEMBER', 'daily-schedule:read:*'),
+    (2, 'MEMBER', 'absence-request:read:*'),
+    (2, 'MEMBER', 'channel:write:15'),
+    (2, 'MANAGER', 'student:write:*'),
+    (2, 'MANAGER', 'student:manage:*'),
+    (2, 'MANAGER', 'teacher-application:manage:*'),
+    (2, 'MANAGER', 'daily-schedule:manage:*'),
+    (2, 'MANAGER', 'absence-request:manage:*'),
+    (2, 'MANAGER', 'channel:manage:15'),
+
+    (3, 'MEMBER', 'purchase-request:read:*'),
+    (3, 'MEMBER', 'channel:write:16'),
+    (3, 'MANAGER', 'purchase-request:review:*'),
+    (3, 'MANAGER', 'channel:manage:16'),
+
+    (4, 'MEMBER', 'purchase-request:read:*'),
+    (4, 'MEMBER', 'vendor:read:*'),
+    (4, 'MEMBER', 'channel:write:17'),
+    (4, 'MANAGER', 'purchase-request:review:*'),
+    (4, 'MANAGER', 'purchase-request:manage:*'),
+    (4, 'MANAGER', 'vendor:manage:*'),
+    (4, 'MANAGER', 'channel:manage:17'),
+
+    (5, 'MEMBER', 'teacher-application:read:*'),
+    (5, 'MEMBER', 'channel:write:18'),
+    (5, 'MANAGER', 'channel:manage:18');
 
 -- 6-1. Site Contents
 INSERT INTO site_contents (id, content_type, ref_id, title, name, content_group, sort_order)
