@@ -1,20 +1,18 @@
 package geumjeongyahak.unit.base;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static geumjeongyahak.unit.base.InitialDataSqlReader.integerValue;
+import static geumjeongyahak.unit.base.InitialDataSqlReader.longValue;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DisplayName;
@@ -26,10 +24,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 class InitialDataLessonConsistencyTest {
 
     private static final Path DEVELOPMENT_INITIAL_DATA = Path.of("src/main/resources/sql/init_data.sql");
-    private static final Pattern INSERT_PATTERN = Pattern.compile(
-        "INSERT\\s+INTO\\s+(\\w+)\\s*\\((.*?)\\)\\s*VALUES\\s*(.*?);",
-        Pattern.CASE_INSENSITIVE | Pattern.DOTALL
-    );
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("initialDataFiles")
@@ -144,108 +138,21 @@ class InitialDataLessonConsistencyTest {
     }
 
     private static SeedData readSeedData(Path initialDataFile) throws IOException {
-        String sql = Files.readString(initialDataFile);
         Map<Long, SubjectRow> subjects = new LinkedHashMap<>();
         Map<Long, LessonRow> lessons = new LinkedHashMap<>();
         Map<Long, DailyScheduleRow> dailySchedules = new LinkedHashMap<>();
 
-        Matcher matcher = INSERT_PATTERN.matcher(sql);
-        while (matcher.find()) {
-            String table = matcher.group(1).toLowerCase();
-            List<String> columns = Arrays.stream(matcher.group(2).split(","))
-                .map(String::trim)
-                .toList();
-
-            for (List<String> values : parseRows(matcher.group(3))) {
-                Map<String, String> row = mapRow(columns, values);
-                switch (table) {
-                    case "subjects" -> {
-                        SubjectRow subject = SubjectRow.from(row);
-                        subjects.put(subject.id(), subject);
-                    }
-                    case "lessons" -> {
-                        LessonRow lesson = LessonRow.from(row);
-                        lessons.put(lesson.id(), lesson);
-                    }
-                    case "daily_schedules" -> {
-                        DailyScheduleRow schedule = DailyScheduleRow.from(row);
-                        dailySchedules.put(schedule.id(), schedule);
-                    }
-                    default -> {
-                    }
-                }
-            }
-        }
+        InitialDataSqlReader.readTable(initialDataFile, "subjects").stream()
+            .map(SubjectRow::from)
+            .forEach(subject -> subjects.put(subject.id(), subject));
+        InitialDataSqlReader.readTable(initialDataFile, "lessons").stream()
+            .map(LessonRow::from)
+            .forEach(lesson -> lessons.put(lesson.id(), lesson));
+        InitialDataSqlReader.readTable(initialDataFile, "daily_schedules").stream()
+            .map(DailyScheduleRow::from)
+            .forEach(schedule -> dailySchedules.put(schedule.id(), schedule));
 
         return new SeedData(subjects, lessons, dailySchedules);
-    }
-
-    private static Map<String, String> mapRow(List<String> columns, List<String> values) {
-        if (columns.size() != values.size()) {
-            throw new IllegalArgumentException(
-                "초기 데이터 INSERT 컬럼 수와 값 수가 다릅니다: " + columns.size() + " != " + values.size()
-            );
-        }
-
-        Map<String, String> row = new LinkedHashMap<>();
-        for (int index = 0; index < columns.size(); index++) {
-            row.put(columns.get(index), normalize(values.get(index)));
-        }
-        return row;
-    }
-
-    private static List<List<String>> parseRows(String valuesClause) {
-        List<List<String>> rows = new ArrayList<>();
-        int rowStart = -1;
-        int depth = 0;
-        boolean quoted = false;
-
-        for (int index = 0; index < valuesClause.length(); index++) {
-            char current = valuesClause.charAt(index);
-            if (current == '\'' && (index + 1 >= valuesClause.length() || valuesClause.charAt(index + 1) != '\'')) {
-                quoted = !quoted;
-            } else if (current == '\'' && quoted) {
-                index++;
-            } else if (!quoted && current == '(') {
-                if (depth++ == 0) {
-                    rowStart = index + 1;
-                }
-            } else if (!quoted && current == ')' && --depth == 0) {
-                rows.add(splitValues(valuesClause.substring(rowStart, index)));
-            }
-        }
-        return rows;
-    }
-
-    private static List<String> splitValues(String row) {
-        List<String> values = new ArrayList<>();
-        int valueStart = 0;
-        boolean quoted = false;
-
-        for (int index = 0; index < row.length(); index++) {
-            char current = row.charAt(index);
-            if (current == '\'' && (index + 1 >= row.length() || row.charAt(index + 1) != '\'')) {
-                quoted = !quoted;
-            } else if (current == '\'' && quoted) {
-                index++;
-            } else if (current == ',' && !quoted) {
-                values.add(row.substring(valueStart, index).trim());
-                valueStart = index + 1;
-            }
-        }
-        values.add(row.substring(valueStart).trim());
-        return values;
-    }
-
-    private static String normalize(String value) {
-        String trimmed = value.trim();
-        if ("NULL".equalsIgnoreCase(trimmed)) {
-            return null;
-        }
-        if (trimmed.length() >= 2 && trimmed.startsWith("'") && trimmed.endsWith("'")) {
-            return trimmed.substring(1, trimmed.length() - 1).replace("''", "'");
-        }
-        return trimmed;
     }
 
     private static Stream<Object[]> initialDataFiles() {
@@ -334,13 +241,4 @@ class InitialDataLessonConsistencyTest {
         }
     }
 
-    private static Long longValue(Map<String, String> row, String column) {
-        String value = row.get(column);
-        return value == null ? null : Long.valueOf(value);
-    }
-
-    private static Integer integerValue(Map<String, String> row, String column) {
-        String value = row.get(column);
-        return value == null ? null : Integer.valueOf(value);
-    }
 }
