@@ -94,16 +94,16 @@
     "permissions": [
       {
         "id": 1,
-        "name": "lesson:write:1",
-        "code": "lesson:write:1",
-        "permissionCode": "lesson:write:1",
+        "name": "lesson:write:*",
+        "code": "lesson:write:*",
+        "permissionCode": "lesson:write:*",
         "resourceCode": "lesson",
         "resourceLabel": "수업",
         "actionCode": "write",
         "actionLabel": "작성",
-        "scope": "target",
-        "targetId": 1,
-        "targetName": "1",
+        "scope": "global",
+        "targetId": null,
+        "targetName": "전체",
         "source": "MANUAL"
       },
       {
