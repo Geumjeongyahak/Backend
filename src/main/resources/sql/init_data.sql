@@ -31,11 +31,11 @@ INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, r
 
 -- teacher01 / teacher01
 INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
-    (2, '홍길동', 'teacher01@test.com', 'VOLUNTEER', 2, NULL, '800101', NULL, NULL);
+    (2, '홍길동', 'teacher01@test.com', 'VOLUNTEER', 2, NULL, '800101', '2026-02-01', NULL);
 
 -- teacher02 / teacher02
 INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
-    (3, '김철수', 'teacher02@test.com', 'VOLUNTEER', 2, NULL, '850505', NULL, NULL);
+    (3, '김철수', 'teacher02@test.com', 'VOLUNTEER', 2, NULL, '850505', '2026-02-01', NULL);
 
 -- guest01 / guest01
 INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
@@ -79,7 +79,7 @@ ALTER SEQUENCE user_credentials_id_seq RESTART WITH 10;
 
 -- 4. User Permissions
 INSERT INTO user_permissions (user_id, permission_code) VALUES
-    (2, 'lesson:write:1'),
+    (2, 'lesson:write:*'),
     (6, 'channel:write:6');
 
 -- 5. Department Permissions
