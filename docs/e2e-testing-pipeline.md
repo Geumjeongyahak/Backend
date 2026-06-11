@@ -237,12 +237,16 @@ void getList_adminSeesAll_volunteerSeesOnlyOwn() {
 | User teacher01 | 2 | ROLE_VOLUNTEER (홍길동) |
 | User teacher02 | 3 | ROLE_VOLUNTEER (김철수) |
 | Classroom 벚꽃반 | 1 | WEEKDAY |
-| Subject 한글 기초 | 1 | classroom=1, teacher=2, FRIDAY |
-| Subject 수학 기초 | 2 | classroom=2, teacher=3, FRIDAY |
+| Subject 한글 기초 | 1 | classroom=1, teacher=2, WEDNESDAY, 1교시 |
+| Subject 수학 기초 | 2 | classroom=2, teacher=3, WEDNESDAY, 1교시 |
 | Subject 스마트폰 활용 | 3 | classroom=3, teacher=2, SATURDAY |
-| Lesson | 1 | subject=1, teacher=2, 2026-02-13 |
-| Lesson | 2 | subject=2, teacher=3, 2026-02-13 |
-| Lesson | 3 | subject=3, teacher=2, 2026-02-14 |
+| Subject 한글 읽기 | 4 | classroom=1, teacher=2, WEDNESDAY, 2교시 |
+| Subject 생활 문해 | 5 | classroom=1, teacher=2, WEDNESDAY, 3교시 |
+| Subject 생활 수학 | 6 | classroom=2, teacher=3, WEDNESDAY, 2교시 |
+| Subject 수학 응용 | 7 | classroom=2, teacher=3, WEDNESDAY, 3교시 |
+| Lesson | 1 | subject=1, teacher=2, 2026-06-10, 1교시 |
+| Lesson | 2 | subject=4, teacher=2, 2026-06-10, 2교시 |
+| Lesson | 3 | subject=5, teacher=2, 2026-06-10, 3교시 |
 
 **주의:** 결석 요청은 DailySchedule 기준, 수업 교환 요청은 Lesson 기준으로 side effect가 발생한다.
 init_data 레슨(1~3)을 직접 사용하지 말고 `TestLessonHelper`로 테스트별 독립 레슨을 생성한 뒤 연결된 DailySchedule을 조회해 사용한다.

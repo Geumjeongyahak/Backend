@@ -126,7 +126,7 @@ GET /api/v1/users/{userId}
   },
   "classroom": null,
   "permissions": [
-    { "name": "lesson:write:1", "code": "lesson:write:1", "source": "MANUAL" },
+    { "name": "lesson:write:*", "code": "lesson:write:*", "source": "MANUAL" },
     { "name": "channel:write:15", "code": "channel:write:15", "source": "MEMBER" }
   ],
   "createdAt": "2024-01-01T12:00:00",
@@ -392,7 +392,7 @@ GET /api/v1/users/{userId}/permissions
 ```json
 [
   { "name": "user:manage:*", "code": "user:manage:*", "source": "MANUAL" },
-  { "name": "lesson:write:1", "code": "lesson:write:1", "source": "MANUAL" }
+  { "name": "lesson:write:*", "code": "lesson:write:*", "source": "MANUAL" }
 ]
 ```
 
@@ -534,7 +534,7 @@ DELETE /api/v1/users/{userId}/permissions
 | 필드 | 타입 | 설명 |
 |------|------|------|
 | `name` | string | 권한 표시명 (현재 code와 동일) |
-| `code` | string | 권한 코드 (예: `user:manage:*`, `lesson:write:1`) |
+| `code` | string | 권한 코드 (예: `user:manage:*`, `lesson:write:*`) |
 | `source` | string | 권한 출처. 직접 권한은 `MANUAL`, 부서 권한은 `MEMBER` 또는 `MANAGER` |
 
 ### RoleType

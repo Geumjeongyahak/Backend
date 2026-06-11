@@ -10,20 +10,20 @@ ALTER TABLE departments ALTER COLUMN id RESTART WITH 7;
 
 -- 2. Users
 -- admin1234 / admin1234
-INSERT INTO users (id, name, primary_email, role, department_id) VALUES
-    (1, '관리자', 'admin@test.com', 'ADMIN', 4);
+INSERT INTO users (id, name, primary_email, role, department_id, teacher_start_at, teacher_end_at) VALUES
+    (1, '관리자', 'admin@test.com', 'ADMIN', 4, NULL, NULL);
 
 -- teacher01 / teacher01
-INSERT INTO users (id, name, primary_email, role, department_id) VALUES
-    (2, '홍길동', 'teacher01@test.com', 'VOLUNTEER', 2);
+INSERT INTO users (id, name, primary_email, role, department_id, teacher_start_at, teacher_end_at) VALUES
+    (2, '홍길동', 'teacher01@test.com', 'VOLUNTEER', 2, '2026-02-01', NULL);
 
 -- teacher02 / teacher02
-INSERT INTO users (id, name, primary_email, role, department_id) VALUES
-    (3, '김철수', 'teacher02@test.com', 'VOLUNTEER', 2);
+INSERT INTO users (id, name, primary_email, role, department_id, teacher_start_at, teacher_end_at) VALUES
+    (3, '김철수', 'teacher02@test.com', 'VOLUNTEER', 2, '2026-02-01', NULL);
 
 -- guest01 / guest01
-INSERT INTO users (id, name, primary_email, role, department_id) VALUES
-    (4, '이영희', 'guest01@test.com', 'GUEST', NULL);
+INSERT INTO users (id, name, primary_email, role, department_id, teacher_start_at, teacher_end_at) VALUES
+    (4, '이영희', 'guest01@test.com', 'GUEST', NULL, NULL, NULL);
 
 ALTER TABLE users ALTER COLUMN id RESTART WITH 5;
 
@@ -140,18 +140,22 @@ INSERT INTO subjects (id, class_id, teacher_id, name, start_at, end_at, day_of_w
 VALUES
     (1, 1, 2, '한글 기초', '2026-02-01', '2026-06-30', 'WEDNESDAY',  '19:20:00', '20:00:00', 1, '2026-02-01 00:00:00', '기초 한글 수업'),
     (2, 2, 3, '수학 기초', '2026-02-01', '2026-06-30', 'WEDNESDAY',  '19:20:00', '20:00:00', 1, '2026-02-01 00:00:00', '기초 수학 수업'),
-    (3, 3, 2, '스마트폰 활용', '2026-02-01', '2026-06-30', 'SATURDAY','19:20:00', '20:00:00', 1, '2026-02-01 00:00:00', '스마트폰 사용법');
-ALTER TABLE subjects ALTER COLUMN id RESTART WITH 4;
+    (3, 3, 2, '스마트폰 활용', '2026-02-01', '2026-06-30', 'SATURDAY','19:20:00', '20:00:00', 1, '2026-02-01 00:00:00', '스마트폰 사용법'),
+    (4, 1, 2, '한글 읽기', '2026-02-01', '2026-06-30', 'WEDNESDAY', '20:10:00', '20:50:00', 2, '2026-02-01 00:00:00', '벚꽃반 2교시 읽기 수업'),
+    (5, 1, 2, '생활 문해', '2026-02-01', '2026-06-30', 'WEDNESDAY', '21:00:00', '21:40:00', 3, '2026-02-01 00:00:00', '벚꽃반 3교시 생활 문해 수업'),
+    (6, 2, 3, '생활 수학', '2026-02-01', '2026-06-30', 'WEDNESDAY', '20:10:00', '20:50:00', 2, '2026-02-01 00:00:00', '장미반 2교시 생활 수학 수업'),
+    (7, 2, 3, '수학 응용', '2026-02-01', '2026-06-30', 'WEDNESDAY', '21:00:00', '21:40:00', 3, '2026-02-01 00:00:00', '장미반 3교시 수학 응용 수업');
+ALTER TABLE subjects ALTER COLUMN id RESTART WITH 8;
 
 -- 9. Lessons
 INSERT INTO lessons (id, subject_id, teacher_id, period, date, start_time, end_time, status)
 VALUES
     (1, 1, 2, 1, '2026-06-10', '19:20:00', '20:00:00', 'SCHEDULED'),
-    (2, 1, 2, 2, '2026-06-10', '20:10:00', '20:50:00', 'SCHEDULED'),
-    (3, 1, 2, 3, '2026-06-10', '21:00:00', '21:40:00', 'SCHEDULED'),
+    (2, 4, 2, 2, '2026-06-10', '20:10:00', '20:50:00', 'SCHEDULED'),
+    (3, 5, 2, 3, '2026-06-10', '21:00:00', '21:40:00', 'SCHEDULED'),
     (4, 2, 3, 1, '2026-06-17', '19:20:00', '20:00:00', 'SCHEDULED'),
-    (5, 2, 3, 2, '2026-06-17', '20:10:00', '20:50:00', 'SCHEDULED'),
-    (6, 2, 3, 3, '2026-06-17', '21:00:00', '21:40:00', 'SCHEDULED');
+    (5, 6, 3, 2, '2026-06-17', '20:10:00', '20:50:00', 'SCHEDULED'),
+    (6, 7, 3, 3, '2026-06-17', '21:00:00', '21:40:00', 'SCHEDULED');
 ALTER TABLE lessons ALTER COLUMN id RESTART WITH 7;
 
 -- 10. Students
