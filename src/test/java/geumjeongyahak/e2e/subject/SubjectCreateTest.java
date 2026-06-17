@@ -2,9 +2,11 @@ package geumjeongyahak.e2e.subject;
 
 import static io.restassured.RestAssured.given;
 import static java.util.Map.entry;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
@@ -173,6 +175,61 @@ public class SubjectCreateTest extends SubjectBaseTest {
             subjectId
         );
         org.assertj.core.api.Assertions.assertThat(lessonCount).isZero();
+    }
+
+    @Test
+    @DisplayName("담당 교사가 있는 과목 생성 시 수업과 하루 일정을 자동 생성한다")
+    void createSubject_Success_WithTeacherCreatesLessonsAndDailySchedule() {
+        LocalDate lessonDate = LocalDate.now().plusWeeks(2);
+        while (lessonDate.getDayOfWeek() != DayOfWeek.MONDAY) {
+            lessonDate = lessonDate.plusDays(1);
+        }
+
+        Map<String, Object> request = createRequest(
+            "하루 일정 자동 생성 과목",
+            lessonDate.toString(),
+            lessonDate.toString(),
+            lessonDate.getDayOfWeek().name()
+        );
+
+        Integer subjectId = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .post()
+            .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .extract()
+            .path("id");
+
+        Integer lessonCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM lessons WHERE subject_id = ?",
+            Integer.class,
+            subjectId
+        );
+        Integer dailyScheduleCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM daily_schedules WHERE classroom_id = ? AND lesson_date = ? AND is_deleted = false",
+            Integer.class,
+            CLASSROOM_ID,
+            lessonDate
+        );
+        Integer teacherAttendanceCount = jdbcTemplate.queryForObject(
+            """
+                SELECT COUNT(*)
+                FROM daily_teacher_attendances dta
+                JOIN daily_schedules ds ON dta.daily_schedule_id = ds.id
+                WHERE ds.classroom_id = ? AND ds.lesson_date = ? AND dta.is_deleted = false
+                """,
+            Integer.class,
+            CLASSROOM_ID,
+            lessonDate
+        );
+
+        assertThat(lessonCount).isEqualTo(1);
+        assertThat(dailyScheduleCount).isEqualTo(1);
+        assertThat(teacherAttendanceCount).isEqualTo(1);
     }
 
     @Test
