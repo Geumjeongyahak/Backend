@@ -49,8 +49,12 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
                 and lesson.subject.classroom.id = absenceRequest.dailySchedule.classroom.id
                 and lesson.date = absenceRequest.dailySchedule.lessonDate
         )
+        and absenceRequest.status in :statuses
         """)
-    boolean existsByDailyScheduleMatchingLessonIds(@Param("lessonIds") List<Long> lessonIds);
+    boolean existsByDailyScheduleMatchingLessonIds(
+        @Param("lessonIds") List<Long> lessonIds,
+        @Param("statuses") List<RequestStatus> statuses
+    );
 
     List<AbsenceRequest> findAllByStatusInAndExpiresAtBefore(
         Collection<RequestStatus> statuses,

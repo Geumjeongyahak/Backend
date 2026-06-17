@@ -26,6 +26,7 @@ class TeacherAssignmentAdminTest extends BaseE2ETest {
     private static final long WEEKEND_SUBJECT_ID = 182L;
     private static final long CONFLICT_SUBJECT_ID = 183L;
     private static final long PERMISSION_CLEANUP_SUBJECT_ID = 184L;
+    private static final long REJECTED_ABSENCE_SUBJECT_ID = 185L;
 
     private String adminToken;
 
@@ -43,6 +44,7 @@ class TeacherAssignmentAdminTest extends BaseE2ETest {
         insertSubject(WEEKEND_SUBJECT_ID, 3L, null, "주말 임의 배정 과목", "SATURDAY", "10:00:00", "11:00:00");
         insertSubject(CONFLICT_SUBJECT_ID, 1L, 2L, "충돌 기준 과목");
         insertSubject(PERMISSION_CLEANUP_SUBJECT_ID, 1L, 3L, "권한 정리 과목", "TUESDAY", "19:20:00", "20:00:00");
+        insertSubject(REJECTED_ABSENCE_SUBJECT_ID, 2L, 3L, "반려 결강 요청 과목");
         adminToken = userTestHelper.generateAccessTokenByUserKey(TEST_ADMIN_USERNAME);
     }
 
@@ -162,6 +164,34 @@ class TeacherAssignmentAdminTest extends BaseE2ETest {
             REPLACEMENT_SUBJECT_ID
         );
         assertThat(teacherId).isEqualTo(3L);
+    }
+
+    @Test
+    @DisplayName("반려된 결강 요청만 있으면 기존 담당 교사를 교체할 수 있다")
+    void assignTeacher_rejectedAbsenceRequest_allowsReplacement() {
+        insertLesson(REJECTED_ABSENCE_SUBJECT_ID, 3L, 1802L, "2099-03-02", "19:20:00", "20:00:00");
+        insertDailyScheduleWithRejectedAbsenceRequest(1900L, REJECTED_ABSENCE_SUBJECT_ID, 3L, "2099-03-02");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType("application/json")
+            .body(Map.of(
+                "teacherId", 2,
+                "subjectIds", java.util.List.of(REJECTED_ABSENCE_SUBJECT_ID),
+                "confirmTeacherReplacement", true
+            ))
+        .when()
+            .patch()
+        .then()
+            .statusCode(200)
+            .body("[0].teacherId", equalTo(2));
+
+        Integer updatedLessonCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM lessons WHERE subject_id = ? AND teacher_id = 2",
+            Integer.class,
+            REJECTED_ABSENCE_SUBJECT_ID
+        );
+        assertThat(updatedLessonCount).isEqualTo(1);
     }
 
     @Test
@@ -294,22 +324,73 @@ class TeacherAssignmentAdminTest extends BaseE2ETest {
             """, lessonId, subjectId, teacherId, date, startTime, endTime);
     }
 
+    private void insertDailyScheduleWithRejectedAbsenceRequest(
+        long dailyScheduleId,
+        long subjectId,
+        long teacherId,
+        String lessonDate
+    ) {
+        Long classroomId = jdbcTemplate.queryForObject(
+            "SELECT class_id FROM subjects WHERE id = ?",
+            Long.class,
+            subjectId
+        );
+        jdbcTemplate.update("""
+            INSERT INTO daily_schedules (
+                id, classroom_id, teacher_id, lesson_date, activity_start_time,
+                activity_end_time, status, is_deleted
+            )
+            VALUES (?, ?, ?, ?, TIME '19:20:00', TIME '20:00:00', 'SCHEDULED', FALSE)
+            """, dailyScheduleId, classroomId, teacherId, lessonDate);
+        jdbcTemplate.update("""
+            INSERT INTO absence_requests (
+                daily_schedule_id, requested_by, title, reason, expires_at,
+                status, approval_at, approval_by, note
+            )
+            VALUES (?, ?, '반려된 결강 요청', '테스트', TIMESTAMP '2099-03-01 00:00:00',
+                    'REJECTED', CURRENT_TIMESTAMP, 1, '반려')
+            """, dailyScheduleId, teacherId);
+    }
+
     private void cleanupFixtures() {
+        jdbcTemplate.update("""
+            DELETE FROM absence_requests
+            WHERE daily_schedule_id IN (
+                SELECT id FROM daily_schedules WHERE lesson_date >= DATE '2099-01-01'
+            )
+            """);
+        jdbcTemplate.update("""
+            DELETE FROM daily_teacher_attendances
+            WHERE daily_schedule_id IN (
+                SELECT id FROM daily_schedules WHERE lesson_date >= DATE '2099-01-01'
+            )
+            """);
+        jdbcTemplate.update("""
+            DELETE FROM daily_student_attendances
+            WHERE daily_schedule_id IN (
+                SELECT id FROM daily_schedules WHERE lesson_date >= DATE '2099-01-01'
+            )
+            """);
+        jdbcTemplate.update("""
+            DELETE FROM daily_schedules WHERE lesson_date >= DATE '2099-01-01'
+            """);
         jdbcTemplate.update(
-            "DELETE FROM lessons WHERE subject_id IN (?, ?, ?, ?, ?)",
+            "DELETE FROM lessons WHERE subject_id IN (?, ?, ?, ?, ?, ?)",
             UNASSIGNED_SUBJECT_ID,
             REPLACEMENT_SUBJECT_ID,
             WEEKEND_SUBJECT_ID,
             CONFLICT_SUBJECT_ID,
-            PERMISSION_CLEANUP_SUBJECT_ID
+            PERMISSION_CLEANUP_SUBJECT_ID,
+            REJECTED_ABSENCE_SUBJECT_ID
         );
         jdbcTemplate.update(
-            "DELETE FROM subjects WHERE id IN (?, ?, ?, ?, ?)",
+            "DELETE FROM subjects WHERE id IN (?, ?, ?, ?, ?, ?)",
             UNASSIGNED_SUBJECT_ID,
             REPLACEMENT_SUBJECT_ID,
             WEEKEND_SUBJECT_ID,
             CONFLICT_SUBJECT_ID,
-            PERMISSION_CLEANUP_SUBJECT_ID
+            PERMISSION_CLEANUP_SUBJECT_ID,
+            REJECTED_ABSENCE_SUBJECT_ID
         );
     }
 
