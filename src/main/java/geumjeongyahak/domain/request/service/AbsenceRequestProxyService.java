@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.request.service;
 
+import geumjeongyahak.domain.request.enums.RequestStatus;
 import geumjeongyahak.domain.request.repository.AbsenceRequestRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -13,10 +14,13 @@ public class AbsenceRequestProxyService {
     private final AbsenceRequestRepository absenceRequestRepository;
 
     @Transactional(readOnly = true)
-    public boolean existsAbsenceRequestByLessonIds(List<Long> lessonIds) {
+    public boolean existsActiveAbsenceRequestByLessonIds(List<Long> lessonIds) {
         if (lessonIds == null || lessonIds.isEmpty()) {
             return false;
         }
-        return absenceRequestRepository.existsByDailyScheduleMatchingLessonIds(lessonIds);
+        return absenceRequestRepository.existsByDailyScheduleMatchingLessonIds(
+            lessonIds,
+            List.of(RequestStatus.PENDING, RequestStatus.APPROVED)
+        );
     }
 }

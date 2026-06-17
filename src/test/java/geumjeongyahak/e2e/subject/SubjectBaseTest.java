@@ -59,6 +59,9 @@ public class SubjectBaseTest extends BaseE2ETest {
         jdbcTemplate.execute("TRUNCATE TABLE absence_requests");
         jdbcTemplate.execute("TRUNCATE TABLE lesson_exchange_proposals");
         jdbcTemplate.execute("TRUNCATE TABLE lesson_exchange_requests");
+        jdbcTemplate.execute("TRUNCATE TABLE daily_student_attendances");
+        jdbcTemplate.execute("TRUNCATE TABLE daily_teacher_attendances");
+        jdbcTemplate.execute("TRUNCATE TABLE daily_schedules");
         jdbcTemplate.execute("TRUNCATE TABLE lessons");
         jdbcTemplate.execute("TRUNCATE TABLE subjects");
 
@@ -66,6 +69,9 @@ public class SubjectBaseTest extends BaseE2ETest {
         jdbcTemplate.execute("ALTER TABLE absence_requests ALTER COLUMN id RESTART WITH 1");
         jdbcTemplate.execute("ALTER TABLE lesson_exchange_proposals ALTER COLUMN id RESTART WITH 1");
         jdbcTemplate.execute("ALTER TABLE lesson_exchange_requests ALTER COLUMN id RESTART WITH 1");
+        jdbcTemplate.execute("ALTER TABLE daily_student_attendances ALTER COLUMN id RESTART WITH 1");
+        jdbcTemplate.execute("ALTER TABLE daily_teacher_attendances ALTER COLUMN id RESTART WITH 1");
+        jdbcTemplate.execute("ALTER TABLE daily_schedules ALTER COLUMN id RESTART WITH 1");
         jdbcTemplate.execute("ALTER TABLE lessons ALTER COLUMN id RESTART WITH 1");
         jdbcTemplate.execute("ALTER TABLE subjects ALTER COLUMN id RESTART WITH 1");
 

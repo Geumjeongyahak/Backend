@@ -364,7 +364,7 @@ public class SubjectService {
         if (lessonProxyService.existsUnchangeableFutureActiveLessonBySubjectId(subjectId, today)) {
             throw new SubjectTeacherAssignmentConflictException("운영 기록이 있는 미래 수업은 자동 변경할 수 없습니다.");
         }
-        if (absenceRequestProxyService.existsAbsenceRequestByLessonIds(
+        if (absenceRequestProxyService.existsActiveAbsenceRequestByLessonIds(
             lessonProxyService.getFutureActiveLessonIdsBySubjectId(subjectId, today)
         )) {
             throw new SubjectTeacherAssignmentConflictException("결석 요청이 연결된 미래 수업은 자동 변경할 수 없습니다.");
