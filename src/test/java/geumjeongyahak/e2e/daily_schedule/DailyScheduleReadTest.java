@@ -58,6 +58,8 @@ public class DailyScheduleReadTest extends BaseE2ETest {
             .body("classroomId", is((int) CLASSROOM_ID))
             .body("lessonDate", is(lessonDate.toString()))
             .body("teacherId", is((int) TEACHER_ID))
+            .body("isExchanged", is(false))
+            .body("isAbsent", is(false))
             .body("lessons[0].subjectName", is(subjectName))
             .body("lessons[0].period", is(1))
             .body("teacherAttendance", notNullValue());

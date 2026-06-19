@@ -51,6 +51,19 @@ public record DailyScheduleDetailResponse(
     )
     DailyScheduleStatus status,
 
+    @Schema(description = "교환 또는 대체 수업 여부", example = "true")
+    boolean isExchanged,
+
+    @Schema(description = "승인된 결석 요청에 따른 결강 여부", example = "false")
+    boolean isAbsent,
+
+    @Schema(
+        description = "교환 상대 수업 날짜. 대체 수업이거나 교환되지 않은 일정이면 null입니다.",
+        example = "2026-06-26",
+        nullable = true
+    )
+    LocalDate exchangedLessonDate,
+
     @Schema(description = "교사 출석 정보. 아직 출석 정보가 생성되지 않은 경우 null입니다.")
     DailyTeacherAttendanceResponse teacherAttendance,
 
@@ -81,6 +94,9 @@ public record DailyScheduleDetailResponse(
             dailySchedule.getActivityStartTime(),
             dailySchedule.getActivityEndTime(),
             dailySchedule.getStatus(),
+            dailySchedule.isExchanged(),
+            dailySchedule.isAbsent(),
+            dailySchedule.getExchangedLessonDate(),
             DailyTeacherAttendanceResponse.from(teacherAttendance),
             lessons.stream().map(DailyScheduleLessonResponse::from).toList(),
             studentAttendances.stream().map(DailyStudentAttendanceResponse::from).toList()

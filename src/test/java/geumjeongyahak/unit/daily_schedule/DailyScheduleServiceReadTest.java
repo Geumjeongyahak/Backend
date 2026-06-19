@@ -81,6 +81,9 @@ class DailyScheduleServiceReadTest {
         Classroom classroom = classroom(1L);
         User teacher = teacher(2L, "홍길동");
         DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        LocalDate exchangedLessonDate = lessonDate.plusDays(2);
+        dailySchedule.markExchanged(exchangedLessonDate);
+        dailySchedule.markAbsent();
         DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
 
         given(dailyScheduleRepository.findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(
@@ -100,6 +103,9 @@ class DailyScheduleServiceReadTest {
         assertThat(responses.get(0).dailyScheduleId()).isEqualTo(dailySchedule.getId());
         assertThat(responses.get(0).volunteerServiceMinutes()).isEqualTo(120);
         assertThat(responses.get(0).lessonCount()).isEqualTo(1);
+        assertThat(responses.get(0).isExchanged()).isTrue();
+        assertThat(responses.get(0).isAbsent()).isTrue();
+        assertThat(responses.get(0).exchangedLessonDate()).isEqualTo(exchangedLessonDate);
     }
 
     @Test
@@ -142,6 +148,9 @@ class DailyScheduleServiceReadTest {
         Classroom classroom = classroom(1L);
         User teacher = teacher(2L, "홍길동");
         DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        LocalDate exchangedLessonDate = lessonDate.plusDays(2);
+        dailySchedule.markExchanged(exchangedLessonDate);
+        dailySchedule.markAbsent();
         Subject subject = subject(classroom, teacher, lessonDate);
         Student student = student(10L, classroom);
         DailyStudentAttendance studentAttendance = new DailyStudentAttendance(dailySchedule, student);
@@ -166,6 +175,9 @@ class DailyScheduleServiceReadTest {
         assertThat(response.lessons()).hasSize(1);
         assertThat(response.studentAttendances()).hasSize(1);
         assertThat(response.teacherAttendance().volunteerServiceMinutes()).isEqualTo(120);
+        assertThat(response.isExchanged()).isTrue();
+        assertThat(response.isAbsent()).isTrue();
+        assertThat(response.exchangedLessonDate()).isEqualTo(exchangedLessonDate);
     }
 
     @Test
