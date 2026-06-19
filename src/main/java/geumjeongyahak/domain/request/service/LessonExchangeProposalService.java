@@ -251,11 +251,13 @@ public class LessonExchangeProposalService {
     ) {
         eventPublisher.publish(new DailyScheduleExchangeAcceptedEvent(
             requestDailySchedule.getId(),
-            newTeacherId
+            newTeacherId,
+            proposalDailySchedule.getLessonDate()
         ));
         eventPublisher.publish(new DailyScheduleExchangeAcceptedEvent(
             proposalDailySchedule.getId(),
-            requesterId
+            requesterId,
+            requestDailySchedule.getLessonDate()
         ));
     }
 
@@ -266,7 +268,8 @@ public class LessonExchangeProposalService {
     ) {
         eventPublisher.publish(new DailyScheduleExchangeAcceptedEvent(
             requestDailySchedule.getId(),
-            newTeacherId
+            newTeacherId,
+            null
         ));
     }
 

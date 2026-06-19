@@ -107,16 +107,17 @@ class AbsenceRequestStatusTest extends RequestBaseTest {
             .then()
             .statusCode(200);
 
-        Long dailyScheduleId = dailyScheduleRepository
+        var dailySchedule = dailyScheduleRepository
             .findByClassroomIdAndLessonDateAndIsDeletedFalse(CLASSROOM_ID, lessonDate)
-            .orElseThrow()
-            .getId();
+            .orElseThrow();
+        Long dailyScheduleId = dailySchedule.getId();
 
         assertThat(dailyTeacherAttendanceRepository
             .findByDailyScheduleIdAndIsDeletedFalse(dailyScheduleId)
             .orElseThrow()
             .getStatus()
         ).isEqualTo(DailyTeacherAttendanceStatus.EXCUSED);
+        assertThat(dailySchedule.isAbsent()).isTrue();
     }
 
     @Test

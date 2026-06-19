@@ -51,6 +51,15 @@ public class DailySchedule extends BaseEntity {
     @Column(name = "personal_info_consent", nullable = false)
     private boolean personalInfoConsent = false;
 
+    @Column(name = "is_exchanged", nullable = false)
+    private boolean isExchanged = false;
+
+    @Column(name = "is_absent", nullable = false)
+    private boolean isAbsent = false;
+
+    @Column(name = "exchanged_lesson_date")
+    private LocalDate exchangedLessonDate;
+
     @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;
 
@@ -83,6 +92,15 @@ public class DailySchedule extends BaseEntity {
         this.status = status;
     }
 
+    public void markExchanged(LocalDate exchangedLessonDate) {
+        this.isExchanged = true;
+        this.exchangedLessonDate = exchangedLessonDate;
+    }
+
+    public void markAbsent() {
+        this.isAbsent = true;
+    }
+
     public void updateJournalPersonalInfo(String residentRegistrationNumberPrefix, boolean personalInfoConsent) {
         this.residentRegistrationNumberPrefix = residentRegistrationNumberPrefix;
         this.personalInfoConsent = personalInfoConsent;
@@ -91,6 +109,9 @@ public class DailySchedule extends BaseEntity {
     public void restore() {
         this.isDeleted = false;
         this.status = DailyScheduleStatus.SCHEDULED;
+        this.isExchanged = false;
+        this.isAbsent = false;
+        this.exchangedLessonDate = null;
     }
 
     public void softDelete() {
