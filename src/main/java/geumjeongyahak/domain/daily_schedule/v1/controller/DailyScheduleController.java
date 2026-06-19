@@ -54,7 +54,18 @@ public class DailyScheduleController {
     @PreAuthorize(DAILY_SCHEDULE_READ_ACCESS)
     @Operation(
         summary = "수업 일지 목록 조회",
-        description = "작성된 수업 일지를 페이지로 조회합니다. keyword로 분반명, 담당 교사명, 과목명, 수업 일지 내용을 검색하고, mine=true이면 로그인 사용자가 담당자인 수업 일지만 조회합니다."
+        description = """
+            작성된 수업 일지를 페이지로 조회합니다.
+            keyword로 분반명, 담당 교사명, 과목명, 수업 일지 내용을 검색하고,
+            mine=true이면 로그인 사용자가 담당자인 수업 일지만 조회합니다.
+
+            시간표 표시 정보:
+            - isExchanged: 교환형 또는 대체형 제안 수락으로 담당 교사가 변경된 일정인지 여부
+            - isAbsent: 결석 요청 승인으로 결강 처리된 일정인지 여부
+            - exchangedLessonDate: 교환형 일정의 상대 수업 날짜
+
+            대체형 일정과 일반 일정은 exchangedLessonDate가 null입니다.
+            """
     )
     @GetMapping
     public ResponseEntity<PaginationResponse<DailyScheduleSummaryResponse>> getDailySchedules(
@@ -74,7 +85,14 @@ public class DailyScheduleController {
     @PreAuthorize(DAILY_SCHEDULE_READ_ACCESS)
     @Operation(
         summary = "날짜/분반 기준 하루 일정 상세 조회",
-        description = "수업 날짜와 분반 ID 기준으로 하루 일정의 수업, 교사 출석, 학생 출석부, 수업 일지 내용을 조회합니다."
+        description = """
+            수업 날짜와 분반 ID 기준으로 하루 일정의 수업, 교사 출석,
+            학생 출석부, 수업 일지 내용을 조회합니다.
+
+            isExchanged와 isAbsent로 교환·결강 여부를 확인할 수 있습니다.
+            교환형 일정은 exchangedLessonDate에 상대 수업 날짜가 반환되며,
+            대체형 또는 일반 일정은 null이 반환됩니다.
+            """
     )
     @GetMapping("/detail")
     public ResponseEntity<DailyScheduleDetailResponse> getDailyScheduleByClassroomAndDate(
@@ -98,7 +116,17 @@ public class DailyScheduleController {
     }
 
     @PreAuthorize(DAILY_SCHEDULE_READ_ACCESS)
-    @Operation(summary = "하루 일정 상세 조회", description = "하루 일정의 수업, 교사 출석, 학생 출석부, 수업 일지 내용을 조회합니다.")
+    @Operation(
+        summary = "하루 일정 상세 조회",
+        description = """
+            dailyScheduleId로 하루 일정의 수업, 교사 출석, 학생 출석부,
+            수업 일지 내용을 조회합니다.
+
+            응답의 isExchanged와 isAbsent로 교환·결강 여부를 확인할 수 있습니다.
+            exchangedLessonDate는 교환형 일정에서만 상대 수업 날짜를 반환하며,
+            대체형 또는 일반 일정에서는 null입니다.
+            """
+    )
     @GetMapping("/{dailyScheduleId}")
     public ResponseEntity<DailyScheduleDetailResponse> getDailySchedule(
         @PathVariable Long dailyScheduleId,

@@ -45,6 +45,8 @@
 - 교환형 제안은 로그인 사용자와 `lessonDate`를 기준으로 조회한 제안자 하루 일정을 대상으로 삼습니다.
 - 교환형 제안은 요청과 같은 수업일로 생성하거나 수정할 수 없습니다.
 - 제안 수락 시 `DailySchedule.teacher`를 변경하고, 해당 DailySchedule의 반/날짜에 연결된 `Lesson.teacher`도 함께 변경합니다.
+- 교환형 제안 수락 시 양쪽 DailySchedule에 `isExchanged=true`를 저장하고, 서로의 수업 날짜를 `exchangedLessonDate`로 기록합니다.
+- 대체형 제안 수락 시 요청 DailySchedule에 `isExchanged=true`를 저장하며 상대 수업이 없으므로 `exchangedLessonDate`는 `null`입니다.
 - 응답의 `dailyScheduleId`는 내부 연결된 하루 일정 식별자이며, 생성/수정 요청 입력은 `lessonDate`를 사용합니다.
 
 ### 2.4 제안 타입 규칙
@@ -277,6 +279,7 @@
 - 요청 상태가 `APPROVED`로 변경됩니다.
 - `approvalAt`, `approvalBy`가 기록됩니다.
 - 승인 이벤트를 통해 연결된 DailySchedule 교사 출석이 `EXCUSED`로 반영됩니다.
+- 연결된 DailySchedule의 `isAbsent`가 `true`로 변경되며 Lesson/DailySchedule 조회 응답에서 결강 여부를 확인할 수 있습니다.
 - 이미 `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED` 상태인 요청은 재처리할 수 없습니다.
 
 ## 5.6 결석 요청 반려
