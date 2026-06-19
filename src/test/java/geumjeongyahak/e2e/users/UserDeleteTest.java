@@ -3,16 +3,31 @@ package geumjeongyahak.e2e.users;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
+import geumjeongyahak.domain.users.entity.UserPermission;
+import geumjeongyahak.domain.users.repository.UserPermissionRepository;
+import geumjeongyahak.domain.users.repository.UserRepository;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("E2E: User 삭제 테스트")
 class UserDeleteTest extends UserBaseTest {
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private UserCredentialRepository userCredentialRepository;
+
+    @Autowired
+    private UserPermissionRepository userPermissionRepository;
+
     @Test
-    @DisplayName("관리자 권한으로 User 삭제 성공(204 No Content)")
+    @DisplayName("관리자 권한으로 User 비활성화 성공 및 계정 종속 데이터 보존(204 No Content)")
     void deleteUser_Success() {
         CreateUserRequest createReq = new CreateUserRequest(
                 "deletetest@test.com",
@@ -35,6 +50,11 @@ class UserDeleteTest extends UserBaseTest {
             .as(UserDetailResponse.class);
 
         userTestHelper.setUser(createdUser.email());
+        var user = userRepository.findById(createdUser.id()).orElseThrow();
+        userPermissionRepository.save(new UserPermission(user, "channel:read:*"));
+
+        int credentialCountBefore = userCredentialRepository.findAllByUserId(createdUser.id()).size();
+        int permissionCountBefore = userPermissionRepository.findAllByUserId(createdUser.id()).size();
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -44,13 +64,13 @@ class UserDeleteTest extends UserBaseTest {
             .statusCode(204)
             .log().all();
 
-        given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-        .when()
-            .get("/{userId}", createdUser.id())
-        .then()
-            .statusCode(404)
-            .log().all();
+        var deactivatedUser = userRepository.findById(createdUser.id()).orElseThrow();
+        assertThat(deactivatedUser.isDeleted()).isTrue();
+        assertThat(deactivatedUser.getDeletedAt()).isNotNull();
+        assertThat(userCredentialRepository.findAllByUserId(createdUser.id()))
+            .hasSize(credentialCountBefore);
+        assertThat(userPermissionRepository.findAllByUserId(createdUser.id()))
+            .hasSize(permissionCountBefore);
     }
 
     @Test

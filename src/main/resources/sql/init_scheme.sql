@@ -67,6 +67,8 @@ CREATE TABLE users (
     teacher_start_at DATE,
     teacher_end_at DATE,
     role VARCHAR(20) NOT NULL DEFAULT 'GUEST',
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

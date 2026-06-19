@@ -260,15 +260,17 @@ public class UserCrudService {
 
     @Transactional
     public void deleteUserById(Long userId) {
-        log.debug("사용자 삭제 요청 - ID: {}", userId);
-        if (!userRepository.existsById(userId)) {
-            log.debug("사용자 삭제 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
-            throw new UserNotFoundException(userId);
-        }
+        log.debug("사용자 비활성화 요청 - ID: {}", userId);
+        User user = userRepository.findById(userId)
+            .filter(foundUser -> !foundUser.isDeleted())
+            .orElseThrow(() -> {
+                log.debug("사용자 비활성화 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
+                return new UserNotFoundException(userId);
+            });
         if (subjectProxyService.existsActiveSubjectByTeacherId(userId)) {
             throw UserTeacherAssignmentConflictException.deletionBlocked();
         }
-        userRepository.deleteById(userId);
-        log.info("사용자 삭제 완료 - ID: {}", userId);
+        user.softDelete();
+        log.info("사용자 비활성화 완료 - ID: {}", userId);
     }
 }
