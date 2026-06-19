@@ -49,6 +49,15 @@ DailySchedule 도메인은 다음 권한 코드를 사용합니다.
 - 삭제된 DailySchedule, DailyTeacherAttendance, DailyStudentAttendance는 조회와 집계에서 제외됩니다.
 - 상세 조회는 DailySchedule에 연결된 Lesson 목록, 교사 출석, 학생 출석부를 함께 반환합니다.
 - 상세 조회는 `dailyScheduleId` 또는 `lessonDate`와 `classroomId` 조합으로 조회할 수 있습니다.
+- 목록과 상세 응답은 교환 여부, 결강 여부, 교환 상대 날짜를 함께 반환합니다.
+
+교환·결강 표시 필드:
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `isExchanged` | boolean | 교환형 또는 대체형 제안 수락으로 담당 교사가 변경된 일정인지 여부 |
+| `isAbsent` | boolean | 결석 요청 승인으로 결강 처리된 일정인지 여부 |
+| `exchangedLessonDate` | date, nullable | 교환형 일정의 상대 수업 날짜. 대체형 또는 일반 일정이면 `null` |
 
 예시:
 
@@ -70,6 +79,9 @@ GET /api/v1/daily-schedules?keyword=수학&mine=true&page=0&size=8
       "activityEndTime": "16:00:00",
       "volunteerServiceMinutes": 120,
       "status": "SCHEDULED",
+      "isExchanged": true,
+      "isAbsent": false,
+      "exchangedLessonDate": "2026-06-26",
       "teacherAttendanceStatus": "ABSENT",
       "lessonCount": 3,
       "lessons": [
@@ -272,6 +284,9 @@ GET /api/v1/daily-schedules/volunteer-hours
 - DailySchedule의 담당 교사는 같은 날짜/분반의 대표 Lesson 담당 교사를 기준으로 갱신됩니다.
 - 활동 시작 시간은 연결된 Lesson 중 가장 이른 시작 시간, 활동 종료 시간은 가장 늦은 종료 시간입니다.
 - 봉사 인정 시간은 활동 시작 시간과 종료 시간의 차이로 계산합니다.
+- 교환형 제안이 수락되면 양쪽 DailySchedule의 `isExchanged`를 `true`로 설정하고 서로의 수업 날짜를 `exchangedLessonDate`에 저장합니다.
+- 대체형 제안이 수락되면 요청 DailySchedule의 `isExchanged`만 `true`로 설정하고 `exchangedLessonDate`는 `null`로 유지합니다.
+- 결석 요청이 승인되면 대상 DailySchedule의 `isAbsent`를 `true`로 설정하고 교사 출석을 `EXCUSED`로 변경합니다.
 
 ## 대표 실패 케이스
 

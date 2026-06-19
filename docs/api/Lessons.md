@@ -48,6 +48,17 @@ Lesson 도메인은 다음 권한 코드를 사용합니다.
 - 월간 뷰는 월간 캘린더 그리드에 노출되는 시작일과 종료일을 `from`, `to`로 전달합니다.
 - 월간 캘린더가 앞뒤 달 날짜를 포함해 6주 그리드로 표시되는 경우에도 최대 42일 범위 안에서 한 번에 조회할 수 있습니다.
 - 응답은 날짜별로 그룹핑하지 않고 flat list로 반환합니다. 클라이언트는 `date`를 기준으로 캘린더 셀에 배치합니다.
+- 목록과 상세 응답은 같은 분반·날짜의 DailySchedule에 저장된 교환 및 결강 정보를 함께 반환합니다.
+
+교환·결강 표시 필드:
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `isExchanged` | boolean | 교환형 또는 대체형 제안 수락으로 담당 교사가 변경된 수업인지 여부 |
+| `isAbsent` | boolean | 결석 요청 승인으로 결강 처리된 수업인지 여부 |
+| `exchangedLessonDate` | date, nullable | 교환형 수업의 상대 수업 날짜. 대체형 또는 일반 수업이면 `null` |
+
+같은 분반과 날짜의 Lesson들은 하나의 DailySchedule에 연결되므로 모든 교시는 같은 교환·결강 값을 반환합니다.
 
 예시:
 
@@ -64,7 +75,12 @@ GET /api/v1/lessons?from=2026-02-01&to=2026-03-14
     "startTime": "19:20:00",
     "endTime": "20:00:00",
     "teacherName": "홍길동",
-    "subjectName": "한글 기초"
+    "subjectName": "한글 기초",
+    "classroomId": 1,
+    "classroomName": "벚꽃반",
+    "isExchanged": true,
+    "isAbsent": false,
+    "exchangedLessonDate": "2026-02-06"
   }
 ]
 ```
@@ -113,6 +129,11 @@ Content-Type: application/json
   "status": "SCHEDULED",
   "teacherName": "홍길동",
   "subjectName": "한글 기초",
+  "classroomId": 1,
+  "classroomName": "벚꽃반",
+  "isExchanged": false,
+  "isAbsent": false,
+  "exchangedLessonDate": null,
   "note": null
 }
 ```
@@ -159,6 +180,8 @@ Lesson 상태는 다음 값을 사용합니다.
 - 교사 출석, 학생 출석, 수업 일지 작성은 DailySchedule API에서 처리합니다.
 - DailySchedule 수업 일지 저장 시 연결된 Lesson의 note가 함께 갱신됩니다.
 - DailySchedule 상태가 `COMPLETED`, `CANCELLED`, `SCHEDULED`로 변경되면 연결된 활성 Lesson 상태도 각각 `COMPLETED`, `CANCELED`, `SCHEDULED`로 연동됩니다.
+- Lesson 목록 조회는 요청 기간의 DailySchedule을 일괄 조회한 뒤 `(classroomId, date)` 기준으로 교환·결강 정보를 결합합니다.
+- 연결된 DailySchedule이 아직 없으면 `isExchanged=false`, `isAbsent=false`, `exchangedLessonDate=null`을 반환합니다.
 - Lesson 상태 변경 API는 남겨두지만 일반 운영 흐름의 기준은 DailySchedule 상태입니다. Lesson 상태 API는 특정 교시만 수동으로 보정해야 하는 예외 상황에 사용합니다.
 
 ## 대표 실패 케이스

@@ -4,6 +4,7 @@ import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleNotFoundException;
 import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleRepository;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,5 +32,15 @@ public class DailyScheduleProxyService {
         return dailyScheduleRepository.findByClassroomIdAndLessonDateAndIsDeletedFalse(classroomId, lessonDate)
             .map(DailySchedule::getId)
             .orElse(null);
+    }
+
+    public DailySchedule findActiveByClassroomIdAndLessonDate(Long classroomId, LocalDate lessonDate) {
+        return dailyScheduleRepository.findByClassroomIdAndLessonDateAndIsDeletedFalse(classroomId, lessonDate)
+            .orElse(null);
+    }
+
+    public List<DailySchedule> findAllActiveBetween(LocalDate from, LocalDate to) {
+        return dailyScheduleRepository
+            .findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(from, to);
     }
 }

@@ -535,18 +535,25 @@ public class DailyScheduleService {
             )));
 
         teacherAttendance.updateAttendance(DailyTeacherAttendanceStatus.EXCUSED, null, null, null);
+        dailySchedule.markAbsent();
         log.debug(
-            "승인된 결석 요청 반영 완료 - DailySchedule 교사 출석 공결 처리 (dailyScheduleId={})",
+            "승인된 결석 요청 반영 완료 - DailySchedule 결강 여부 및 교사 출석 공결 처리 (dailyScheduleId={})",
             dailySchedule.getId()
         );
     }
 
     @Transactional
-    public void applyTeacherExchange(Long dailyScheduleId, Long newTeacherId) {
+    public void applyTeacherExchange(
+        Long dailyScheduleId,
+        Long newTeacherId,
+        LocalDate exchangedLessonDate
+    ) {
         log.debug(
-            "DailySchedule 담당 교사 교환 처리 (dailyScheduleId={}, newTeacherId={})",
+            "DailySchedule 담당 교사 교환 처리 "
+                + "(dailyScheduleId={}, newTeacherId={}, exchangedLessonDate={})",
             dailyScheduleId,
-            newTeacherId
+            newTeacherId,
+            exchangedLessonDate
         );
         DailySchedule dailySchedule = dailyScheduleRepository.findByIdAndIsDeletedFalse(dailyScheduleId)
             .orElseThrow(() -> {
@@ -556,13 +563,20 @@ public class DailyScheduleService {
         User newTeacher = userProxyService.getById(newTeacherId);
 
         dailySchedule.updateTeacher(newTeacher);
+        dailySchedule.markExchanged(exchangedLessonDate);
         lessonProxyService.updateActiveLessonsTeacherByClassroomAndDate(
             dailySchedule.getClassroom().getId(),
             dailySchedule.getLessonDate(),
             newTeacher
         );
 
-        log.debug("DailySchedule 담당 교사 교환 완료 (dailyScheduleId={}, newTeacherId={})", dailyScheduleId, newTeacherId);
+        log.debug(
+            "DailySchedule 담당 교사 교환 완료 "
+                + "(dailyScheduleId={}, newTeacherId={}, exchangedLessonDate={})",
+            dailyScheduleId,
+            newTeacherId,
+            exchangedLessonDate
+        );
     }
 
     private boolean canViewDailyScheduleSensitiveInfo(

@@ -31,10 +31,32 @@ public record LessonSummaryResponse(
     Long classroomId,
 
     @Schema(description = "분반 이름", example = "벚꽃반")
-    String classroomName
+    String classroomName,
+
+    @Schema(description = "교환 또는 대체 수업 여부", example = "true")
+    boolean isExchanged,
+
+    @Schema(description = "승인된 결석 요청에 따른 결강 여부", example = "false")
+    boolean isAbsent,
+
+    @Schema(
+        description = "교환 상대 수업 날짜. 대체 수업이거나 교환되지 않은 수업이면 null입니다.",
+        example = "2026-06-26",
+        nullable = true
+    )
+    LocalDate exchangedLessonDate
 ) {
 
     public static LessonSummaryResponse from(Lesson lesson) {
+        return from(lesson, false, false, null);
+    }
+
+    public static LessonSummaryResponse from(
+        Lesson lesson,
+        boolean isExchanged,
+        boolean isAbsent,
+        LocalDate exchangedLessonDate
+    ) {
         return new LessonSummaryResponse(
             lesson.getId(),
             lesson.getDate(),
@@ -44,7 +66,10 @@ public record LessonSummaryResponse(
             lesson.getTeacher().getName(),
             lesson.getSubject().getName(),
             lesson.getSubject().getClassroom().getId(),
-            lesson.getSubject().getClassroom().getName()
+            lesson.getSubject().getClassroom().getName(),
+            isExchanged,
+            isAbsent,
+            exchangedLessonDate
         );
     }
 }

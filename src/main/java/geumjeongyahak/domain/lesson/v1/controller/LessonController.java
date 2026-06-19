@@ -37,9 +37,18 @@ public class LessonController {
 
     @Operation(
         summary = "전체 수업 조회",
-        description = "기간 조건에 해당하는 전체 수업 목록을 조회합니다. "
-            + "수업 목록은 날짜와 교시 기준으로 정렬되어 반환됩니다. "
-            + "조회 API는 side effect 를 발생시키지 않습니다."
+        description = """
+            기간 조건에 해당하는 전체 수업 목록을 날짜와 교시 기준으로 정렬하여 반환합니다.
+
+            시간표 표시 정보:
+            - isExchanged: 교환형 또는 대체형 제안 수락으로 담당 교사가 변경된 수업인지 여부
+            - isAbsent: 결석 요청 승인으로 결강 처리된 수업인지 여부
+            - exchangedLessonDate: 교환형 수업의 상대 수업 날짜
+
+            대체형 수업과 일반 수업은 exchangedLessonDate가 null입니다.
+            같은 분반과 날짜의 모든 교시는 동일한 교환·결강 정보를 반환합니다.
+            조회 API는 side effect를 발생시키지 않습니다.
+            """
     )
     @GetMapping
     public ResponseEntity<List<LessonSummaryResponse>> getAllLessons(
@@ -51,7 +60,16 @@ public class LessonController {
     }
 
     @PreAuthorize(TEACHER_OR_LESSON_READ_ACCESS)
-    @Operation(summary = "내 수업 목록 조회", description = "내 수업 목록을 조회합니다.")
+    @Operation(
+        summary = "내 수업 목록 조회",
+        description = """
+            로그인 사용자가 담당하는 기간 내 수업 목록을 조회합니다.
+
+            응답의 isExchanged와 isAbsent로 교환·결강 여부를 확인할 수 있습니다.
+            교환형 수업은 exchangedLessonDate에 상대 수업 날짜가 반환되며,
+            대체형 또는 일반 수업은 null이 반환됩니다.
+            """
+    )
     @GetMapping("/me")
     public ResponseEntity<List<LessonSummaryResponse>> getMyLessons(
         @ModelAttribute @Valid LessonRangeRequest request,
@@ -63,7 +81,19 @@ public class LessonController {
     }
 
     @PreAuthorize(TEACHER_OR_LESSON_READ_ACCESS)
-    @Operation(summary = "수업 상세 조회", description = "수업 상세 정보를 조회합니다.")
+    @Operation(
+        summary = "수업 상세 조회",
+        description = """
+            개별 교시 수업의 상세 정보와 연결된 하루 일정 식별자를 조회합니다.
+
+            연결된 DailySchedule을 기준으로 다음 시간표 표시 정보를 함께 반환합니다.
+            - isExchanged: 교환 또는 대체 수업 여부
+            - isAbsent: 승인된 결석 요청에 따른 결강 여부
+            - exchangedLessonDate: 교환형 수업의 상대 날짜
+
+            연결된 DailySchedule이 아직 없으면 false, false, null을 반환합니다.
+            """
+    )
     @GetMapping("/{lessonId}")
     public ResponseEntity<LessonDetailResponse> getLessonDetail(
         @PathVariable Long lessonId,

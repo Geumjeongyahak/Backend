@@ -1,5 +1,6 @@
 package geumjeongyahak.e2e.request.lessonexchange;
 
+import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleRepository;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
 import geumjeongyahak.domain.request.enums.LessonExchangeProposalStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
@@ -34,6 +35,9 @@ class LessonExchangeProposalAcceptTest extends RequestBaseTest {
 
     @Autowired
     private LessonRepository lessonRepository;
+
+    @Autowired
+    private DailyScheduleRepository dailyScheduleRepository;
 
     private final List<Long> subjectIds = new ArrayList<>();
     private final List<Long> lessonIds = new ArrayList<>();
@@ -110,6 +114,18 @@ class LessonExchangeProposalAcceptTest extends RequestBaseTest {
             .isEqualTo(TEACHER2_ID);
         assertThat(lessonRepository.findById(proposalLessonId).orElseThrow().getTeacher().getId())
             .isEqualTo(TEACHER_ID);
+
+        var requestDailySchedule = dailyScheduleRepository
+            .findByClassroomIdAndLessonDateAndIsDeletedFalse(CLASSROOM_ID, requestDate)
+            .orElseThrow();
+        var proposalDailySchedule = dailyScheduleRepository
+            .findByClassroomIdAndLessonDateAndIsDeletedFalse(CLASSROOM_ID, proposalDate)
+            .orElseThrow();
+
+        assertThat(requestDailySchedule.isExchanged()).isTrue();
+        assertThat(requestDailySchedule.getExchangedLessonDate()).isEqualTo(proposalDate);
+        assertThat(proposalDailySchedule.isExchanged()).isTrue();
+        assertThat(proposalDailySchedule.getExchangedLessonDate()).isEqualTo(requestDate);
     }
 
     @Test
@@ -140,6 +156,12 @@ class LessonExchangeProposalAcceptTest extends RequestBaseTest {
 
         assertThat(lessonRepository.findById(requestLessonId).orElseThrow().getTeacher().getId())
             .isEqualTo(TEACHER2_ID);
+
+        var requestDailySchedule = dailyScheduleRepository
+            .findByClassroomIdAndLessonDateAndIsDeletedFalse(CLASSROOM_ID, requestDate)
+            .orElseThrow();
+        assertThat(requestDailySchedule.isExchanged()).isTrue();
+        assertThat(requestDailySchedule.getExchangedLessonDate()).isNull();
 
         given()
             .basePath("/api/v1/lesson-exchange-requests")

@@ -20,10 +20,16 @@ public class DailyScheduleExchangeEventHandler {
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void handleDailyScheduleExchangeAccepted(DailyScheduleExchangeAcceptedEvent event) {
         log.info(
-            "수업 교환 수락 이벤트 처리 - DailySchedule 담당 교사 변경 (dailyScheduleId={}, newTeacherId={})",
+            "수업 교환 수락 이벤트 처리 - DailySchedule 담당 교사 변경 "
+                + "(dailyScheduleId={}, newTeacherId={}, exchangedLessonDate={})",
             event.getDailyScheduleId(),
-            event.getNewTeacherId()
+            event.getNewTeacherId(),
+            event.getExchangedLessonDate()
         );
-        dailyScheduleService.applyTeacherExchange(event.getDailyScheduleId(), event.getNewTeacherId());
+        dailyScheduleService.applyTeacherExchange(
+            event.getDailyScheduleId(),
+            event.getNewTeacherId(),
+            event.getExchangedLessonDate()
+        );
     }
 }

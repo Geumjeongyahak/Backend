@@ -3,8 +3,11 @@ package geumjeongyahak.domain.lesson.service;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Map;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -12,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.CommonErrorCode;
+import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleProxyService;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
@@ -98,9 +102,10 @@ public class LessonService {
         log.debug("전체 수업 목록 조회 요청");
         List<Lesson> lessonList = lessonRepository
             .findAllByIsDeletedFalseAndDateBetweenOrderByDateAscPeriodAsc(request.from(), request.to());
+        Map<DailyScheduleKey, DailySchedule> dailySchedules = getDailyScheduleMap(request.from(), request.to());
         log.debug("전체 수업 목록 조회 완료 - 총 {}개", lessonList.size());
         return lessonList.stream()
-            .map(LessonSummaryResponse::from)
+            .map(lesson -> toSummaryResponse(lesson, dailySchedules))
             .toList();
     }
 
@@ -113,9 +118,10 @@ public class LessonService {
             .findAllByTeacherIdAndIsDeletedFalseAndDateBetweenOrderByDateAscPeriodAsc(
                 userId, request.from(), request.to()
             );
+        Map<DailyScheduleKey, DailySchedule> dailySchedules = getDailyScheduleMap(request.from(), request.to());
         log.debug("내 수업 목록 조회 완료 - 총 {}개", lessonList.size());
         return lessonList.stream()
-            .map(LessonSummaryResponse::from)
+            .map(lesson -> toSummaryResponse(lesson, dailySchedules))
             .toList();
     }
 
@@ -126,7 +132,7 @@ public class LessonService {
             : lessonRepository.findByIdAndTeacherIdAndIsDeletedFalse(lessonId, teacherId);
 
         return lessonOpt
-            .map(lesson -> LessonDetailResponse.from(lesson, findDailyScheduleId(lesson)))
+            .map(this::toDetailResponse)
             .orElseThrow(() -> {
                 log.warn("수업 상세 조회 실패 - 수업을 찾을 수 없습니다. ID: {}", lessonId);
                 return new LessonNotFoundException(lessonId);
@@ -410,10 +416,61 @@ public class LessonService {
         eventPublisher.publish(new LessonDailyScheduleSyncRequestedEvent(classroomId, lessonDate));
     }
 
-    private Long findDailyScheduleId(Lesson lesson) {
-        return dailyScheduleProxyService.findActiveIdByClassroomIdAndLessonDate(
+    private LessonDetailResponse toDetailResponse(Lesson lesson) {
+        DailySchedule dailySchedule = dailyScheduleProxyService.findActiveByClassroomIdAndLessonDate(
             lesson.getSubject().getClassroom().getId(),
             lesson.getDate()
         );
+        if (dailySchedule == null) {
+            return LessonDetailResponse.from(lesson);
+        }
+        return LessonDetailResponse.from(
+            lesson,
+            dailySchedule.getId(),
+            dailySchedule.isExchanged(),
+            dailySchedule.isAbsent(),
+            dailySchedule.getExchangedLessonDate()
+        );
+    }
+
+    private Map<DailyScheduleKey, DailySchedule> getDailyScheduleMap(LocalDate from, LocalDate to) {
+        return dailyScheduleProxyService.findAllActiveBetween(from, to).stream()
+            .collect(Collectors.toMap(
+                DailyScheduleKey::from,
+                Function.identity()
+            ));
+    }
+
+    private LessonSummaryResponse toSummaryResponse(
+        Lesson lesson,
+        Map<DailyScheduleKey, DailySchedule> dailySchedules
+    ) {
+        DailySchedule dailySchedule = dailySchedules.get(DailyScheduleKey.from(lesson));
+        if (dailySchedule == null) {
+            return LessonSummaryResponse.from(lesson);
+        }
+        return LessonSummaryResponse.from(
+            lesson,
+            dailySchedule.isExchanged(),
+            dailySchedule.isAbsent(),
+            dailySchedule.getExchangedLessonDate()
+        );
+    }
+
+    private record DailyScheduleKey(Long classroomId, LocalDate lessonDate) {
+
+        private static DailyScheduleKey from(DailySchedule dailySchedule) {
+            return new DailyScheduleKey(
+                dailySchedule.getClassroom().getId(),
+                dailySchedule.getLessonDate()
+            );
+        }
+
+        private static DailyScheduleKey from(Lesson lesson) {
+            return new DailyScheduleKey(
+                lesson.getSubject().getClassroom().getId(),
+                lesson.getDate()
+            );
+        }
     }
 }

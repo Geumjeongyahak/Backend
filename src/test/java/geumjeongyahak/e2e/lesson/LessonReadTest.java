@@ -7,12 +7,18 @@ import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
+import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleRepository;
+import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.domain.auth.enums.RoleType;
 
 @DisplayName("E2E: 수업 조회 테스트")
 public class LessonReadTest extends LessonBaseTest {
+
+    @Autowired
+    private DailyScheduleRepository dailyScheduleRepository;
 
     // [전체 수업 목록 조회 테스트]
 
@@ -37,8 +43,47 @@ public class LessonReadTest extends LessonBaseTest {
             .body("period", everyItem(allOf(notNullValue(), anyOf(is(1), is(2), is(3)))))
             .body("classroomId", everyItem(notNullValue()))
             .body("classroomName", everyItem(notNullValue()))
+            .body("isExchanged", everyItem(is(false)))
+            .body("isAbsent", everyItem(is(false)))
             .body("[0].date", notNullValue())
             .log().all();
+    }
+
+    @Test
+    @DisplayName("전체 수업 목록에서 DailySchedule 교환 및 결강 정보를 반환한다")
+    void getAllLessons_returnsDailyScheduleChangeFlags() {
+        LocalDate lessonDate = LocalDate.of(2027, 5, 20);
+        LocalDate exchangedLessonDate = lessonDate.plusDays(2);
+        createTrackedLessonFixture(
+            "read-list-change-flags",
+            TEACHER_ID,
+            "2042-05-20",
+            "MONDAY",
+            1,
+            lessonDate.toString(),
+            "19:20:00",
+            "20:00:00",
+            1
+        );
+
+        var dailySchedule = dailyScheduleRepository
+            .findByClassroomIdAndLessonDateAndIsDeletedFalse(CLASSROOM_ID, lessonDate)
+            .orElseThrow();
+        dailySchedule.markExchanged(exchangedLessonDate);
+        dailySchedule.markAbsent();
+        dailyScheduleRepository.save(dailySchedule);
+
+        given()
+            .queryParam("from", lessonDate.toString())
+            .queryParam("to", lessonDate.toString())
+            .when()
+            .get()
+            .then()
+            .statusCode(200)
+            .body("size()", is(1))
+            .body("[0].isExchanged", is(true))
+            .body("[0].isAbsent", is(true))
+            .body("[0].exchangedLessonDate", is(exchangedLessonDate.toString()));
     }
 
     @Test
@@ -227,7 +272,44 @@ public class LessonReadTest extends LessonBaseTest {
             .body("dailyScheduleId", notNullValue())
             .body("classroomId", is((int) CLASSROOM_ID))
             .body("classroomName", notNullValue())
+            .body("isExchanged", is(false))
+            .body("isAbsent", is(false))
             .log().all();
+    }
+
+    @Test
+    @DisplayName("수업 상세에서 DailySchedule 교환 및 결강 정보를 반환한다")
+    void getLessonDetail_returnsDailyScheduleChangeFlags() {
+        LocalDate lessonDate = LocalDate.of(2027, 7, 20);
+        LocalDate exchangedLessonDate = lessonDate.plusDays(3);
+        long lessonId = createTrackedLessonFixture(
+            "read-detail-change-flags",
+            TEACHER_ID,
+            "2042-07-20",
+            "MONDAY",
+            1,
+            lessonDate.toString(),
+            "19:20:00",
+            "20:00:00",
+            1
+        );
+
+        var dailySchedule = dailyScheduleRepository
+            .findByClassroomIdAndLessonDateAndIsDeletedFalse(CLASSROOM_ID, lessonDate)
+            .orElseThrow();
+        dailySchedule.markExchanged(exchangedLessonDate);
+        dailySchedule.markAbsent();
+        dailyScheduleRepository.save(dailySchedule);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
+            .when()
+            .get("/{lessonId}", lessonId)
+            .then()
+            .statusCode(200)
+            .body("isExchanged", is(true))
+            .body("isAbsent", is(true))
+            .body("exchangedLessonDate", is(exchangedLessonDate.toString()));
     }
 
     @Test
