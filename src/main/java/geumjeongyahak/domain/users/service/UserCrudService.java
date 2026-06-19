@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.users.service;
 
+import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.auth.service.UserCredentialService;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
@@ -8,6 +9,7 @@ import geumjeongyahak.domain.department.service.DepartmentPermissionProxyService
 import geumjeongyahak.domain.department.service.DepartmentProxyService;
 import geumjeongyahak.domain.subject.service.SubjectProxyService;
 import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.users.event.UserDeactivatedEvent;
 import geumjeongyahak.domain.users.exception.DuplicateEmailException;
 import geumjeongyahak.domain.users.exception.UserNotFoundException;
 import geumjeongyahak.domain.users.exception.UserTeacherAssignmentConflictException;
@@ -46,6 +48,7 @@ public class UserCrudService {
     private final DepartmentPermissionProxyService departmentPermissionProxyService;
     private final UserPermissionService userPermissionService;
     private final SubjectProxyService subjectProxyService;
+    private final EventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public UserDetailResponse getUserById(Long userId) {
@@ -271,6 +274,7 @@ public class UserCrudService {
             throw UserTeacherAssignmentConflictException.deletionBlocked();
         }
         user.softDelete();
+        eventPublisher.publish(new UserDeactivatedEvent(userId));
         log.info("사용자 비활성화 완료 - ID: {}", userId);
     }
 }

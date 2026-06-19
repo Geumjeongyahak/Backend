@@ -5,6 +5,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
+import geumjeongyahak.domain.auth.repository.RefreshTokenRepository;
+import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
+import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
 import geumjeongyahak.domain.users.entity.UserPermission;
 import geumjeongyahak.domain.users.repository.UserPermissionRepository;
 import geumjeongyahak.domain.users.repository.UserRepository;
@@ -25,6 +28,9 @@ class UserDeleteTest extends UserBaseTest {
 
     @Autowired
     private UserPermissionRepository userPermissionRepository;
+
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
 
     @Test
     @DisplayName("관리자 권한으로 User 비활성화 성공 및 계정 종속 데이터 보존(204 No Content)")
@@ -159,5 +165,58 @@ class UserDeleteTest extends UserBaseTest {
         .then()
             .statusCode(404)
             .log().all();
+    }
+
+    @Test
+    @DisplayName("User 비활성화 시 발급된 Refresh Token 즉시 폐기")
+    void deleteUser_RevokesRefreshToken() {
+        CreateUserRequest createReq = new CreateUserRequest(
+            "revoketest@test.com",
+            "Revoke Test User",
+            "pw_revoketest",
+            "010-7777-8888",
+            "GUEST",
+            null
+        );
+
+        var createdUser = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(createReq)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .extract()
+            .as(UserDetailResponse.class);
+
+        String originalBasePath = io.restassured.RestAssured.basePath;
+        io.restassured.RestAssured.basePath = "/api/v1/auth";
+        var loginResponse = given()
+            .contentType(ContentType.JSON)
+            .body(new LocalLoginRequest("revoketest@test.com", "pw_revoketest"))
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(200)
+            .extract()
+            .as(TokenResponse.class);
+        io.restassured.RestAssured.basePath = originalBasePath;
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/{userId}", createdUser.id())
+        .then()
+            .statusCode(204);
+
+        assertThat(refreshTokenRepository.findById(loginResponse.refreshToken())).isEmpty();
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(loginResponse.accessToken()))
+        .when()
+            .get("/me")
+        .then()
+            .statusCode(401);
     }
 }

@@ -4,15 +4,21 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.RefreshTokenRequest;
 import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
+import geumjeongyahak.domain.users.repository.UserRepository;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
 @DisplayName("E2E: 토큰 재발급 테스트")
 class AuthRefreshTest extends AuthBaseTest {
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Test
     @DisplayName("유효한 Refresh Token으로 토큰 재발급 성공(200 OK)")
@@ -155,6 +161,43 @@ class AuthRefreshTest extends AuthBaseTest {
         RefreshTokenRequest refreshReq = new RefreshTokenRequest(
                 loginResponse.refreshToken()
         );
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(refreshReq)
+        .when()
+            .post("/refresh")
+        .then()
+            .statusCode(401)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("비활성화된 사용자의 Refresh Token으로 재발급 실패(401 Unauthorized)")
+    void refreshToken_DeactivatedUser() {
+        String email = "deactivated-refresh@test.com";
+        String password = "password123!";
+        var user = userTestHelper.createTestUser(email, "비활성 재발급 사용자", password, RoleType.GUEST);
+
+        LocalLoginRequest loginReq = new LocalLoginRequest(
+            email,
+            password
+        );
+
+        var loginResponse = given()
+            .contentType(ContentType.JSON)
+            .body(loginReq)
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(200)
+            .extract()
+            .as(TokenResponse.class);
+
+        user.softDelete();
+        userRepository.saveAndFlush(user);
+
+        RefreshTokenRequest refreshReq = new RefreshTokenRequest(loginResponse.refreshToken());
 
         given()
             .contentType(ContentType.JSON)

@@ -43,6 +43,9 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     private UserDetails toUserDetails(UserCredential credential) {
         User user = credential.getUser();
+        if (user.isDeleted()) {
+            throw new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + user.getId());
+        }
         Collection<GrantedAuthority> authorities = new LinkedHashSet<>();
         authorities.add(user.getRole().getAuthority());
         authorities.addAll(user.getPermissions()

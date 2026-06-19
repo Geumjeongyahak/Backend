@@ -57,7 +57,9 @@ public class LocalAuthService {
         }
         UserCredential credential = userCredentialService.getCredentialByCredentialEmailAndProvider(request.email(), ProviderType.LOCAL);
 
-        if (credential.getPasswordHash() == null || !passwordEncoder.matches(request.password(), credential.getPasswordHash())) {
+        if (credential.getUser().isDeleted()
+            || credential.getPasswordHash() == null
+            || !passwordEncoder.matches(request.password(), credential.getPasswordHash())) {
             throw new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
@@ -124,6 +126,14 @@ public class LocalAuthService {
 
         // 새로운 토큰 생성 (Refresh Token Rotation)
         User user = credential.getUser();
+        if (user.isDeleted()) {
+            log.warn(
+                "토큰 재발급 실패 - 비활성화된 사용자: credentialId={}, userId={}",
+                credentialId,
+                user.getId()
+            );
+            throw new InvalidRefreshTokenException();
+        }
         TokenResponse tokenResponse = createTokenResponse(user, credentialId);
 
         log.info("토큰 재발급 성공: credentialId={}, userId={}", credentialId, user.getId());
