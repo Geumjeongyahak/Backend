@@ -304,10 +304,10 @@ sequenceDiagram
 
 ---
 
-## 5. 사용자 삭제 `DELETE /api/v1/users/{userId}`
+## 5. 사용자 계정 비활성화 `DELETE /api/v1/users/{userId}`
 
 **권한** `ADMIN` | `user:manage:*`  
-**특이점** 하드 삭제. CASCADE로 `user_credentials`, `user_permissions` 함께 삭제되며 복구 불가
+**특이점** 사용자 행과 과거 이력을 보존하는 soft delete. 인증과 운영 대상 조회만 차단
 
 #### Request — Path Parameters
 
@@ -326,6 +326,8 @@ sequenceDiagram
     participant Controller as UserAdminController
     participant Service as UserCrudService
     participant DB as UserRepository
+    participant Event as EventPublisher
+    participant Auth as Auth Event Handler
 
     Client->>Security: DELETE /api/v1/users/1
     Security-->>Client: 403 (권한 없음)
@@ -333,17 +335,21 @@ sequenceDiagram
 
     Security->>Controller: 권한 통과
     Controller->>Service: deleteUserById(userId)
-    Service->>DB: existsById(userId)
+    Service->>DB: findByIdAndIsDeletedFalse(userId)
     alt 사용자 없음
-        DB-->>Service: false
         Service-->>Client: 404 RES-01-001
     end
 
     note over Service,DB: 트랜잭션 시작
-    Service->>DB: deleteById(userId)
-    note right of DB: [Side Effect] users DELETE
-    note right of DB: [Side Effect] user_credentials CASCADE DELETE
-    note right of DB: [Side Effect] user_permissions CASCADE DELETE
+    Service->>Service: 활성 과목 담당 여부 검사
+    alt 담당 중인 활성 과목 존재
+        Service-->>Client: 409 BIZ-01-006
+    end
+    Service->>DB: isDeleted=true, deletedAt=현재 시각
+    Service->>Event: UserDeactivatedEvent(userId)
+    Event->>Auth: 비활성화 이벤트 전달
+    Auth->>Auth: 사용자 Refresh Token 전체 폐기
+    note right of DB: user_credentials, user_permissions 및 기존 이력 보존
     note over Service,DB: 트랜잭션 커밋
 
     Controller-->>Client: 204 No Content

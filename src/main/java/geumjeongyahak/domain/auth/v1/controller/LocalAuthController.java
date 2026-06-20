@@ -26,7 +26,10 @@ import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
 public class LocalAuthController {
     private final LocalAuthService localLoginService;
 
-    @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인합니다.")
+    @Operation(
+        summary = "로그인",
+        description = "이메일과 비밀번호로 로그인합니다. 비활성화된 사용자는 로그인할 수 없습니다."
+    )
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(
             @Valid @RequestBody LocalLoginRequest request
@@ -35,7 +38,10 @@ public class LocalAuthController {
         return ResponseEntity.ok(localLoginService.login(request));
     }
 
-    @Operation(summary = "관리자 로그인", description = "관리자 페이지에서 사용할 ADMIN/MANAGER 전용 JWT 로그인을 수행합니다.")
+    @Operation(
+        summary = "관리자 로그인",
+        description = "관리자 페이지에서 사용할 ADMIN/MANAGER 전용 JWT 로그인을 수행합니다. 비활성화된 사용자는 로그인할 수 없습니다."
+    )
     @PostMapping("/admin/login")
     public ResponseEntity<TokenResponse> adminLogin(
             @Valid @RequestBody LocalLoginRequest request
@@ -53,7 +59,10 @@ public class LocalAuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(localLoginService.signup(request));
     }
 
-    @Operation(summary = "토큰 재발급", description = "Refresh Token으로 새로운 Access Token을 발급받습니다.")
+    @Operation(
+        summary = "토큰 재발급",
+        description = "Refresh Token으로 새로운 Access Token을 발급받습니다. 비활성 사용자이거나 폐기된 Refresh Token이면 재발급되지 않습니다."
+    )
     @PostMapping("/refresh")
     public ResponseEntity<TokenResponse> refreshToken(
             @Valid @RequestBody RefreshTokenRequest request

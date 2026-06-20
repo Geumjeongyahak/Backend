@@ -87,13 +87,15 @@ erDiagram
     files ||--o{ purchase_requests_items : "used as item receipt"
 
     %% 엔티티 정의
-    users {
-        bigint id PK
-        varchar name
-        varchar primary_email UK
-        varchar phone_number
-        varchar role
-    }
+      users {
+          bigint id PK
+          varchar name
+          varchar primary_email UK
+          varchar phone_number
+          varchar role
+          boolean is_deleted
+          timestamp deleted_at
+      }
 
     user_permissions {
         bigint id PK
@@ -254,8 +256,10 @@ erDiagram
 | email | VARCHAR(100) | UNIQUE, NULL | 이메일 주소 |
 | gmail | VARCHAR(100) | UNIQUE, NULL | Gmail 주소 (OAuth) |
 | password_hash | VARCHAR(512) | NULL | 암호화된 비밀번호 |
-| phone_number | VARCHAR(20) | NULL | 전화번호 |
-| client_id | VARCHAR(512) | NULL | OAuth Client ID |
+  | phone_number | VARCHAR(20) | NULL | 전화번호 |
+  | is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | 계정 비활성화 여부 |
+  | deleted_at | TIMESTAMP | NULL | 계정 비활성화 처리 시각 |
+  | client_id | VARCHAR(512) | NULL | OAuth Client ID |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 

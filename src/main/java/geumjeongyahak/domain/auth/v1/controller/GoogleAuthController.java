@@ -67,7 +67,10 @@ public class GoogleAuthController {
         }
     }
 
-    @Operation(summary = "Google 로그인", description = "tempToken으로 기존 Google 계정 로그인합니다.")
+    @Operation(
+        summary = "Google 로그인",
+        description = "tempToken으로 기존 Google 계정 로그인합니다. 연결된 사용자가 비활성화된 경우 로그인할 수 없습니다."
+    )
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(
             @Valid @RequestBody GoogleLoginRequest request
@@ -75,7 +78,10 @@ public class GoogleAuthController {
         return ResponseEntity.ok(googleAuthService.login(request.tempToken()));
     }
 
-    @Operation(summary = "Google 계정과 Local 계정 연결", description = "tempToken으로 Google 계정을 Local 계정과 연결합니다.")
+    @Operation(
+        summary = "Google 계정과 Local 계정 연결",
+        description = "tempToken으로 Google 계정을 Local 계정과 연결합니다. 비활성화된 Local 계정에는 연결할 수 없습니다."
+    )
     @PostMapping("/connect")
     public ResponseEntity<TokenResponse> connectLocalAccount(
             @Valid @RequestBody GoogleLoginRequest request
@@ -83,7 +89,10 @@ public class GoogleAuthController {
         return ResponseEntity.ok(googleAuthService.connectToLocalAccount(request));
     }
 
-    @Operation(summary = "Google 회원가입", description = "tempToken과 추가 정보로 Google 계정을 등록합니다.")
+    @Operation(
+        summary = "Google 회원가입",
+        description = "tempToken과 추가 정보로 Google 계정을 등록합니다. 동일 이메일의 비활성 계정이 존재하면 해당 계정을 재사용하거나 새로 가입할 수 없습니다."
+    )
     @PostMapping("/signup")
     public ResponseEntity<TokenResponse> signup(
             @Valid @RequestBody GoogleSignupRequest request
