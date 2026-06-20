@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.purchase_request.repository;
 
 import java.util.List;
+import java.util.Collection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
@@ -8,6 +9,11 @@ import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 public interface PurchaseRequestRepository extends JpaRepository<PurchaseRequest, Long> {
 
     long countByStatus(PurchaseRequestStatus status);
+
+    boolean existsByRequestedBy_IdAndStatusIn(
+        Long requestedById,
+        Collection<PurchaseRequestStatus> statuses
+    );
 
     List<PurchaseRequest> findAllByOrderByCreatedAtDesc();
 

@@ -23,6 +23,11 @@ public interface LessonExchangeProposalRepository
         Collection<LessonExchangeProposalStatus> statuses
     );
 
+    boolean existsByProposedBy_IdAndStatus(
+        Long proposedById,
+        LessonExchangeProposalStatus status
+    );
+
     Optional<LessonExchangeProposal> findByIdAndRequest_Id(Long proposalId, Long requestId);
 
     List<LessonExchangeProposal> findAllByRequest_IdAndStatusNotOrderByCreatedAtDesc(

@@ -6,12 +6,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
+import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.users.service.UserCrudService;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UpdateUserRequest;
@@ -176,9 +178,14 @@ public class UserAdminController {
 
             동작 방식:
             - 활성 사용자만 비활성화 대상으로 조회합니다.
+            - 요청자 본인의 계정은 비활성화할 수 없습니다.
+            - 마지막 활성 관리자 계정은 비활성화할 수 없습니다.
             - 담당 중인 활성 과목이 있으면 비활성화를 거부합니다.
+            - PENDING 상태의 교원 신청이나 결석 요청이 있으면 비활성화를 거부합니다.
+            - PENDING 또는 APPROVED 상태의 구입 요청이 있으면 비활성화를 거부합니다.
+            - PENDING 또는 APPROVED 상태의 수업 교환 요청이나 ACTIVE 상태의 수업 교환 제안이 있으면 비활성화를 거부합니다.
             - users.is_deleted를 true로 변경하고 deleted_at에 처리 시각을 기록합니다.
-            - 사용자 비활성화 이벤트를 발행하여 모든 Refresh Token을 즉시 폐기합니다.
+            - 사용자 비활성화 이벤트를 발행하여 모든 Refresh Token과 활성 Push 구독을 즉시 폐기합니다.
 
             사이드 이펙트:
             - 사용자 레코드, 자격 증명, 직접 권한은 삭제하지 않고 보존합니다.
@@ -192,10 +199,11 @@ public class UserAdminController {
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> deleteUser(
             @Parameter(description = "사용자 ID", example = "1")
-            @PathVariable Long userId
+            @PathVariable Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("DELETE /api/v1/users/{} - 사용자 삭제 요청", userId);
-        userCrudService.deleteUserById(userId);
+        userCrudService.deleteUserById(userDetails.getUserId(), userId);
         return ResponseEntity.noContent().build();
     }
 }

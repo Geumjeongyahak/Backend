@@ -15,7 +15,10 @@ public enum UserErrorCode implements ErrorCode {
     ROLE_NOT_ASSIGNED(HttpStatus.BAD_REQUEST, "VAL-01-001", "사용자에게 해당 역할이 부여되어 있지 않습니다."),
     CANNOT_DELETE_ROLE_IN_USE(HttpStatus.BAD_REQUEST, "BIZ-01-004", "해당 역할이 사용자에게 할당되어 있어 삭제할 수 없습니다."),
     CANNOT_CHANGE_ROLE_WITH_ACTIVE_ASSIGNMENT(HttpStatus.CONFLICT, "BIZ-01-005", "담당 중인 활성 과목이 있는 사용자는 교사 배정이 불가능한 역할로 변경할 수 없습니다."),
-    CANNOT_DELETE_USER_WITH_ACTIVE_ASSIGNMENT(HttpStatus.CONFLICT, "BIZ-01-006", "담당 중인 활성 과목이 있는 사용자는 삭제할 수 없습니다.");
+    CANNOT_DELETE_USER_WITH_ACTIVE_ASSIGNMENT(HttpStatus.CONFLICT, "BIZ-01-006", "담당 중인 활성 과목이 있는 사용자는 삭제할 수 없습니다."),
+    CANNOT_DEACTIVATE_SELF(HttpStatus.CONFLICT, "BIZ-01-007", "본인 계정은 비활성화할 수 없습니다."),
+    CANNOT_DEACTIVATE_LAST_ADMIN(HttpStatus.CONFLICT, "BIZ-01-008", "마지막 활성 관리자 계정은 비활성화할 수 없습니다."),
+    CANNOT_DEACTIVATE_USER_WITH_ACTIVE_WORKFLOW(HttpStatus.CONFLICT, "BIZ-01-009", "처리 중인 신청 또는 요청이 있는 사용자는 비활성화할 수 없습니다.");
 
     private final HttpStatus status;
     private final String code;

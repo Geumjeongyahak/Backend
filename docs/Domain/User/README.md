@@ -328,27 +328,42 @@ sequenceDiagram
     participant DB as UserRepository
     participant Event as EventPublisher
     participant Auth as Auth Event Handler
+    participant Push as Notification Event Handler
 
     Client->>Security: DELETE /api/v1/users/1
     Security-->>Client: 403 (권한 없음)
     note right of Security: ADMIN 또는 user:manage:* 없으면 차단
 
     Security->>Controller: 권한 통과
-    Controller->>Service: deleteUserById(userId)
+    Controller->>Service: deleteUserById(requesterId, userId)
+    Service->>Service: 본인 계정 여부 검사
+    alt 본인 계정
+        Service-->>Client: 409 BIZ-01-007
+    end
     Service->>DB: findByIdAndIsDeletedFalse(userId)
     alt 사용자 없음
         Service-->>Client: 404 RES-01-001
     end
 
     note over Service,DB: 트랜잭션 시작
+    Service->>DB: 마지막 활성 관리자 여부 검사
+    alt 마지막 활성 관리자
+        Service-->>Client: 409 BIZ-01-008
+    end
     Service->>Service: 활성 과목 담당 여부 검사
     alt 담당 중인 활성 과목 존재
         Service-->>Client: 409 BIZ-01-006
+    end
+    Service->>Service: PENDING 신청·요청, APPROVED 구입·교환 요청 및 ACTIVE 교환 제안 검사
+    alt 처리 중인 신청 또는 요청 존재
+        Service-->>Client: 409 BIZ-01-009
     end
     Service->>DB: isDeleted=true, deletedAt=현재 시각
     Service->>Event: UserDeactivatedEvent(userId)
     Event->>Auth: 비활성화 이벤트 전달
     Auth->>Auth: 사용자 Refresh Token 전체 폐기
+    Event->>Push: 비활성화 이벤트 전달
+    Push->>Push: 활성 Push 구독 전체 해제
     note right of DB: user_credentials, user_permissions 및 기존 이력 보존
     note over Service,DB: 트랜잭션 커밋
 

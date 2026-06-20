@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.users.repository;
 
 import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.auth.enums.RoleType;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +24,7 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     boolean existsByDepartmentIdAndIsDeletedFalse(Long departmentId);
     boolean existsByIdAndDepartmentIdAndIsDeletedFalse(Long userId, Long departmentId);
     long countByIsDeletedFalse();
+    long countByRoleAndIsDeletedFalse(RoleType role);
     long countByDepartmentIdAndIsDeletedFalse(Long departmentId);
     List<User> findAllByDepartmentIdAndIsDeletedFalse(Long departmentId);
     List<User> findAllByIsDeletedFalse(Sort sort);

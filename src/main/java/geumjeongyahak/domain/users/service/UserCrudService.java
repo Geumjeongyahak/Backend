@@ -7,10 +7,15 @@ import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
 import geumjeongyahak.domain.department.service.DepartmentPermissionProxyService;
 import geumjeongyahak.domain.department.service.DepartmentProxyService;
+import geumjeongyahak.domain.purchase_request.service.PurchaseRequestProxyService;
+import geumjeongyahak.domain.request.service.AbsenceRequestProxyService;
+import geumjeongyahak.domain.request.service.LessonExchangeRequestProxyService;
 import geumjeongyahak.domain.subject.service.SubjectProxyService;
+import geumjeongyahak.domain.teacher_application.service.TeacherApplicationProxyService;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.event.UserDeactivatedEvent;
 import geumjeongyahak.domain.users.exception.DuplicateEmailException;
+import geumjeongyahak.domain.users.exception.UserDeactivationConflictException;
 import geumjeongyahak.domain.users.exception.UserNotFoundException;
 import geumjeongyahak.domain.users.exception.UserTeacherAssignmentConflictException;
 import geumjeongyahak.domain.users.repository.UserRepository;
@@ -48,6 +53,10 @@ public class UserCrudService {
     private final DepartmentPermissionProxyService departmentPermissionProxyService;
     private final UserPermissionService userPermissionService;
     private final SubjectProxyService subjectProxyService;
+    private final TeacherApplicationProxyService teacherApplicationProxyService;
+    private final PurchaseRequestProxyService purchaseRequestProxyService;
+    private final AbsenceRequestProxyService absenceRequestProxyService;
+    private final LessonExchangeRequestProxyService lessonExchangeRequestProxyService;
     private final EventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
@@ -262,18 +271,44 @@ public class UserCrudService {
     }
 
     @Transactional
-    public void deleteUserById(Long userId) {
+    public void deleteUserById(Long requesterId, Long userId) {
         log.debug("사용자 비활성화 요청 - ID: {}", userId);
+        validateNotSelfDeactivation(requesterId, userId);
         User user = userRepository.findByIdAndIsDeletedFalse(userId)
             .orElseThrow(() -> {
                 log.debug("사용자 비활성화 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
                 return new UserNotFoundException(userId);
             });
-        if (subjectProxyService.existsActiveSubjectByTeacherId(userId)) {
-            throw UserTeacherAssignmentConflictException.deletionBlocked();
-        }
+        validateUserDeactivation(user);
         user.softDelete();
         eventPublisher.publish(new UserDeactivatedEvent(userId));
         log.info("사용자 비활성화 완료 - ID: {}", userId);
+    }
+
+    private void validateNotSelfDeactivation(Long requesterId, Long targetUserId) {
+        if (requesterId.equals(targetUserId)) {
+            throw UserDeactivationConflictException.selfDeactivationBlocked();
+        }
+    }
+
+    private void validateUserDeactivation(User user) {
+        Long userId = user.getId();
+        if (user.getRole() == RoleType.ADMIN
+            && userRepository.countByRoleAndIsDeletedFalse(RoleType.ADMIN) <= 1) {
+            throw UserDeactivationConflictException.lastAdminDeactivationBlocked();
+        }
+        if (subjectProxyService.existsActiveSubjectByTeacherId(userId)) {
+            throw UserTeacherAssignmentConflictException.deletionBlocked();
+        }
+        if (hasActiveWorkflow(userId)) {
+            throw UserDeactivationConflictException.activeWorkflowExists();
+        }
+    }
+
+    private boolean hasActiveWorkflow(Long userId) {
+        return teacherApplicationProxyService.existsPendingByApplicantId(userId)
+            || purchaseRequestProxyService.existsActiveByRequesterId(userId)
+            || absenceRequestProxyService.existsPendingByRequesterId(userId)
+            || lessonExchangeRequestProxyService.existsActiveExchangeByUserId(userId);
     }
 }
