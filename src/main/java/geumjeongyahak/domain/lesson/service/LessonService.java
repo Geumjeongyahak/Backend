@@ -35,8 +35,7 @@ import geumjeongyahak.domain.subject.entity.Subject;
 import geumjeongyahak.domain.subject.exception.SubjectNotFoundException;
 import geumjeongyahak.domain.subject.repository.SubjectRepository;
 import geumjeongyahak.domain.users.entity.User;
-import geumjeongyahak.domain.users.exception.UserNotFoundException;
-import geumjeongyahak.domain.users.repository.UserRepository;
+import geumjeongyahak.domain.users.service.UserProxyService;
 
 @Slf4j
 @Service
@@ -46,7 +45,7 @@ public class LessonService {
 
     private final LessonRepository lessonRepository;
     private final SubjectRepository subjectRepository;
-    private final UserRepository userRepository;
+    private final UserProxyService userProxyService;
     private final EventPublisher eventPublisher;
     private final DailyScheduleProxyService dailyScheduleProxyService;
 
@@ -64,11 +63,7 @@ public class LessonService {
                 return new SubjectNotFoundException(request.subjectId());
             });
 
-        User teacher = userRepository.findById(request.teacherId())
-            .orElseThrow(() -> {
-                log.info("수업 생성 실패 - 교사를 찾을 수 없습니다. ID: {}", request.teacherId());
-                return new UserNotFoundException(request.teacherId());
-            });
+        User teacher = userProxyService.getById(request.teacherId());
         validateTeacherAssignable(teacher);
 
         // 같은 teacher + 같은 date 기준 겹치는 시간이 있는지 확인
@@ -191,11 +186,7 @@ public class LessonService {
 
         User teacher = lesson.getTeacher();
         if (!teacher.getId().equals(newTeacherId)) {
-            teacher = userRepository.findById(newTeacherId)
-                .orElseThrow(() -> {
-                    log.info("수업 수정 실패 - 교사를 찾을 수 없습니다. ID: {}", newTeacherId);
-                    return new UserNotFoundException(newTeacherId);
-                });
+            teacher = userProxyService.getById(newTeacherId);
             validateTeacherAssignable(teacher);
         }
 
@@ -251,8 +242,7 @@ public class LessonService {
 
         Subject subject = subjectRepository.findById(subjectId)
             .orElseThrow(() -> new SubjectNotFoundException(subjectId));
-        User teacher = userRepository.findById(teacherId)
-            .orElseThrow(() -> new UserNotFoundException(teacherId));
+        User teacher = userProxyService.getById(teacherId);
         validateTeacherAssignable(teacher);
 
         List<LocalDate> dates = startAt.datesUntil(endAt.plusDays(1))
@@ -305,8 +295,7 @@ public class LessonService {
         LocalDate from
     ) {
         log.debug("과목 담당 교사 배정에 따른 수업 교사 변경 (subjectId={}, teacherId={})", subjectId, teacherId);
-        User newTeacher = userRepository.findById(teacherId)
-            .orElseThrow(() -> new UserNotFoundException(teacherId));
+        User newTeacher = userProxyService.getById(teacherId);
         validateTeacherAssignable(newTeacher);
 
         List<Lesson> lessons = lessonRepository

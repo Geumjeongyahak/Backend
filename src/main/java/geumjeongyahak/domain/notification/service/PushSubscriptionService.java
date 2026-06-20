@@ -26,7 +26,7 @@ public class PushSubscriptionService {
     @Transactional
     public PushSubscriptionResponse subscribe(Long userId, SubscribePushRequest request) {
         String token = normalizeToken(request.token());
-        User user = userProxyService.getReferenceById(userId);
+        User user = userProxyService.getById(userId);
 
         PushSubscription subscription = pushSubscriptionRepository.findByToken(token)
             .map(existing -> {

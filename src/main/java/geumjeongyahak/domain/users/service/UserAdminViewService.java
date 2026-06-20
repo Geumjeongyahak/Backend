@@ -36,7 +36,9 @@ public class UserAdminViewService {
     private final UserPermissionService userPermissionService;
 
     public AdminPage<AdminUserRow> getUsers(UserFilter filter) {
-        List<AdminUserRow> rows = userRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+        List<AdminUserRow> rows = userRepository.findAllByIsDeletedFalse(
+                Sort.by(Sort.Direction.DESC, "createdAt")
+            )
             .stream()
             .filter(user -> matchesKeyword(user, filter.keyword()))
             .filter(user -> isBlank(filter.role()) || user.getRole().name().equals(filter.role()))

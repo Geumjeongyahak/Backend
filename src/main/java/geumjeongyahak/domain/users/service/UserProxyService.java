@@ -28,57 +28,74 @@ public class UserProxyService {
 
     @Transactional(readOnly = true)
     public boolean existsById(Long userId) {
-        return userRepository.existsById(userId);
+        return userRepository.existsByIdAndIsDeletedFalse(userId);
     }
 
     @Transactional(readOnly = true)
-    public boolean existsByEmail(String email) {
+    public boolean existsByEmailIncludingDeleted(String email) {
         return userRepository.existsByEmail(email);
     }
 
     @Transactional(readOnly = true)
     public boolean existsByDepartmentId(Long departmentId) {
-        return userRepository.existsByDepartmentId(departmentId);
+        return userRepository.existsByDepartmentIdAndIsDeletedFalse(departmentId);
     }
 
     @Transactional(readOnly = true)
     public boolean existsByClassroomId(Long classroomId) {
-        return userRepository.existsByClassroomId(classroomId);
+        return userRepository.existsByClassroomIdAndIsDeletedFalse(classroomId);
     }
     
 
     @Transactional(readOnly = true)
     public boolean existsByIdAndDepartmentId(Long userId, Long departmentId) {
-        return userRepository.existsByIdAndDepartmentId(userId, departmentId);
-    }
-
-    @Transactional(readOnly = true)
-    public User getReferenceById(Long userId) {
-        return userRepository.getReferenceById(userId);
+        return userRepository.existsByIdAndDepartmentIdAndIsDeletedFalse(userId, departmentId);
     }
 
     @Transactional(readOnly = true)
     public Optional<User> findById(Long userId) {
-        return userRepository.findById(userId);
+        return userRepository.findByIdAndIsDeletedFalse(userId);
     }
 
     @Transactional(readOnly = true)
     public User getById(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+        return userRepository.findByIdAndIsDeletedFalse(userId)
+            .orElseThrow(() -> {
+                log.info("활성 사용자 조회 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
+                return new UserNotFoundException(userId);
+            });
     }
 
     @Transactional(readOnly = true)
-    public java.util.List<User> getAllByDepartmentId(Long departmentId) {
-        return userRepository.findAllByDepartmentId(departmentId);
+    public Optional<User> findByIdIncludingDeleted(Long userId) {
+        return userRepository.findById(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public User getByIdIncludingDeleted(Long userId) {
+        return userRepository.findById(userId)
+            .orElseThrow(() -> {
+                log.info("사용자 이력 조회 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
+                return new UserNotFoundException(userId);
+            });
+    }
+
+    @Transactional(readOnly = true)
+    public List<User> getAllByDepartmentId(Long departmentId) {
+        return userRepository.findAllByDepartmentIdAndIsDeletedFalse(departmentId);
     }
 
     @Transactional(readOnly = true)
     public List<User> getTeacherCandidatesOrderByName() {
-        return userRepository.findAll(Sort.by(Sort.Direction.ASC, "name"))
+        return userRepository.findAllByIsDeletedFalse(Sort.by(Sort.Direction.ASC, "name"))
             .stream()
             .filter(user -> TEACHER_ROLES.contains(user.getRole()))
             .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public long countActiveUsersByDepartmentId(Long departmentId) {
+        return userRepository.countByDepartmentIdAndIsDeletedFalse(departmentId);
     }
 
     @Transactional

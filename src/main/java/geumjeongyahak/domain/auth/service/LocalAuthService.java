@@ -77,7 +77,7 @@ public class LocalAuthService {
     public TokenResponse signup(LocalSignupRequest request) {
         log.debug("회원가입 시도: {}", request.email());
 
-        if (request.email() != null && userProxyService.existsByEmail(request.email())) {
+        if (request.email() != null && userProxyService.existsByEmailIncludingDeleted(request.email())) {
             throw new DuplicateEmailException(request.email());
         }
 

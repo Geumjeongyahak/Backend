@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.time.LocalDate;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
 
@@ -69,6 +70,15 @@ class TeacherContactListTest extends UserBaseTest {
             today.minusDays(10),
             today.minusDays(1)
         );
+        User deactivatedTeacher = createTeacherContact(
+            "contact-deactivated@test.com",
+            "Deactivated Teacher",
+            "010-9999-0000",
+            today.minusDays(1),
+            today.plusDays(1)
+        );
+        deactivatedTeacher.softDelete();
+        userRepository.save(deactivatedTeacher);
 
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
@@ -78,6 +88,7 @@ class TeacherContactListTest extends UserBaseTest {
             .statusCode(200)
             .body("name", hasItems("Current Teacher", "Open Ended Teacher"))
             .body("name", not(hasItems("Future Teacher", "Expired Teacher")))
+            .body("name", not(hasItem("Deactivated Teacher")))
             .body("classroomName", hasItems("벚꽃반"))
             .body("phoneNumber", hasItems("010-1111-2222", "010-3333-4444"));
     }
@@ -103,7 +114,7 @@ class TeacherContactListTest extends UserBaseTest {
             .statusCode(401);
     }
 
-    private void createTeacherContact(
+    private User createTeacherContact(
         String email,
         String name,
         String phoneNumber,
@@ -117,5 +128,6 @@ class TeacherContactListTest extends UserBaseTest {
         user.setClassroom(classroomRepository.findById(1L).orElseThrow());
         userRepository.save(user);
         userTestHelper.setUser(email);
+        return user;
     }
 }

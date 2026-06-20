@@ -5,6 +5,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import geumjeongyahak.domain.auth.enums.RoleType;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
@@ -71,6 +72,56 @@ class UserReadTest extends UserBaseTest {
             .get("/{userId}", nonExistentId)
         .then()
             .statusCode(404)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("비활성화된 User는 상세 조회할 수 없다(404 Not Found)")
+    void getUserById_DeactivatedUser() {
+        var user = userTestHelper.createTestUser(
+            "deactivated-read@test.com",
+            "Deactivated Read User",
+            "password123!",
+            RoleType.GUEST
+        );
+        jdbcTemplate.update(
+            "UPDATE users SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?",
+            user.getId()
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/{userId}", user.getId())
+        .then()
+            .statusCode(404)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("비활성화된 User는 사용자 목록에서 제외된다")
+    void getUsers_ExcludesDeactivatedUser() {
+        var user = userTestHelper.createTestUser(
+            "deactivated-list@test.com",
+            "Deactivated List User",
+            "password123!",
+            RoleType.GUEST
+        );
+        jdbcTemplate.update(
+            "UPDATE users SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?",
+            user.getId()
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .queryParam("name", "Deactivated List User")
+            .queryParam("size", 20)
+        .when()
+            .get()
+        .then()
+            .statusCode(200)
+            .body("content", empty())
+            .body("totalElements", equalTo(0))
             .log().all();
     }
 

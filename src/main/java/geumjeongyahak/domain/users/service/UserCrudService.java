@@ -64,7 +64,7 @@ public class UserCrudService {
         log.debug("전체 사용자 목록 조회 요청 - role: {}, name: {}, currentTeacher: {}",
             request.getRole(), request.getName(), request.getCurrentTeacher());
 
-        Specification<User> spec = Specification.allOf();
+        Specification<User> spec = Specification.allOf(UserSpecs.isActive());
 
         if (request.getRole() != null) {
             spec = spec.and(UserSpecs.hasRole(RoleType.valueOf(request.getRole())));
@@ -94,7 +94,7 @@ public class UserCrudService {
     public UserDetailResponse createUser(CreateUserRequest request) {
         log.debug("사용자 생성 요청 - email: {}", request.email());
 
-        if (userProxyService.existsByEmail(request.email())) {
+        if (userProxyService.existsByEmailIncludingDeleted(request.email())) {
             log.debug("사용자 생성 실패 - 중복된 Email: {}", request.email());
             throw new DuplicateEmailException(request.email());
         }
@@ -128,7 +128,7 @@ public class UserCrudService {
     public UserDetailResponse updateUser(Long userId, UpdateUserRequest request) {
         log.debug("사용자 수정 요청 - ID: {}", userId);
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndIsDeletedFalse(userId)
             .orElseThrow(() -> {
                 log.debug("사용자 수정 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
                 return new UserNotFoundException(userId);
@@ -151,7 +151,7 @@ public class UserCrudService {
     public UserDetailResponse updateUser(Long userId, UpdateSelfRequest request) {
         log.debug("본인 사용자 수정 요청 - ID: {}", userId);
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndIsDeletedFalse(userId)
                 .orElseThrow(() -> {
                     log.debug("본인 사용자 수정 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
                     return new UserNotFoundException(userId);
@@ -264,8 +264,7 @@ public class UserCrudService {
     @Transactional
     public void deleteUserById(Long userId) {
         log.debug("사용자 비활성화 요청 - ID: {}", userId);
-        User user = userRepository.findById(userId)
-            .filter(foundUser -> !foundUser.isDeleted())
+        User user = userRepository.findByIdAndIsDeletedFalse(userId)
             .orElseThrow(() -> {
                 log.debug("사용자 비활성화 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
                 return new UserNotFoundException(userId);

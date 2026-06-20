@@ -66,7 +66,7 @@ class AdminDashboardServiceTest {
 
     @Test
     void getSummary_includesLessonCounts() {
-        given(userRepository.count()).willReturn(4L);
+        given(userRepository.countByIsDeletedFalse()).willReturn(4L);
         given(departmentRepository.count()).willReturn(6L);
         given(classroomRepository.count()).willReturn(9L);
         given(purchaseRequestRepository.countByStatus(PurchaseRequestStatus.PENDING)).willReturn(2L);

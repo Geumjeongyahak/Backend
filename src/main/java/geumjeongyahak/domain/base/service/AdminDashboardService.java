@@ -43,7 +43,7 @@ public class AdminDashboardService {
         LocalDate weekEnd = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
 
         return new AdminDashboardSummary(
-            userRepository.count(),
+            userRepository.countByIsDeletedFalse(),
             departmentRepository.count(),
             classroomRepository.count(),
             purchaseRequestRepository.countByStatus(PurchaseRequestStatus.PENDING),
