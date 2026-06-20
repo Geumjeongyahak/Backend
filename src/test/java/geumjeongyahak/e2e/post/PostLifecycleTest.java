@@ -9,6 +9,7 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
+import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.channel.entity.Channel;
 import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
@@ -16,10 +17,14 @@ import geumjeongyahak.domain.channel.enums.ChannelBindingType;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.post.v1.dto.request.CreatePostRequest;
 import geumjeongyahak.domain.post.v1.dto.request.UpdatePostRequest;
+import geumjeongyahak.domain.users.repository.UserRepository;
 
 @DisplayName("E2E: Post 생명주기 테스트")
 @ResourceLock("post-e2e-shared-state")
 class PostLifecycleTest extends BasePostTest {
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Test
     @DisplayName("작성자는 게시글을 수정할 수 있다")
@@ -125,6 +130,28 @@ class PostLifecycleTest extends BasePostTest {
             .delete("/api/v1/channels/{channelId}/posts/{postId}", channelId, postId)
         .then()
             .statusCode(204);
+    }
+
+    @Test
+    @DisplayName("작성자 계정이 비활성화되어도 게시글 작성자 이력은 유지된다")
+    void getPost_afterAuthorDeactivated_keepsAuthorHistory() {
+        String authorKey = "postHistoryAuthor";
+        String authorToken = createToken(authorKey);
+        Long channelId = createAllAuthenticatedChannel();
+        Long postId = createPost(channelId, authorToken, "비활성 작성자 이력");
+
+        var author = userTestHelper.getUser(authorKey);
+        author.softDelete();
+        userRepository.saveAndFlush(author);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/api/v1/channels/{channelId}/posts/{postId}", channelId, postId)
+        .then()
+            .statusCode(200)
+            .body("authorId", equalTo(author.getId().intValue()))
+            .body("authorName", equalTo(author.getName()));
     }
 
     private String createToken(String username) {

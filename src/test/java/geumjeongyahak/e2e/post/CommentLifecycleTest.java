@@ -9,6 +9,7 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
+import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.channel.entity.Channel;
 import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
@@ -16,10 +17,14 @@ import geumjeongyahak.domain.channel.enums.ChannelBindingType;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.comment.v1.dto.request.CreateCommentRequest;
 import geumjeongyahak.domain.post.v1.dto.request.CreatePostRequest;
+import geumjeongyahak.domain.users.repository.UserRepository;
 
 @DisplayName("E2E: Comment 생명주기 테스트")
 @ResourceLock("post-e2e-shared-state")
 class CommentLifecycleTest extends BasePostTest {
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Test
     @DisplayName("작성자는 자신의 댓글을 삭제할 수 있고 목록에서 사라진다")
@@ -99,6 +104,35 @@ class CommentLifecycleTest extends BasePostTest {
         .then()
             .statusCode(400)
             .body("code", equalTo("VAL002"));
+    }
+
+    @Test
+    @DisplayName("작성자 계정이 비활성화되어도 댓글 작성자 이력은 유지된다")
+    void getComments_afterAuthorDeactivated_keepsAuthorHistory() {
+        String postAuthorToken = createToken("commentHistoryPostAuthor");
+        String commentAuthorKey = "commentHistoryAuthor";
+        String commentAuthorToken = createToken(commentAuthorKey);
+        Long channelId = createAllAuthenticatedChannel();
+        Long postId = createPost(channelId, postAuthorToken);
+        Long commentId = createComment(
+            channelId,
+            postId,
+            commentAuthorToken,
+            "비활성 댓글 작성자 이력"
+        );
+
+        var commentAuthor = userTestHelper.getUser(commentAuthorKey);
+        commentAuthor.softDelete();
+        userRepository.saveAndFlush(commentAuthor);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/api/v1/channels/{channelId}/posts/{postId}/comments", channelId, postId)
+        .then()
+            .statusCode(200)
+            .body("find { it.id == " + commentId + " }.authorId", equalTo(commentAuthor.getId().intValue()))
+            .body("find { it.id == " + commentId + " }.authorName", equalTo(commentAuthor.getName()));
     }
 
     private String createToken(String username) {

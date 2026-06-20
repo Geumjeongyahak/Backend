@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import geumjeongyahak.domain.auth.enums.RoleType;
 
 @DisplayName("E2E: 수업 조회 테스트")
@@ -19,6 +20,9 @@ public class LessonReadTest extends LessonBaseTest {
 
     @Autowired
     private DailyScheduleRepository dailyScheduleRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     // [전체 수업 목록 조회 테스트]
 
@@ -275,6 +279,47 @@ public class LessonReadTest extends LessonBaseTest {
             .body("isExchanged", is(false))
             .body("isAbsent", is(false))
             .log().all();
+    }
+
+    @Test
+    @DisplayName("교사 계정이 비활성화되어도 수업 교사 이력은 유지된다")
+    void getLessonDetail_afterTeacherDeactivated_keepsTeacherHistory() {
+        String teacherName = jdbcTemplate.queryForObject(
+            "SELECT name FROM users WHERE id = ?",
+            String.class,
+            TEACHER2_ID
+        );
+        long lessonId = createTrackedLessonFixture(
+            "read-detail-deactivated-teacher",
+            TEACHER2_ID,
+            "2042-07-21",
+            "MONDAY",
+            1,
+            "2027-07-21",
+            "19:20:00",
+            "20:00:00",
+            1
+        );
+
+        try {
+            jdbcTemplate.update(
+                "UPDATE users SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?",
+                TEACHER2_ID
+            );
+
+            given()
+                .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .when()
+                .get("/{lessonId}", lessonId)
+            .then()
+                .statusCode(200)
+                .body("teacherName", is(teacherName));
+        } finally {
+            jdbcTemplate.update(
+                "UPDATE users SET is_deleted = FALSE, deleted_at = NULL WHERE id = ?",
+                TEACHER2_ID
+            );
+        }
     }
 
     @Test
