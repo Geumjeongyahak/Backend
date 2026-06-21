@@ -30,6 +30,9 @@ public record UserDetailResponse(
     @Schema(description = "연락 가능한 전화번호", example = "010-1234-5678")
     String phoneNumber,
 
+    @Schema(description = "프로필 이미지 URL", example = "https://example.com/profile.png", nullable = true)
+    String profileImageUrl,
+
     @Schema(description = "사용자 기본 역할(role)", examples = { "ADMIN", "MANAGER", "VOLUNTEER", "GUEST" })
     String role,
 
@@ -84,6 +87,7 @@ public record UserDetailResponse(
             user.getName(),
             user.getEmail(),
             user.getPhoneNumber(),
+            user.getProfileImageUrl(),
             user.getRole().name(),
             user.getDepartment() != null ? DepartmentSimpleResponse.from(user.getDepartment()) : null,
             user.getClassroom() != null ? ClassroomSummaryResponse.from(user.getClassroom()) : null,

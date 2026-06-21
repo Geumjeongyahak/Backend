@@ -55,6 +55,7 @@ public class FileController {
             + "사용 시점은 마이페이지 또는 사용자 정보 수정 화면에서 프로필 사진을 변경할 때입니다. "
             + "업로드된 이미지는 서버에서 256x256 PNG로 리사이즈된 뒤 profiles 디렉터리에 저장되며, "
             + "files 테이블에는 변환된 파일의 메타데이터가 기록됩니다. "
+            + "업로드가 완료되면 현재 사용자의 profileImageUrl도 업로드된 이미지 URL로 갱신됩니다. "
             + "응답에는 즉시 화면에 반영할 수 있는 공개 URL과 저장된 파일 메타데이터가 포함됩니다."
     )
     @PostMapping(value = "/images/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

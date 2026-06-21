@@ -38,6 +38,7 @@ class UserCreateTest extends UserBaseTest {
             .body("id", notNullValue())
             .body("email", equalTo(uniqueUsername + "@test.com"))
             .body("name", equalTo("Manager User"))
+            .body("profileImageUrl", nullValue())
             .body("birthDate", equalTo(DEFAULT_BIRTH_DATE.toString()))
             .body("role", equalTo("MANAGER"))
             .log().all()

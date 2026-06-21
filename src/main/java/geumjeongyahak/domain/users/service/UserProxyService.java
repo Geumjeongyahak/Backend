@@ -102,4 +102,11 @@ public class UserProxyService {
     public User save(User user) {
         return userRepository.save(user);
     }
+
+    @Transactional
+    public void updateProfileImageUrl(Long userId, String profileImageUrl) {
+        User user = getById(userId);
+        user.setProfileImageUrl(profileImageUrl);
+        log.info("사용자 프로필 이미지 URL 갱신 완료 - userId={}", userId);
+    }
 }

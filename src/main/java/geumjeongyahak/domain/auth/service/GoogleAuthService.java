@@ -56,7 +56,11 @@ public class GoogleAuthService {
 
         log.info("Google 콜백 처리: email={}, signupRequired={}", userInfo.email(), signupRequired);
         return new GoogleCallbackResponse(
-            jwtTokenProvider.createOAuth2TempToken(userInfo.sub(), userInfo.email()),
+            jwtTokenProvider.createOAuth2TempToken(
+                userInfo.sub(),
+                userInfo.email(),
+                userInfo.profileImageUrl()
+            ),
             signupRequired,
             connectedToLocal,
             userInfo.email(),
@@ -67,8 +71,8 @@ public class GoogleAuthService {
 
     @Transactional
     public TokenResponse login(String tempToken) {
-        String[] parts = extractTempToken(tempToken);
-        String googleSub = parts[0];
+        GoogleTempTokenClaims claims = extractTempToken(tempToken);
+        String googleSub = claims.googleSub();
 
         UserCredential credential = userCredentialService
             .getCredentialByProviderUserIdAndProvider(googleSub, ProviderType.GOOGLE);
@@ -82,9 +86,9 @@ public class GoogleAuthService {
 
     @Transactional
     public TokenResponse connectToLocalAccount(GoogleLoginRequest request) {
-        String[] parts = extractTempToken(request.tempToken());
-        String googleSub = parts[0];
-        String email = parts[1];
+        GoogleTempTokenClaims claims = extractTempToken(request.tempToken());
+        String googleSub = claims.googleSub();
+        String email = claims.email();
 
         User user = userCredentialService
             .findOptionalByCredentialEmailAndProvider(email, ProviderType.LOCAL)
@@ -106,9 +110,9 @@ public class GoogleAuthService {
         String phoneNumber,
         LocalDate birthDate
     ) {
-        String[] parts = extractTempToken(tempToken);
-        String googleSub = parts[0];
-        String email = parts[1];
+        GoogleTempTokenClaims claims = extractTempToken(tempToken);
+        String googleSub = claims.googleSub();
+        String email = claims.email();
 
         User user = userCredentialService
             .findOptionalByCredentialEmailAndProvider(email, ProviderType.LOCAL)
@@ -117,6 +121,7 @@ public class GoogleAuthService {
                 .name(name)
                 .email(email)
                 .phoneNumber(phoneNumber)
+                .profileImageUrl(claims.profileImageUrl())
                 .residentRegistrationNumberPrefix(
                     UserBirthDateConverter.toResidentRegistrationNumberPrefix(birthDate)
                 )
@@ -142,17 +147,18 @@ public class GoogleAuthService {
         );
     }
 
-    private String[] extractTempToken(String tempToken) {
+    private GoogleTempTokenClaims extractTempToken(String tempToken) {
         if (!jwtTokenProvider.validate(tempToken)) {
             throw new OAuthProcessingException("유효하지 않은 임시 토큰입니다.");
         }
         String googleSub = jwtTokenProvider.getSubject(tempToken);
         String email = jwtTokenProvider.getEmail(tempToken);
+        String profileImageUrl = jwtTokenProvider.getProfileImageUrl(tempToken);
 
         if (googleSub == null || email == null) {
             throw new OAuthProcessingException("임시 토큰에서 필요한 정보를 추출할 수 없습니다.");
         }
-        return new String[]{googleSub, email};
+        return new GoogleTempTokenClaims(googleSub, email, profileImageUrl);
     }
 
     private void validateActiveUser(User user) {
@@ -160,5 +166,12 @@ public class GoogleAuthService {
             log.warn("Google 인증 실패 - 비활성화된 사용자: userId={}", user.getId());
             throw new OAuthProcessingException("비활성화된 사용자입니다.");
         }
+    }
+
+    private record GoogleTempTokenClaims(
+        String googleSub,
+        String email,
+        String profileImageUrl
+    ) {
     }
 }

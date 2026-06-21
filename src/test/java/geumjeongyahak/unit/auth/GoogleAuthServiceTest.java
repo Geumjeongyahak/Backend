@@ -13,6 +13,8 @@ import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.auth.exception.OAuthProcessingException;
 import geumjeongyahak.domain.auth.external.GoogleApiClient;
+import geumjeongyahak.domain.auth.external.dto.GoogleTokenResponse;
+import geumjeongyahak.domain.auth.external.dto.GoogleUserInfo;
 import geumjeongyahak.domain.auth.service.GoogleAuthService;
 import geumjeongyahak.domain.auth.service.RefreshTokenService;
 import geumjeongyahak.domain.auth.service.UserCredentialService;
@@ -35,6 +37,7 @@ class GoogleAuthServiceTest {
     private static final String TEMP_TOKEN = "google-temp-token";
     private static final String GOOGLE_SUB = "google-user-id";
     private static final String EMAIL = "deactivated-google@test.com";
+    private static final String PROFILE_IMAGE_URL = "https://example.com/google-profile.png";
 
     @Mock
     private GoogleOAuth2Properties googleProperties;
@@ -68,13 +71,42 @@ class GoogleAuthServiceTest {
             .build();
         deactivatedUser.softDelete();
 
-        given(jwtTokenProvider.validate(TEMP_TOKEN)).willReturn(true);
-        given(jwtTokenProvider.getSubject(TEMP_TOKEN)).willReturn(GOOGLE_SUB);
-        given(jwtTokenProvider.getEmail(TEMP_TOKEN)).willReturn(EMAIL);
+    }
+
+    @Test
+    void handleCallback_includesGoogleProfileImageUrlInTempToken() {
+        GoogleTokenResponse tokenResponse =
+            new GoogleTokenResponse("google-access-token", "google-id-token", "Bearer");
+        GoogleUserInfo userInfo =
+            new GoogleUserInfo(GOOGLE_SUB, EMAIL, true, "Google 사용자", PROFILE_IMAGE_URL);
+        given(googleApiClient.exchangeCode("authorization-code")).willReturn(tokenResponse);
+        given(googleApiClient.verifyIdToken("google-id-token")).willReturn(userInfo);
+        given(userCredentialService.existsByCredentialEmailAndProvider(
+            EMAIL,
+            ProviderType.GOOGLE
+        )).willReturn(false);
+        given(userCredentialService.existsByCredentialEmailAndProvider(
+            EMAIL,
+            ProviderType.LOCAL
+        )).willReturn(false);
+        given(jwtTokenProvider.createOAuth2TempToken(
+            GOOGLE_SUB,
+            EMAIL,
+            PROFILE_IMAGE_URL
+        )).willReturn(TEMP_TOKEN);
+
+        googleAuthService.handleCallback("authorization-code");
+
+        verify(jwtTokenProvider).createOAuth2TempToken(
+            GOOGLE_SUB,
+            EMAIL,
+            PROFILE_IMAGE_URL
+        );
     }
 
     @Test
     void login_rejectsDeactivatedUserBeforeIssuingToken() {
+        stubTempTokenClaims();
         UserCredential credential = UserCredential.google(
             deactivatedUser,
             GOOGLE_SUB,
@@ -95,6 +127,7 @@ class GoogleAuthServiceTest {
 
     @Test
     void connectToLocalAccount_rejectsDeactivatedUserBeforeCreatingGoogleCredential() {
+        stubTempTokenClaims();
         given(userCredentialService.findOptionalByCredentialEmailAndProvider(
             EMAIL,
             ProviderType.LOCAL
@@ -121,6 +154,7 @@ class GoogleAuthServiceTest {
 
     @Test
     void signup_rejectsDeactivatedLocalUserBeforeCreatingGoogleCredential() {
+        stubTempTokenClaims();
         given(userCredentialService.findOptionalByCredentialEmailAndProvider(
             EMAIL,
             ProviderType.LOCAL
@@ -151,10 +185,12 @@ class GoogleAuthServiceTest {
 
     @Test
     void signup_connectsGoogleCredentialToExistingLocalUserWithoutUpdatingUserInfo() {
+        stubTempTokenClaims();
         User localUser = User.builder()
             .name("기존 Local 사용자")
             .email(EMAIL)
             .phoneNumber("010-1111-2222")
+            .profileImageUrl("https://example.com/local-profile.png")
             .residentRegistrationNumberPrefix("900101")
             .role(RoleType.GUEST)
             .build();
@@ -195,11 +231,14 @@ class GoogleAuthServiceTest {
         );
         assertThat(localUser.getName()).isEqualTo("기존 Local 사용자");
         assertThat(localUser.getPhoneNumber()).isEqualTo("010-1111-2222");
+        assertThat(localUser.getProfileImageUrl())
+            .isEqualTo("https://example.com/local-profile.png");
         assertThat(localUser.getResidentRegistrationNumberPrefix()).isEqualTo("900101");
     }
 
     @Test
     void signup_convertsBirthDateBeforeSavingNewUser() {
+        stubTempTokenClaims();
         given(userCredentialService.findOptionalByCredentialEmailAndProvider(
             EMAIL,
             ProviderType.LOCAL
@@ -229,5 +268,14 @@ class GoogleAuthServiceTest {
         verify(userProxyService).save(userCaptor.capture());
         assertThat(userCaptor.getValue().getResidentRegistrationNumberPrefix())
             .isEqualTo("000101");
+        assertThat(userCaptor.getValue().getProfileImageUrl())
+            .isEqualTo(PROFILE_IMAGE_URL);
+    }
+
+    private void stubTempTokenClaims() {
+        given(jwtTokenProvider.validate(TEMP_TOKEN)).willReturn(true);
+        given(jwtTokenProvider.getSubject(TEMP_TOKEN)).willReturn(GOOGLE_SUB);
+        given(jwtTokenProvider.getEmail(TEMP_TOKEN)).willReturn(EMAIL);
+        given(jwtTokenProvider.getProfileImageUrl(TEMP_TOKEN)).willReturn(PROFILE_IMAGE_URL);
     }
 }

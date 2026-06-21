@@ -41,7 +41,10 @@ public class GoogleAuthController {
         response.sendRedirect(googleAuthService.getAuthorizationUrl());
     }
 
-    @Operation(summary = "Google OAuth2 콜백", description = "Google 인증 후 tempToken과 signupRequired를 담아 프론트엔드로 리다이렉트합니다.")
+    @Operation(
+        summary = "Google OAuth2 콜백",
+        description = "Google 인증 후 이메일과 프로필 이미지 URL을 포함한 tempToken 및 signupRequired를 담아 프론트엔드로 리다이렉트합니다."
+    )
     @GetMapping("/callback")
     public void handleCallback(
             @RequestParam String code,
@@ -93,6 +96,7 @@ public class GoogleAuthController {
         summary = "Google 회원가입",
         description = """
             tempToken과 이름, 전화번호, 생년월일로 Google 계정을 등록합니다.
+            신규 사용자는 Google 콜백에서 받은 프로필 이미지 URL을 tempToken에서 추출하여 저장합니다.
             생년월일은 내부 저장 형식으로 변환되며, 동일 이메일의 비활성 계정이 존재하면 해당 계정을 재사용하거나 새로 가입할 수 없습니다.
             동일 이메일의 Local 계정이 존재하면 기존 사용자에게 Google 계정이 자동으로 연결되며, 기존 사용자 정보와 생년월일은 유지됩니다.
             """

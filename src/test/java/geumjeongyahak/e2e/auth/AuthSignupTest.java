@@ -23,7 +23,6 @@ class AuthSignupTest extends AuthBaseTest {
                 "password123!",
                 "회원가입 테스트",
                 uniqueEmail,
-                null,
                 "010-1234-5678",
                 LocalDate.of(1990, 1, 1)
         );
@@ -68,7 +67,6 @@ class AuthSignupTest extends AuthBaseTest {
                 "password123!",
                 "중복 테스트",
                 TEST_ADMIN_EMAIL,  // 이미 존재하는 이메일
-                null,
                 "010-1234-5678",
                 LocalDate.of(1990, 1, 1)
         );
@@ -109,7 +107,6 @@ class AuthSignupTest extends AuthBaseTest {
                 "short",  // 8자 미만
                 "테스트 사용자",
                 "test" + System.currentTimeMillis() + "@test.com",
-                null,
                 "010-1234-5678",
                 LocalDate.of(1990, 1, 1)
         );
@@ -131,7 +128,6 @@ class AuthSignupTest extends AuthBaseTest {
                 "password123!",
                 "이메일 테스트",
                 "invalid-email",  // 잘못된 이메일 형식
-                null,
                 "010-1234-5678",
                 LocalDate.of(1990, 1, 1)
         );
@@ -154,7 +150,6 @@ class AuthSignupTest extends AuthBaseTest {
                 "password123!",
                 "전화번호 테스트",
                 uniqueEmail,
-                null,
                 "invalid-phone",  // 잘못된 전화번호 형식
                 LocalDate.of(1990, 1, 1)
         );
@@ -177,7 +172,6 @@ class AuthSignupTest extends AuthBaseTest {
                 "password123!",
                 "a".repeat(51),  // 50자 초과
                 uniqueEmail,
-                null,
                 "010-1234-5678",
                 LocalDate.of(1990, 1, 1)
         );
@@ -200,7 +194,6 @@ class AuthSignupTest extends AuthBaseTest {
                 "password123!",
                 "최소 정보",
                 uniqueEmail,
-                null,
                 null,   // 전화번호 선택
                 LocalDate.of(1990, 1, 1)
         );
@@ -226,7 +219,6 @@ class AuthSignupTest extends AuthBaseTest {
             "password123!",
             "미래 생년월일",
             "futurebirth" + System.currentTimeMillis() + "@test.com",
-            null,
             "010-1234-5678",
             LocalDate.now().plusDays(1)
         );
@@ -248,7 +240,6 @@ class AuthSignupTest extends AuthBaseTest {
             "password123!",
             "연령 제한",
             "ageboundary" + System.currentTimeMillis() + "@test.com",
-            null,
             "010-1234-5678",
             LocalDate.now().minusYears(100)
         );

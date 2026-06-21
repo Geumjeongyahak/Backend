@@ -25,9 +25,6 @@ public record LocalSignupRequest(
         @ValidEmail
         String email,
 
-        @Schema(description = "프로필 이미지 URL", example = "https://example.com/profile.jpg")
-        String profileImageUrl,
-
         @Schema(description = "전화번호", example = "010-1234-5678")
         @ValidPhoneNumber
         String phoneNumber,

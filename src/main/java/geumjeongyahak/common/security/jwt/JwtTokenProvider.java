@@ -38,12 +38,13 @@ public class JwtTokenProvider {
         return createToken(subject, securityProperties.getJwt().getAccessExpSeconds());
     }
 
-    public String createOAuth2TempToken(String subject, String email) {
+    public String createOAuth2TempToken(String subject, String email, String profileImageUrl) {
         Instant now = Instant.now();
         Instant exp = now.plusSeconds(securityProperties.getJwt().getOauth2TempExpSeconds());
         return Jwts.builder()
             .subject(subject)
             .claim("email", email)
+            .claim("profileImageUrl", profileImageUrl)
             .issuedAt(Date.from(now))
             .expiration(Date.from(exp))
             .signWith(signingKey())
@@ -89,6 +90,10 @@ public class JwtTokenProvider {
 
     public String getEmail(String token) {
         return parse(token).getPayload().get("email", String.class);
+    }
+
+    public String getProfileImageUrl(String token) {
+        return parse(token).getPayload().get("profileImageUrl", String.class);
     }
 
     private Jws<Claims> parse(String token) {

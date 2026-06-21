@@ -86,7 +86,6 @@ public class LocalAuthService {
             .name(request.name())
             .email(request.email())
             .phoneNumber(request.phoneNumber())
-            .profileImageUrl(request.profileImageUrl())
             .residentRegistrationNumberPrefix(
                 UserBirthDateConverter.toResidentRegistrationNumberPrefix(request.birthDate())
             )

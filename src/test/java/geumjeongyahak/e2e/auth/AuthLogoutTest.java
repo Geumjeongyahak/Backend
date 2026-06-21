@@ -133,7 +133,6 @@ class AuthLogoutTest extends AuthBaseTest {
                 "password123!",
                 "멀티 디바이스 테스트",
                 uniqueUsername + "@test.com",
-                null,
                 "010-1234-5678",
                 LocalDate.of(1990, 1, 1)
         );
