@@ -2,8 +2,10 @@ package geumjeongyahak.domain.users.v1.dto.request;
 
 import geumjeongyahak.common.validation.annotation.ValidPhoneNumber;
 import geumjeongyahak.common.validation.annotation.ValidRole;
+import geumjeongyahak.common.validation.annotation.ValidUserBirthDate;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
+import java.time.LocalDate;
 
 @Schema(
     description = """
@@ -19,6 +21,10 @@ public record UpdateUserRequest(
     @Schema(description = "변경할 전화번호", example = "010-9876-5432")
     @ValidPhoneNumber
     String phoneNumber,
+
+    @Schema(description = "변경할 생년월일", example = "1990-01-01")
+    @ValidUserBirthDate
+    LocalDate birthDate,
 
     @Schema(description = "변경할 이메일 주소. 사용자 기본 이메일과 Local credential 이메일이 함께 갱신될 수 있습니다.", example = "example@domain.com")
     String email,
@@ -54,11 +60,12 @@ public record UpdateUserRequest(
     public UpdateUserRequest(
         String name,
         String phoneNumber,
+        LocalDate birthDate,
         String email,
         String password,
         String role,
         Long departmentId
     ) {
-        this(name, phoneNumber, email, password, role, departmentId, null);
+        this(name, phoneNumber, birthDate, email, password, role, departmentId, null);
     }
 }

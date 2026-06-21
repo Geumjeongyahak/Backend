@@ -20,6 +20,7 @@ import geumjeongyahak.domain.users.exception.UserNotFoundException;
 import geumjeongyahak.domain.users.exception.UserTeacherAssignmentConflictException;
 import geumjeongyahak.domain.users.repository.UserRepository;
 import geumjeongyahak.domain.users.repository.specification.UserSpecs;
+import geumjeongyahak.domain.users.support.UserBirthDateConverter;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UpdateSelfRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UpdateUserRequest;
@@ -112,6 +113,9 @@ public class UserCrudService {
             .name(request.name())
             .email(request.email())
             .phoneNumber(request.phoneNumber())
+            .residentRegistrationNumberPrefix(
+                UserBirthDateConverter.toResidentRegistrationNumberPrefix(request.birthDate())
+            )
             .role(RoleType.valueOf(request.role()));
 
         if (request.departmentId() != null) {
@@ -146,6 +150,7 @@ public class UserCrudService {
         updateUserInternal(user,
             Optional.ofNullable(request.name()),
             Optional.ofNullable(request.phoneNumber()),
+            Optional.ofNullable(request.birthDate()),
             Optional.ofNullable(request.password()),
             Optional.ofNullable(request.email()),
             Optional.ofNullable(request.role()),
@@ -168,6 +173,7 @@ public class UserCrudService {
         updateUserInternal(user,
                 Optional.ofNullable(request.name()),
                 Optional.ofNullable(request.phoneNumber()),
+                Optional.ofNullable(request.birthDate()),
                 Optional.ofNullable(request.password()),
                 Optional.ofNullable(request.email()),
                 Optional.empty(), // 본인 수정 시 역할 변경 불가
@@ -190,6 +196,7 @@ public class UserCrudService {
             User user,
             Optional<String> name,
             Optional<String> phoneNumber,
+            Optional<LocalDate> birthDate,
             Optional<String> password,
             Optional<String> email,
             Optional<String> role,
@@ -198,6 +205,9 @@ public class UserCrudService {
     ) {
         name.ifPresent(user::setName);
         phoneNumber.ifPresent(user::setPhoneNumber);
+        birthDate
+            .map(UserBirthDateConverter::toResidentRegistrationNumberPrefix)
+            .ifPresent(user::setResidentRegistrationNumberPrefix);
         password.ifPresent(pw -> credentialService.updateLocalPassword(user, passwordEncoder.encode(pw)));
         email.ifPresent(em -> {
             if (em.equals(user.getEmail())) {

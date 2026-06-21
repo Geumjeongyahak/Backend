@@ -7,6 +7,7 @@ import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 
 @DisplayName("E2E: User 생성 테스트")
@@ -21,6 +22,7 @@ class UserCreateTest extends UserBaseTest {
                 "Manager User",
                 "password123!",
                 "010-1234-5678",
+                DEFAULT_BIRTH_DATE,
                 "MANAGER",
                 null
         );
@@ -36,12 +38,15 @@ class UserCreateTest extends UserBaseTest {
             .body("id", notNullValue())
             .body("email", equalTo(uniqueUsername + "@test.com"))
             .body("name", equalTo("Manager User"))
+            .body("birthDate", equalTo(DEFAULT_BIRTH_DATE.toString()))
             .body("role", equalTo("MANAGER"))
             .log().all()
             .extract()
             .as(UserDetailResponse.class);
 
         userTestHelper.setUser(res.email());
+        assertThat(userTestHelper.getUser(res.email()).getResidentRegistrationNumberPrefix())
+            .isEqualTo("900101");
     }
 
     @Test
@@ -53,6 +58,7 @@ class UserCreateTest extends UserBaseTest {
                 "Volunteer User",
                 "password123!",
                 "010-2222-3333",
+                DEFAULT_BIRTH_DATE,
                 "VOLUNTEER",
                 null
         );
@@ -82,6 +88,7 @@ class UserCreateTest extends UserBaseTest {
             "Classroom User",
             "password123!",
             "010-4444-5555",
+            DEFAULT_BIRTH_DATE,
             "VOLUNTEER",
             null,
             1L
@@ -112,6 +119,7 @@ class UserCreateTest extends UserBaseTest {
                 "Guest User",
                 "password123!",
                 "010-3333-4444",
+                DEFAULT_BIRTH_DATE,
                 "GUEST",
                 null
         );
@@ -141,6 +149,7 @@ class UserCreateTest extends UserBaseTest {
                 "Minimal User",
                 "password123!",
                 null,  // phoneNumber optional
+                DEFAULT_BIRTH_DATE,
                 "GUEST",
                 null
         );
@@ -171,6 +180,7 @@ class UserCreateTest extends UserBaseTest {
                 "Forbidden User",
                 "password123!",
                 "010-1234-5678",
+                DEFAULT_BIRTH_DATE,
                 "GUEST",
                 null
         );
@@ -196,6 +206,7 @@ class UserCreateTest extends UserBaseTest {
                 "Unauthorized User",
                 "password123!",
                 "010-1234-5678",
+                DEFAULT_BIRTH_DATE,
                 "GUEST",
                 null
         );
@@ -219,6 +230,7 @@ class UserCreateTest extends UserBaseTest {
                 "Duplicate User",
                 "password123!",
                 "010-1234-5678",
+                DEFAULT_BIRTH_DATE,
                 "GUEST",
                 null
         );
@@ -265,6 +277,7 @@ class UserCreateTest extends UserBaseTest {
                 "Short Password User",
                 "short",  // 8자 미만
                 "010-1234-5678",
+                DEFAULT_BIRTH_DATE,
                 "GUEST",
                 null
         );
@@ -290,6 +303,7 @@ class UserCreateTest extends UserBaseTest {
                 "Invalid Email User",
                 "password123!",
                 "010-1234-5678",
+                DEFAULT_BIRTH_DATE,
                 "GUEST",
                 null
         );
@@ -315,6 +329,7 @@ class UserCreateTest extends UserBaseTest {
                 "Invalid Phone User",
                 "password123!",
                 "invalid-phone",  // 잘못된 전화번호 형식
+                DEFAULT_BIRTH_DATE,
                 "GUEST",
                 null
         );
@@ -340,6 +355,7 @@ class UserCreateTest extends UserBaseTest {
                 "Invalid Role User",
                 "password123!",
                 "010-1234-5678",
+                DEFAULT_BIRTH_DATE,
                 "INVALID_ROLE",  // 존재하지 않는 역할
                 null
         );

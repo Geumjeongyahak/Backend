@@ -27,6 +27,7 @@ class UserPaginationTest extends UserBaseTest {
                     "Page Test User " + i,
                     "pw_pagetest" + i,
                     "010-" + String.format("%04d", i) + "-5678",
+                    DEFAULT_BIRTH_DATE,
                     "GUEST",
                     null
             );

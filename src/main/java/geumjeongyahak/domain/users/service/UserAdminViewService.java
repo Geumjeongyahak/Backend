@@ -18,6 +18,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -109,6 +110,7 @@ public class UserAdminViewService {
         String name,
         String password,
         String phoneNumber,
+        LocalDate birthDate,
         String role,
         Long departmentId,
         Long classroomId
@@ -118,6 +120,7 @@ public class UserAdminViewService {
             name,
             password,
             phoneNumber,
+            birthDate,
             role,
             departmentId,
             classroomId
@@ -130,6 +133,7 @@ public class UserAdminViewService {
         String email,
         String name,
         String phoneNumber,
+        LocalDate birthDate,
         String role,
         Long departmentId,
         Long classroomId
@@ -137,6 +141,7 @@ public class UserAdminViewService {
         userCrudService.updateUser(userId, new UpdateUserRequest(
             name,
             phoneNumber,
+            birthDate,
             email,
             null,
             role,
@@ -148,6 +153,7 @@ public class UserAdminViewService {
     @Transactional
     public void updateRole(Long userId, String role) {
         userCrudService.updateUser(userId, new UpdateUserRequest(
+            null,
             null,
             null,
             null,
@@ -166,6 +172,7 @@ public class UserAdminViewService {
             null,
             null,
             null,
+            null,
             departmentId,
             null
         ));
@@ -174,6 +181,7 @@ public class UserAdminViewService {
     @Transactional
     public void updateClassroom(Long userId, Long classroomId) {
         userCrudService.updateUser(userId, new UpdateUserRequest(
+            null,
             null,
             null,
             null,

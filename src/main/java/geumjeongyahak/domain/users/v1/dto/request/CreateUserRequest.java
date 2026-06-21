@@ -2,9 +2,12 @@ package geumjeongyahak.domain.users.v1.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import geumjeongyahak.common.validation.annotation.ValidEmail;
 import geumjeongyahak.common.validation.annotation.ValidPhoneNumber;
+import geumjeongyahak.common.validation.annotation.ValidUserBirthDate;
+import java.time.LocalDate;
 
 @Schema(description = "사용자 생성 요청 DTO. 사용자 기본 프로필과 Local 로그인 자격 증명을 함께 생성할 때 사용합니다.")
 public record CreateUserRequest(
@@ -27,6 +30,11 @@ public record CreateUserRequest(
     @ValidPhoneNumber
     String phoneNumber,
 
+    @Schema(description = "사용자 생년월일", example = "1990-01-01")
+    @NotNull(message = "생년월일은 필수입니다.")
+    @ValidUserBirthDate
+    LocalDate birthDate,
+
     @Schema(description = "사용자 기본 역할. 인가의 1차 기준이 되는 role 값입니다.", examples = { "ADMIN", "MANAGER", "VOLUNTEER", "GUEST" })
     String role,
 
@@ -41,9 +49,10 @@ public record CreateUserRequest(
         String name,
         String password,
         String phoneNumber,
+        LocalDate birthDate,
         String role,
         Long departmentId
     ) {
-        this(email, name, password, phoneNumber, role, departmentId, null);
+        this(email, name, password, phoneNumber, birthDate, role, departmentId, null);
     }
 }

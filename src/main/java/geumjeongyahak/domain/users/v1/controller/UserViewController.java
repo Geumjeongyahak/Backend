@@ -1,5 +1,7 @@
 package geumjeongyahak.domain.users.v1.controller;
 
+import java.time.LocalDate;
+import geumjeongyahak.common.validation.annotation.ValidUserBirthDate;
 import geumjeongyahak.domain.base.service.PermissionRegistryViewService;
 import geumjeongyahak.domain.users.service.UserAdminViewService;
 import geumjeongyahak.domain.users.service.dto.UserFilter;
@@ -7,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
+@Validated
 @RequestMapping("/admin/user/users")
 @RequiredArgsConstructor
 public class UserViewController {
@@ -61,12 +65,22 @@ public class UserViewController {
         @RequestParam String name,
         @RequestParam String password,
         @RequestParam(required = false) String phoneNumber,
+        @RequestParam @ValidUserBirthDate LocalDate birthDate,
         @RequestParam String role,
         @RequestParam(required = false) Long departmentId,
         @RequestParam(required = false) Long classroomId,
         RedirectAttributes redirectAttributes
     ) {
-        Long userId = userAdminViewService.createUser(email, name, password, phoneNumber, role, departmentId, classroomId);
+        Long userId = userAdminViewService.createUser(
+            email,
+            name,
+            password,
+            phoneNumber,
+            birthDate,
+            role,
+            departmentId,
+            classroomId
+        );
         redirectAttributes.addFlashAttribute("message", "사용자를 등록했습니다.");
         return "redirect:/admin/user/users/" + userId;
     }
@@ -107,12 +121,22 @@ public class UserViewController {
         @RequestParam String email,
         @RequestParam String name,
         @RequestParam(required = false) String phoneNumber,
+        @RequestParam(required = false) @ValidUserBirthDate LocalDate birthDate,
         @RequestParam String role,
         @RequestParam(required = false) Long departmentId,
         @RequestParam(required = false) Long classroomId,
         RedirectAttributes redirectAttributes
     ) {
-        userAdminViewService.updateUser(userId, email, name, phoneNumber, role, departmentId, classroomId);
+        userAdminViewService.updateUser(
+            userId,
+            email,
+            name,
+            phoneNumber,
+            birthDate,
+            role,
+            departmentId,
+            classroomId
+        );
         redirectAttributes.addFlashAttribute("message", "사용자 정보를 수정했습니다.");
         return "redirect:/admin/user/users/" + userId;
     }

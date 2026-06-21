@@ -6,6 +6,7 @@ import geumjeongyahak.domain.classroom.v1.dto.response.ClassroomSummaryResponse;
 import geumjeongyahak.domain.department.entity.DepartmentPermission;
 import geumjeongyahak.domain.department.v1.dto.response.DepartmentSimpleResponse;
 import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.users.support.UserBirthDateConverter;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
@@ -38,8 +39,8 @@ public record UserDetailResponse(
     @Schema(description = "교원으로 배정된 분반. 교원 승인 전이거나 교원 해제 상태이면 null일 수 있습니다.", nullable = true)
     ClassroomSummaryResponse classroom,
 
-    @Schema(description = "주민등록번호 앞자리", example = "900101")
-    String residentRegistrationNumberPrefix,
+    @Schema(description = "사용자 생년월일", example = "1990-01-01", nullable = true)
+    LocalDate birthDate,
 
     @JsonInclude(JsonInclude.Include.ALWAYS)
     @Schema(description = "교원 활동 시작일. 교원 승인 전이면 null입니다.", example = "2026-02-01", nullable = true)
@@ -86,7 +87,7 @@ public record UserDetailResponse(
             user.getRole().name(),
             user.getDepartment() != null ? DepartmentSimpleResponse.from(user.getDepartment()) : null,
             user.getClassroom() != null ? ClassroomSummaryResponse.from(user.getClassroom()) : null,
-            user.getResidentRegistrationNumberPrefix(),
+            UserBirthDateConverter.toBirthDate(user.getResidentRegistrationNumberPrefix()),
             user.getTeacherStartAt(),
             user.getTeacherEndAt(),
             buildPermissions(user, departmentPermissions),
