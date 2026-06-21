@@ -2,10 +2,12 @@ package geumjeongyahak.domain.auth.v1.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import geumjeongyahak.common.validation.annotation.ValidEmail;
 import geumjeongyahak.common.validation.annotation.ValidPhoneNumber;
+import geumjeongyahak.common.validation.annotation.ValidUserBirthDate;
+import java.time.LocalDate;
 
 public record LocalSignupRequest(
         @Schema(description = "비밀번호", example = "password123!")
@@ -30,9 +32,9 @@ public record LocalSignupRequest(
         @ValidPhoneNumber
         String phoneNumber,
 
-        @Schema(description = "주민등록번호 앞자리", example = "900101")
-        @NotBlank(message = "주민등록번호 앞자리는 필수입니다.")
-        @Pattern(regexp = "\\d{6}", message = "주민등록번호 앞자리는 숫자 6자리여야 합니다.")
-        String residentRegistrationNumberPrefix
+        @Schema(description = "생년월일", example = "1990-01-01")
+        @NotNull(message = "생년월일은 필수입니다.")
+        @ValidUserBirthDate
+        LocalDate birthDate
 ) {
 }

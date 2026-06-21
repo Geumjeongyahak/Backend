@@ -91,7 +91,11 @@ public class GoogleAuthController {
 
     @Operation(
         summary = "Google 회원가입",
-        description = "tempToken과 추가 정보로 Google 계정을 등록합니다. 동일 이메일의 비활성 계정이 존재하면 해당 계정을 재사용하거나 새로 가입할 수 없습니다."
+        description = """
+            tempToken과 이름, 전화번호, 생년월일로 Google 계정을 등록합니다.
+            생년월일은 내부 저장 형식으로 변환되며, 동일 이메일의 비활성 계정이 존재하면 해당 계정을 재사용하거나 새로 가입할 수 없습니다.
+            동일 이메일의 Local 계정이 존재하면 기존 사용자에게 Google 계정이 자동으로 연결되며, 기존 사용자 정보와 생년월일은 유지됩니다.
+            """
     )
     @PostMapping("/signup")
     public ResponseEntity<TokenResponse> signup(
@@ -102,7 +106,7 @@ public class GoogleAuthController {
                 request.tempToken(),
                 request.name(),
                 request.phoneNumber(),
-                request.residentRegistrationNumberPrefix()
+                request.birthDate()
             ));
     }
 }

@@ -20,6 +20,8 @@ import geumjeongyahak.domain.auth.v1.dto.response.GoogleCallbackResponse;
 import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
+import geumjeongyahak.domain.users.support.UserBirthDateConverter;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -102,7 +104,7 @@ public class GoogleAuthService {
         String tempToken,
         String name,
         String phoneNumber,
-        String residentRegistrationNumberPrefix
+        LocalDate birthDate
     ) {
         String[] parts = extractTempToken(tempToken);
         String googleSub = parts[0];
@@ -115,7 +117,9 @@ public class GoogleAuthService {
                 .name(name)
                 .email(email)
                 .phoneNumber(phoneNumber)
-                .residentRegistrationNumberPrefix(residentRegistrationNumberPrefix)
+                .residentRegistrationNumberPrefix(
+                    UserBirthDateConverter.toResidentRegistrationNumberPrefix(birthDate)
+                )
                 .role(RoleType.GUEST)
                 .build()));
 

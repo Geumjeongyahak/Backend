@@ -19,6 +19,7 @@ import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.exception.DuplicateEmailException;
 import geumjeongyahak.domain.users.service.UserProxyService;
+import geumjeongyahak.domain.users.support.UserBirthDateConverter;
 
 import java.time.LocalDateTime;
 @Slf4j
@@ -86,7 +87,9 @@ public class LocalAuthService {
             .email(request.email())
             .phoneNumber(request.phoneNumber())
             .profileImageUrl(request.profileImageUrl())
-            .residentRegistrationNumberPrefix(request.residentRegistrationNumberPrefix())
+            .residentRegistrationNumberPrefix(
+                UserBirthDateConverter.toResidentRegistrationNumberPrefix(request.birthDate())
+            )
             .role(RoleType.GUEST)
             .build();
 
