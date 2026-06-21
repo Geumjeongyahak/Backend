@@ -12,7 +12,7 @@ import geumjeongyahak.domain.department.service.DepartmentPermissionService;
 import geumjeongyahak.domain.department.v1.dto.request.CreateDepartmentRequest;
 import geumjeongyahak.domain.department.v1.dto.request.UpdateDepartmentRequest;
 import geumjeongyahak.domain.department.v1.dto.response.DepartmentDetailResponse;
-import geumjeongyahak.domain.users.repository.UserRepository;
+import geumjeongyahak.domain.users.service.UserProxyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,7 @@ import java.util.Map;
 public class DepartmentAdminViewService {
 
     private final DepartmentRepository departmentRepository;
-    private final UserRepository userRepository;
+    private final UserProxyService userProxyService;
     private final DepartmentCrudService departmentCrudService;
     private final DepartmentPermissionService departmentPermissionService;
 
@@ -43,7 +43,7 @@ public class DepartmentAdminViewService {
                     .anyMatch(permission -> permission.getPermissionCode().contains(filter.permissionCode().trim())))
             .map(department -> AdminDepartmentRow.from(
                 department,
-                userRepository.countByDepartmentId(department.getId()),
+                userProxyService.countActiveUsersByDepartmentId(department.getId()),
                 departmentPermissionService.getAllPermissions(department.getId())
             ))
             .filter(row -> filter.minMemberCount() == null || row.memberCount() >= filter.minMemberCount())

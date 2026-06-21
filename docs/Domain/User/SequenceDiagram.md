@@ -195,9 +195,9 @@ sequenceDiagram
 
 ---
 
-## 5. 사용자 삭제 `DELETE /api/v1/users/{userId}`
+## 5. 사용자 계정 비활성화 `DELETE /api/v1/users/{userId}`
 
-**Side Effect**: `users` 삭제 + CASCADE로 `user_credentials`, `user_permissions` 삭제
+**Side Effect**: `users.is_deleted=true`, `deleted_at` 기록, Refresh Token 폐기. 사용자 행과 연관 이력은 보존
 
 ```mermaid
 sequenceDiagram
@@ -206,6 +206,8 @@ sequenceDiagram
     participant UserAdminController
     participant UserCrudService
     participant UserRepository
+    participant EventPublisher
+    participant AuthEventHandler
 
     Client->>JwtFilter: DELETE /api/v1/users/1
     JwtFilter->>JwtFilter: JWT 검증 및 SecurityContext 설정
@@ -213,18 +215,23 @@ sequenceDiagram
     UserAdminController->>UserAdminController: @PreAuthorize 권한 검사<br/>(ADMIN or user:manage:*)
     UserAdminController->>UserCrudService: deleteUserById(userId)
 
-    UserCrudService->>UserRepository: existsById(userId)
+    UserCrudService->>UserRepository: findByIdAndIsDeletedFalse(userId)
     alt 사용자 없음
-        UserRepository-->>UserCrudService: false
         UserCrudService-->>UserAdminController: UserNotFoundException
         UserAdminController-->>Client: 404 RES-01-001
     end
 
     Note over UserCrudService,UserRepository: 트랜잭션 시작
-    UserCrudService->>UserRepository: deleteById(userId)
-    Note right of UserRepository: [Side Effect] users 레코드 삭제
-    Note right of UserRepository: [Side Effect] CASCADE → user_credentials 삭제<br/>(orphanRemoval=true)
-    Note right of UserRepository: [Side Effect] CASCADE → user_permissions 삭제<br/>(orphanRemoval=true)
+    UserCrudService->>UserCrudService: 활성 과목 담당 여부 검사
+    alt 담당 중인 활성 과목 존재
+        UserCrudService-->>UserAdminController: UserTeacherAssignmentConflictException
+        UserAdminController-->>Client: 409 BIZ-01-006
+    end
+    UserCrudService->>UserRepository: isDeleted=true, deletedAt=현재 시각
+    UserCrudService->>EventPublisher: UserDeactivatedEvent(userId)
+    EventPublisher->>AuthEventHandler: 이벤트 전달
+    AuthEventHandler->>AuthEventHandler: 사용자 Refresh Token 전체 폐기
+    Note right of UserRepository: user_credentials, user_permissions 및 기존 이력 보존
     Note over UserCrudService,UserRepository: 트랜잭션 커밋
 
     UserCrudService-->>UserAdminController: void

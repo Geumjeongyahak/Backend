@@ -1,18 +1,53 @@
 package geumjeongyahak.e2e.users;
 
 import io.restassured.http.ContentType;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
+import geumjeongyahak.domain.auth.repository.RefreshTokenRepository;
+import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
+import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
+import geumjeongyahak.domain.notification.entity.PushSubscription;
+import geumjeongyahak.domain.notification.enums.PushDeviceType;
+import geumjeongyahak.domain.notification.repository.PushSubscriptionRepository;
+import geumjeongyahak.domain.users.entity.UserPermission;
+import geumjeongyahak.domain.users.repository.UserPermissionRepository;
+import geumjeongyahak.domain.users.repository.UserRepository;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("E2E: User 삭제 테스트")
 class UserDeleteTest extends UserBaseTest {
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private UserCredentialRepository userCredentialRepository;
+
+    @Autowired
+    private UserPermissionRepository userPermissionRepository;
+
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @Autowired
+    private PushSubscriptionRepository pushSubscriptionRepository;
+
+    @AfterEach
+    void cleanUpPushSubscriptions() {
+        pushSubscriptionRepository.deleteAll();
+        pushSubscriptionRepository.flush();
+    }
+
     @Test
-    @DisplayName("관리자 권한으로 User 삭제 성공(204 No Content)")
+    @DisplayName("관리자 권한으로 User 비활성화 성공 및 계정 종속 데이터 보존(204 No Content)")
     void deleteUser_Success() {
         CreateUserRequest createReq = new CreateUserRequest(
                 "deletetest@test.com",
@@ -35,6 +70,11 @@ class UserDeleteTest extends UserBaseTest {
             .as(UserDetailResponse.class);
 
         userTestHelper.setUser(createdUser.email());
+        var user = userRepository.findById(createdUser.id()).orElseThrow();
+        userPermissionRepository.save(new UserPermission(user, "channel:read:*"));
+
+        int credentialCountBefore = userCredentialRepository.findAllByUserId(createdUser.id()).size();
+        int permissionCountBefore = userPermissionRepository.findAllByUserId(createdUser.id()).size();
 
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -44,13 +84,13 @@ class UserDeleteTest extends UserBaseTest {
             .statusCode(204)
             .log().all();
 
-        given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-        .when()
-            .get("/{userId}", createdUser.id())
-        .then()
-            .statusCode(404)
-            .log().all();
+        var deactivatedUser = userRepository.findById(createdUser.id()).orElseThrow();
+        assertThat(deactivatedUser.isDeleted()).isTrue();
+        assertThat(deactivatedUser.getDeletedAt()).isNotNull();
+        assertThat(userCredentialRepository.findAllByUserId(createdUser.id()))
+            .hasSize(credentialCountBefore);
+        assertThat(userPermissionRepository.findAllByUserId(createdUser.id()))
+            .hasSize(permissionCountBefore);
     }
 
     @Test
@@ -139,5 +179,96 @@ class UserDeleteTest extends UserBaseTest {
         .then()
             .statusCode(404)
             .log().all();
+    }
+
+    @Test
+    @DisplayName("본인 User 비활성화 실패(409 Conflict)")
+    void deleteUser_selfDeactivation_returns409() {
+        Long adminId = userTestHelper.getUser(TEST_ADMIN_EMAIL).getId();
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/{userId}", adminId)
+        .then()
+            .statusCode(409)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("User 비활성화 시 발급된 Refresh Token 즉시 폐기")
+    void deleteUser_RevokesRefreshToken() {
+        CreateUserRequest createReq = new CreateUserRequest(
+            "revoketest@test.com",
+            "Revoke Test User",
+            "pw_revoketest",
+            "010-7777-8888",
+            "GUEST",
+            null
+        );
+
+        var createdUser = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(createReq)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .extract()
+            .as(UserDetailResponse.class);
+
+        String originalBasePath = io.restassured.RestAssured.basePath;
+        io.restassured.RestAssured.basePath = "/api/v1/auth";
+        var loginResponse = given()
+            .contentType(ContentType.JSON)
+            .body(new LocalLoginRequest("revoketest@test.com", "pw_revoketest"))
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(200)
+            .extract()
+            .as(TokenResponse.class);
+        io.restassured.RestAssured.basePath = originalBasePath;
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/{userId}", createdUser.id())
+        .then()
+            .statusCode(204);
+
+        assertThat(refreshTokenRepository.findById(loginResponse.refreshToken())).isEmpty();
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(loginResponse.accessToken()))
+        .when()
+            .get("/me")
+        .then()
+            .statusCode(401);
+    }
+
+    @Test
+    @DisplayName("User 비활성화 시 활성 Push 구독 즉시 해제")
+    void deleteUser_DeactivatesPushSubscriptions() {
+        var targetUser = userTestHelper.createTestUser(
+            "push-deactivation@test.com",
+            RoleType.GUEST
+        );
+        PushSubscription subscription = pushSubscriptionRepository.save(
+            new PushSubscription(targetUser, "push-deactivation-token", PushDeviceType.WEB)
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/{userId}", targetUser.getId())
+        .then()
+            .statusCode(204);
+
+        PushSubscription deactivatedSubscription =
+            pushSubscriptionRepository.findById(subscription.getId()).orElseThrow();
+        assertThat(deactivatedSubscription.isActive()).isFalse();
+        assertThat(deactivatedSubscription.getUnsubscribedAt()).isNotNull();
     }
 }

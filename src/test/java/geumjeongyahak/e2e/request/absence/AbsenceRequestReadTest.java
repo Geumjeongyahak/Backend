@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.request.repository.AbsenceRequestRepository;
 import geumjeongyahak.domain.users.entity.User;
@@ -35,6 +36,9 @@ class AbsenceRequestReadTest extends RequestBaseTest {
 
     @Autowired
     private UserPermissionRepository userPermissionRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private Long subjectId;
     private Long lessonIdForVolunteer1;
@@ -274,6 +278,38 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             .body("status", equalTo("PENDING"))
             .body("title", equalTo("봉사자1 결석 요청"))
             .body("reason", equalTo("봉사자1 결석 사유"));
+    }
+
+    @Test
+    @DisplayName("요청자 계정이 비활성화되어도 결석 요청자 이력은 유지된다")
+    void getDetail_afterRequesterDeactivated_keepsRequesterHistory() {
+        String requesterName = jdbcTemplate.queryForObject(
+            "SELECT name FROM users WHERE id = ?",
+            String.class,
+            TEACHER_ID
+        );
+
+        try {
+            jdbcTemplate.update(
+                "UPDATE users SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?",
+                TEACHER_ID
+            );
+
+            given()
+                .basePath("/api/v1/absence-requests")
+                .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .when()
+                .get("/{id}", requestIdByVolunteer1)
+            .then()
+                .statusCode(200)
+                .body("requestedById", equalTo((int) TEACHER_ID))
+                .body("requestedByName", equalTo(requesterName));
+        } finally {
+            jdbcTemplate.update(
+                "UPDATE users SET is_deleted = FALSE, deleted_at = NULL WHERE id = ?",
+                TEACHER_ID
+            );
+        }
     }
 
     @Test

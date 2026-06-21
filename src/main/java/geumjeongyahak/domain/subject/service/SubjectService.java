@@ -36,8 +36,7 @@ import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectScheduleRequest
 import geumjeongyahak.domain.subject.v1.dto.response.SubjectDetailResponse;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.users.entity.User;
-import geumjeongyahak.domain.users.exception.UserNotFoundException;
-import geumjeongyahak.domain.users.repository.UserRepository;
+import geumjeongyahak.domain.users.service.UserProxyService;
 
 @Slf4j
 @Service
@@ -49,7 +48,7 @@ public class SubjectService {
 
     private final SubjectRepository subjectRepository;
     private final ClassroomRepository classroomRepository;
-    private final UserRepository userRepository;
+    private final UserProxyService userProxyService;
     private final LessonProxyService lessonProxyService;
     private final AbsenceRequestProxyService absenceRequestProxyService;
     private final LessonExchangeRequestProxyService lessonExchangeRequestProxyService;
@@ -67,11 +66,7 @@ public class SubjectService {
             });
         User teacher = null;
         if (request.teacherId() != null) {
-            teacher = userRepository.findById(request.teacherId())
-                .orElseThrow(() -> {
-                    log.info("과목 등록 실패 - 교사를 찾을 수 없습니다. ID: {}", request.teacherId());
-                    return new UserNotFoundException(request.teacherId());
-                });
+            teacher = userProxyService.getById(request.teacherId());
             validateTeacherAssignable(teacher);
         }
 
@@ -212,11 +207,7 @@ public class SubjectService {
             return SubjectDetailResponse.from(subject);
         }
 
-        User teacher = userRepository.findById(request.teacherId())
-            .orElseThrow(() -> {
-                log.info("과목 담당 교사 배정 실패 - 교사를 찾을 수 없습니다. ID: {}", request.teacherId());
-                return new UserNotFoundException(request.teacherId());
-            });
+        User teacher = userProxyService.getById(request.teacherId());
         validateTeacherAssignable(teacher);
 
         validateFutureLessonsChangeable(subjectId, today);

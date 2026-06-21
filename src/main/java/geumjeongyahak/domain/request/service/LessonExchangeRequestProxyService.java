@@ -25,6 +25,19 @@ public class LessonExchangeRequestProxyService {
             .orElseThrow(() -> new RequestNotFoundException(requestId));
     }
 
+    public boolean existsActiveExchangeByUserId(Long userId) {
+        return lessonExchangeRequestRepository.existsByRequestedBy_IdAndStatusIn(
+            userId,
+            List.of(
+                LessonExchangeRequestStatus.PENDING,
+                LessonExchangeRequestStatus.APPROVED
+            )
+        ) || lessonExchangeProposalRepository.existsByProposedBy_IdAndStatus(
+            userId,
+            LessonExchangeProposalStatus.ACTIVE
+        );
+    }
+
     public boolean existsActiveExchangeByLessonTeacherDates(List<LessonTeacherDate> lessonTeacherDates) {
         if (lessonTeacherDates == null || lessonTeacherDates.isEmpty()) {
             return false;

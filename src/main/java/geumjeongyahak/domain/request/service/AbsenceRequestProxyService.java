@@ -14,6 +14,14 @@ public class AbsenceRequestProxyService {
     private final AbsenceRequestRepository absenceRequestRepository;
 
     @Transactional(readOnly = true)
+    public boolean existsPendingByRequesterId(Long requesterId) {
+        return absenceRequestRepository.existsByRequestedBy_IdAndStatus(
+            requesterId,
+            RequestStatus.PENDING
+        );
+    }
+
+    @Transactional(readOnly = true)
     public boolean existsActiveAbsenceRequestByLessonIds(List<Long> lessonIds) {
         if (lessonIds == null || lessonIds.isEmpty()) {
             return false;

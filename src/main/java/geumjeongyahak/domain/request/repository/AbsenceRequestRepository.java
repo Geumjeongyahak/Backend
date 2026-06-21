@@ -38,6 +38,8 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
 
     boolean existsByDailySchedule_IdIn(List<Long> dailyScheduleIds);
 
+    boolean existsByRequestedBy_IdAndStatus(Long requestedById, RequestStatus status);
+
     @Query("""
         select count(absenceRequest) > 0
         from AbsenceRequest absenceRequest

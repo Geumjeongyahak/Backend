@@ -4,14 +4,20 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
 import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
+import geumjeongyahak.domain.users.repository.UserRepository;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
 @DisplayName("E2E: 로그인 테스트")
 class AuthLoginTest extends AuthBaseTest {
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Test
     @DisplayName("올바른 아이디와 비밀번호로 로그인 성공(200 OK)")
@@ -85,6 +91,31 @@ class AuthLoginTest extends AuthBaseTest {
         .then()
             .statusCode(401)
             .body("code", equalTo("AUTH005"))  // INVALID_CREDENTIALS (사용자 존재 여부 노출 방지)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("비활성화된 사용자로 로그인 실패(401 Unauthorized)")
+    void login_DeactivatedUser() {
+        String email = "deactivated-login@test.com";
+        String password = "password123!";
+        var user = userTestHelper.createTestUser(email, "비활성 로그인 사용자", password, RoleType.GUEST);
+        user.softDelete();
+        userRepository.saveAndFlush(user);
+
+        LocalLoginRequest req = new LocalLoginRequest(
+            email,
+            password
+        );
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(401)
+            .body("code", equalTo("AUTH005"))
             .log().all();
     }
 

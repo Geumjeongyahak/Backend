@@ -7,6 +7,10 @@ import org.springframework.data.jpa.domain.Specification;
 import java.time.LocalDate;
 
 public class UserSpecs {
+    public static Specification<User> isActive() {
+        return (root, query, cb) -> cb.isFalse(root.get("isDeleted"));
+    }
+
     public static Specification<User> hasRole(RoleType role) {
         return (root, query, cb) -> cb.equal(root.get("role"), role);
     }

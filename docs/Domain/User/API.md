@@ -259,7 +259,7 @@ PATCH /api/v1/users/{userId}
 
 ---
 
-### 1.5 사용자 삭제
+### 1.5 사용자 계정 비활성화
 
 ```
 DELETE /api/v1/users/{userId}
@@ -277,15 +277,23 @@ DELETE /api/v1/users/{userId}
 
 #### Side Effect
 
-- `users` 테이블에서 사용자 레코드 삭제
-- CASCADE: `user_credentials`, `user_permissions` 연관 레코드 함께 삭제
-- 삭제 후 해당 계정으로의 로그인 및 조회 불가
+- `users.is_deleted=true`, `deleted_at=처리 시각`으로 변경
+- 사용자 레코드, `user_credentials`, `user_permissions`는 보존
+- 사용자의 모든 Refresh Token 즉시 폐기
+- 사용자의 모든 활성 Push 구독 즉시 해제
+- 기존 Access Token 및 로컬/관리자/Google 로그인 차단
+- 운영 대상 조회에서는 제외하되 게시글, 댓글, 요청, 수업 등 기존 이력의 작성자 정보는 유지
+- 비활성 계정 이메일 재사용 불가
 
 #### Error
 
 | 코드 | HTTP | 설명 |
 |------|------|------|
 | `RES-01-001` | 404 | 사용자를 찾을 수 없음 |
+| `BIZ-01-006` | 409 | 담당 중인 활성 과목이 있어 비활성화할 수 없음 |
+| `BIZ-01-007` | 409 | 본인 계정이어서 비활성화할 수 없음 |
+| `BIZ-01-008` | 409 | 마지막 활성 관리자여서 비활성화할 수 없음 |
+| `BIZ-01-009` | 409 | 처리 중인 신청 또는 요청이 있어 비활성화할 수 없음 |
 | `AUTHZ001` | 403 | 권한 없음 |
 
 ---

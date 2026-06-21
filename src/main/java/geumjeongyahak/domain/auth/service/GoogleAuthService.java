@@ -71,6 +71,7 @@ public class GoogleAuthService {
         UserCredential credential = userCredentialService
             .getCredentialByProviderUserIdAndProvider(googleSub, ProviderType.GOOGLE);
 
+        validateActiveUser(credential.getUser());
         credential.setLastLoginAt(LocalDateTime.now());
 
         log.info("Google 로그인 성공: userId={}", credential.getUser().getId());
@@ -88,6 +89,7 @@ public class GoogleAuthService {
             .map(UserCredential::getUser)
             .orElseThrow(() -> new OAuthProcessingException("연결할 로컬 계정을 찾을 수 없습니다."));
 
+        validateActiveUser(user);
         UserCredential credential = userCredentialService.createGoogleCredential(user, googleSub, email, false);
         credential.setLastLoginAt(LocalDateTime.now());
 
@@ -117,6 +119,7 @@ public class GoogleAuthService {
                 .role(RoleType.GUEST)
                 .build()));
 
+        validateActiveUser(user);
         UserCredential credential = userCredentialService.createGoogleCredential(user, googleSub, email, true);
         credential.setLastLoginAt(LocalDateTime.now());
 
@@ -125,6 +128,7 @@ public class GoogleAuthService {
     }
 
     private TokenResponse issueToken(UserCredential credential) {
+        validateActiveUser(credential.getUser());
         String accessToken = jwtTokenProvider.createAccessToken(String.valueOf(credential.getUser().getId()));
         String refreshToken = refreshTokenService.createRefreshToken(credential.getId());
         return TokenResponse.of(
@@ -145,5 +149,12 @@ public class GoogleAuthService {
             throw new OAuthProcessingException("임시 토큰에서 필요한 정보를 추출할 수 없습니다.");
         }
         return new String[]{googleSub, email};
+    }
+
+    private void validateActiveUser(User user) {
+        if (user.isDeleted()) {
+            log.warn("Google 인증 실패 - 비활성화된 사용자: userId={}", user.getId());
+            throw new OAuthProcessingException("비활성화된 사용자입니다.");
+        }
     }
 }
