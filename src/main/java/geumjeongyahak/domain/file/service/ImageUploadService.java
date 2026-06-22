@@ -63,6 +63,7 @@ public class ImageUploadService {
             Long.valueOf(resizedImage.length),
             "png"
         );
+        userProxyService.updateProfileImageUrl(userId, storedFile.url());
 
         log.debug("프로필 이미지 업로드 완료 (userId={}, fileId={})", userId, savedFile.getId());
         return FileUploadResponse.from(savedFile, storedFile.url());

@@ -6,8 +6,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalSignupRequest;
 import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
+import java.time.LocalDate;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 
 @DisplayName("E2E: 회원가입 테스트")
@@ -21,9 +23,8 @@ class AuthSignupTest extends AuthBaseTest {
                 "password123!",
                 "회원가입 테스트",
                 uniqueEmail,
-                null,
                 "010-1234-5678",
-                "900101"
+                LocalDate.of(1990, 1, 1)
         );
 
         var response = given()
@@ -55,6 +56,8 @@ class AuthSignupTest extends AuthBaseTest {
             .body("name", equalTo("회원가입 테스트"));
 
         RestAssured.basePath = originalBasePath;
+        assertThat(userTestHelper.getUser(uniqueEmail).getResidentRegistrationNumberPrefix())
+            .isEqualTo("900101");
     }
 
     @Test
@@ -64,9 +67,8 @@ class AuthSignupTest extends AuthBaseTest {
                 "password123!",
                 "중복 테스트",
                 TEST_ADMIN_EMAIL,  // 이미 존재하는 이메일
-                null,
                 "010-1234-5678",
-                "900101"
+                LocalDate.of(1990, 1, 1)
         );
 
         given()
@@ -105,9 +107,8 @@ class AuthSignupTest extends AuthBaseTest {
                 "short",  // 8자 미만
                 "테스트 사용자",
                 "test" + System.currentTimeMillis() + "@test.com",
-                null,
                 "010-1234-5678",
-                "900101"
+                LocalDate.of(1990, 1, 1)
         );
 
         given()
@@ -127,9 +128,8 @@ class AuthSignupTest extends AuthBaseTest {
                 "password123!",
                 "이메일 테스트",
                 "invalid-email",  // 잘못된 이메일 형식
-                null,
                 "010-1234-5678",
-                "900101"
+                LocalDate.of(1990, 1, 1)
         );
 
         given()
@@ -150,9 +150,8 @@ class AuthSignupTest extends AuthBaseTest {
                 "password123!",
                 "전화번호 테스트",
                 uniqueEmail,
-                null,
                 "invalid-phone",  // 잘못된 전화번호 형식
-                "900101"
+                LocalDate.of(1990, 1, 1)
         );
 
         given()
@@ -173,9 +172,8 @@ class AuthSignupTest extends AuthBaseTest {
                 "password123!",
                 "a".repeat(51),  // 50자 초과
                 uniqueEmail,
-                null,
                 "010-1234-5678",
-                "900101"
+                LocalDate.of(1990, 1, 1)
         );
 
         given()
@@ -196,9 +194,8 @@ class AuthSignupTest extends AuthBaseTest {
                 "password123!",
                 "최소 정보",
                 uniqueEmail,
-                null,
                 null,   // 전화번호 선택
-                "900101"
+                LocalDate.of(1990, 1, 1)
         );
 
         given()
@@ -213,5 +210,47 @@ class AuthSignupTest extends AuthBaseTest {
             .log().all()
             .extract()
             .as(TokenResponse.class);
+    }
+
+    @Test
+    @DisplayName("미래 생년월일로 회원가입 실패(400 Bad Request)")
+    void signup_FutureBirthDate() {
+        LocalSignupRequest req = new LocalSignupRequest(
+            "password123!",
+            "미래 생년월일",
+            "futurebirth" + System.currentTimeMillis() + "@test.com",
+            "010-1234-5678",
+            LocalDate.now().plusDays(1)
+        );
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .post("/signup")
+        .then()
+            .statusCode(400)
+            .body("errors.message", hasItem("생년월일은 미래일 수 없습니다."));
+    }
+
+    @Test
+    @DisplayName("만 100세 이상 생년월일로 회원가입 실패(400 Bad Request)")
+    void signup_AgeLimitExceeded() {
+        LocalSignupRequest req = new LocalSignupRequest(
+            "password123!",
+            "연령 제한",
+            "ageboundary" + System.currentTimeMillis() + "@test.com",
+            "010-1234-5678",
+            LocalDate.now().minusYears(100)
+        );
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .post("/signup")
+        .then()
+            .statusCode(400)
+            .body("errors.message", hasItem("생년월일은 만 100세 미만이어야 합니다."));
     }
 }

@@ -20,6 +20,7 @@ class UserSubRoleTest extends UserBaseTest {
             "Permission Test User",
             "password123!",
             "010-1234-5678",
+            DEFAULT_BIRTH_DATE,
             "VOLUNTEER",
             null
         );

@@ -33,6 +33,7 @@ class UserUpdateTest extends UserBaseTest {
                 "Update Test User",
                 "pw_updatetest",
                 "010-1111-2222",
+                DEFAULT_BIRTH_DATE,
                 "GUEST",
                 null
         );
@@ -54,6 +55,7 @@ class UserUpdateTest extends UserBaseTest {
         UpdateUserRequest updateReq = new UpdateUserRequest(
                 "Updated Name",
                 "010-9999-8888",
+                LocalDate.of(2000, 2, 2),
                 "updated@test.com",
                 "newpassword123!",
                 "VOLUNTEER",
@@ -72,8 +74,13 @@ class UserUpdateTest extends UserBaseTest {
             .body("name", equalTo("Updated Name"))
             .body("phoneNumber", equalTo("010-9999-8888"))
             .body("email", equalTo("updated@test.com"))
+            .body("birthDate", equalTo("2000-02-02"))
             .body("role", equalTo("VOLUNTEER"))
             .log().all();
+
+        org.assertj.core.api.Assertions.assertThat(
+            userTestHelper.getUser("updated@test.com").getResidentRegistrationNumberPrefix()
+        ).isEqualTo("000202");
     }
 
     @Test
@@ -85,6 +92,7 @@ class UserUpdateTest extends UserBaseTest {
                 "Dept Test User",
                 "pw_depttest",
                 "010-0000-0000",
+                DEFAULT_BIRTH_DATE,
                 "VOLUNTEER",
                 null
         );
@@ -103,7 +111,7 @@ class UserUpdateTest extends UserBaseTest {
 
         // 2. 부서 할당 (ID: 1 - 교무기획부)
         UpdateUserRequest updateReq = new UpdateUserRequest(
-                null, null, null, null, null, 1L
+                null, null, null, null, null, null, 1L
         );
 
         given()
@@ -119,7 +127,7 @@ class UserUpdateTest extends UserBaseTest {
 
         // 3. 부서 해제 (null)
         UpdateUserRequest clearReq = new UpdateUserRequest(
-                null, null, null, null, null, null
+                null, null, null, null, null, null, null
         );
 
         // Note: UpdateUserRequest에서 null 전달 시 유지가 될지 해제가 될지는 UserCrudService 구현에 따라 다름.
@@ -135,6 +143,7 @@ class UserUpdateTest extends UserBaseTest {
             "Classroom Update User",
             "pw_classroom",
             "010-1111-3333",
+            DEFAULT_BIRTH_DATE,
             "VOLUNTEER",
             null,
             null
@@ -155,7 +164,7 @@ class UserUpdateTest extends UserBaseTest {
         userTestHelper.setUser(createdUser.email());
 
         UpdateUserRequest updateReq = new UpdateUserRequest(
-            null, null, null, null, null, null, 2L
+            null, null, null, null, null, null, null, 2L
         );
 
         given()
@@ -179,6 +188,7 @@ class UserUpdateTest extends UserBaseTest {
             "Release Teacher User",
             "password123!",
             "010-2222-3333",
+            DEFAULT_BIRTH_DATE,
             "MANAGER",
             2L,
             2L
@@ -211,7 +221,7 @@ class UserUpdateTest extends UserBaseTest {
             .body("size()", equalTo(1));
 
         UpdateUserRequest updateReq = new UpdateUserRequest(
-            null, null, null, null, "GUEST", 1L, 1L
+            null, null, null, null, null, "GUEST", 1L, 1L
         );
 
         given()
@@ -241,7 +251,7 @@ class UserUpdateTest extends UserBaseTest {
     @DisplayName("담당 중인 활성 과목이 있는 User는 교사 배정 불가 역할로 변경 실패(409 Conflict)")
     void updateUser_withActiveTeacherAssignmentsToGuest_returns409() {
         UpdateUserRequest updateReq = new UpdateUserRequest(
-            null, null, null, null, "GUEST", null, null
+            null, null, null, null, null, "GUEST", null, null
         );
 
         given()
@@ -260,6 +270,7 @@ class UserUpdateTest extends UserBaseTest {
     void updateUser_Forbidden() {
         UpdateUserRequest updateReq = new UpdateUserRequest(
                 "Hacker Name",
+                null,
                 null,
                 null,
                 null,
@@ -287,6 +298,7 @@ class UserUpdateTest extends UserBaseTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -307,6 +319,7 @@ class UserUpdateTest extends UserBaseTest {
         UpdateSelfRequest updateReq = new UpdateSelfRequest(
                 "Updated Volunteer Name",
                 "010-5555-6666",
+                LocalDate.of(2001, 3, 3),
                 "volunteer.updated@test.com",
                 null
         );
@@ -322,6 +335,7 @@ class UserUpdateTest extends UserBaseTest {
             .body("name", equalTo("Updated Volunteer Name"))
             .body("phoneNumber", equalTo("010-5555-6666"))
             .body("email", equalTo("volunteer.updated@test.com"))
+            .body("birthDate", equalTo("2001-03-03"))
             .log().all();
     }
 
@@ -330,6 +344,7 @@ class UserUpdateTest extends UserBaseTest {
     void updateSelf_Unauthorized() {
         UpdateSelfRequest updateReq = new UpdateSelfRequest(
                 "Hacker",
+                null,
                 null,
                 null,
                 null

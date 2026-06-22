@@ -50,7 +50,10 @@ public class LocalAuthController {
         return ResponseEntity.ok(localLoginService.adminLogin(request));
     }
 
-    @Operation(summary = "회원가입", description = "새로운 사용자를 등록합니다.")
+    @Operation(
+        summary = "회원가입",
+        description = "이메일, 비밀번호, 기본 정보와 생년월일로 새로운 사용자를 등록합니다. 생년월일은 내부 저장 형식으로 변환되며, 프로필 이미지는 가입 후 별도 업로드 API로 등록합니다."
+    )
     @PostMapping("/signup")
     public ResponseEntity<TokenResponse> signup(
             @Valid @RequestBody LocalSignupRequest request

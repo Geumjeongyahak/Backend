@@ -6,8 +6,9 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
@@ -24,7 +25,7 @@ public class FileUploadTest extends BaseFileTest {
     @Test
     @DisplayName("인증된 사용자는 프로필 이미지를 업로드할 수 있다")
     void uploadProfileImage_success() throws IOException {
-        given()
+        String uploadedUrl = given()
             .header(AUTH_HEADER, getAuthHeader(userAccessToken))
             .contentType(ContentType.MULTIPART)
             .multiPart("file", "avatar.jpg", readSampleImage(), "image/jpeg")
@@ -36,7 +37,24 @@ public class FileUploadTest extends BaseFileTest {
             .body("originalName", equalTo("profile-" + userTestHelper.getUser(TEST_FILE_USER).getId() + ".png"))
             .body("contentType", equalTo("image/png"))
             .body("ext", equalTo("png"))
-            .body("url", containsString("/profiles/"));
+            .body("url", containsString("/profiles/"))
+            .extract()
+            .path("url");
+
+        userTestHelper.setUser(TEST_FILE_USER);
+        assertThat(userTestHelper.getUser(TEST_FILE_USER).getProfileImageUrl())
+            .isEqualTo(uploadedUrl);
+
+        String originalBasePath = io.restassured.RestAssured.basePath;
+        io.restassured.RestAssured.basePath = "";
+        given()
+            .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+        .when()
+            .get("/api/v1/users/me")
+        .then()
+            .statusCode(200)
+            .body("profileImageUrl", equalTo(uploadedUrl));
+        io.restassured.RestAssured.basePath = originalBasePath;
     }
 
     @Test
@@ -291,11 +309,10 @@ public class FileUploadTest extends BaseFileTest {
     }
 
     private byte[] readSampleImage() throws IOException {
-        try (InputStream inputStream = getClass().getResourceAsStream("/images/sample1.jpg")) {
-            if (inputStream == null) {
-                throw new IOException("sample image resource not found: /images/sample1.jpg");
-            }
-            return inputStream.readAllBytes();
+        BufferedImage image = new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            javax.imageio.ImageIO.write(image, "jpg", outputStream);
+            return outputStream.toByteArray();
         }
     }
 }

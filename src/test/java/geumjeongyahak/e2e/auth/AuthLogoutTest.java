@@ -8,6 +8,7 @@ import geumjeongyahak.domain.auth.v1.dto.request.LocalSignupRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LogoutRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.RefreshTokenRequest;
 import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
+import java.time.LocalDate;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
@@ -132,9 +133,8 @@ class AuthLogoutTest extends AuthBaseTest {
                 "password123!",
                 "멀티 디바이스 테스트",
                 uniqueUsername + "@test.com",
-                null,
                 "010-1234-5678",
-                "900101"
+                LocalDate.of(1990, 1, 1)
         );
 
         var signupResponse = given()

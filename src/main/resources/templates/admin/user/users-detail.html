@@ -12,6 +12,7 @@
         <div class="detail-item"><span>역할</span><strong th:text="${user.role}">VOLUNTEER</strong></div>
         <div class="detail-item"><span>이메일</span><strong th:text="${user.email}">email</strong></div>
         <div class="detail-item"><span>연락처</span><strong th:text="${user.phoneNumber ?: '-'}">-</strong></div>
+        <div class="detail-item"><span>생년월일</span><strong th:text="${user.birthDate ?: '-'}">-</strong></div>
         <div class="detail-item"><span>부서</span><strong><a class="link" th:if="${user.departmentId != null}" th:href="@{/admin/department/departments/{departmentId}(departmentId=${user.departmentId})}" th:text="${user.departmentName}">부서</a><span th:if="${user.departmentId == null}">-</span></strong></div>
         <div class="detail-item"><span>분반</span><strong><a class="link" th:if="${user.classroomId != null}" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${user.classroomId})}" th:text="${user.classroomName}">분반</a><span th:if="${user.classroomId == null}">-</span></strong></div>
     </section>

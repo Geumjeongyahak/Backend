@@ -8,6 +8,7 @@
         <label>이메일 <input name="email" type="email" th:value="${user.email}" required></label>
         <label>이름 <input name="name" th:value="${user.name}" required></label>
         <label>연락처 <input name="phoneNumber" th:value="${user.phoneNumber}"></label>
+        <label>생년월일 <input name="birthDate" type="date" th:value="${user.birthDate}"></label>
         <label>역할
             <select name="role">
                 <option value="ADMIN" th:selected="${user.role == 'ADMIN'}">ADMIN</option>

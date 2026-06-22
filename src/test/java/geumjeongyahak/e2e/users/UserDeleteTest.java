@@ -54,6 +54,7 @@ class UserDeleteTest extends UserBaseTest {
                 "Delete Test User",
                 "pw_deletetest",
                 "010-3333-4444",
+                DEFAULT_BIRTH_DATE,
                 "GUEST",
                 null
         );
@@ -148,6 +149,7 @@ class UserDeleteTest extends UserBaseTest {
                 "Double Delete Test",
                 "pw_doubledelete",
                 "010-5555-6666",
+                DEFAULT_BIRTH_DATE,
                 "GUEST",
                 null
         );
@@ -203,6 +205,7 @@ class UserDeleteTest extends UserBaseTest {
             "Revoke Test User",
             "pw_revoketest",
             "010-7777-8888",
+            DEFAULT_BIRTH_DATE,
             "GUEST",
             null
         );
