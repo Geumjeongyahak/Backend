@@ -1,0 +1,30 @@
+services:
+  app:
+    image: ${APP_IMAGE:-ghcr.io/geumjeongyahak/backend:latest}
+    build:
+      context: .
+      dockerfile: infra/app/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      POSTGRES_HOST: ${POSTGRES_HOST:?POSTGRES_HOST must be set to the DB server private IP or DNS name}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      MANAGEMENT_PORT: ${MANAGEMENT_PORT:-9090}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+      - "${MANAGEMENT_PORT:-9090}:9090"
+    volumes:
+      - "${APP_LOG_DIR:-./logs/app}:/app/logs"
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+    pid: host
+    ports:
+      - "${NODE_EXPORTER_PORT:-9100}:9100"
+    volumes:
+      - /:/host:ro,rslave

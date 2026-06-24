@@ -18,9 +18,11 @@ services:
     ports:
       - "${APP_PORT:-8080}:8080"
       - "${MANAGEMENT_PORT:-9090}:9090"
+    volumes:
+      - "${APP_LOG_DIR:-./logs/app}:/app/logs"
 
   db:
-    image: postgres:${POSTGRES_VERSION:-16-alpine}
+    image: docker.io/library/postgres:${POSTGRES_VERSION:-16-alpine}
     restart: unless-stopped
     env_file:
       - .env

@@ -39,10 +39,12 @@ out/
 ## 기본 환경 설정 관련
 .env
 .env.*
+scripts/gcp/env/*.env
 .devdbrc
 .claude/settings.local.json
 .secret
 .secret/*
+logs/
 
 docs/issue/*
 docs/pr/*

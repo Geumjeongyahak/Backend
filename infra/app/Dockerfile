@@ -1,4 +1,4 @@
-FROM gradle:8.11-jdk21-alpine AS builder
+FROM docker.io/library/gradle:8.11-jdk21-alpine AS builder
 
 WORKDIR /workspace
 
@@ -12,11 +12,13 @@ COPY src ./src
 
 RUN ./gradlew bootJar -x test --no-daemon
 
-FROM eclipse-temurin:21-jre-alpine
+FROM docker.io/library/eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-RUN addgroup -S spring && adduser -S spring -G spring
+RUN addgroup -S -g 1000 spring && adduser -S -u 1000 -G spring spring \
+    && mkdir -p /app/logs \
+    && chown -R spring:spring /app/logs
 
 COPY --from=builder /workspace/build/libs/*.jar /app/app.jar
 
