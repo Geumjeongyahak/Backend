@@ -94,21 +94,20 @@ make logs-local
 make down-local
 ```
 
-dev 서버 배포는 GHCR에 올라간 backend 이미지를 pull하고, 같은 GCE 인스턴스에서 앱, PostgreSQL, exporter, Alloy를 함께 올립니다.
+dev 앱 서버 배포는 GHCR에 올라간 backend 이미지를 pull하고, GCE `e2-small` 인스턴스에서 Spring Boot 앱을 올립니다. PostgreSQL은 별도 GCE `e2-micro` 인스턴스에서 실행합니다.
 
 ```bash
-APP_IMAGE=ghcr.io/geumjeongyahak/backend:dev-latest make deploy-dev
-make ps-dev
-make logs-dev
+APP_IMAGE=ghcr.io/geumjeongyahak/backend:dev-latest make deploy-app-dev
+make ps-app-dev
+make logs-app-dev
 ```
 
-`make deploy-dev` 실행 순서:
+DB 서버는 최초 구성 또는 DB 컨테이너 갱신 시 별도로 배포합니다.
 
 ```bash
-docker compose pull app node-exporter cadvisor postgres-exporter alloy
-docker compose up -d --remove-orphans
-docker image prune -f
-docker builder prune -f
+make deploy-db-dev
+make ps-db-dev
+make logs-db-dev
 ```
 
 이미지를 직접 업로드할 때는 `APP_IMAGE`를 지정해서 push합니다.
@@ -127,70 +126,81 @@ APP_IMAGE=ghcr.io/geumjeongyahak/backend:dev-latest make push
 
 ### 배포 구성
 
-현재 dev 배포는 두 개의 GCE 인스턴스를 전제로 합니다.
+현재 dev 배포는 세 개의 GCE 인스턴스를 전제로 합니다.
 
 ```text
-App/DB GCE
+App GCE (e2-small)
 - app
+- node-exporter
+
+DB GCE (e2-micro)
 - postgres
 - node-exporter
-- cAdvisor
-- postgres-exporter
-- Grafana Alloy
 
-Monitoring GCE
-- Prometheus
-- Loki/Grafana는 다음 단계에서 추가 예정
+Home server
+- Prometheus/Grafana
 ```
 
-App/DB GCE의 `.env`는 인스턴스 파일로 직접 관리합니다. GitHub Actions는 `.env`를 덮어쓰지 않고, compose/config 파일만 복사한 뒤 `APP_IMAGE=... make deploy-dev`를 실행합니다.
+각 GCE의 `.env`는 인스턴스 파일로 직접 관리합니다. GitHub Actions는 앱 서버의 `.env`를 덮어쓰지 않고, 앱 compose/config 파일만 복사한 뒤 `APP_IMAGE=... make deploy-app-dev`를 실행합니다.
 
-필수 환경 변수 예시:
+앱 서버 필수 환경 변수 예시:
 
 ```env
-SPRING_PROFILES_ACTIVE=dev
+SPRING_PROFILES_ACTIVE=prod
 APP_PORT=8080
 MANAGEMENT_PORT=9090
-DB_PORT=5432
+NODE_EXPORTER_PORT=9100
+LOG_LEVEL_ROOT=WARN
+LOG_LEVEL_APP=WARN
+APP_LOG_DIR=./logs/app
+LOG_FILE_MAX_HISTORY=30
 
 POSTGRES_DB=geumjeongyahak
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=change-me
-POSTGRES_HOST=db
+POSTGRES_HOST=DB_SERVER_PRIVATE_IP
 POSTGRES_PORT=5432
+FLYWAY_ENABLED=true
+FLYWAY_BASELINE_ON_MIGRATE=false
 
+ADMIN_BOOTSTRAP_ENABLED=true
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=change-this-strong-password-1A!
+ADMIN_NAME=관리자
+```
+
+`ADMIN_PASSWORD`는 최초 관리자 계정 생성에만 필요합니다. 계정 생성 후에는 서버 `.env`에서 제거해도 재시작이 가능합니다. 기존 수동 생성 DB를 Flyway로 편입해야 하는 경우에만 `FLYWAY_BASELINE_ON_MIGRATE=true`를 일회성으로 사용하고, 신규 운영 DB는 `false`를 유지합니다.
+
+DB 서버 필수 환경 변수 예시:
+
+```env
+DB_PORT=5432
+DB_BIND_ADDRESS=0.0.0.0
 NODE_EXPORTER_PORT=9100
-CADVISOR_PORT=8081
-POSTGRES_EXPORTER_PORT=9187
-ALLOY_PORT=12345
-DEPLOY_ENV=dev
-INSTANCE_NAME=app-dev-1
-LOKI_PUSH_URL=http://MONITORING_PRIVATE_IP:3100/loki/api/v1/push
+
+POSTGRES_DB=geumjeongyahak
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=change-me
 ```
 
 ### 관측성
 
-App/DB GCE는 메트릭 endpoint를 노출하고, Monitoring GCE의 Prometheus가 private IP로 scrape합니다.
+앱은 Spring Actuator 메트릭 endpoint를 노출하고, 앱/DB 서버는 Node Exporter로 시스템 메트릭을 노출합니다. 홈서버의 Prometheus가 VPN 또는 허용된 네트워크 경로로 scrape합니다.
 
 | 포트 | 대상 | 설명 |
 |------|------|------|
-| `9090` | Spring Actuator | `/actuator/prometheus` |
-| `9100` | node-exporter | VM CPU, memory, disk, network |
-| `8081` | cAdvisor | Docker container metrics |
-| `9187` | postgres-exporter | PostgreSQL metrics |
-| `12345` | Alloy | Alloy self metrics/status |
+| `9090` | App GCE Spring Actuator | `/actuator/prometheus` |
+| `9100` | App GCE / DB GCE node-exporter | CPU, memory, disk, network metrics |
 
-Alloy는 App/DB GCE의 Docker 로그를 읽어 Loki로 push합니다. Loki/Grafana 구성은 monitoring 서버 구성 단계에서 추가합니다.
-
-Monitoring GCE에서 Prometheus만 먼저 올릴 수 있습니다. repository root에서 실행합니다.
+홈서버에서 Prometheus만 먼저 올릴 수 있습니다. repository root에서 실행합니다.
 
 ```bash
 make deploy-monitoring
 ```
 
-`infra/monitoring/prometheus.yml`의 target IP는 App/DB GCE의 private IP로 바꿔야 합니다.
+`infra/monitoring/prometheus.yml`의 target IP는 홈서버에서 접근 가능한 App GCE / DB GCE IP로 바꿔야 합니다.
 
-관측성 포트는 외부 공개하지 않고, Monitoring GCE의 private IP에서만 접근 가능하게 방화벽을 제한합니다.
+Actuator와 Node Exporter 포트는 외부 공개하지 않고, 홈서버 VPN IP 또는 고정 IP에서만 접근 가능하게 방화벽을 제한합니다.
 
 ## 아키텍처
 
