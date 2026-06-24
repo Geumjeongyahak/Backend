@@ -73,7 +73,7 @@ jobs:
           host: ${{ secrets.GCE_HOST }}
           username: ${{ secrets.GCE_USER }}
           key: ${{ secrets.GCE_SSH_KEY }}
-          source: "docker-compose.yml,docker-compose.dev.yml,Makefile,src/main/resources/sql/init_scheme.sql,src/main/resources/sql/init_data.sql,infra/app-server"
+          source: "docker-compose.app.yml,docker-compose.dev.yml,Makefile"
           target: "~/app-dev/"
 
       - name: Deploy to GCE via SSH
@@ -93,4 +93,4 @@ jobs:
             test -f .env
             
             # .env is managed on the instance. Override only the image selected by this workflow.
-            APP_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-latest make deploy-dev
+            APP_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-latest make deploy-app-dev
