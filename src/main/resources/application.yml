@@ -17,7 +17,7 @@ spring:
           starttls:
             enable: ${MAIL_SMTP_STARTTLS_ENABLE:true}
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE}
+    active: ${SPRING_PROFILES_ACTIVE:prod}
   jpa:
     open-in-view: false
   flyway:
@@ -80,6 +80,12 @@ app:
       cron: "0 0 3 * * *"
   post:
     draft-expiration-minutes: 60
+  bootstrap:
+    admin:
+      enabled: ${ADMIN_BOOTSTRAP_ENABLED:false}
+      email: ${ADMIN_EMAIL:}
+      password: ${ADMIN_PASSWORD:}
+      name: ${ADMIN_NAME:관리자}
   firebase:
     enabled: ${FIREBASE_ENABLED:false}
     project-id: ${FIREBASE_PROJECT_ID:}

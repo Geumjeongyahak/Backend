@@ -2,10 +2,13 @@
 <configuration>
     <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="geumjeongyahak"/>
     <springProperty scope="context" name="activeProfile" source="SPRING_PROFILES_ACTIVE" defaultValue="default"/>
-    <springProperty scope="context" name="rootLogLevel" source="LOG_LEVEL_ROOT" defaultValue="INFO"/>
-    <springProperty scope="context" name="appLogLevel" source="LOG_LEVEL_APP" defaultValue="INFO"/>
+    <springProperty scope="context" name="rootLogLevel" source="LOG_LEVEL_ROOT" defaultValue="WARN"/>
+    <springProperty scope="context" name="appLogLevel" source="LOG_LEVEL_APP" defaultValue="WARN"/>
     <springProperty scope="context" name="springLogLevel" source="LOG_LEVEL_SPRING" defaultValue="WARN"/>
     <springProperty scope="context" name="sqlLogLevel" source="LOG_LEVEL_SQL" defaultValue="WARN"/>
+    <springProperty scope="context" name="logFilePath" source="LOG_FILE_PATH" defaultValue="/app/logs/application.log"/>
+    <springProperty scope="context" name="logFileMaxHistory" source="LOG_FILE_MAX_HISTORY" defaultValue="30"/>
+    <springProperty scope="context" name="logFileTotalSizeCap" source="LOG_FILE_TOTAL_SIZE_CAP" defaultValue="1GB"/>
 
     <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
@@ -19,8 +22,28 @@
         </encoder>
     </appender>
 
+    <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${logFilePath}</file>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeContext>false</includeContext>
+            <customFields>{"service":"${appName}","profile":"${activeProfile}"}</customFields>
+            <fieldNames>
+                <timestamp>timestamp</timestamp>
+                <version>[ignore]</version>
+                <levelValue>[ignore]</levelValue>
+            </fieldNames>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${logFilePath}.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>${logFileMaxHistory}</maxHistory>
+            <totalSizeCap>${logFileTotalSizeCap}</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
     <root level="${rootLogLevel}">
         <appender-ref ref="JSON_CONSOLE"/>
+        <appender-ref ref="JSON_FILE"/>
     </root>
 
     <logger name="geumjeongyahak" level="${appLogLevel}"/>
