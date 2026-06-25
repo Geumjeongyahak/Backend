@@ -51,7 +51,7 @@ SPRING_PROFILES_ACTIVE=dev           # local, dev, prod
 # 필수 - 데이터베이스 (dev/prod)
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
-POSTGRES_DB=sonmoum
+POSTGRES_DB=gjlearn
 POSTGRES_USER=your-db-user
 POSTGRES_PASSWORD=your-db-password
 
@@ -81,11 +81,11 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 ### 테스트 컨벤션
 
 PR 생성 및 머지 전에는 로컬 또는 별도 검증 환경에서 `./gradlew test`를 반드시 통과시킵니다.
-dev 배포 워크플로는 배포 병목을 줄이기 위해 테스트를 실행하지 않고, Docker 이미지 빌드도 `bootJar -x test`로 수행합니다.
+GCE 배포는 Docker 이미지가 아니라 `bootJar` 산출물(`build/libs/*.jar`)을 앱 서버에 복사한 뒤 systemd 서비스로 실행합니다.
 
 ### Docker Compose
 
-로컬에서는 앱과 PostgreSQL을 함께 빌드해서 실행합니다.
+로컬에서는 앱과 PostgreSQL을 함께 빌드해서 실행합니다. GCE 운영 배포에는 Docker/Compose를 사용하지 않습니다.
 
 ```bash
 cp .env-example .env
@@ -94,31 +94,26 @@ make logs-local
 make down-local
 ```
 
-dev 앱 서버 배포는 GHCR에 올라간 backend 이미지를 pull하고, GCE `e2-small` 인스턴스에서 Spring Boot 앱을 올립니다. PostgreSQL은 별도 GCE `e2-micro` 인스턴스에서 실행합니다.
+GCE dev/prod 배포는 앱 서버와 DB 서버를 분리합니다. 앱 서버는 Spring Boot jar + systemd, DB 서버는 apt PostgreSQL + systemd로 실행합니다.
 
 ```bash
-APP_IMAGE=ghcr.io/geumjeongyahak/backend:dev-latest make deploy-app-dev
-make ps-app-dev
-make logs-app-dev
+./gradlew bootJar -x test
+gcloud compute scp build/libs/*.jar scripts/gcp/05_app/01_install-app-service.sh \
+  "$APP_INSTANCE_NAME:~/app-dev/" --project "$PROJECT_ID" --zone "$ZONE"
+gcloud compute ssh "$APP_INSTANCE_NAME" --project "$PROJECT_ID" --zone "$ZONE" \
+  --command "cd ~/app-dev && mv *.jar app.jar && chmod +x 01_install-app-service.sh && ./01_install-app-service.sh"
 ```
 
-DB 서버는 최초 구성 또는 DB 컨테이너 갱신 시 별도로 배포합니다.
+DB 서버는 최초 구성 또는 PostgreSQL/exporter 재설정 시 별도로 구성합니다.
 
 ```bash
-make deploy-db-dev
-make ps-db-dev
-make logs-db-dev
+gcloud compute scp scripts/gcp/04_db/01_install-db-service.sh scripts/gcp/00_env/dev.db.env \
+  "$DB_INSTANCE_NAME:~/db-dev/" --project "$PROJECT_ID" --zone "$ZONE" --tunnel-through-iap
+gcloud compute ssh "$DB_INSTANCE_NAME" --project "$PROJECT_ID" --zone "$ZONE" --tunnel-through-iap \
+  --command "cd ~/db-dev && mv dev.db.env .env && chmod +x 01_install-db-service.sh && ./01_install-db-service.sh"
 ```
 
-이미지를 직접 업로드할 때는 `APP_IMAGE`를 지정해서 push합니다.
-
-```bash
-docker login ghcr.io -u <github-username>
-docker build -t ghcr.io/geumjeongyahak/backend:dev-latest -f infra/app/Dockerfile .
-APP_IMAGE=ghcr.io/geumjeongyahak/backend:dev-latest make push
-```
-
-수동 build/push 전에 코드 검증이 필요하면 배포 명령과 분리해서 먼저 실행합니다.
+수동 빌드 전에 코드 검증이 필요하면 배포 명령과 분리해서 먼저 실행합니다.
 
 ```bash
 ./gradlew test
@@ -126,34 +121,41 @@ APP_IMAGE=ghcr.io/geumjeongyahak/backend:dev-latest make push
 
 ### 배포 구성
 
-현재 dev 배포는 세 개의 GCE 인스턴스를 전제로 합니다.
+현재 dev/prod 배포는 두 개의 GCE 인스턴스와 홈서버 Tailscale 연동을 전제로 합니다. EC2라는 표현을 쓰더라도 여기서는 같은 역할의 App VM을 의미합니다.
 
 ```text
-App GCE (e2-small)
-- app
-- node-exporter
+Home server (Prometheus/Grafana)
+  ↕ Tailscale 100.64.0.0/10 또는 MagicDNS
+App GCE e2-small
+- Spring Boot jar systemd service
+- node-exporter systemd service
+- tailscaled
 
-DB GCE (e2-micro)
-- postgres
-- node-exporter
-
-Home server
-- Prometheus/Grafana
+DB GCE e2-micro
+- PostgreSQL systemd service
+- node-exporter systemd service
+- postgres-exporter systemd service
+- tailscaled
 ```
 
-각 GCE의 `.env`는 인스턴스 파일로 직접 관리합니다. GitHub Actions는 앱 서버의 `.env`를 덮어쓰지 않고, 앱 compose/config 파일만 복사한 뒤 `APP_IMAGE=... make deploy-app-dev`를 실행합니다.
+각 GCE의 `.env`는 인스턴스 파일로 직접 관리합니다. 배포 자동화는 Tailscale SSH로 앱 서버에 접속해서 jar와 설치 스크립트만 갱신하고, `.env`는 덮어쓰지 않습니다.
 
 앱 서버 필수 환경 변수 예시:
 
 ```env
 SPRING_PROFILES_ACTIVE=prod
 APP_PORT=8080
-MANAGEMENT_PORT=9090
+MANAGEMENT_PORT=8080
 NODE_EXPORTER_PORT=9100
 LOG_LEVEL_ROOT=WARN
 LOG_LEVEL_APP=WARN
 APP_LOG_DIR=./logs/app
+LOG_FILE_PATTERN=./logs/app/application.%d{yyyy-MM-dd}.log
+LOG_UPLOAD_PATH=./logs/app/application.*.log
 LOG_FILE_MAX_HISTORY=30
+LOG_FILE_TOTAL_SIZE_CAP=1GB
+CLOUD_LOGGING_ENABLED=true
+CLOUD_LOGGING_LOG_ID=gjlearn-prod-app
 
 POSTGRES_DB=geumjeongyahak
 POSTGRES_USER=postgres
@@ -175,32 +177,51 @@ DB 서버 필수 환경 변수 예시:
 
 ```env
 DB_PORT=5432
-DB_BIND_ADDRESS=0.0.0.0
+DB_LISTEN_ADDRESS=*
+APP_DB_CIDR=APP_SERVER_PRIVATE_IP/32
 NODE_EXPORTER_PORT=9100
+POSTGRES_EXPORTER_PORT=9187
 
 POSTGRES_DB=geumjeongyahak
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=change-me
 ```
 
+`POSTGRES_HOST`를 DB 서버 VPC private IP로 설정하면 PostgreSQL `pg_hba.conf`의 `APP_DB_CIDR`도 App VM의 VPC private IP `/32`여야 합니다. Tailscale IP/MagicDNS로 DB에 접속하는 구성에서만 App VM Tailscale IP `/32` 또는 Tailnet 대역을 사용합니다.
+
 ### 관측성
 
-앱은 Spring Actuator 메트릭 endpoint를 노출하고, 앱/DB 서버는 Node Exporter로 시스템 메트릭을 노출합니다. 홈서버의 Prometheus가 VPN 또는 허용된 네트워크 경로로 scrape합니다.
+앱은 Spring Actuator 메트릭 endpoint를 노출하고, 앱/DB 서버는 Node Exporter로 시스템 메트릭을 노출합니다. DB 서버는 PostgreSQL Exporter도 함께 실행합니다. 홈서버 Prometheus는 public IP가 아니라 Tailscale IP 또는 MagicDNS hostname으로 scrape합니다. 앱 파일 로그는 `application.yyyy-MM-dd.log` 형식으로 일자별 저장하고 Logback이 30일 이후 파일을 정리합니다. 파일에는 `WARN`/`ERROR` 이상만 기록하므로 Cloud Ops Agent는 JSON 파싱 없이 해당 파일을 Cloud Logging으로 전달합니다.
 
 | 포트 | 대상 | 설명 |
 |------|------|------|
-| `9090` | App GCE Spring Actuator | `/actuator/prometheus` |
+| `8080` | App GCE Spring Actuator | `/actuator/prometheus` |
 | `9100` | App GCE / DB GCE node-exporter | CPU, memory, disk, network metrics |
+| `9187` | DB GCE postgres-exporter | PostgreSQL metrics |
 
-홈서버에서 Prometheus만 먼저 올릴 수 있습니다. repository root에서 실행합니다.
+홈서버 Prometheus 예시:
 
-```bash
-make deploy-monitoring
+```yaml
+scrape_configs:
+  - job_name: gjlearn-app-node
+    static_configs:
+      - targets: ['gjlearn-app.<tailnet>.ts.net:9100']
+
+  - job_name: gjlearn-api
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['gjlearn-app.<tailnet>.ts.net:8080']
+
+  - job_name: gjlearn-db-node
+    static_configs:
+      - targets: ['gjlearn-db.<tailnet>.ts.net:9100']
+
+  - job_name: gjlearn-postgres
+    static_configs:
+      - targets: ['gjlearn-db.<tailnet>.ts.net:9187']
 ```
 
-`infra/monitoring/prometheus.yml`의 target IP는 홈서버에서 접근 가능한 App GCE / DB GCE IP로 바꿔야 합니다.
-
-Actuator와 Node Exporter 포트는 외부 공개하지 않고, 홈서버 VPN IP 또는 고정 IP에서만 접근 가능하게 방화벽을 제한합니다.
+`infra/monitoring/prometheus.yml`의 target은 실제 Tailscale IP(`100.x.x.x`) 또는 MagicDNS hostname으로 바꿔야 합니다. `8080`, `9100`, `9187`, `5432`는 public internet에 직접 열지 않습니다. GCP firewall/security group에는 Tailscale용 `41641/udp`만 public 허용하면 됩니다.
 
 ## 아키텍처
 
