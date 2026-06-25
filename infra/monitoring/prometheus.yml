@@ -3,21 +3,27 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: sonmoum-api
+  - job_name: gjlearn-api
     metrics_path: /actuator/prometheus
     static_configs:
-      # Replace 10.0.0.10 with the VPN or reachable private IP of the app GCE instance.
+      # Replace with App VM Tailscale IP (100.x.x.x) or MagicDNS hostname.
       - targets:
-          - 10.0.0.10:9090
+          - gjlearn-app.example.ts.net:8080
 
-  - job_name: sonmoum-app-node
+  - job_name: gjlearn-app-node
     static_configs:
-      # Replace 10.0.0.10 with the VPN or reachable private IP of the app GCE instance.
+      # Replace with App VM Tailscale IP (100.x.x.x) or MagicDNS hostname.
       - targets:
-          - 10.0.0.10:9100
+          - gjlearn-app.example.ts.net:9100
 
-  - job_name: sonmoum-db-node
+  - job_name: gjlearn-db-node
     static_configs:
-      # Replace 10.0.0.20 with the VPN or reachable private IP of the DB GCE instance.
+      # Replace with DB VM Tailscale IP (100.x.x.x) or MagicDNS hostname.
       - targets:
-          - 10.0.0.20:9100
+          - gjlearn-db.example.ts.net:9100
+
+  - job_name: gjlearn-postgres
+    static_configs:
+      # Replace with DB VM Tailscale IP (100.x.x.x) or MagicDNS hostname.
+      - targets:
+          - gjlearn-db.example.ts.net:9187
