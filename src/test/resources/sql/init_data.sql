@@ -25,19 +25,24 @@ INSERT INTO users (id, name, primary_email, role, department_id, teacher_start_a
 INSERT INTO users (id, name, primary_email, role, department_id, teacher_start_at, teacher_end_at) VALUES
     (4, '이영희', 'guest01@test.com', 'GUEST', NULL, NULL, NULL);
 
-ALTER TABLE users ALTER COLUMN id RESTART WITH 5;
+INSERT INTO users (id, name, primary_email, role, department_id, teacher_start_at, teacher_end_at) VALUES
+    (5, 'Apps Script Bot', 'geumjeongyahak-apps-script-bot@gmail.com', 'VOLUNTEER', NULL, NULL, NULL);
+
+ALTER TABLE users ALTER COLUMN id RESTART WITH 6;
 
 -- 3. User Credentials
 INSERT INTO user_credentials (id, user_id, provider, credential_email, password_hash, email_verified) VALUES
     (1, 1, 'LOCAL', 'admin@test.com', '$2a$10$A0Av/dPBUz5uoDmp0Z/2S.dsMzOWFL5gLK7CrXmQp6Rw2vqWulapi', TRUE),
     (2, 2, 'LOCAL', 'teacher01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
     (3, 3, 'LOCAL', 'teacher02@test.com', '$2a$12$jNEpPdWPB8WX6kOR/t9cru3Lz7WwZRw3KHfgoRJBg0ddWUFnymr/O', TRUE),
-    (4, 4, 'LOCAL', 'guest01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE);
-ALTER TABLE user_credentials ALTER COLUMN id RESTART WITH 5;
+    (4, 4, 'LOCAL', 'guest01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
+    (5, 5, 'LOCAL', 'geumjeongyahak-apps-script-bot@gmail.com', '$2a$10$6w/cCD2l06.TF3GK7FuCv.uMBX7gqIvgMdwkuSe3D3F6WYbgctibW', TRUE);
+ALTER TABLE user_credentials ALTER COLUMN id RESTART WITH 6;
 
 -- 4. User Permissions
 INSERT INTO user_permissions (user_id, permission_code) VALUES
-    (2, 'channel:write:1');
+    (2, 'channel:write:1'),
+    (5, 'daily-schedule:manage:*');
 
 -- 5. Department Permissions
 INSERT INTO department_permissions (department_id, role_type, permission_code) VALUES
