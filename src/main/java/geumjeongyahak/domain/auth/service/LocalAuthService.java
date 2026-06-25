@@ -7,11 +7,12 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import geumjeongyahak.common.mail.MailSenderService;
+import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.common.security.jwt.JwtTokenProvider;
 import geumjeongyahak.domain.auth.entity.UserCredential;
 import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.auth.event.UserSignedUpEvent;
 import geumjeongyahak.domain.auth.exception.InvalidRefreshTokenException;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalSignupRequest;
@@ -32,7 +33,7 @@ public class LocalAuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
-    private final MailSenderService mailSenderService;
+    private final EventPublisher eventPublisher;
 
     @Transactional
     public TokenResponse login(LocalLoginRequest request) {
@@ -102,7 +103,7 @@ public class LocalAuthService {
         );
         
         TokenResponse tokenResponse = createTokenResponse(savedUser, credential.getId());
-        mailSenderService.sendSignupWelcomeMail(savedUser.getEmail(), savedUser.getName());
+        eventPublisher.publish(new UserSignedUpEvent(savedUser.getId(), savedUser.getEmail(), savedUser.getName()));
         log.info("회원가입 성공: userId={}, email={}", savedUser.getId(), request.email());
         return tokenResponse;
     }

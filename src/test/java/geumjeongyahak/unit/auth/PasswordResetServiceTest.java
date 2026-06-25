@@ -126,4 +126,46 @@ class PasswordResetServiceTest {
             .isInstanceOf(BusinessException.class)
             .hasMessage("비밀번호 재설정 인증번호가 만료되었습니다.");
     }
+
+    @Test
+    void resetPassword_rejectsInvalidResetCode() {
+        User user = User.builder()
+            .name("인증번호 불일치 사용자")
+            .email(EMAIL)
+            .build();
+        UserCredential credential = UserCredential.local(user, EMAIL, "old-password-hash", true);
+        credential.issuePasswordResetToken(TOKEN_HASH, CLOCK.instant().atZone(ZoneId.of("Asia/Seoul")).toLocalDateTime().plusMinutes(15));
+        given(credentialRepository.findByCredentialEmailAndProvider(EMAIL, ProviderType.LOCAL))
+            .willReturn(Optional.of(credential));
+        given(passwordEncoder.matches("654321", TOKEN_HASH)).willReturn(false);
+
+        assertThatThrownBy(() -> passwordResetService.resetPassword(EMAIL, "654321", "new-password123!"))
+            .isInstanceOf(BusinessException.class)
+            .hasMessage("유효하지 않은 비밀번호 재설정 인증번호입니다.");
+
+        assertThat(credential.getPasswordHash()).isEqualTo("old-password-hash");
+        assertThat(credential.getPasswordResetTokenHash()).isEqualTo(TOKEN_HASH);
+        verify(credentialRepository, never()).save(any());
+    }
+
+    @Test
+    void resetPassword_rejectsDeactivatedUserEvenWhenTokenMatches() {
+        User user = User.builder()
+            .name("비활성 사용자")
+            .email(EMAIL)
+            .build();
+        user.softDelete();
+        UserCredential credential = UserCredential.local(user, EMAIL, "old-password-hash", true);
+        credential.issuePasswordResetToken(TOKEN_HASH, CLOCK.instant().atZone(ZoneId.of("Asia/Seoul")).toLocalDateTime().plusMinutes(15));
+        given(credentialRepository.findByCredentialEmailAndProvider(EMAIL, ProviderType.LOCAL))
+            .willReturn(Optional.of(credential));
+        given(passwordEncoder.matches(RAW_TOKEN, TOKEN_HASH)).willReturn(true);
+
+        assertThatThrownBy(() -> passwordResetService.resetPassword(EMAIL, RAW_TOKEN, "new-password123!"))
+            .isInstanceOf(BusinessException.class)
+            .hasMessage("유효하지 않은 비밀번호 재설정 인증번호입니다.");
+
+        assertThat(credential.getPasswordHash()).isEqualTo("old-password-hash");
+        verify(credentialRepository, never()).save(any());
+    }
 }

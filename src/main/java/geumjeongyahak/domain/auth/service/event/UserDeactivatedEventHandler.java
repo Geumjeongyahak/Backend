@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.auth.service.event;
 
 import geumjeongyahak.domain.auth.service.RefreshTokenService;
+import geumjeongyahak.domain.auth.service.UserCredentialService;
 import geumjeongyahak.domain.users.event.UserDeactivatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,10 +14,12 @@ import org.springframework.stereotype.Component;
 public class UserDeactivatedEventHandler {
 
     private final RefreshTokenService refreshTokenService;
+    private final UserCredentialService userCredentialService;
 
     @EventListener
     public void handleUserDeactivated(UserDeactivatedEvent event) {
         refreshTokenService.deleteRefreshTokenByUserId(event.userId());
+        userCredentialService.clearPasswordResetTokensByUserId(event.userId());
         log.info("비활성 사용자 Refresh Token 폐기 완료 - userId: {}", event.userId());
     }
 }

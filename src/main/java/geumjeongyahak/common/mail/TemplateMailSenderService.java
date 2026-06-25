@@ -102,11 +102,11 @@ public class TemplateMailSenderService implements MailSenderService {
         String message
     ) {
         log.info(
-            "MAIL_FALLBACK template={} recipient={} subject={} variables={}",
+            "MAIL_FALLBACK template={} recipient={} subject={} message={}",
             templateKey,
             recipientEmail,
             subject,
-            variables
+            message
         );
         return mailProperties.enabled()
             ? MailDeliveryResult.fallbackLogged(templateKey, recipientEmail, message)

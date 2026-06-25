@@ -97,6 +97,7 @@ public class PasswordResetService {
         UserCredential credential = credentialRepository.findByCredentialEmailAndProvider(email, ProviderType.LOCAL)
             .filter(candidate -> candidate.getPasswordResetTokenHash() != null)
             .filter(candidate -> passwordEncoder.matches(resetCode, candidate.getPasswordResetTokenHash()))
+            .filter(candidate -> !candidate.getUser().isDeleted())
             .orElseThrow(() -> new BusinessException(AuthErrorCode.PASSWORD_RESET_TOKEN_INVALID));
 
         LocalDateTime now = LocalDateTime.now(clock);

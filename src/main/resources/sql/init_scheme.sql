@@ -99,7 +99,6 @@ CREATE TABLE user_credentials (
 
 CREATE INDEX idx_user_credentials_user_id ON user_credentials(user_id);
 CREATE INDEX idx_user_credentials_credential_email ON user_credentials(credential_email);
-CREATE INDEX idx_user_credentials_password_reset_token_hash ON user_credentials(password_reset_token_hash);
 
 -- Refresh tokens table
 CREATE TABLE refresh_tokens (

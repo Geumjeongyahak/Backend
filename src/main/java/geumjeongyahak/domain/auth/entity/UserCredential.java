@@ -126,13 +126,23 @@ public class UserCredential extends BaseEntity {
         this.passwordResetTokenExpiresAt = expiresAt;
     }
 
+    public void changeCredentialEmail(String newEmail) {
+        this.credentialEmail = newEmail;
+        this.emailVerified = false;
+        clearPasswordResetToken();
+    }
+
+    public void changePassword(String newPasswordHash) {
+        this.passwordHash = newPasswordHash;
+        clearPasswordResetToken();
+    }
+
     public boolean isPasswordResetTokenExpired(LocalDateTime now) {
         return passwordResetTokenExpiresAt == null || !passwordResetTokenExpiresAt.isAfter(now);
     }
 
     public void completePasswordReset(String newPasswordHash) {
-        this.passwordHash = newPasswordHash;
-        clearPasswordResetToken();
+        changePassword(newPasswordHash);
     }
 
     public void clearPasswordResetToken() {
