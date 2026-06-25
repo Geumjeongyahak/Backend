@@ -1,6 +1,6 @@
 spring:
   application:
-    name: sonmoum-api-test
+    name: gjlearn-api-test
   autoconfigure:
     exclude:
       - com.google.cloud.spring.autoconfigure.storage.GcpStorageAutoConfiguration
