@@ -1,20 +1,16 @@
-name: Deploy to Dev (GCE)
+name: Deploy to Dev (SSH)
 
 on:
   push:
     branches:
       - dev
-
-env:
-  REGISTRY: ghcr.io
-  # IMAGE_NAME will be set to lowercase in the job
+  workflow_dispatch:
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
 
     steps:
       - name: Checkout repository
@@ -27,70 +23,27 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Lowercase IMAGE_NAME
+      - name: Build Spring Boot jar
+        run: ./gradlew bootJar -x test
+
+      - name: Deploy jar over SSH
+        env:
+          SSH_HOST: ${{ secrets.DEV_GCE_HOST || secrets.GCE_HOST }}
+          SSH_USER: ${{ secrets.DEV_GCE_USER || secrets.GCE_USER }}
+          SSH_KEY: ${{ secrets.DEV_GCE_SSH_KEY || secrets.GCE_SSH_KEY }}
         run: |
-          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+          set -euo pipefail
+          test -n "${SSH_HOST}"
+          test -n "${SSH_USER}"
+          test -n "${SSH_KEY}"
 
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=dev-latest
-            type=sha,prefix=dev-
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: infra/app/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Lowercase IMAGE_NAME
-        run: |
-          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
-
-      - name: Copy deploy files to GCE
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.GCE_HOST }}
-          username: ${{ secrets.GCE_USER }}
-          key: ${{ secrets.GCE_SSH_KEY }}
-          source: "docker-compose.app.yml,docker-compose.dev.yml,Makefile"
-          target: "~/app-dev/"
-
-      - name: Deploy to GCE via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.GCE_HOST }}
-          username: ${{ secrets.GCE_USER }}
-          key: ${{ secrets.GCE_SSH_KEY }}
-          command_timeout: 20m
-          script: |
-            # Authenticate with GHCR
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            mkdir -p ~/app-dev
-            cd ~/app-dev
-
-            test -f .env
-            
-            # .env is managed on the instance. Override only the image selected by this workflow.
-            APP_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-latest make deploy-app-dev
+          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" "mkdir -p ~/app-dev"
+          scp -i ~/.ssh/deploy_key build/libs/*.jar scripts/gcp/05_app/01_install-app-service.sh \
+            "${SSH_USER}@${SSH_HOST}:~/app-dev/"
+          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" \
+            "cd ~/app-dev && test -f .env && mv *.jar app.jar && chmod +x 01_install-app-service.sh && ./01_install-app-service.sh"
