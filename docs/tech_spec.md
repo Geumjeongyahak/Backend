@@ -452,7 +452,7 @@ src/test/java/org/geumjeong/learning/
 
 ```properties
 # .env
-DATABASE_URL=jdbc:postgresql://localhost:5432/sonmoum
+DATABASE_URL=jdbc:postgresql://localhost:5432/gjlearn
 DATABASE_USERNAME=postgres
 DATABASE_PASSWORD=password
 GOOGLE_CLIENT_ID=xxx
