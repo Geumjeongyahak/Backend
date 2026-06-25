@@ -1,5 +1,0 @@
-services:
-  app:
-    environment:
-      SPRING_PROFILES_ACTIVE: dev
-      FLYWAY_ENABLED: "false"
