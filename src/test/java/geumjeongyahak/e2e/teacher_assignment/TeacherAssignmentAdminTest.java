@@ -52,7 +52,12 @@ class TeacherAssignmentAdminTest extends BaseE2ETest {
     void cleanup() {
         cleanupFixtures();
         jdbcTemplate.update("UPDATE users SET classroom_id = NULL WHERE id IN (2, 3)");
-        jdbcTemplate.update("DELETE FROM user_permissions WHERE user_id IN (2, 3) AND permission_code LIKE 'channel:write:%'");
+        jdbcTemplate.update("""
+            DELETE FROM user_permissions
+            WHERE user_id IN (2, 3)
+              AND permission_code LIKE 'channel:write:%'
+              AND NOT (user_id = 2 AND permission_code = 'channel:write:1')
+            """);
     }
 
     @Test
@@ -353,6 +358,13 @@ class TeacherAssignmentAdminTest extends BaseE2ETest {
     }
 
     private void cleanupFixtures() {
+        jdbcTemplate.update("""
+            DELETE FROM lessons
+            WHERE date = DATE '2099-03-02'
+              AND start_time = TIME '19:20:00'
+              AND end_time = TIME '20:00:00'
+              AND teacher_id IN (2, 3)
+            """);
         jdbcTemplate.update("""
             DELETE FROM absence_requests
             WHERE daily_schedule_id IN (

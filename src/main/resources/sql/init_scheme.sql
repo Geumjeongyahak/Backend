@@ -87,6 +87,8 @@ CREATE TABLE user_credentials (
     credential_email VARCHAR(100),
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     password_hash VARCHAR(512),
+    password_reset_token_hash VARCHAR(512),
+    password_reset_token_expires_at TIMESTAMP,
     last_login_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -97,6 +99,7 @@ CREATE TABLE user_credentials (
 
 CREATE INDEX idx_user_credentials_user_id ON user_credentials(user_id);
 CREATE INDEX idx_user_credentials_credential_email ON user_credentials(credential_email);
+CREATE INDEX idx_user_credentials_password_reset_token_hash ON user_credentials(password_reset_token_hash);
 
 -- Refresh tokens table
 CREATE TABLE refresh_tokens (

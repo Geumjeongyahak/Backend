@@ -4,8 +4,10 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalSignupRequest;
 import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
+import geumjeongyahak.e2e.TestStorageConfig.ControlledMailSenderService;
 import java.time.LocalDate;
 
 import static io.restassured.RestAssured.given;
@@ -14,6 +16,9 @@ import static org.hamcrest.Matchers.*;
 
 @DisplayName("E2E: 회원가입 테스트")
 class AuthSignupTest extends AuthBaseTest {
+
+    @Autowired
+    private ControlledMailSenderService mailSenderService;
 
     @Test
     @DisplayName("올바른 정보로 회원가입 성공(201 Created)")
@@ -58,6 +63,7 @@ class AuthSignupTest extends AuthBaseTest {
         RestAssured.basePath = originalBasePath;
         assertThat(userTestHelper.getUser(uniqueEmail).getResidentRegistrationNumberPrefix())
             .isEqualTo("900101");
+        assertThat(mailSenderService.getLastSignupRecipient()).isEqualTo(uniqueEmail);
     }
 
     @Test

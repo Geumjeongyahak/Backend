@@ -62,6 +62,12 @@ public class UserCredential extends BaseEntity {
     @Setter
     private LocalDateTime lastLoginAt;
 
+    @Column(name = "password_reset_token_hash", length = 512)
+    private String passwordResetTokenHash;
+
+    @Column(name = "password_reset_token_expires_at")
+    private LocalDateTime passwordResetTokenExpiresAt;
+
     @Builder
     private UserCredential(
         User user,
@@ -70,7 +76,9 @@ public class UserCredential extends BaseEntity {
         String credentialEmail,
         boolean emailVerified,
         String passwordHash,
-        LocalDateTime lastLoginAt
+        LocalDateTime lastLoginAt,
+        String passwordResetTokenHash,
+        LocalDateTime passwordResetTokenExpiresAt
     ) {
         this.user = user;
         this.provider = provider;
@@ -79,6 +87,8 @@ public class UserCredential extends BaseEntity {
         this.emailVerified = emailVerified;
         this.passwordHash = passwordHash;
         this.lastLoginAt = lastLoginAt;
+        this.passwordResetTokenHash = passwordResetTokenHash;
+        this.passwordResetTokenExpiresAt = passwordResetTokenExpiresAt;
     }
 
     public static UserCredential local(
@@ -109,5 +119,24 @@ public class UserCredential extends BaseEntity {
             .credentialEmail(credentialEmail)
             .emailVerified(emailVerified)
             .build();
+    }
+
+    public void issuePasswordResetToken(String tokenHash, LocalDateTime expiresAt) {
+        this.passwordResetTokenHash = tokenHash;
+        this.passwordResetTokenExpiresAt = expiresAt;
+    }
+
+    public boolean isPasswordResetTokenExpired(LocalDateTime now) {
+        return passwordResetTokenExpiresAt == null || !passwordResetTokenExpiresAt.isAfter(now);
+    }
+
+    public void completePasswordReset(String newPasswordHash) {
+        this.passwordHash = newPasswordHash;
+        clearPasswordResetToken();
+    }
+
+    public void clearPasswordResetToken() {
+        this.passwordResetTokenHash = null;
+        this.passwordResetTokenExpiresAt = null;
     }
 }

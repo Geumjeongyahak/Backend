@@ -11,9 +11,12 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.auth.service.LocalAuthService;
+import geumjeongyahak.domain.auth.service.PasswordResetService;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalSignupRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LogoutRequest;
+import geumjeongyahak.domain.auth.v1.dto.request.PasswordResetConfirmRequest;
+import geumjeongyahak.domain.auth.v1.dto.request.PasswordResetRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.RefreshTokenRequest;
 import geumjeongyahak.domain.auth.v1.dto.response.AuthMessageResponse;
 import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
@@ -25,6 +28,7 @@ import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
 @Tag(name = "Auth", description = "인증 API")
 public class LocalAuthController {
     private final LocalAuthService localLoginService;
+    private final PasswordResetService passwordResetService;
 
     @Operation(
         summary = "로그인",
@@ -60,6 +64,32 @@ public class LocalAuthController {
     ) {
         log.debug("POST /api/v1/auth/signup - 회원가입 요청: {}", request.email());
         return ResponseEntity.status(HttpStatus.CREATED).body(localLoginService.signup(request));
+    }
+
+    @Operation(
+        summary = "비밀번호 재설정 메일 요청",
+        description = "비밀번호를 모르는 사용자가 Local 로그인 이메일로 6자리 인증번호를 요청합니다. 계정 존재 여부는 노출하지 않고 항상 동일한 성공 응답을 반환합니다."
+    )
+    @PostMapping("/password-reset/request")
+    public ResponseEntity<AuthMessageResponse> requestPasswordReset(
+            @Valid @RequestBody PasswordResetRequest request
+    ) {
+        log.debug("POST /api/v1/auth/password-reset/request - 비밀번호 재설정 요청: {}", request.email());
+        passwordResetService.requestReset(request.email());
+        return ResponseEntity.ok(AuthMessageResponse.of("비밀번호 재설정 안내 메일이 발송되었습니다. 메일이 도착하지 않으면 입력한 이메일을 확인해 주세요."));
+    }
+
+    @Operation(
+        summary = "비밀번호 재설정 확정",
+        description = "메일로 받은 6자리 인증번호와 새 비밀번호로 Local 로그인 비밀번호를 재설정합니다."
+    )
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<AuthMessageResponse> confirmPasswordReset(
+            @Valid @RequestBody PasswordResetConfirmRequest request
+    ) {
+        log.debug("POST /api/v1/auth/password-reset/confirm - 비밀번호 재설정 확정 요청");
+        passwordResetService.resetPassword(request.email(), request.resetCode(), request.newPassword());
+        return ResponseEntity.ok(AuthMessageResponse.of("비밀번호가 재설정되었습니다. 새 비밀번호로 로그인해 주세요."));
     }
 
     @Operation(

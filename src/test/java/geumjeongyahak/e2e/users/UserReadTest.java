@@ -2,6 +2,7 @@ package geumjeongyahak.e2e.users;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -18,6 +19,15 @@ class UserReadTest extends UserBaseTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void restorePermissionFixture() {
+        jdbcTemplate.update("""
+            MERGE INTO user_permissions (user_id, permission_code)
+            KEY (user_id, permission_code)
+            VALUES (2, 'channel:write:1')
+            """);
+    }
 
     @AfterEach
     void cleanupTeacherAssignmentFixture() {

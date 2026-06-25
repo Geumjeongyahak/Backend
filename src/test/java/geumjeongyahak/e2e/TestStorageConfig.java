@@ -13,6 +13,8 @@ import org.springframework.web.multipart.MultipartFile;
 import com.google.cloud.storage.Storage;
 
 import geumjeongyahak.domain.file.service.StorageService;
+import geumjeongyahak.common.mail.MailDeliveryResult;
+import geumjeongyahak.common.mail.MailSenderService;
 
 import static org.mockito.Mockito.mock;
 
@@ -29,6 +31,43 @@ public class TestStorageConfig {
     @Primary
     ControlledStorageService testStorageService() {
         return new ControlledStorageService();
+    }
+
+    @Bean
+    @Primary
+    ControlledMailSenderService testMailSenderService() {
+        return new ControlledMailSenderService();
+    }
+
+    public static class ControlledMailSenderService implements MailSenderService {
+        private String lastSignupRecipient;
+        private String lastPasswordResetRecipient;
+        private String lastPasswordResetCode;
+
+        @Override
+        public MailDeliveryResult sendSignupWelcomeMail(String recipientEmail, String recipientName) {
+            this.lastSignupRecipient = recipientEmail;
+            return MailDeliveryResult.sent("signup-welcome", recipientEmail);
+        }
+
+        @Override
+        public MailDeliveryResult sendPasswordResetMail(String recipientEmail, String recipientName, String resetCode) {
+            this.lastPasswordResetRecipient = recipientEmail;
+            this.lastPasswordResetCode = resetCode;
+            return MailDeliveryResult.sent("password-reset", recipientEmail);
+        }
+
+        public String getLastSignupRecipient() {
+            return lastSignupRecipient;
+        }
+
+        public String getLastPasswordResetRecipient() {
+            return lastPasswordResetRecipient;
+        }
+
+        public String getLastPasswordResetCode() {
+            return lastPasswordResetCode;
+        }
     }
 
     public static class ControlledStorageService implements StorageService {
