@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sonmoum-admin-static-v1';
+const CACHE_NAME = 'gjlearn-admin-static-v1';
 const STATIC_ASSETS = [
   '/site.webmanifest',
   '/icons/geumjeongyahak-icon.svg',

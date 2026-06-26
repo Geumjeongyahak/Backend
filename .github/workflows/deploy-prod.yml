@@ -1,9 +1,9 @@
-name: Deploy to Dev (SSH)
+name: Deploy to Prod (SSH)
 
 on:
   push:
     branches:
-      - dev
+      - main
   workflow_dispatch:
 
 jobs:
@@ -28,9 +28,9 @@ jobs:
 
       - name: Deploy jar over SSH
         env:
-          SSH_HOST: ${{ secrets.DEV_GCE_HOST || secrets.GCE_HOST }}
-          SSH_USER: ${{ secrets.DEV_GCE_USER || secrets.GCE_USER }}
-          SSH_KEY: ${{ secrets.DEV_GCE_SSH_KEY || secrets.GCE_SSH_KEY }}
+          SSH_HOST: ${{ secrets.PROD_GCE_HOST }}
+          SSH_USER: ${{ secrets.PROD_GCE_USER }}
+          SSH_KEY: ${{ secrets.PROD_GCE_SSH_KEY }}
         run: |
           set -euo pipefail
           test -n "${SSH_HOST}"
@@ -47,3 +47,15 @@ jobs:
             "${SSH_USER}@${SSH_HOST}:~/app-dev/"
           ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" \
             "cd ~/app-dev && test -f .env && mv *.jar app.jar && chmod +x 01_install-app-service.sh && ./01_install-app-service.sh"
+
+      - name: Verify prod health
+        env:
+          SSH_HOST: ${{ secrets.PROD_GCE_HOST }}
+          SSH_USER: ${{ secrets.PROD_GCE_USER }}
+          SSH_KEY: ${{ secrets.PROD_GCE_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" \
+            "curl -fsS http://127.0.0.1:8080/actuator/health >/dev/null && sudo systemctl is-active --quiet gjlearn-app"
