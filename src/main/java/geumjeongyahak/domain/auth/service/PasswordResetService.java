@@ -7,7 +7,6 @@ import geumjeongyahak.domain.auth.entity.UserCredential;
 import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.exception.AuthErrorCode;
 import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
-import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.function.Supplier;
@@ -20,9 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 public class PasswordResetService {
-
-    private static final int CODE_BOUND = 1_000_000;
-    private static final int CODE_DIGITS = 6;
 
     private final UserCredentialRepository credentialRepository;
     private final PasswordEncoder passwordEncoder;
@@ -44,7 +40,7 @@ public class PasswordResetService {
             passwordEncoder,
             mailSenderService,
             clock,
-            new SecureRandomResetCodeSupplier(),
+            new NumericCodeGenerator(),
             mailProperties.passwordResetExpirationMinutes()
         );
     }
@@ -125,12 +121,4 @@ public class PasswordResetService {
         log.info("비밀번호 재설정 메일 처리 완료: credentialId={}, expiresAt={}", credential.getId(), expiresAt);
     }
 
-    private static class SecureRandomResetCodeSupplier implements Supplier<String> {
-        private final SecureRandom secureRandom = new SecureRandom();
-
-        @Override
-        public String get() {
-            return String.format("%0" + CODE_DIGITS + "d", secureRandom.nextInt(CODE_BOUND));
-        }
-    }
 }
