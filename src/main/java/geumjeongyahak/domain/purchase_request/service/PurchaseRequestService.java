@@ -28,6 +28,7 @@ import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestPaymentTrans
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.exception.PurchaseRequestErrorCode;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestByAdminRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
@@ -68,18 +69,33 @@ public class PurchaseRequestService {
             ))
             .toList();
 
-        PurchaseRequest saved = purchaseRequestRepository.save(
-            new PurchaseRequest(
-                classroom,
-                requester,
-                request.title(),
-                request.content(),
-                items
-            )
+        return createPurchaseRequest(requester, classroom, request.title(), request.content(), items);
+    }
+
+    @Transactional
+    public PurchaseRequestDetailResponse createPurchaseRequestByAdmin(
+        Long actorId, CreatePurchaseRequestByAdminRequest request
+    ) {
+        log.debug(
+            "관리자 구입 요청 대리 생성 (actorId={}, requestedById={}, classroomId={})",
+            actorId,
+            request.requestedById(),
+            request.classroomId()
         );
 
-        log.debug("구입 요청 생성 완료 (id={})", saved.getId());
-        return toDetailResponse(saved);
+        Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
+        User requester = userProxyService.getById(request.requestedById());
+
+        List<PurchaseRequestItem> items = request.items().stream()
+            .map(item -> new PurchaseRequestItem(
+                item.name(),
+                item.reason(),
+                item.quantity(),
+                item.paymentType()
+            ))
+            .toList();
+
+        return createPurchaseRequest(requester, classroom, request.title(), request.content(), items);
     }
 
     public List<PurchaseRequestSummaryResponse> getPurchaseRequests(Long requesterId, PurchaseRequestStatus status) {
@@ -322,6 +338,27 @@ public class PurchaseRequestService {
 
     private PurchaseRequestDetailResponse toDetailResponse(PurchaseRequest purchaseRequest) {
         return PurchaseRequestDetailResponse.from(purchaseRequest, vendorService.getVendors(null));
+    }
+
+    private PurchaseRequestDetailResponse createPurchaseRequest(
+        User requester,
+        Classroom classroom,
+        String title,
+        String content,
+        List<PurchaseRequestItem> items
+    ) {
+        PurchaseRequest saved = purchaseRequestRepository.save(
+            new PurchaseRequest(
+                classroom,
+                requester,
+                title,
+                content,
+                items
+            )
+        );
+
+        log.debug("구입 요청 생성 완료 (id={})", saved.getId());
+        return toDetailResponse(saved);
     }
 
     private void checkAccess(PurchaseRequest purchaseRequest, Long requesterId, boolean isAdmin) {
