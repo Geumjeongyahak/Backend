@@ -7,6 +7,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 
 import io.restassured.http.ContentType;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 
@@ -30,9 +32,12 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     private PurchaseRequestRepository purchaseRequestRepository;
 
     private Long createdRequestId;
+    private final List<Long> createdRequestIds = new ArrayList<>();
 
     @AfterEach
     void cleanup() {
+        createdRequestIds.forEach(purchaseRequestRepository::deleteById);
+        createdRequestIds.clear();
         if (createdRequestId != null) {
             purchaseRequestRepository.deleteById(createdRequestId);
             createdRequestId = null;
@@ -101,6 +106,121 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .extract()
             .jsonPath()
             .getLong("id");
+    }
+
+    @Test
+    @DisplayName("관리자가 실제 요청자를 지정해 구입 요청 대리 생성 → 201")
+    void createRequestByAdmin_withRequestedById_returns201() {
+        createdRequestIds.add(given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.ofEntries(
+                entry("requestedById", TEACHER2_ID),
+                entry("title", "시트 구입 요청"),
+                entry("content", "Apps Script에서 등록한 구입 요청입니다."),
+                entry("classroomId", CLASSROOM_ID),
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "프린터 토너"),
+                    entry("reason", "수업 자료 출력"),
+                    entry("quantity", 1),
+                    entry("paymentType", "ACTUAL")
+                )))
+            ))
+            .post()
+            .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .body("requestedById", equalTo((int) TEACHER2_ID))
+            .body("requestedByName", equalTo("김철수"))
+            .body("title", equalTo("시트 구입 요청"))
+            .body("status", equalTo("PENDING"))
+            .extract()
+            .jsonPath()
+            .getLong("id"));
+    }
+
+    @Test
+    @DisplayName("purchase-request:manage:* 권한자가 구입 요청 대리 생성 → 201")
+    void createRequestByAdmin_withManagePermission_returns201() {
+        String manageToken = createAccessTokenWithPermission(
+            "purchase-delegate",
+            RoleType.VOLUNTEER,
+            "purchase-request:manage:*"
+        );
+
+        createdRequestIds.add(given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(manageToken))
+            .contentType(ContentType.JSON)
+            .body(Map.ofEntries(
+                entry("requestedById", TEACHER_ID),
+                entry("title", "권한자 대리 요청"),
+                entry("content", "구입 요청 관리 권한자가 등록합니다."),
+                entry("classroomId", CLASSROOM_ID),
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "마커"),
+                    entry("reason", "수업 판서"),
+                    entry("quantity", 3),
+                    entry("paymentType", "PREPAID")
+                )))
+            ))
+            .post()
+            .then()
+            .statusCode(201)
+            .body("requestedById", equalTo((int) TEACHER_ID))
+            .body("requestedByName", equalTo("홍길동"))
+            .extract()
+            .jsonPath()
+            .getLong("id"));
+    }
+
+    @Test
+    @DisplayName("권한 없는 사용자의 구입 요청 대리 생성 → 403")
+    void createRequestByAdmin_withoutPermission_returns403() {
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(managerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.ofEntries(
+                entry("requestedById", TEACHER2_ID),
+                entry("title", "권한 없는 요청"),
+                entry("content", "권한 없는 사용자는 대리 생성할 수 없습니다."),
+                entry("classroomId", CLASSROOM_ID),
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "교재"),
+                    entry("reason", "수업 준비"),
+                    entry("quantity", 1),
+                    entry("paymentType", "ACTUAL")
+                )))
+            ))
+            .post()
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 요청자 ID로 구입 요청 대리 생성 → 404")
+    void createRequestByAdmin_nonExistentRequester_returns404() {
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.ofEntries(
+                entry("requestedById", 99999L),
+                entry("title", "없는 요청자"),
+                entry("content", "존재하지 않는 사용자로 대리 생성할 수 없습니다."),
+                entry("classroomId", CLASSROOM_ID),
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "교재"),
+                    entry("reason", "수업 준비"),
+                    entry("quantity", 1),
+                    entry("paymentType", "ACTUAL")
+                )))
+            ))
+            .post()
+            .then()
+            .statusCode(404);
     }
 
     // ── 인증 오류 ─────────────────────────────────────────
