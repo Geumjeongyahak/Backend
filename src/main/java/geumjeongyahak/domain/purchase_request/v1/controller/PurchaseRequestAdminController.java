@@ -24,6 +24,7 @@ import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestService;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestByAdminRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReviewPurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.UpdatePurchaseRequestByAdminRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
@@ -168,12 +169,30 @@ public class PurchaseRequestAdminController {
         );
     }
 
+    @Operation(
+        summary = "구매 완료 보고",
+        description = "관리자 또는 purchase-request:manage:* 권한자가 APPROVED 상태의 구입 요청에 구매 거래와 영수증을 등록합니다. "
+            + "상태가 PURCHASED 로 변경됩니다."
+    )
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
+    @PostMapping("/{requestId}/report")
+    public ResponseEntity<PurchaseRequestDetailResponse> reportPurchase(
+        @PathVariable Long requestId,
+        @Valid @RequestBody ReportPurchaseRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("POST /api/v1/admin/purchase-requests/{}/report", requestId);
+        return ResponseEntity.ok(
+            purchaseRequestService.reportPurchase(userDetails.getUserId(), requestId, request, true)
+        );
+    }
+
     @Operation(summary = "구매 완료 거래 수정")
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
     @PatchMapping("/{requestId}/item-receipts")
     public ResponseEntity<PurchaseRequestDetailResponse> updateItemReceipts(
         @PathVariable Long requestId,
-        @Valid @RequestBody geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest request,
+        @Valid @RequestBody ReportPurchaseRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PATCH /api/v1/admin/purchase-requests/{}/item-receipts", requestId);

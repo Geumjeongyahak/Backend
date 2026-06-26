@@ -208,7 +208,7 @@ public class PurchaseRequestService {
     ) {
         log.debug("구매 완료 보고 (requestId={})", requestId);
         PurchaseRequest purchaseRequest = findById(requestId);
-        checkAccess(purchaseRequest, requesterId, false);
+        checkAccess(purchaseRequest, requesterId, isAdmin);
 
         if (purchaseRequest.getStatus() != PurchaseRequestStatus.APPROVED) {
             throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
