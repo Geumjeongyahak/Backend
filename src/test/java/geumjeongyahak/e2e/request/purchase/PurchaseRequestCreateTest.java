@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 
@@ -27,6 +28,9 @@ import geumjeongyahak.e2e.request.RequestBaseTest;
 @Tag("purchase-request")
 @DisplayName("E2E: 기자재 구입 요청 생성 테스트")
 class PurchaseRequestCreateTest extends RequestBaseTest {
+
+    private static final String APPS_SCRIPT_BOT_EMAIL = "geumjeongyahak-apps-script-bot@gmail.com";
+    private static final String APPS_SCRIPT_BOT_PASSWORD = "apps-script-bot123!";
 
     @Autowired
     private PurchaseRequestRepository purchaseRequestRepository;
@@ -176,6 +180,37 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("Apps Script Bot이 실제 요청자를 지정해 구입 요청 대리 생성 → 201")
+    void createRequestByAdmin_withAppsScriptBot_returns201() {
+        String botAccessToken = loginAppsScriptBot();
+
+        createdRequestIds.add(given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(botAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.ofEntries(
+                entry("requestedById", TEACHER2_ID),
+                entry("title", "Bot 대리 구입 요청"),
+                entry("content", "Apps Script Bot이 시트 값을 동기화합니다."),
+                entry("classroomId", CLASSROOM_ID),
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "복사용지"),
+                    entry("reason", "수업 자료 인쇄"),
+                    entry("quantity", 2),
+                    entry("paymentType", "ACTUAL")
+                )))
+            ))
+            .post()
+            .then()
+            .statusCode(201)
+            .body("requestedById", equalTo((int) TEACHER2_ID))
+            .body("requestedByName", equalTo("김철수"))
+            .extract()
+            .jsonPath()
+            .getLong("id"));
+    }
+
+    @Test
     @DisplayName("권한 없는 사용자의 구입 요청 대리 생성 → 403")
     void createRequestByAdmin_withoutPermission_returns403() {
         given()
@@ -221,6 +256,19 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .post()
             .then()
             .statusCode(404);
+    }
+
+    private String loginAppsScriptBot() {
+        return given()
+            .basePath("/api/v1/auth")
+            .contentType(ContentType.JSON)
+            .body(new LocalLoginRequest(APPS_SCRIPT_BOT_EMAIL, APPS_SCRIPT_BOT_PASSWORD))
+            .post("/login")
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getString("accessToken");
     }
 
     // ── 인증 오류 ─────────────────────────────────────────

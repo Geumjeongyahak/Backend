@@ -92,7 +92,20 @@ class AuthLoginTest extends AuthBaseTest {
         .then()
             .statusCode(200)
             .body("email", equalTo(APPS_SCRIPT_BOT_EMAIL))
-            .body("permissions.find { it.code == 'daily-schedule:manage:*' }.source", equalTo("MANUAL"));
+            .body("permissions.find { it.code == 'daily-schedule:manage:*' }.source", equalTo("MANUAL"))
+            .body("permissions.find { it.code == 'user:read:*' }.source", equalTo("MANUAL"))
+            .body("permissions.find { it.code == 'purchase-request:read:*' }.source", equalTo("MANUAL"))
+            .body("permissions.find { it.code == 'purchase-request:manage:*' }.source", equalTo("MANUAL"))
+            .body("permissions.find { it.code == 'vendor:read:*' }.source", equalTo("MANUAL"));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(response.accessToken()))
+            .queryParam("size", 20)
+        .when()
+            .get("/api/v1/users")
+        .then()
+            .statusCode(200)
+            .body("content.find { it.email == 'teacher02@test.com' }.name", equalTo("김철수"));
 
         RestAssured.basePath = originalBasePath;
     }
