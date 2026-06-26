@@ -5,10 +5,12 @@ import static java.util.Map.entry;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
+import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
 import geumjeongyahak.e2e.BaseE2ETest;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +24,8 @@ public class DailyScheduleReadTest extends BaseE2ETest {
 
     private static final long CLASSROOM_ID = 1L;
     private static final long TEACHER_ID = 2L;
+    private static final String APPS_SCRIPT_BOT_EMAIL = "geumjeongyahak-apps-script-bot@gmail.com";
+    private static final String APPS_SCRIPT_BOT_PASSWORD = "apps-script-bot123!";
     private static final LocalDate BASE_DATE = LocalDate.of(2051, 1, 1);
     private static final AtomicLong SEQUENCE = new AtomicLong();
 
@@ -97,13 +101,87 @@ public class DailyScheduleReadTest extends BaseE2ETest {
             .statusCode(403);
     }
 
+    @Test
+    @DisplayName("Apps Script Bot은 날짜와 분반 ID로 DailySchedule 상세를 조회할 수 있다")
+    void getDailyScheduleByClassroomAndDate_asAppsScriptBot_success() {
+        LocalDate lessonDate = nextLessonDate();
+        String subjectName = "Bot상세조회-" + SEQUENCE.get();
+        createDailyScheduleSource(subjectName, lessonDate);
+        String botAccessToken = loginAppsScriptBot();
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(botAccessToken))
+            .queryParam("classroomId", CLASSROOM_ID)
+            .queryParam("lessonDate", lessonDate.toString())
+            .when()
+            .get("/detail")
+            .then()
+            .statusCode(200)
+            .body("dailyScheduleId", notNullValue())
+            .body("classroomId", is((int) CLASSROOM_ID))
+            .body("teacherId", is((int) TEACHER_ID))
+            .body("lessons[0].lessonId", notNullValue())
+            .body("lessons[0].subjectName", is(subjectName));
+    }
+
+    @Test
+    @DisplayName("Apps Script Bot은 수업 일지를 최초 작성하고 수정할 수 있다")
+    void createAndUpdateJournal_asAppsScriptBot_success() {
+        LocalDate lessonDate = nextLessonDate();
+        Long lessonId = createDailyScheduleSource("Bot일지작성-" + SEQUENCE.get(), lessonDate);
+        String botAccessToken = loginAppsScriptBot();
+
+        Long dailyScheduleId = given()
+            .header(AUTH_HEADER, getAuthHeader(botAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "lessonDate", lessonDate.toString(),
+                "classroomId", CLASSROOM_ID,
+                "personalInfoConsent", true,
+                "residentRegistrationNumberPrefix", "900101",
+                "lessonJournals", List.of(Map.of(
+                    "lessonId", lessonId,
+                    "note", "Apps Script Bot이 최초 작성한 수업 내용입니다."
+                ))
+            ))
+            .post("/journal")
+            .then()
+            .statusCode(200)
+            .body("dailyScheduleId", notNullValue())
+            .body("residentRegistrationNumberPrefix", is("900101"))
+            .body("personalInfoConsent", is(true))
+            .body("lessons[0].lessonId", is(lessonId.intValue()))
+            .body("lessons[0].note", is("Apps Script Bot이 최초 작성한 수업 내용입니다."))
+            .extract()
+            .jsonPath()
+            .getLong("dailyScheduleId");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(botAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "personalInfoConsent", true,
+                "residentRegistrationNumberPrefix", "900101",
+                "lessonJournals", List.of(Map.of(
+                    "lessonId", lessonId,
+                    "note", "Apps Script Bot이 수정한 수업 내용입니다."
+                ))
+            ))
+            .patch("/{dailyScheduleId}/journal", dailyScheduleId)
+            .then()
+            .statusCode(200)
+            .body("dailyScheduleId", is(dailyScheduleId.intValue()))
+            .body("lessons[0].lessonId", is(lessonId.intValue()))
+            .body("lessons[0].note", is("Apps Script Bot이 수정한 수업 내용입니다."));
+    }
+
     private LocalDate nextLessonDate() {
         return BASE_DATE.plusDays(SEQUENCE.incrementAndGet());
     }
 
-    private void createDailyScheduleSource(String name, LocalDate lessonDate) {
+    private Long createDailyScheduleSource(String name, LocalDate lessonDate) {
         Long subjectId = createSubject(name, lessonDate);
-        createLesson(subjectId, lessonDate);
+        return createLesson(subjectId, lessonDate);
     }
 
     private Long createSubject(String name, LocalDate lessonDate) {
@@ -132,7 +210,7 @@ public class DailyScheduleReadTest extends BaseE2ETest {
             .getLong("id");
     }
 
-    private void createLesson(Long subjectId, LocalDate lessonDate) {
+    private Long createLesson(Long subjectId, LocalDate lessonDate) {
         Map<String, Object> request = Map.ofEntries(
             entry("subjectId", subjectId),
             entry("teacherId", TEACHER_ID),
@@ -142,13 +220,29 @@ public class DailyScheduleReadTest extends BaseE2ETest {
             entry("period", 1)
         );
 
-        given()
+        return given()
             .basePath("/api/v1/lessons")
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .contentType(ContentType.JSON)
             .body(request)
             .post()
             .then()
-            .statusCode(201);
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("lessonId");
+    }
+
+    private String loginAppsScriptBot() {
+        return given()
+            .basePath("/api/v1/auth")
+            .contentType(ContentType.JSON)
+            .body(new LocalLoginRequest(APPS_SCRIPT_BOT_EMAIL, APPS_SCRIPT_BOT_PASSWORD))
+            .post("/login")
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getString("accessToken");
     }
 }
