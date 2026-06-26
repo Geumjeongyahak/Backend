@@ -10,6 +10,7 @@
 04_db/               DB VM bootstrap/install
 05_app/              App VM bootstrap/install
 06_observability/    Cloud Logging/Monitoring alert 구성
+07_deploy/           env 하나로 infra→DB→App 순차 자동화
 ```
 
 빠른 dev 순서:
@@ -22,6 +23,14 @@ scripts/gcp/03_env_render/00_render-server-env.sh scripts/gcp/00_env/dev.env db 
 scripts/gcp/03_env_render/00_render-server-env.sh scripts/gcp/00_env/dev.env app > scripts/gcp/00_env/dev.app.env
 chmod 600 scripts/gcp/00_env/dev.db.env scripts/gcp/00_env/dev.app.env
 # edit scripts/gcp/00_env/dev.db.env and scripts/gcp/00_env/dev.app.env secrets
+```
+
+prod 전체 순차 실행은 root의 `DEPLOY.md` 또는 다음 wrapper를 사용합니다.
+
+```bash
+scripts/gcp/07_deploy/00_deploy-env.sh scripts/gcp/00_env/prod.env
+# generated prod.app.env/prod.db.env 편집 후
+RENDER_ENVS=false scripts/gcp/07_deploy/00_deploy-env.sh scripts/gcp/00_env/prod.env
 ```
 
 전체 runbook은 repository root의 `DEPLOY.md`를 봅니다.

@@ -50,7 +50,8 @@ configure_tailscale() {
   if sudo tailscale ip -4 >/dev/null 2>&1; then
     sudo tailscale set --accept-dns="${accept_dns}"
     if [[ -n "${tags}" ]]; then
-      sudo tailscale set --advertise-tags="${tags}"
+      sudo tailscale set --advertise-tags="${tags}" 2>/dev/null \
+        || sudo tailscale up --advertise-tags="${tags}" --accept-dns="${accept_dns}"
     fi
     echo "tailscale already authenticated: $(sudo tailscale ip -4)"
     return 0
@@ -130,6 +131,57 @@ EOF
   sudo systemctl restart google-cloud-ops-agent
 }
 
+configure_caddy() {
+  local enabled="${ENABLE_CADDY:-}"
+  local api_domain="${API_DOMAIN:-}"
+  local app_port="${APP_PORT:-}"
+
+  if [[ -z "${enabled}" ]]; then
+    enabled="$(read_env_value ENABLE_CADDY)"
+  fi
+  enabled="${enabled:-true}"
+
+  if [[ -z "${api_domain}" ]]; then
+    api_domain="$(read_env_value API_DOMAIN)"
+  fi
+  if [[ -z "${app_port}" ]]; then
+    app_port="$(read_env_value APP_PORT)"
+  fi
+  app_port="${app_port:-8080}"
+
+  if [[ "${enabled}" != "true" || -z "${api_domain}" ]]; then
+    echo "caddy disabled or API_DOMAIN empty; skipping reverse proxy setup"
+    return 0
+  fi
+
+  if ! command -v caddy >/dev/null 2>&1; then
+    sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https
+    sudo rm -f /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+      | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+      | sudo tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
+    sudo apt-get update
+    sudo apt-get install -y caddy
+  fi
+
+  sudo install -d -o root -g root -m 755 /etc/caddy
+  if [[ -f /etc/caddy/Caddyfile ]]; then
+    sudo cp /etc/caddy/Caddyfile "/etc/caddy/Caddyfile.bak.$(date +%Y%m%d%H%M%S)"
+  fi
+
+  sudo tee /etc/caddy/Caddyfile >/dev/null <<EOF
+${api_domain} {
+    reverse_proxy 127.0.0.1:${app_port}
+}
+EOF
+
+  sudo caddy fmt --overwrite /etc/caddy/Caddyfile
+  sudo caddy validate --config /etc/caddy/Caddyfile
+  sudo systemctl enable --now caddy
+  sudo systemctl reload caddy
+}
+
 if [[ ! -f "${JAR_PATH}" ]]; then
   echo "missing jar: ${JAR_PATH}" >&2
   exit 1
@@ -141,7 +193,7 @@ if [[ ! -f "${ENV_PATH}" ]]; then
 fi
 
 sudo apt-get update
-sudo apt-get install -y ca-certificates curl openjdk-21-jre-headless prometheus-node-exporter
+sudo apt-get install -y ca-certificates curl gnupg openjdk-21-jre-headless prometheus-node-exporter
 if ! command -v tailscale >/dev/null 2>&1; then
   curl -fsSL https://tailscale.com/install.sh | sh
 fi
@@ -152,6 +204,7 @@ mkdir -p "${APP_DIR}/logs/app"
 sudo chown -R "${APP_USER}:${APP_GROUP}" "${APP_DIR}"
 chmod 600 "${ENV_PATH}"
 configure_cloud_logging
+configure_caddy
 
 sudo tee "/etc/systemd/system/${SERVICE_NAME}.service" >/dev/null <<EOF
 [Unit]
