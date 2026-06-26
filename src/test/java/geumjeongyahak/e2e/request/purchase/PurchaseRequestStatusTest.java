@@ -663,6 +663,15 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
                 .extract().jsonPath().getList("id", Long.class);
             assertThat(adminIds).contains(request1Id, request2Id);
 
+            given()
+                .basePath("/api/v1/admin/purchase-requests")
+                .header(AUTH_HEADER, getAuthHeader(adminToken))
+                .get()
+                .then()
+                .statusCode(200)
+                .body("find { it.id == " + request1Id + " }.classroomId", equalTo((int) CLASSROOM_ID))
+                .body("find { it.id == " + request1Id + " }.requestedById", equalTo((int) TEACHER_ID));
+
             List<Long> v1Ids = given()
                 .basePath("/api/v1/purchase-requests")
                 .header(AUTH_HEADER, getAuthHeader(volunteerToken))
