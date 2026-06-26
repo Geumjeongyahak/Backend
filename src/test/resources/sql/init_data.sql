@@ -42,7 +42,11 @@ ALTER TABLE user_credentials ALTER COLUMN id RESTART WITH 6;
 -- 4. User Permissions
 INSERT INTO user_permissions (user_id, permission_code) VALUES
     (2, 'channel:write:1'),
-    (5, 'daily-schedule:manage:*');
+    (5, 'daily-schedule:manage:*'),
+    (5, 'user:read:*'),
+    (5, 'purchase-request:read:*'),
+    (5, 'purchase-request:manage:*'),
+    (5, 'vendor:read:*');
 
 -- 5. Department Permissions
 INSERT INTO department_permissions (department_id, role_type, permission_code) VALUES

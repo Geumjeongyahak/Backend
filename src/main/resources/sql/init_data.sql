@@ -85,7 +85,11 @@ ALTER SEQUENCE user_credentials_id_seq RESTART WITH 11;
 INSERT INTO user_permissions (user_id, permission_code) VALUES
     (2, 'lesson:write:*'),
     (6, 'channel:write:6'),
-    (10, 'daily-schedule:manage:*');
+    (10, 'daily-schedule:manage:*'),
+    (10, 'user:read:*'),
+    (10, 'purchase-request:read:*'),
+    (10, 'purchase-request:manage:*'),
+    (10, 'vendor:read:*');
 
 -- 5. Department Permissions
 INSERT INTO department_permissions (department_id, role_type, permission_code) VALUES
