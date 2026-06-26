@@ -10,8 +10,14 @@ public record PurchaseRequestSummaryResponse(
     @Schema(description = "요청 ID", example = "1")
     Long id,
 
+    @Schema(description = "분반 ID", example = "1")
+    Long classroomId,
+
     @Schema(description = "분반 이름", example = "한글반")
     String classroomName,
+
+    @Schema(description = "요청자 ID", example = "3")
+    Long requestedById,
 
     @Schema(description = "요청자 이름", example = "홍길동")
     String requestedByName,
@@ -31,7 +37,9 @@ public record PurchaseRequestSummaryResponse(
     public static PurchaseRequestSummaryResponse from(PurchaseRequest r) {
         return new PurchaseRequestSummaryResponse(
             r.getId(),
+            r.getClassroom().getId(),
             r.getClassroom().getName(),
+            r.getRequestedBy().getId(),
             r.getRequestedBy().getName(),
             r.getTitle(),
             r.getTotalPrice(),

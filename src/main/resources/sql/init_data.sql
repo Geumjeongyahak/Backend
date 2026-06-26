@@ -61,7 +61,10 @@ INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, r
 INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
     (9, '한취소', 'cancelled-applicant01@test.com', 'GUEST', NULL, NULL, NULL, NULL, NULL);
 
-ALTER SEQUENCE users_id_seq RESTART WITH 10;
+INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
+    (10, 'Apps Script Bot', 'geumjeongyahak-apps-script-bot@gmail.com', 'VOLUNTEER', NULL, NULL, NULL, NULL, NULL);
+
+ALTER SEQUENCE users_id_seq RESTART WITH 11;
 
 -- 3. User Credentials
 INSERT INTO user_credentials (id, user_id, provider, credential_email, password_hash, email_verified) VALUES
@@ -73,14 +76,20 @@ INSERT INTO user_credentials (id, user_id, provider, credential_email, password_
     (6, 6, 'LOCAL', 'approved-teacher01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
     (7, 7, 'LOCAL', 'rejected-applicant01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
     (8, 8, 'LOCAL', 'direct-assign-edge01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
-    (9, 9, 'LOCAL', 'cancelled-applicant01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE);
+    (9, 9, 'LOCAL', 'cancelled-applicant01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
+    (10, 10, 'LOCAL', 'geumjeongyahak-apps-script-bot@gmail.com', '$2a$10$6w/cCD2l06.TF3GK7FuCv.uMBX7gqIvgMdwkuSe3D3F6WYbgctibW', TRUE);
 
-ALTER SEQUENCE user_credentials_id_seq RESTART WITH 10;
+ALTER SEQUENCE user_credentials_id_seq RESTART WITH 11;
 
 -- 4. User Permissions
 INSERT INTO user_permissions (user_id, permission_code) VALUES
     (2, 'lesson:write:*'),
-    (6, 'channel:write:6');
+    (6, 'channel:write:6'),
+    (10, 'daily-schedule:manage:*'),
+    (10, 'user:read:*'),
+    (10, 'purchase-request:read:*'),
+    (10, 'purchase-request:manage:*'),
+    (10, 'vendor:read:*');
 
 -- 5. Department Permissions
 INSERT INTO department_permissions (department_id, role_type, permission_code) VALUES

@@ -16,6 +16,9 @@ import static org.hamcrest.Matchers.*;
 @DisplayName("E2E: 로그인 테스트")
 class AuthLoginTest extends AuthBaseTest {
 
+    private static final String APPS_SCRIPT_BOT_EMAIL = "geumjeongyahak-apps-script-bot@gmail.com";
+    private static final String APPS_SCRIPT_BOT_PASSWORD = "apps-script-bot123!";
+
     @Autowired
     private UserRepository userRepository;
 
@@ -53,6 +56,56 @@ class AuthLoginTest extends AuthBaseTest {
             .get("/api/v1/users/me")
         .then()
             .statusCode(200);
+
+        RestAssured.basePath = originalBasePath;
+    }
+
+    @Test
+    @DisplayName("Apps Script Bot 계정으로 로그인하면 수업일지 관리 권한을 가진다")
+    void login_AppsScriptBot_Success() {
+        LocalLoginRequest req = new LocalLoginRequest(
+            APPS_SCRIPT_BOT_EMAIL,
+            APPS_SCRIPT_BOT_PASSWORD
+        );
+
+        var response = given()
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(200)
+            .body("accessToken", notNullValue())
+            .body("refreshToken", notNullValue())
+            .body("tokenType", equalTo("Bearer"))
+            .log().all()
+            .extract()
+            .as(TokenResponse.class);
+
+        String originalBasePath = RestAssured.basePath;
+        RestAssured.basePath = "";
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(response.accessToken()))
+        .when()
+            .get("/api/v1/users/me")
+        .then()
+            .statusCode(200)
+            .body("email", equalTo(APPS_SCRIPT_BOT_EMAIL))
+            .body("permissions.find { it.code == 'daily-schedule:manage:*' }.source", equalTo("MANUAL"))
+            .body("permissions.find { it.code == 'user:read:*' }.source", equalTo("MANUAL"))
+            .body("permissions.find { it.code == 'purchase-request:read:*' }.source", equalTo("MANUAL"))
+            .body("permissions.find { it.code == 'purchase-request:manage:*' }.source", equalTo("MANUAL"))
+            .body("permissions.find { it.code == 'vendor:read:*' }.source", equalTo("MANUAL"));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(response.accessToken()))
+            .queryParam("size", 20)
+        .when()
+            .get("/api/v1/users")
+        .then()
+            .statusCode(200)
+            .body("content.find { it.email == 'teacher02@test.com' }.name", equalTo("김철수"));
 
         RestAssured.basePath = originalBasePath;
     }

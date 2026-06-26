@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,7 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestService;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestByAdminRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReviewPurchaseRequestRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.UpdatePurchaseRequestByAdminRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
 
@@ -32,6 +38,21 @@ import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSum
 public class PurchaseRequestAdminController {
 
     private final PurchaseRequestService purchaseRequestService;
+
+    @Operation(
+        summary = "구입 요청 대리 생성",
+        description = "관리자 또는 purchase-request:manage:* 권한자가 requestedById 사용자를 실제 요청자로 지정해 구입 요청을 생성합니다."
+    )
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
+    @PostMapping
+    public ResponseEntity<PurchaseRequestDetailResponse> createPurchaseRequest(
+        @Valid @RequestBody CreatePurchaseRequestByAdminRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("POST /api/v1/admin/purchase-requests (requestedById={})", request.requestedById());
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(purchaseRequestService.createPurchaseRequestByAdmin(userDetails.getUserId(), request));
+    }
 
     @Operation(
         summary = "구입 요청 전체 목록 조회",
@@ -56,6 +77,28 @@ public class PurchaseRequestAdminController {
         log.debug("GET /api/v1/admin/purchase-requests/{}", requestId);
         return ResponseEntity.ok(
             purchaseRequestService.getPurchaseRequest(userDetails.getUserId(), requestId, true)
+        );
+    }
+
+    @Operation(
+        summary = "구입 요청 수정",
+        description = "관리자 또는 purchase-request:manage:* 권한자가 PENDING 상태의 구입 요청 제목, 내용, 품목을 수정합니다."
+    )
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
+    @PatchMapping("/{requestId}")
+    public ResponseEntity<PurchaseRequestDetailResponse> updatePurchaseRequest(
+        @PathVariable Long requestId,
+        @Valid @RequestBody UpdatePurchaseRequestByAdminRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/admin/purchase-requests/{}", requestId);
+        return ResponseEntity.ok(
+            purchaseRequestService.updatePurchaseRequest(
+                userDetails.getUserId(),
+                requestId,
+                new CreatePurchaseRequestRequest(request.title(), request.content(), null, request.items()),
+                true
+            )
         );
     }
 
@@ -126,12 +169,30 @@ public class PurchaseRequestAdminController {
         );
     }
 
+    @Operation(
+        summary = "구매 완료 보고",
+        description = "관리자 또는 purchase-request:manage:* 권한자가 APPROVED 상태의 구입 요청에 구매 거래와 영수증을 등록합니다. "
+            + "상태가 PURCHASED 로 변경됩니다."
+    )
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
+    @PostMapping("/{requestId}/report")
+    public ResponseEntity<PurchaseRequestDetailResponse> reportPurchase(
+        @PathVariable Long requestId,
+        @Valid @RequestBody ReportPurchaseRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("POST /api/v1/admin/purchase-requests/{}/report", requestId);
+        return ResponseEntity.ok(
+            purchaseRequestService.reportPurchase(userDetails.getUserId(), requestId, request, true)
+        );
+    }
+
     @Operation(summary = "구매 완료 거래 수정")
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
     @PatchMapping("/{requestId}/item-receipts")
     public ResponseEntity<PurchaseRequestDetailResponse> updateItemReceipts(
         @PathVariable Long requestId,
-        @Valid @RequestBody geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest request,
+        @Valid @RequestBody ReportPurchaseRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PATCH /api/v1/admin/purchase-requests/{}/item-receipts", requestId);
