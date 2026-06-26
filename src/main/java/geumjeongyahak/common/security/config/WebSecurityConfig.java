@@ -108,7 +108,7 @@ public class WebSecurityConfig {
                 // 정적 리소스 및 문서/헬스체크
                 .requestMatchers("/favicon.ico", "/sw.js", "/icons/**", "/site.webmanifest", "/actuator/health", "/actuator/prometheus", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/swagger-ui").permitAll()
                 // 인증 API (로그인, 회원가입, 토큰 재발급, 로그아웃)
-                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/admin/login", "/api/v1/auth/signup", "/api/v1/auth/refresh", "/api/v1/auth/logout", "/api/v1/auth/password-reset/request", "/api/v1/auth/password-reset/confirm").permitAll()
+                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/admin/login", "/api/v1/auth/signup", "/api/v1/auth/refresh", "/api/v1/auth/logout", "/api/v1/auth/password-reset/request", "/api/v1/auth/password-reset/confirm", "/api/v1/auth/email-verification/confirm", "/api/v1/auth/email-verification/resend").permitAll()
                 .requestMatchers("/api/v1/auth/google/**").permitAll()
                 // 공개 조회 API (목록 위주)
                 .requestMatchers(HttpMethod.GET, "/api/v1/classrooms").permitAll()

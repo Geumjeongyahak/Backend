@@ -10,7 +10,9 @@ public record MailProperties(
     String fromName,
     String frontendBaseUrl,
     String passwordResetPath,
-    long passwordResetExpirationMinutes
+    long passwordResetExpirationMinutes,
+    String emailVerificationPath,
+    long emailVerificationExpirationMinutes
 ) {
     public MailProperties {
         if (fromEmail == null || fromEmail.isBlank()) {
@@ -27,6 +29,12 @@ public record MailProperties(
         }
         if (passwordResetExpirationMinutes <= 0) {
             passwordResetExpirationMinutes = 15;
+        }
+        if (emailVerificationPath == null || emailVerificationPath.isBlank()) {
+            emailVerificationPath = "/auth/email-verification";
+        }
+        if (emailVerificationExpirationMinutes <= 0) {
+            emailVerificationExpirationMinutes = 15;
         }
     }
 }

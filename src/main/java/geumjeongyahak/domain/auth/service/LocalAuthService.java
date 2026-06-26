@@ -7,16 +7,17 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import geumjeongyahak.common.event.EventPublisher;
+import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.security.jwt.JwtTokenProvider;
 import geumjeongyahak.domain.auth.entity.UserCredential;
 import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.enums.RoleType;
-import geumjeongyahak.domain.auth.event.UserSignedUpEvent;
+import geumjeongyahak.domain.auth.exception.AuthErrorCode;
 import geumjeongyahak.domain.auth.exception.InvalidRefreshTokenException;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalSignupRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.RefreshTokenRequest;
+import geumjeongyahak.domain.auth.v1.dto.response.AuthMessageResponse;
 import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.exception.DuplicateEmailException;
@@ -33,7 +34,7 @@ public class LocalAuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
-    private final EventPublisher eventPublisher;
+    private final EmailVerificationService emailVerificationService;
 
     @Transactional
     public TokenResponse login(LocalLoginRequest request) {
@@ -66,6 +67,9 @@ public class LocalAuthService {
             || !passwordEncoder.matches(request.password(), credential.getPasswordHash())) {
             throw new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
+        if (!credential.isEmailVerified()) {
+            throw new BusinessException(AuthErrorCode.EMAIL_NOT_VERIFIED);
+        }
 
         return credential;
     }
@@ -78,7 +82,7 @@ public class LocalAuthService {
     }
 
     @Transactional
-    public TokenResponse signup(LocalSignupRequest request) {
+    public AuthMessageResponse signup(LocalSignupRequest request) {
         log.debug("회원가입 시도: {}", request.email());
 
         if (request.email() != null && userProxyService.existsByEmailIncludingDeleted(request.email())) {
@@ -99,13 +103,13 @@ public class LocalAuthService {
         UserCredential credential = userCredentialService.createLocalCredential(
             savedUser,
             request.email(),
-            request.password()
+            request.password(),
+            false
         );
-        
-        TokenResponse tokenResponse = createTokenResponse(savedUser, credential.getId());
-        eventPublisher.publish(new UserSignedUpEvent(savedUser.getId(), savedUser.getEmail(), savedUser.getName()));
+
+        emailVerificationService.issueVerification(credential);
         log.info("회원가입 성공: userId={}, email={}", savedUser.getId(), request.email());
-        return tokenResponse;
+        return AuthMessageResponse.of("회원가입이 완료되었습니다. 이메일 인증 후 로그인해 주세요.");
     }
 
     @Transactional

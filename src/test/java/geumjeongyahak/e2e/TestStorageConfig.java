@@ -43,6 +43,8 @@ public class TestStorageConfig {
         private String lastSignupRecipient;
         private String lastPasswordResetRecipient;
         private String lastPasswordResetCode;
+        private String lastEmailVerificationRecipient;
+        private String lastEmailVerificationCode;
 
         @Override
         public MailDeliveryResult sendSignupWelcomeMail(String recipientEmail, String recipientName) {
@@ -57,6 +59,17 @@ public class TestStorageConfig {
             return MailDeliveryResult.sent("password-reset", recipientEmail);
         }
 
+        @Override
+        public MailDeliveryResult sendEmailVerificationMail(
+            String recipientEmail,
+            String recipientName,
+            String verificationCode
+        ) {
+            this.lastEmailVerificationRecipient = recipientEmail;
+            this.lastEmailVerificationCode = verificationCode;
+            return MailDeliveryResult.sent("email-verification", recipientEmail);
+        }
+
         public String getLastSignupRecipient() {
             return lastSignupRecipient;
         }
@@ -67,6 +80,14 @@ public class TestStorageConfig {
 
         public String getLastPasswordResetCode() {
             return lastPasswordResetCode;
+        }
+
+        public String getLastEmailVerificationRecipient() {
+            return lastEmailVerificationRecipient;
+        }
+
+        public String getLastEmailVerificationCode() {
+            return lastEmailVerificationCode;
         }
     }
 

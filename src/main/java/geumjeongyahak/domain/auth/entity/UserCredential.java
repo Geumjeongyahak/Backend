@@ -68,6 +68,15 @@ public class UserCredential extends BaseEntity {
     @Column(name = "password_reset_token_expires_at")
     private LocalDateTime passwordResetTokenExpiresAt;
 
+    @Column(name = "email_verification_token_hash", length = 512)
+    private String emailVerificationTokenHash;
+
+    @Column(name = "email_verification_token_expires_at")
+    private LocalDateTime emailVerificationTokenExpiresAt;
+
+    @Column(name = "email_verification_requested_at")
+    private LocalDateTime emailVerificationRequestedAt;
+
     @Builder
     private UserCredential(
         User user,
@@ -78,7 +87,10 @@ public class UserCredential extends BaseEntity {
         String passwordHash,
         LocalDateTime lastLoginAt,
         String passwordResetTokenHash,
-        LocalDateTime passwordResetTokenExpiresAt
+        LocalDateTime passwordResetTokenExpiresAt,
+        String emailVerificationTokenHash,
+        LocalDateTime emailVerificationTokenExpiresAt,
+        LocalDateTime emailVerificationRequestedAt
     ) {
         this.user = user;
         this.provider = provider;
@@ -89,6 +101,9 @@ public class UserCredential extends BaseEntity {
         this.lastLoginAt = lastLoginAt;
         this.passwordResetTokenHash = passwordResetTokenHash;
         this.passwordResetTokenExpiresAt = passwordResetTokenExpiresAt;
+        this.emailVerificationTokenHash = emailVerificationTokenHash;
+        this.emailVerificationTokenExpiresAt = emailVerificationTokenExpiresAt;
+        this.emailVerificationRequestedAt = emailVerificationRequestedAt;
     }
 
     public static UserCredential local(
@@ -126,10 +141,26 @@ public class UserCredential extends BaseEntity {
         this.passwordResetTokenExpiresAt = expiresAt;
     }
 
+    public void issueEmailVerificationToken(
+        String tokenHash,
+        LocalDateTime expiresAt,
+        LocalDateTime requestedAt
+    ) {
+        this.emailVerificationTokenHash = tokenHash;
+        this.emailVerificationTokenExpiresAt = expiresAt;
+        this.emailVerificationRequestedAt = requestedAt;
+    }
+
+    public void verifyEmail() {
+        this.emailVerified = true;
+        clearEmailVerificationToken();
+    }
+
     public void changeCredentialEmail(String newEmail) {
         this.credentialEmail = newEmail;
         this.emailVerified = false;
         clearPasswordResetToken();
+        clearEmailVerificationToken();
     }
 
     public void changePassword(String newPasswordHash) {
@@ -141,6 +172,10 @@ public class UserCredential extends BaseEntity {
         return passwordResetTokenExpiresAt == null || !passwordResetTokenExpiresAt.isAfter(now);
     }
 
+    public boolean isEmailVerificationTokenExpired(LocalDateTime now) {
+        return emailVerificationTokenExpiresAt == null || !emailVerificationTokenExpiresAt.isAfter(now);
+    }
+
     public void completePasswordReset(String newPasswordHash) {
         changePassword(newPasswordHash);
     }
@@ -148,5 +183,11 @@ public class UserCredential extends BaseEntity {
     public void clearPasswordResetToken() {
         this.passwordResetTokenHash = null;
         this.passwordResetTokenExpiresAt = null;
+    }
+
+    public void clearEmailVerificationToken() {
+        this.emailVerificationTokenHash = null;
+        this.emailVerificationTokenExpiresAt = null;
+        this.emailVerificationRequestedAt = null;
     }
 }

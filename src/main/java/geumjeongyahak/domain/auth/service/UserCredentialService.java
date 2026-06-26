@@ -83,7 +83,17 @@ public class UserCredentialService {
         String email,
         String password
     ) {
-log.info("로컬 로그인 자격 증명 생성 요청 - userId: {}, email: {}", user.getId(), user.getEmail());
+        return createLocalCredential(user, email, password, true);
+    }
+
+    @Transactional
+    public UserCredential createLocalCredential(
+        User user,
+        String email,
+        String password,
+        boolean emailVerified
+    ) {
+        log.info("로컬 로그인 자격 증명 생성 요청 - userId: {}, email: {}", user.getId(), user.getEmail());
 
         if (hasCredentialForProvider(user.getId(), ProviderType.LOCAL)) {
             log.info("로컬 로그인 자격 증명 생성 실패 - 이미 로컬 계정으로 가입된 사용자: userId: {}, email: {}", user.getId(), user.getEmail());
@@ -101,9 +111,9 @@ log.info("로컬 로그인 자격 증명 생성 요청 - userId: {}, email: {}",
             user,
             email,
             passwordEncoder.encode(password),
-            true
+            emailVerified
         );
-        
+
         log.debug("로컬 로그인 자격 증명 생성 완료 - userId: {}, email: {}", user.getId(), user.getEmail());
         return userCredentialRepository.save(credential);
     }

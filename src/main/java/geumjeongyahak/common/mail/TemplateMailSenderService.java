@@ -13,6 +13,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Slf4j
 @Service
@@ -21,6 +22,7 @@ public class TemplateMailSenderService implements MailSenderService {
 
     private static final String SIGNUP_WELCOME_TEMPLATE = "mail/signup-welcome";
     private static final String PASSWORD_RESET_TEMPLATE = "mail/password-reset";
+    private static final String EMAIL_VERIFICATION_TEMPLATE = "mail/email-verification";
 
     private final ObjectProvider<JavaMailSender> javaMailSenderProvider;
     private final TemplateEngine templateEngine;
@@ -50,6 +52,27 @@ public class TemplateMailSenderService implements MailSenderService {
                 "resetCode", resetCode,
                 "resetUrl", resetUrl,
                 "expiresMinutes", mailProperties.passwordResetExpirationMinutes()
+            )
+        );
+    }
+
+    @Override
+    public MailDeliveryResult sendEmailVerificationMail(
+        String recipientEmail,
+        String recipientName,
+        String verificationCode
+    ) {
+        String verificationUrl = buildEmailVerificationUrl(recipientEmail, verificationCode);
+        return sendHtmlMail(
+            "email-verification",
+            EMAIL_VERIFICATION_TEMPLATE,
+            recipientEmail,
+            "금정야학 이메일 인증번호",
+            Map.of(
+                "name", defaultName(recipientName),
+                "verificationCode", verificationCode,
+                "verificationUrl", verificationUrl,
+                "expiresMinutes", mailProperties.emailVerificationExpirationMinutes()
             )
         );
     }
@@ -114,11 +137,24 @@ public class TemplateMailSenderService implements MailSenderService {
     }
 
     private String buildPasswordResetUrl(String resetCode) {
-        String baseUrl = removeTrailingSlash(mailProperties.frontendBaseUrl());
-        String path = mailProperties.passwordResetPath().startsWith("/")
-            ? mailProperties.passwordResetPath()
-            : "/" + mailProperties.passwordResetPath();
-        return baseUrl + path + "?code=" + resetCode;
+        return UriComponentsBuilder.fromUriString(buildFrontendUrl(mailProperties.passwordResetPath()))
+            .queryParam("code", resetCode)
+            .toUriString();
+    }
+
+    private String buildEmailVerificationUrl(String recipientEmail, String verificationCode) {
+        return UriComponentsBuilder.fromUriString(buildFrontendUrl(mailProperties.emailVerificationPath()))
+            .queryParam("email", recipientEmail)
+            .queryParam("code", verificationCode)
+            .toUriString();
+    }
+
+    private String buildFrontendUrl(String path) {
+        return removeTrailingSlash(mailProperties.frontendBaseUrl()) + normalizePath(path);
+    }
+
+    private String normalizePath(String path) {
+        return path.startsWith("/") ? path : "/" + path;
     }
 
     private String removeTrailingSlash(String value) {
