@@ -59,7 +59,7 @@ public class GoogleApiClient {
             return new GoogleUserInfo(
                 response.sub(),
                 response.email(),
-                "true".equals(response.emailVerified()),
+                response.isEmailVerified(),
                 response.name(),
                 response.picture()
             );

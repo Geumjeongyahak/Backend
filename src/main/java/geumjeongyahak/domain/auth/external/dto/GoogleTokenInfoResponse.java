@@ -8,4 +8,8 @@ public record GoogleTokenInfoResponse(
     @JsonProperty("email_verified") String emailVerified,
     String name,
     String picture
-) {}
+) {
+    public boolean isEmailVerified() {
+        return "true".equalsIgnoreCase(emailVerified);
+    }
+}
