@@ -9,11 +9,14 @@ import static org.hamcrest.Matchers.notNullValue;
 import io.restassured.http.ContentType;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
+import geumjeongyahak.domain.file.repository.FileRepository;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
 import geumjeongyahak.domain.vendor.repository.VendorBalanceHistoryRepository;
 import geumjeongyahak.domain.vendor.repository.VendorRepository;
@@ -27,8 +30,14 @@ import geumjeongyahak.e2e.request.RequestBaseTest;
 @DisplayName("E2E: 기자재 구입 요청 승인·반려·조회 테스트")
 class PurchaseRequestStatusTest extends RequestBaseTest {
 
+    private static final String APPS_SCRIPT_BOT_EMAIL = "geumjeongyahak-apps-script-bot@gmail.com";
+    private static final String APPS_SCRIPT_BOT_PASSWORD = "apps-script-bot123!";
+
     @Autowired
     private PurchaseRequestRepository purchaseRequestRepository;
+
+    @Autowired
+    private FileRepository fileRepository;
 
     @Autowired
     private VendorRepository vendorRepository;
@@ -38,6 +47,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
 
     private Long currentRequestId;
     private Long createdVendorId;
+    private UUID registeredDriveFileId;
 
     @AfterEach
     void cleanup() {
@@ -49,6 +59,10 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
                 purchaseRequestRepository.deleteById(currentRequestId);
             }
             currentRequestId = null;
+        }
+        if (registeredDriveFileId != null && fileRepository.existsById(registeredDriveFileId)) {
+            fileRepository.deleteById(registeredDriveFileId);
+            registeredDriveFileId = null;
         }
         if (createdVendorId != null) {
             if (vendorRepository.existsById(createdVendorId)) {
@@ -345,6 +359,74 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
         currentRequestId = null;
     }
 
+    // ── 관리자 수정 (update) ─────────────────────────────
+
+    @Test
+    @DisplayName("Apps Script Bot이 PENDING 구입 요청 수정 → 200, 기본 정보와 품목 교체")
+    void update_asAppsScriptBotAndPending_returns200() {
+        currentRequestId = setupPendingRequest();
+        String botAccessToken = loginAppsScriptBot();
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(botAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "title", "시트 수정 구입 요청",
+                "content", "Apps Script에서 수정한 내용입니다.",
+                "items", List.of(Map.of(
+                    "name", "수정된 품목",
+                    "reason", "시트 수정 반영",
+                    "quantity", 3,
+                    "paymentType", "PREPAID"
+                ))
+            ))
+            .patch("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(200)
+            .body("title", equalTo("시트 수정 구입 요청"))
+            .body("content", equalTo("Apps Script에서 수정한 내용입니다."))
+            .body("status", equalTo("PENDING"))
+            .body("items", hasSize(1))
+            .body("items[0].name", equalTo("수정된 품목"))
+            .body("items[0].quantity", equalTo(3))
+            .body("items[0].paymentType", equalTo("PREPAID"));
+    }
+
+    @Test
+    @DisplayName("APPROVED 구입 요청 수정 → 409")
+    void update_approvedRequest_returns409() {
+        currentRequestId = setupPendingRequest();
+        String botAccessToken = loginAppsScriptBot();
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "수정 불가 상태 전환"))
+            .patch("/{requestId}/approve", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(botAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "title", "승인 후 수정",
+                "content", "승인 후에는 수정할 수 없습니다.",
+                "items", List.of(Map.of(
+                    "name", "수정 시도 품목",
+                    "reason", "상태 검증",
+                    "quantity", 1,
+                    "paymentType", "ACTUAL"
+                ))
+            ))
+            .patch("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(409);
+    }
+
     // ── 구매 보고 (report) ────────────────────────────────
 
     @Test
@@ -376,6 +458,63 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .body("transactions", hasSize(1))
             .body("transactions[0].itemNames", hasSize(2))
             .body("transactions[0].receiptFileId", equalTo(receiptFileId));
+    }
+
+    @Test
+    @DisplayName("Apps Script Bot이 Drive 영수증으로 구매 완료 보고 → 200, PURCHASED")
+    void reportByAdmin_withAppsScriptBotAndDriveReceipt_returns200() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = setupPendingRequest();
+        String botAccessToken = loginAppsScriptBot();
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "Bot 구매 보고 테스트 승인"))
+            .patch("/{requestId}/approve", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        String receiptFileId = registerDriveReceipt(botAccessToken);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(botAccessToken))
+            .contentType(ContentType.JSON)
+            .body(reportBody(createdVendorId, 20000L, receiptFileId))
+            .post("/{requestId}/report", currentRequestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("PURCHASED"))
+            .body("transactions", hasSize(1))
+            .body("transactions[0].receiptFileId", equalTo(receiptFileId))
+            .body("transactions[0].receiptFileUrl", equalTo("https://drive.google.com/file/d/apps-script-receipt/view?usp=sharing"));
+    }
+
+    @Test
+    @DisplayName("권한 없는 사용자의 관리자 구매 완료 보고 → 403")
+    void reportByAdmin_withoutManagePermission_returns403() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "권한 검증용 승인"))
+            .patch("/{requestId}/approve", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(managerToken))
+            .contentType(ContentType.JSON)
+            .body(reportBody(createdVendorId, 20000L, null))
+            .post("/{requestId}/report", currentRequestId)
+            .then()
+            .statusCode(403);
     }
 
     // ── 재확인 요청 (reconfirmation) ───────────────────────
@@ -658,6 +797,41 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             transaction.put("receiptFileId", receiptFileId);
         }
         return Map.of("transactions", List.of(transaction));
+    }
+
+    private String loginAppsScriptBot() {
+        return given()
+            .basePath("/api/v1/auth")
+            .contentType(ContentType.JSON)
+            .body(new LocalLoginRequest(APPS_SCRIPT_BOT_EMAIL, APPS_SCRIPT_BOT_PASSWORD))
+            .post("/login")
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getString("accessToken");
+    }
+
+    private String registerDriveReceipt(String accessToken) {
+        String fileId = given()
+            .basePath("/api/v1/files")
+            .header(AUTH_HEADER, getAuthHeader(accessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "driveUrl", "https://drive.google.com/file/d/apps-script-receipt/view?usp=sharing",
+                "originalName", "apps-script-receipt.png",
+                "mimeType", "image/png",
+                "fileSize", 1024L
+            ))
+            .post("/drive")
+            .then()
+            .statusCode(201)
+            .body("isGoogleDrive", equalTo(true))
+            .body("url", equalTo("https://drive.google.com/file/d/apps-script-receipt/view?usp=sharing"))
+            .extract()
+            .path("fileId");
+        registeredDriveFileId = UUID.fromString(fileId);
+        return fileId;
     }
 
     private String uploadPurchaseReceipt() {
