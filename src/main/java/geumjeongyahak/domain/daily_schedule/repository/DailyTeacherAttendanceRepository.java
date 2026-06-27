@@ -19,6 +19,8 @@ public interface DailyTeacherAttendanceRepository extends JpaRepository<DailyTea
 
     List<DailyTeacherAttendance> findAllByDailyScheduleIdAndIsDeletedFalse(Long dailyScheduleId);
 
+    List<DailyTeacherAttendance> findAllByDailyScheduleIdInAndIsDeletedFalse(Collection<Long> dailyScheduleIds);
+
     @Query("""
         select coalesce(sum(attendance.volunteerServiceMinutes), 0)
         from DailyTeacherAttendance attendance

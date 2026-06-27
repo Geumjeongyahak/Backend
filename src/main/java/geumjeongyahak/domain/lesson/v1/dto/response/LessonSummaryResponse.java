@@ -3,6 +3,7 @@ package geumjeongyahak.domain.lesson.v1.dto.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 
 public record LessonSummaryResponse(
@@ -44,18 +45,22 @@ public record LessonSummaryResponse(
         example = "2026-06-26",
         nullable = true
     )
-    LocalDate exchangedLessonDate
+    LocalDate exchangedLessonDate,
+
+    @Schema(description = "같은 날짜/분반 DailySchedule 기준 교사 출석/퇴근 여부. 아직 출석 정보가 없으면 null입니다.")
+    LessonTeacherAttendanceResponse teacherAttendance
 ) {
 
     public static LessonSummaryResponse from(Lesson lesson) {
-        return from(lesson, false, false, null);
+        return from(lesson, false, false, null, null);
     }
 
     public static LessonSummaryResponse from(
         Lesson lesson,
         boolean isExchanged,
         boolean isAbsent,
-        LocalDate exchangedLessonDate
+        LocalDate exchangedLessonDate,
+        DailyTeacherAttendance teacherAttendance
     ) {
         return new LessonSummaryResponse(
             lesson.getId(),
@@ -69,7 +74,8 @@ public record LessonSummaryResponse(
             lesson.getSubject().getClassroom().getName(),
             isExchanged,
             isAbsent,
-            exchangedLessonDate
+            exchangedLessonDate,
+            LessonTeacherAttendanceResponse.from(teacherAttendance)
         );
     }
 }

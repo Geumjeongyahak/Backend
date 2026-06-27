@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 
@@ -56,14 +57,17 @@ public record LessonDetailResponse(
     LocalDate exchangedLessonDate,
 
     @Schema(description = "수업일지(메모)")
-    String note
+    String note,
+
+    @Schema(description = "같은 날짜/분반 DailySchedule 기준 교사 출석/퇴근 여부. 아직 출석 정보가 없으면 null입니다.")
+    LessonTeacherAttendanceResponse teacherAttendance
 ) {
     public static LessonDetailResponse from(Lesson lesson) {
-        return from(lesson, null, false, false, null);
+        return from(lesson, null, false, false, null, null);
     }
 
     public static LessonDetailResponse from(Lesson lesson, Long dailyScheduleId) {
-        return from(lesson, dailyScheduleId, false, false, null);
+        return from(lesson, dailyScheduleId, false, false, null, null);
     }
 
     public static LessonDetailResponse from(
@@ -71,7 +75,8 @@ public record LessonDetailResponse(
         Long dailyScheduleId,
         boolean isExchanged,
         boolean isAbsent,
-        LocalDate exchangedLessonDate
+        LocalDate exchangedLessonDate,
+        DailyTeacherAttendance teacherAttendance
     ) {
         return new LessonDetailResponse(
             lesson.getId(),
@@ -88,7 +93,8 @@ public record LessonDetailResponse(
             isExchanged,
             isAbsent,
             exchangedLessonDate,
-            lesson.getNote()
+            lesson.getNote(),
+            LessonTeacherAttendanceResponse.from(teacherAttendance)
         );
     }
 }
