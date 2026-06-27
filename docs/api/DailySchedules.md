@@ -52,6 +52,7 @@ DailySchedule 도메인은 다음 권한 코드를 사용합니다.
 - 상세 조회는 DailySchedule에 연결된 Lesson 목록, 교사 출석, 학생 출석부를 함께 반환합니다.
 - 상세 조회는 `dailyScheduleId` 또는 `lessonDate`와 `classroomId` 조합으로 조회할 수 있습니다.
 - 목록과 상세 응답은 교환 여부, 결강 여부, 교환 상대 날짜를 함께 반환합니다.
+- 목록 응답은 교사 출석 상태, 출석 처리 여부, 퇴근 처리 여부를 함께 반환합니다.
 
 교환·결강 표시 필드:
 
@@ -60,6 +61,14 @@ DailySchedule 도메인은 다음 권한 코드를 사용합니다.
 | `isExchanged` | boolean | 교환형 또는 대체형 제안 수락으로 담당 교사가 변경된 일정인지 여부 |
 | `isAbsent` | boolean | 결석 요청 승인으로 결강 처리된 일정인지 여부 |
 | `exchangedLessonDate` | date, nullable | 교환형 일정의 상대 수업 날짜. 대체형 또는 일반 일정이면 `null` |
+
+교사 출석 요약 필드:
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `teacherAttendanceStatus` | enum, nullable | 교사 출석 상태. 출석 정보가 없으면 `null` |
+| `isTeacherAttended` | boolean | 교사 출석 처리 여부 |
+| `isTeacherCheckedOut` | boolean | 교사 퇴근 처리 여부 |
 
 예시:
 
@@ -85,6 +94,8 @@ GET /api/v1/daily-schedules?keyword=수학&mine=true&page=0&size=8
       "isAbsent": false,
       "exchangedLessonDate": "2026-06-26",
       "teacherAttendanceStatus": "ABSENT",
+      "isTeacherAttended": false,
+      "isTeacherCheckedOut": false,
       "lessonCount": 3,
       "lessons": [
         {

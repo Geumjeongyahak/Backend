@@ -64,6 +64,12 @@ public record DailyScheduleSummaryResponse(
     )
     DailyTeacherAttendanceStatus teacherAttendanceStatus,
 
+    @Schema(description = "교사 출석 처리 여부", example = "true")
+    boolean isTeacherAttended,
+
+    @Schema(description = "교사 퇴근 처리 여부", example = "false")
+    boolean isTeacherCheckedOut,
+
     @Schema(description = "연결된 수업 수", example = "3")
     int lessonCount,
 
@@ -91,6 +97,8 @@ public record DailyScheduleSummaryResponse(
             dailySchedule.isAbsent(),
             dailySchedule.getExchangedLessonDate(),
             teacherAttendance != null ? teacherAttendance.getStatus() : null,
+            teacherAttendance != null && teacherAttendance.isAttended(),
+            teacherAttendance != null && teacherAttendance.isCheckedOut(),
             lessons.size(),
             lessons
         );

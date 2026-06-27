@@ -89,6 +89,13 @@ class DailyScheduleServiceReadTest {
         dailySchedule.markExchanged(exchangedLessonDate);
         dailySchedule.markAbsent();
         DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
+        teacherAttendance.updateAttendance(
+            DailyTeacherAttendanceStatus.PRESENT,
+            LocalDateTime.of(2026, 5, 20, 14, 0),
+            null,
+            null
+        );
+        teacherAttendance.checkOut(LocalDateTime.of(2026, 5, 20, 16, 0));
 
         given(dailyScheduleRepository.findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(
             lessonDate,
@@ -106,6 +113,9 @@ class DailyScheduleServiceReadTest {
         assertThat(responses).hasSize(1);
         assertThat(responses.get(0).dailyScheduleId()).isEqualTo(dailySchedule.getId());
         assertThat(responses.get(0).volunteerServiceMinutes()).isEqualTo(120);
+        assertThat(responses.get(0).teacherAttendanceStatus()).isEqualTo(DailyTeacherAttendanceStatus.PRESENT);
+        assertThat(responses.get(0).isTeacherAttended()).isTrue();
+        assertThat(responses.get(0).isTeacherCheckedOut()).isTrue();
         assertThat(responses.get(0).lessonCount()).isEqualTo(1);
         assertThat(responses.get(0).isExchanged()).isTrue();
         assertThat(responses.get(0).isAbsent()).isTrue();
