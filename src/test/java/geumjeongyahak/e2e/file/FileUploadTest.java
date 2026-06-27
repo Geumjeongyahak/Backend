@@ -214,6 +214,156 @@ public class FileUploadTest extends BaseFileTest {
     }
 
     @Test
+    @DisplayName("관리자는 백엔드를 통해 Google Drive 파일을 직접 업로드할 수 있다")
+    void uploadDriveFile_admin_success() {
+        UUID fileId = UUID.fromString(
+            given()
+                .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+                .contentType(ContentType.MULTIPART)
+                .multiPart("file", "board.pdf", "drive-file".getBytes(StandardCharsets.UTF_8), "application/pdf")
+            .when()
+                .post("/drive/board")
+            .then()
+                .statusCode(201)
+                .body("fileId", notNullValue())
+                .body("originalName", equalTo("board.pdf"))
+                .body("contentType", equalTo("application/pdf"))
+                .body("fileSize", equalTo(10))
+                .body("ext", equalTo("pdf"))
+                .body("isGoogleDrive", equalTo(true))
+                .body("url", equalTo("https://drive.google.com/file/d/board-drive-file/view"))
+                .extract()
+                .path("fileId")
+        );
+
+        File file = fileRepository.findById(fileId).orElseThrow();
+        assertThat(file.getBucket()).isEqualTo(File.GOOGLE_DRIVE_BUCKET);
+        assertThat(file.getStorageKey()).isEqualTo("board-drive-file");
+        assertThat(file.isGoogleDrive()).isTrue();
+    }
+
+    @Test
+    @DisplayName("관리자는 반별 Google Drive 게시판 파일을 직접 업로드할 수 있다")
+    void uploadDriveFile_classroomScope_admin_success() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.MULTIPART)
+            .queryParam("scopeType", "classroom")
+            .queryParam("scopeId", 1)
+            .multiPart("file", "classroom-board.pdf", "drive-file".getBytes(StandardCharsets.UTF_8), "application/pdf")
+        .when()
+            .post("/drive/board")
+        .then()
+            .statusCode(201)
+            .body("fileId", notNullValue())
+            .body("originalName", equalTo("classroom-board.pdf"))
+            .body("url", equalTo("https://drive.google.com/file/d/board-drive-file/view"));
+    }
+
+    @Test
+    @DisplayName("관리자는 회의록 Google Drive 파일을 직접 업로드할 수 있다")
+    void uploadDriveFile_meetingRecords_admin_success() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.MULTIPART)
+            .multiPart("file", "meeting.pdf", "drive-file".getBytes(StandardCharsets.UTF_8), "application/pdf")
+        .when()
+            .post("/drive/meetingRecords")
+        .then()
+            .statusCode(201)
+            .body("fileId", notNullValue())
+            .body("originalName", equalTo("meeting.pdf"))
+            .body("url", equalTo("https://drive.google.com/file/d/meetingRecords-drive-file/view"));
+    }
+
+    @Test
+    @DisplayName("봉사자는 백엔드 Google Drive 직접 업로드를 호출할 수 없다")
+    void uploadDriveFile_volunteer_forbidden() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+            .contentType(ContentType.MULTIPART)
+            .multiPart("file", "board.pdf", "drive-file".getBytes(StandardCharsets.UTF_8), "application/pdf")
+        .when()
+            .post("/drive/board")
+        .then()
+            .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("게스트는 백엔드 Google Drive 직접 업로드를 호출할 수 없다")
+    void uploadDriveFile_guest_forbidden() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(guestAccessToken))
+            .contentType(ContentType.MULTIPART)
+            .multiPart("file", "board.pdf", "drive-file".getBytes(StandardCharsets.UTF_8), "application/pdf")
+        .when()
+            .post("/drive/board")
+        .then()
+            .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("Google Drive 직접 업로드 scope 조합이 잘못되면 실패한다")
+    void uploadDriveFile_invalidScope_badRequest() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.MULTIPART)
+            .queryParam("scopeType", "student")
+            .queryParam("scopeId", 1)
+            .multiPart("file", "board.pdf", "drive-file".getBytes(StandardCharsets.UTF_8), "application/pdf")
+        .when()
+            .post("/drive/board")
+        .then()
+            .statusCode(400);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.MULTIPART)
+            .queryParam("scopeType", "classroom")
+            .multiPart("file", "board.pdf", "drive-file".getBytes(StandardCharsets.UTF_8), "application/pdf")
+        .when()
+            .post("/drive/board")
+        .then()
+            .statusCode(400);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.MULTIPART)
+            .queryParam("scopeId", 1)
+            .multiPart("file", "board.pdf", "drive-file".getBytes(StandardCharsets.UTF_8), "application/pdf")
+        .when()
+            .post("/drive/board")
+        .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("Google Drive 직접 업로드 scope 대상이 없으면 실패한다")
+    void uploadDriveFile_missingScopeResource_notFound() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.MULTIPART)
+            .queryParam("scopeType", "classroom")
+            .queryParam("scopeId", 999999)
+            .multiPart("file", "board.pdf", "drive-file".getBytes(StandardCharsets.UTF_8), "application/pdf")
+        .when()
+            .post("/drive/board")
+        .then()
+            .statusCode(404);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.MULTIPART)
+            .queryParam("scopeType", "department")
+            .queryParam("scopeId", 999999)
+            .multiPart("file", "board.pdf", "drive-file".getBytes(StandardCharsets.UTF_8), "application/pdf")
+        .when()
+            .post("/drive/board")
+        .then()
+            .statusCode(404);
+    }
+
+    @Test
     @DisplayName("첨부파일 삭제 요청 시 파일 메타데이터가 soft delete 된다")
     void deleteAttachment_softDeleteSuccess() {
         UUID fileId = UUID.fromString(

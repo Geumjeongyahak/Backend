@@ -33,16 +33,18 @@ scripts/gcp/03_env_render/02_configure-runtime-env.sh scripts/gcp/00_env/dev.env
 - 서버 생성 후 또는 install 직전/이후: `02_configure-runtime-env.sh`
   - `scripts/gcp/00_env/<env>.app.env`와 `<env>.db.env`를 렌더링/수정합니다.
   - DB 계정/암호, App DB 접속값, MailerSend SMTP, JWT/JWE, Firebase, Google OAuth,
+    Google Drive 업로드 폴더,
     CORS/redirect, Admin bootstrap, Tailscale auth key를 설정합니다.
   - DB password, JWT/JWE, Admin password 등은 기존 값이 비어 있거나 `CHANGE_ME`이면
     Enter만 눌러도 랜덤값을 생성합니다. 이미 값이 있으면 Enter는 기존 값을 유지합니다.
   - `--apply-app`, `--apply-db`, `--apply-all` 모드는 원격 VM의 `~/app-dev/.env`/`~/db-dev/.env`를
     갱신하고 가능한 경우 서비스를 재시작/재설치합니다.
 - App runtime 값이 많을 때는 `03_configure-app-runtime-section.sh`로 나눠서 설정합니다.
-  - 섹션: `frontend`, `db`, `security`, `mailersend`, `oauth`, `firebase`, `gcp-storage`, `logging`, `tailscale`, `all`
+  - 섹션: `frontend`, `db`, `security`, `mailersend`, `oauth`, `firebase`, `gcp-storage`, `google-drive`, `logging`, `tailscale`, `all`
   - 예: `scripts/gcp/03_env_render/03_configure-app-runtime-section.sh scripts/gcp/00_env/dev.env mailersend`
   - Firebase/GCP credential은 JSON 파일 경로를 입력하면 자동으로 one-line base64로 인코딩해 env에 저장합니다.
   - Google OAuth는 client JSON 경로를 입력하면 `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`을 가져올 수 있습니다.
+  - Google Drive 업로드는 로그인/회원가입용 OAuth와 별도 client를 권장하며, OAuth Playground에서 발급한 refresh token을 `google-drive` 섹션에 입력합니다.
 
 prod 전체 순차 실행은 root의 `DEPLOY.md` 또는 다음 wrapper를 사용합니다.
 

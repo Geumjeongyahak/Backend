@@ -14,6 +14,7 @@ SECTION values:
   oauth        Google OAuth values; can import client_id/client_secret from Google client JSON
   firebase     Firebase values; can base64-encode service-account JSON from a file path
   gcp-storage  GCP storage bucket/project values; can base64-encode service-account JSON from a file path
+  google-drive Google Drive Shared Drive/folder ids for backend direct upload
   logging      App log/Cloud Ops Agent values
   tailscale    App Tailscale tags/auth key
   all          Run all sections
@@ -37,7 +38,7 @@ fi
 ENV_FILE="${1:?missing ENV_FILE}"
 SECTION="${2:?missing SECTION}"
 MODE="${3:---local-only}"
-case "${SECTION}" in frontend|db|security|mailersend|oauth|firebase|gcp-storage|logging|tailscale|all) ;;
+case "${SECTION}" in frontend|db|security|mailersend|oauth|firebase|gcp-storage|google-drive|logging|tailscale|all) ;;
   *) echo "unknown SECTION: ${SECTION}" >&2; usage >&2; exit 1 ;;
 esac
 case "${MODE}" in --local-only|--apply-app) ;;
@@ -252,6 +253,19 @@ def gcp_storage():
     ask('GCP_DEV_BUCKET_NAME','Dev bucket env value', get('GCP_DEV_BUCKET_NAME', infra.get('STORAGE_BUCKET_NAME','')))
     ask_b64_or_file('GCP_ENCODED_CREDENTIALS','GCP service-account JSON')
 
+def google_drive():
+    title("Google Drive direct upload")
+    ask('GOOGLE_DRIVE_SHARED_DRIVE_ID','Shared Drive id', get('GOOGLE_DRIVE_SHARED_DRIVE_ID', infra.get('GOOGLE_DRIVE_SHARED_DRIVE_ID','')))
+    ask('GOOGLE_DRIVE_MAKE_LINK_PUBLIC','Make uploaded Drive files link-public?', get('GOOGLE_DRIVE_MAKE_LINK_PUBLIC', infra.get('GOOGLE_DRIVE_MAKE_LINK_PUBLIC','true')), ['true','false'])
+    ask('GOOGLE_DRIVE_OAUTH_CLIENT_ID','Drive OAuth client id', get('GOOGLE_DRIVE_OAUTH_CLIENT_ID', infra.get('GOOGLE_DRIVE_OAUTH_CLIENT_ID','')), secret=True)
+    ask_secret('GOOGLE_DRIVE_OAUTH_CLIENT_SECRET','Drive OAuth client secret')
+    ask_secret('GOOGLE_DRIVE_OAUTH_REFRESH_TOKEN','Drive OAuth refresh token')
+    ask('GOOGLE_DRIVE_FOLDER_ID_HANDOVER','Drive folder id for handover', get('GOOGLE_DRIVE_FOLDER_ID_HANDOVER', infra.get('GOOGLE_DRIVE_FOLDER_ID_HANDOVER','')))
+    ask('GOOGLE_DRIVE_FOLDER_ID_EXAM_MATERIALS','Drive folder id for examMaterials', get('GOOGLE_DRIVE_FOLDER_ID_EXAM_MATERIALS', infra.get('GOOGLE_DRIVE_FOLDER_ID_EXAM_MATERIALS','')))
+    ask('GOOGLE_DRIVE_FOLDER_ID_DOCUMENT_FORMS','Drive folder id for documentForms', get('GOOGLE_DRIVE_FOLDER_ID_DOCUMENT_FORMS', infra.get('GOOGLE_DRIVE_FOLDER_ID_DOCUMENT_FORMS','')))
+    ask('GOOGLE_DRIVE_FOLDER_ID_MEETING_RECORDS','Drive folder id for meetingRecords', get('GOOGLE_DRIVE_FOLDER_ID_MEETING_RECORDS', infra.get('GOOGLE_DRIVE_FOLDER_ID_MEETING_RECORDS','')))
+    ask('GOOGLE_DRIVE_FOLDER_ID_BOARD','Drive folder id for board', get('GOOGLE_DRIVE_FOLDER_ID_BOARD', infra.get('GOOGLE_DRIVE_FOLDER_ID_BOARD','')))
+
 def logging():
     title("Logging")
     ask('APP_LOG_DIR','App log dir', get('APP_LOG_DIR','./logs/app'))
@@ -270,10 +284,10 @@ def tailscale():
 
 sections={
  'frontend': frontend, 'db': db, 'security': security, 'mailersend': mailersend,
- 'oauth': oauth, 'firebase': firebase, 'gcp-storage': gcp_storage, 'logging': logging, 'tailscale': tailscale,
+ 'oauth': oauth, 'firebase': firebase, 'gcp-storage': gcp_storage, 'google-drive': google_drive, 'logging': logging, 'tailscale': tailscale,
 }
 if section == 'all':
-    for name in ['frontend','db','security','mailersend','oauth','firebase','gcp-storage','logging','tailscale']:
+    for name in ['frontend','db','security','mailersend','oauth','firebase','gcp-storage','google-drive','logging','tailscale']:
         sections[name]()
 else:
     sections[section]()

@@ -2,6 +2,7 @@ package geumjeongyahak.e2e;
 
 import java.time.Duration;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -13,6 +14,8 @@ import org.springframework.web.multipart.MultipartFile;
 import com.google.cloud.storage.Storage;
 
 import geumjeongyahak.domain.file.service.StorageService;
+import geumjeongyahak.domain.file.enums.DriveUploadTarget;
+import geumjeongyahak.domain.file.service.DriveStorageService;
 import geumjeongyahak.common.mail.MailDeliveryResult;
 import geumjeongyahak.common.mail.MailSenderService;
 
@@ -31,6 +34,12 @@ public class TestStorageConfig {
     @Primary
     ControlledStorageService testStorageService() {
         return new ControlledStorageService();
+    }
+
+    @Bean
+    @Primary
+    DriveStorageService testDriveStorageService() {
+        return new ControlledDriveStorageService();
     }
 
     @Bean
@@ -88,6 +97,24 @@ public class TestStorageConfig {
 
         public String getLastEmailVerificationCode() {
             return lastEmailVerificationCode;
+        }
+    }
+
+    public static class ControlledDriveStorageService implements DriveStorageService {
+
+        @Override
+        public StoredDriveFile upload(DriveUploadTarget target, List<String> folderPath, MultipartFile file) {
+            String driveFileId = target.path() + "-drive-file";
+            String viewUrl = "https://drive.google.com/file/d/" + driveFileId + "/view";
+            String downloadUrl = "https://drive.google.com/uc?export=download&id=" + driveFileId;
+            return new StoredDriveFile(
+                driveFileId,
+                viewUrl,
+                downloadUrl,
+                file.getOriginalFilename(),
+                file.getContentType(),
+                file.getSize()
+            );
         }
     }
 

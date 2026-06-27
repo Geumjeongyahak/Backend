@@ -76,6 +76,19 @@ app:
         - text/plain
         - application/vnd.ms-powerpoint
         - application/vnd.openxmlformats-officedocument.presentationml.presentation
+    drive:
+      shared-drive-id: ${GOOGLE_DRIVE_SHARED_DRIVE_ID:}
+      make-link-public: ${GOOGLE_DRIVE_MAKE_LINK_PUBLIC:true}
+      oauth:
+        client-id: ${GOOGLE_DRIVE_OAUTH_CLIENT_ID:}
+        client-secret: ${GOOGLE_DRIVE_OAUTH_CLIENT_SECRET:}
+        refresh-token: ${GOOGLE_DRIVE_OAUTH_REFRESH_TOKEN:}
+      folder-ids:
+        handover: ${GOOGLE_DRIVE_FOLDER_ID_HANDOVER:}
+        exam-materials: ${GOOGLE_DRIVE_FOLDER_ID_EXAM_MATERIALS:}
+        document-forms: ${GOOGLE_DRIVE_FOLDER_ID_DOCUMENT_FORMS:}
+        meeting-records: ${GOOGLE_DRIVE_FOLDER_ID_MEETING_RECORDS:}
+        board: ${GOOGLE_DRIVE_FOLDER_ID_BOARD:}
     cleanup:
       retention-days: 7
       chunk-size: 100

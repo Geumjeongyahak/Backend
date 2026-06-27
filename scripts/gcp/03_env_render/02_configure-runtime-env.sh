@@ -12,7 +12,7 @@ and can optionally copy them to the remote VMs and restart services.
 
 Covers runtime values:
 - DB runtime: PostgreSQL db/user/password, listen port, APP_DB_CIDR, exporter ports, Tailscale auth/tag values
-- App runtime: frontend/API/OAuth URLs, DB connection, MailerSend SMTP, JWT/JWE, Firebase, GCP credentials,
+- App runtime: frontend/API/OAuth URLs, DB connection, MailerSend SMTP, JWT/JWE, Firebase, GCP/Drive credentials,
   admin bootstrap, logging, Caddy toggle
 
 Modes:
@@ -253,7 +253,19 @@ ask(app, app_order, "GCP_PROD_BUCKET_NAME", "Prod bucket env value", get(app, "G
 ask(app, app_order, "GCP_DEV_BUCKET_NAME", "Dev bucket env value", get(app, "GCP_DEV_BUCKET_NAME", infra.get("STORAGE_BUCKET_NAME", "")))
 ask_secret(app, app_order, "GCP_ENCODED_CREDENTIALS", "Optional base64 service-account JSON; leave empty if VM metadata credentials are enough")
 
-section("7. Firebase")
+section("7. Google Drive direct upload")
+ask(app, app_order, "GOOGLE_DRIVE_SHARED_DRIVE_ID", "Shared Drive id", get(app, "GOOGLE_DRIVE_SHARED_DRIVE_ID", infra.get("GOOGLE_DRIVE_SHARED_DRIVE_ID", "")))
+ask(app, app_order, "GOOGLE_DRIVE_MAKE_LINK_PUBLIC", "Make uploaded Drive files link-public?", get(app, "GOOGLE_DRIVE_MAKE_LINK_PUBLIC", infra.get("GOOGLE_DRIVE_MAKE_LINK_PUBLIC", "true")), choices=["true", "false"])
+ask(app, app_order, "GOOGLE_DRIVE_OAUTH_CLIENT_ID", "Drive OAuth client id", get(app, "GOOGLE_DRIVE_OAUTH_CLIENT_ID", infra.get("GOOGLE_DRIVE_OAUTH_CLIENT_ID", "")), secret=True)
+ask_secret(app, app_order, "GOOGLE_DRIVE_OAUTH_CLIENT_SECRET", "Drive OAuth client secret")
+ask_secret(app, app_order, "GOOGLE_DRIVE_OAUTH_REFRESH_TOKEN", "Drive OAuth refresh token")
+ask(app, app_order, "GOOGLE_DRIVE_FOLDER_ID_HANDOVER", "Drive folder id for handover", get(app, "GOOGLE_DRIVE_FOLDER_ID_HANDOVER", infra.get("GOOGLE_DRIVE_FOLDER_ID_HANDOVER", "")))
+ask(app, app_order, "GOOGLE_DRIVE_FOLDER_ID_EXAM_MATERIALS", "Drive folder id for examMaterials", get(app, "GOOGLE_DRIVE_FOLDER_ID_EXAM_MATERIALS", infra.get("GOOGLE_DRIVE_FOLDER_ID_EXAM_MATERIALS", "")))
+ask(app, app_order, "GOOGLE_DRIVE_FOLDER_ID_DOCUMENT_FORMS", "Drive folder id for documentForms", get(app, "GOOGLE_DRIVE_FOLDER_ID_DOCUMENT_FORMS", infra.get("GOOGLE_DRIVE_FOLDER_ID_DOCUMENT_FORMS", "")))
+ask(app, app_order, "GOOGLE_DRIVE_FOLDER_ID_MEETING_RECORDS", "Drive folder id for meetingRecords", get(app, "GOOGLE_DRIVE_FOLDER_ID_MEETING_RECORDS", infra.get("GOOGLE_DRIVE_FOLDER_ID_MEETING_RECORDS", "")))
+ask(app, app_order, "GOOGLE_DRIVE_FOLDER_ID_BOARD", "Drive folder id for board", get(app, "GOOGLE_DRIVE_FOLDER_ID_BOARD", infra.get("GOOGLE_DRIVE_FOLDER_ID_BOARD", "")))
+
+section("8. Firebase")
 ask(app, app_order, "FIREBASE_ENABLED", "Firebase enabled", get(app, "FIREBASE_ENABLED", "false"), choices=["true", "false"])
 ask(app, app_order, "FIREBASE_PROJECT_ID", "Firebase project id", get(app, "FIREBASE_PROJECT_ID", ""))
 ask_secret(app, app_order, "FIREBASE_CREDENTIALS_BASE64", "Firebase service-account JSON base64")
@@ -265,7 +277,7 @@ ask(app, app_order, "FIREBASE_WEB_MESSAGING_SENDER_ID", "Firebase messaging send
 ask(app, app_order, "FIREBASE_WEB_APP_ID", "Firebase web app id", get(app, "FIREBASE_WEB_APP_ID", ""))
 ask_secret(app, app_order, "FIREBASE_WEB_VAPID_KEY", "Firebase web VAPID key")
 
-section("8. App Tailscale/logging")
+section("9. App Tailscale/logging")
 ask(app, app_order, "TAILSCALE_TAGS", "App Tailscale tags", get(app, "TAILSCALE_TAGS", infra.get("APP_TAILSCALE_TAGS", "")))
 ask(app, app_order, "TAILSCALE_ACCEPT_DNS", "App Tailscale accept DNS?", get(app, "TAILSCALE_ACCEPT_DNS", infra.get("APP_TAILSCALE_ACCEPT_DNS", "false")), choices=["true", "false"])
 ask_secret(app, app_order, "TAILSCALE_AUTHKEY", "Optional App Tailscale auth key")
