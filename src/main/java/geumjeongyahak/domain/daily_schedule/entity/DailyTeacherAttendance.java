@@ -86,6 +86,20 @@ public class DailyTeacherAttendance extends BaseEntity {
         this.checkedOutAt = checkedOutAt;
     }
 
+    public void correctAttendance(
+        DailyTeacherAttendanceStatus status,
+        LocalDateTime attendedAt,
+        LocalDateTime checkedOutAt
+    ) {
+        this.status = status;
+        this.attendedAt = attendedAt;
+        this.checkedOutAt = checkedOutAt;
+        if (attendedAt == null) {
+            this.latitude = null;
+            this.longitude = null;
+        }
+    }
+
     public void restore() {
         this.isDeleted = false;
     }

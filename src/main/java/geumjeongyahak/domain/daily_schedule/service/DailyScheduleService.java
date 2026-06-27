@@ -730,6 +730,39 @@ public class DailyScheduleService {
         }
     }
 
+    public void recalculateCompletionStatus(DailySchedule dailySchedule) {
+        if (dailySchedule.getStatus() == DailyScheduleStatus.CANCELLED) {
+            return;
+        }
+
+        List<Lesson> lessons = lessonProxyService.getActiveLessonsByClassroomAndDate(
+            dailySchedule.getClassroom().getId(),
+            dailySchedule.getLessonDate()
+        );
+        boolean teacherAttendanceCompleted = dailyTeacherAttendanceRepository
+            .findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId())
+            .map(attendance -> attendance.getStatus() != DailyTeacherAttendanceStatus.ABSENT)
+            .orElse(false);
+        boolean journalCompleted = isJournalCompleted(lessons);
+
+        if (teacherAttendanceCompleted && journalCompleted) {
+            dailySchedule.updateStatus(DailyScheduleStatus.COMPLETED);
+            lessonProxyService.updateActiveLessonsStatusByClassroomAndDate(
+                dailySchedule.getClassroom().getId(),
+                dailySchedule.getLessonDate(),
+                LessonStatus.COMPLETED
+            );
+            return;
+        }
+
+        dailySchedule.updateStatus(DailyScheduleStatus.SCHEDULED);
+        lessonProxyService.updateActiveLessonsStatusByClassroomAndDate(
+            dailySchedule.getClassroom().getId(),
+            dailySchedule.getLessonDate(),
+            LessonStatus.SCHEDULED
+        );
+    }
+
     private void validateJournalPersonalInfo(
         Long dailyScheduleId,
         Boolean personalInfoConsent,

@@ -20,6 +20,7 @@ DailySchedule은 같은 분반과 같은 날짜의 Lesson들을 하루 단위로
 | `PATCH /api/v1/daily-schedules/{dailyScheduleId}/student-attendances` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
 | `PATCH /api/v1/daily-schedules/{dailyScheduleId}/teacher-attendance` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
 | `PATCH /api/v1/daily-schedules/{dailyScheduleId}/teacher-attendance/check-out` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
+| `PATCH /api/v1/daily-schedules/{dailyScheduleId}/teacher-attendance/adjustment` | `ADMIN`, `daily-schedule:manage:*` |
 | `PATCH /api/v1/daily-schedules/{dailyScheduleId}/status` | `ADMIN`, `daily-schedule:manage:*` |
 
 접근 범위:
@@ -220,6 +221,8 @@ DELETE /api/v1/daily-schedules/1/journal
 - 교사 퇴근 처리는 출근 처리 이후에만 가능합니다.
 - 교사 퇴근 처리는 DailySchedule에 연결된 모든 활성 Lesson의 수업 일지 note가 작성된 이후에만 가능합니다.
 - 교사 계정은 퇴근 처리를 최초 1회만 할 수 있으며, 이미 퇴근 처리된 경우 재처리할 수 없습니다.
+- 관리자는 교사 출석 상태, 출근 시간, 퇴근 시간을 보정할 수 있습니다.
+- 관리자 보정 시 `ABSENT`, `EXCUSED` 상태에는 출근 시간과 퇴근 시간을 입력할 수 없습니다.
 - 퇴근 시간은 출근 시간보다 빠를 수 없습니다.
 - 학생 출석 요청에는 같은 학생이 중복으로 들어올 수 없습니다.
 - 학생 출석 요청의 학생은 해당 DailySchedule의 분반에 속한 학생이어야 합니다.
@@ -232,6 +235,21 @@ PATCH /api/v1/daily-schedules/1/teacher-attendance/check-out
 ```
 
 성공 시 현재 서버 시각을 퇴근 시간으로 저장하고 DailySchedule 상세 응답을 반환합니다.
+
+관리자 교사 출석 보정:
+
+```http
+PATCH /api/v1/daily-schedules/1/teacher-attendance/adjustment
+Content-Type: application/json
+
+{
+  "status": "PRESENT",
+  "attendedAt": "2026-06-20T14:00:00",
+  "checkedOutAt": "2026-06-20T16:00:00"
+}
+```
+
+관리자 또는 `daily-schedule:manage:*` 권한자가 교사 출석 상태, 출근 시간, 퇴근 시간을 보정합니다. 위치 정보는 보정하지 않습니다. 출석 상태가 `ABSENT` 또는 `EXCUSED`이면 출근 시간과 퇴근 시간을 입력할 수 없으며, 보정 퇴근 시간은 보정 출근 시간보다 빠를 수 없습니다. 보정 후 DailySchedule과 연결된 Lesson의 완료 상태를 다시 계산합니다.
 
 ## 상태 정책
 
