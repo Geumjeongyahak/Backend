@@ -83,6 +83,15 @@
 - **Body**: `{ "fileId": "...", "sortOrder": 0 }`
 - GCS 업로드로 받은 `fileId`와 Drive 등록으로 받은 `fileId`를 동일하게 사용할 수 있습니다.
 
+## 교학 회의록 첨부 연결
+
+- **URL**: `POST /api/v1/meeting-records/{recordId}/attachments`
+- **Content-Type**: `application/json` 또는 `multipart/form-data`
+- **Body(JSON)**: `{ "fileId": "...", "sortOrder": 0 }`
+- **Multipart**: `file` 파트로 문서 파일을 업로드하면 즉시 회의록에 연결합니다.
+- **삭제**: `DELETE /api/v1/meeting-records/{recordId}/attachments/{fileId}`
+- 작성자 또는 ADMIN만 첨부파일을 추가/삭제할 수 있습니다.
+
 ## 다운로드 URL 조회
 
 - **URL**: `GET /api/v1/files/attachments/{fileId}/download-url`
