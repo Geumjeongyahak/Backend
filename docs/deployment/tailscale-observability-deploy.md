@@ -62,42 +62,20 @@ tailscale status --json | jq -r '.Self.DNSName'
 
 ## 2. 홈서버 Prometheus 설정
 
-IP 고정 관리가 싫으면 MagicDNS hostname을 우선 사용한다.
+Backend repo의 `infra/monitoring`은 편집/독립 실행용 mirror이고, 홈서버 운영 경로는 `/home/min/Infra/monitoring`이다.
 
-```yaml
-scrape_configs:
-  - job_name: gjlearn-app-node
-    static_configs:
-      - targets: ['gjlearn-app.<tailnet>.ts.net:9100']
-
-  - job_name: gjlearn-api
-    metrics_path: /actuator/prometheus
-    static_configs:
-      - targets: ['gjlearn-app.<tailnet>.ts.net:8080']
-
-  - job_name: gjlearn-db-node
-    static_configs:
-      - targets: ['gjlearn-db.<tailnet>.ts.net:9100']
-
-  - job_name: gjlearn-postgres
-    static_configs:
-      - targets: ['gjlearn-db.<tailnet>.ts.net:9187']
+```text
+infra/monitoring/prometheus/targets/gjlearn/dev/app-actuator.yml
+infra/monitoring/prometheus/targets/gjlearn/dev/node-exporter.yml
+infra/monitoring/prometheus/targets/gjlearn/dev/postgres-exporter.yml
 ```
 
-IP로 쓸 경우 `tailscale ip -4` 결과인 `100.x.x.x`를 넣는다.
-
-```yaml
-targets: ['100.x.x.x:9100']
-```
+IP로 쓸 경우 각 target에 `tailscale ip -4` 결과인 `100.x.x.x:port`를 넣는다. IP 고정 관리가 싫으면 MagicDNS hostname을 우선 사용한다.
 
 홈서버 Prometheus reload:
 
 ```bash
-# compose로 운영하는 경우
-make deploy-monitoring
-
-# systemd로 운영하는 경우
-sudo systemctl reload prometheus || sudo systemctl restart prometheus
+/home/min/Infra/monitoring/scripts/restart.sh
 ```
 
 ## 3. GCP firewall 기준
@@ -188,7 +166,7 @@ ssh min@gjlearn-app.<tailnet>.ts.net \
 홈서버에서:
 
 ```bash
-curl -fsS http://gjlearn-app.<tailnet>.ts.net:8080/actuator/health
+curl -fsS http://gjlearn-app.<tailnet>.ts.net:9090/actuator/health
 curl -fsS http://gjlearn-app.<tailnet>.ts.net:9100/metrics >/dev/null
 curl -fsS http://gjlearn-db.<tailnet>.ts.net:9100/metrics >/dev/null
 curl -fsS http://gjlearn-db.<tailnet>.ts.net:9187/metrics >/dev/null

@@ -387,7 +387,7 @@ gcloud compute ssh "$APP_INSTANCE_NAME" \
 gcloud compute ssh "$APP_INSTANCE_NAME" \
   --project "$PROJECT_ID" \
   --zone "$ZONE" \
-  --command "curl -fsS http://localhost:8080/actuator/health && sudo systemctl status gjlearn-app --no-pager --full"
+  --command "curl -fsS http://localhost:9090/actuator/health && sudo systemctl status gjlearn-app --no-pager --full"
 ```
 
 Tailscale 인증이 필요하면:
@@ -429,20 +429,22 @@ gcloud logging read \
 
 Prometheus scrape target은 Tailscale IP 또는 MagicDNS hostname을 사용합니다.
 
-- App actuator: `gjlearn-prod-app.<tailnet>.ts.net:8080/actuator/prometheus`
+- App actuator: `gjlearn-prod-app.<tailnet>.ts.net:9090/actuator/prometheus`
 - App node exporter: `gjlearn-prod-app.<tailnet>.ts.net:9100`
 - DB node exporter: `gjlearn-prod-db.<tailnet>.ts.net:9100`
 - DB postgres exporter: `gjlearn-prod-db.<tailnet>.ts.net:9187`
 
-`infra/monitoring/prometheus.yml`을 실제 target으로 수정한 뒤 홈서버에서:
+prod target은 실제 prod tailnet 노드가 생긴 뒤 `infra/monitoring/prometheus/targets/gjlearn/prod/`에 추가하고 홈서버 운영 경로로 동기화합니다.
 
 ```bash
-make deploy-monitoring
+make sync-monitoring-diff
+make sync-monitoring-push
+/home/min/Infra/monitoring/scripts/restart.sh
 ```
 
 ## 8. DNS/HTTPS 확인
 
-`ENABLE_CADDY=true`인 prod는 App VM 설치 단계에서 Caddy reverse proxy를 구성합니다. DNS가 App static IP를 가리킨 뒤 Caddy 설정과 HTTPS health check를 함께 확인합니다.
+`ENABLE_CADDY=true`인 prod는 App VM 설치 단계에서 Caddy reverse proxy를 구성합니다. DNS가 App static IP를 가리킨 뒤 Caddy 설정과 HTTPS 연결을 함께 확인합니다.
 
 ```bash
 scripts/gcp/01_infra/02_print-outputs.sh scripts/gcp/00_env/prod.env
@@ -451,7 +453,7 @@ gcloud compute ssh "$APP_INSTANCE_NAME" \
   --project "$PROJECT_ID" \
   --zone "$ZONE" \
   --command "sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl is-active --quiet caddy && sudo caddy fmt --diff /etc/caddy/Caddyfile"
-curl -fsS "https://${API_DOMAIN}/actuator/health"
+curl -fsS "https://${API_DOMAIN}/"
 ```
 
 `dig` 결과가 App static IP와 다르거나 비어 있으면 DNS provider에서 `API_DOMAIN`의 A record를 App static IP로 설정한 뒤 다시 시도합니다.

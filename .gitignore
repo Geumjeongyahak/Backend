@@ -47,6 +47,13 @@ scripts/gcp/secrets/
 .secret
 .secret/*
 logs/
+scripts/local/
+infra/monitoring/secrets/*
+!infra/monitoring/secrets/.gitignore
+infra/monitoring/monitoring.env
+infra/monitoring/grafana/data/
+infra/monitoring/grafana/admin-login.txt
+infra/monitoring/caddy/*auth*
 
 docs/issue/*
 docs/pr/*

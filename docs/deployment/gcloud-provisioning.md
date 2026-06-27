@@ -337,6 +337,7 @@ Home server
 
 App GCE
 - app jar :8080
+- actuator :9090
 - node-exporter :9100
 - google-cloud-ops-agent, app WARN/ERROR logs -> Cloud Logging
 - tailscaled
@@ -371,46 +372,17 @@ tailscale status
 
 MagicDNS를 켜면 IP 대신 `gjlearn-app.<tailnet>.ts.net` 같은 hostname을 Prometheus와 GitHub Actions에서 사용할 수 있다.
 
-### 7.2 홈서버 Prometheus scrape 예시
+### 7.2 홈서버 Prometheus target 파일
 
-```yaml
-global:
-  scrape_interval: 60s
-  evaluation_interval: 60s
+Backend repo의 `infra/monitoring`은 편집/독립 실행용 mirror이고, 홈서버 운영 경로는 `/home/min/Infra/monitoring`이다. dev target은 아래 파일에 있고, prod는 실제 prod tailnet 노드가 생긴 뒤 같은 형식으로 `infra/monitoring/prometheus/targets/gjlearn/prod/`에 추가한 뒤 동기화한다.
 
-rule_files:
-  - /etc/prometheus/rules/*.yml
-
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets:
-            - alertmanager:9093
-
-scrape_configs:
-  - job_name: gjlearn-api
-    metrics_path: /actuator/prometheus
-    static_configs:
-      - targets:
-          - gjlearn-app.<tailnet>.ts.net:8080
-
-  - job_name: gjlearn-app-node
-    static_configs:
-      - targets:
-          - gjlearn-app.<tailnet>.ts.net:9100
-
-  - job_name: gjlearn-db-node
-    static_configs:
-      - targets:
-          - gjlearn-db.<tailnet>.ts.net:9100
-
-  - job_name: gjlearn-postgres
-    static_configs:
-      - targets:
-          - gjlearn-db.<tailnet>.ts.net:9187
+```text
+infra/monitoring/prometheus/targets/gjlearn/dev/app-actuator.yml
+infra/monitoring/prometheus/targets/gjlearn/dev/node-exporter.yml
+infra/monitoring/prometheus/targets/gjlearn/dev/postgres-exporter.yml
 ```
 
-IP로 관리하려면 `tailscale ip -4` 결과인 `100.x.x.x`를 넣는다.
+IP로 관리하려면 target에 `tailscale ip -4` 결과인 `100.x.x.x:port`를 넣는다.
 
 자세한 절차는 `docs/deployment/tailscale-observability-deploy.md`를 따른다.
 
@@ -423,7 +395,7 @@ groups:
   - name: gjlearn-basic
     rules:
       - alert: AppActuatorDown
-        expr: up{job="gjlearn-api"} == 0
+        expr: up{project="gjlearn", role="app-actuator"} == 0
         for: 2m
         labels:
           severity: critical
@@ -431,7 +403,7 @@ groups:
           summary: "API actuator is down"
 
       - alert: AppNodeDown
-        expr: up{job="gjlearn-app-node"} == 0
+        expr: up{project="gjlearn", role="node-exporter", service="app"} == 0
         for: 2m
         labels:
           severity: critical
@@ -439,7 +411,7 @@ groups:
           summary: "App VM node-exporter is down"
 
       - alert: DbNodeDown
-        expr: up{job="gjlearn-db-node"} == 0
+        expr: up{project="gjlearn", role="node-exporter", service="db"} == 0
         for: 2m
         labels:
           severity: critical
@@ -447,7 +419,7 @@ groups:
           summary: "DB VM node-exporter is down"
 
       - alert: PostgresDown
-        expr: pg_up == 0
+        expr: pg_up{project="gjlearn", role="postgres-exporter"} == 0
         for: 2m
         labels:
           severity: critical
@@ -455,7 +427,7 @@ groups:
           summary: "PostgreSQL is down"
 
       - alert: DiskAlmostFull
-        expr: 100 - ((node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} * 100) / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) > 85
+        expr: 100 * (1 - node_filesystem_avail_bytes{project="gjlearn", role="node-exporter", fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{project="gjlearn", role="node-exporter", fstype!~"tmpfs|overlay"}) > 85
         for: 10m
         labels:
           severity: warning

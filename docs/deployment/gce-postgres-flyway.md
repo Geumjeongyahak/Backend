@@ -118,7 +118,7 @@ gcloud compute ssh "$APP_INSTANCE_NAME" \
 ```bash
 sudo systemctl status gjlearn-app --no-pager
 sudo journalctl -u gjlearn-app -n 200 --no-pager
-curl -fsS http://127.0.0.1:8080/actuator/prometheus >/dev/null
+curl -fsS http://127.0.0.1:9090/actuator/prometheus >/dev/null
 curl -fsS http://127.0.0.1:9100/metrics >/dev/null
 ```
 

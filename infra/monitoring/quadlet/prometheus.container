@@ -1,0 +1,17 @@
+[Unit]
+Description=Prometheus
+
+[Container]
+Image=docker.io/prom/prometheus:latest
+ContainerName=prometheus
+Network=monitoring.network
+PublishPort=9090:9090
+Volume=%h/Infra/monitoring/prometheus:/etc/prometheus:ro,Z
+Volume=prometheus-data:/prometheus
+Exec=--config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus --storage.tsdb.retention.time=7d --storage.tsdb.retention.size=3GB --web.enable-lifecycle
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
