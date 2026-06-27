@@ -60,7 +60,7 @@ GitHub Actions는 `.env`를 생성하거나 덮어쓰지 않는다. 애플리케
 ```env
 SPRING_PROFILES_ACTIVE=prod
 APP_PORT=8080
-MANAGEMENT_PORT=8080
+MANAGEMENT_PORT=9090
 NODE_EXPORTER_PORT=9100
 LOG_LEVEL_ROOT=WARN
 LOG_LEVEL_APP=WARN
@@ -191,7 +191,7 @@ gcloud compute ssh "$APP_INSTANCE_NAME" \
 API smoke test:
 
 ```bash
-curl -fsS "http://<APP_EXTERNAL_IP>:8080/actuator/health"
+curl -fsS "http://<APP_EXTERNAL_IP>:8080/"
 ```
 
 ## 7. 모니터링
@@ -200,7 +200,7 @@ curl -fsS "http://<APP_EXTERNAL_IP>:8080/actuator/health"
 
 | 포트 | 대상 | 설명 |
 | :--- | :--- | :--- |
-| `8080` | App GCE Spring Actuator | `/actuator/prometheus` |
+| `9090` | App GCE Spring Actuator | `/actuator/prometheus` |
 | `9100` | App GCE / DB GCE node-exporter | CPU, memory, disk, network metrics |
 | `9187` | DB GCE postgres-exporter | PostgreSQL metrics |
 
@@ -208,7 +208,7 @@ curl -fsS "http://<APP_EXTERNAL_IP>:8080/actuator/health"
 
 ```text
 Home Prometheus
-  -> gjlearn-app.<tailnet>.ts.net:8080/actuator/prometheus
+  -> gjlearn-app.<tailnet>.ts.net:9090/actuator/prometheus
   -> gjlearn-app.<tailnet>.ts.net:9100/metrics
   -> gjlearn-db.<tailnet>.ts.net:9100/metrics
   -> gjlearn-db.<tailnet>.ts.net:9187/metrics

@@ -1,0 +1,19 @@
+[Unit]
+Description=Alertmanager
+After=monitoring-network.service
+
+[Container]
+Image=docker.io/prom/alertmanager:latest
+ContainerName=alertmanager
+Network=monitoring.network
+PublishPort=9093:9093
+Volume=%h/Infra/monitoring/alertmanager/projects/gjlearn/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro,Z
+Volume=%h/Infra/monitoring/secrets:/run/secrets:ro,Z
+Volume=alertmanager-data:/alertmanager
+Exec=--config.file=/etc/alertmanager/alertmanager.yml --storage.path=/alertmanager
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

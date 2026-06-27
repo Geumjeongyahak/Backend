@@ -131,6 +131,36 @@ EOF
   sudo systemctl restart google-cloud-ops-agent
 }
 
+configure_opentelemetry_javaagent() {
+  local enabled="${OTEL_JAVAAGENT_ENABLED:-}"
+  local agent_path="${OTEL_JAVAAGENT_PATH:-}"
+  local agent_url="${OTEL_JAVAAGENT_URL:-}"
+
+  if [[ -z "${enabled}" ]]; then
+    enabled="$(read_env_value OTEL_JAVAAGENT_ENABLED)"
+  fi
+  enabled="${enabled:-false}"
+  if [[ "${enabled}" != "true" ]]; then
+    echo "OpenTelemetry Java agent disabled by OTEL_JAVAAGENT_ENABLED=${enabled}"
+    return 0
+  fi
+
+  if [[ -z "${agent_path}" ]]; then
+    agent_path="$(read_env_value OTEL_JAVAAGENT_PATH)"
+  fi
+  agent_path="${agent_path:-/opt/opentelemetry-javaagent.jar}"
+
+  if [[ -z "${agent_url}" ]]; then
+    agent_url="$(read_env_value OTEL_JAVAAGENT_URL)"
+  fi
+  agent_url="${agent_url:-https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar}"
+
+  if [[ ! -s "${agent_path}" ]]; then
+    curl -fsSLo /tmp/opentelemetry-javaagent.jar "${agent_url}"
+    sudo install -o root -g root -m 0644 /tmp/opentelemetry-javaagent.jar "${agent_path}"
+  fi
+}
+
 configure_caddy() {
   local enabled="${ENABLE_CADDY:-}"
   local api_domain="${API_DOMAIN:-}"
@@ -199,6 +229,7 @@ if ! command -v tailscale >/dev/null 2>&1; then
 fi
 configure_tailscale
 sudo systemctl enable --now prometheus-node-exporter
+configure_opentelemetry_javaagent
 
 mkdir -p "${APP_DIR}/logs/app"
 sudo chown -R "${APP_USER}:${APP_GROUP}" "${APP_DIR}"
@@ -218,7 +249,7 @@ User=${APP_USER}
 Group=${APP_GROUP}
 WorkingDirectory=${APP_DIR}
 EnvironmentFile=${ENV_PATH}
-ExecStart=/usr/bin/java -Dserver.port=\${APP_PORT} -jar ${JAR_PATH}
+ExecStart=/bin/sh -c 'agent=""; if [ "\${OTEL_JAVAAGENT_ENABLED:-false}" = "true" ]; then agent="-javaagent:\${OTEL_JAVAAGENT_PATH:-/opt/opentelemetry-javaagent.jar}"; fi; exec /usr/bin/java \$agent -Dserver.port="\${APP_PORT}" -jar ${JAR_PATH}'
 SuccessExitStatus=143
 Restart=always
 RestartSec=10

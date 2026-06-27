@@ -200,7 +200,7 @@ ask_secret(db, db_order, "TAILSCALE_AUTHKEY", "Optional DB Tailscale auth key")
 section("2. App DB 연결 - DB runtime 값과 일치해야 함")
 ask(app, app_order, "SPRING_PROFILES_ACTIVE", "Spring profile", get(app, "SPRING_PROFILES_ACTIVE", env), choices=["dev", "prod"])
 ask(app, app_order, "APP_PORT", "App HTTP port", get(app, "APP_PORT", "8080"))
-ask(app, app_order, "MANAGEMENT_PORT", "Management/actuator port", get(app, "MANAGEMENT_PORT", get(app, "APP_PORT", "8080")))
+ask(app, app_order, "MANAGEMENT_PORT", "Management/actuator port", get(app, "MANAGEMENT_PORT", "9090"))
 ask(app, app_order, "POSTGRES_HOST", "DB host/IP from App VM", get(app, "POSTGRES_HOST", ""))
 ask(app, app_order, "POSTGRES_PORT", "DB port from App VM", get(app, "POSTGRES_PORT", get(db, "DB_PORT", "5432")))
 ask(app, app_order, "POSTGRES_DB", "DB name", get(app, "POSTGRES_DB", get(db, "POSTGRES_DB", "geumjeongyahak")))
@@ -351,7 +351,7 @@ apply_app() {
   echo "Applying App env to ${APP_INSTANCE_NAME}:~/app-dev/.env"
   run_scp "${USE_IAP_FOR_APP}" "${APP_ENV_FILE}" "${APP_INSTANCE_NAME}:~/app-dev/$(basename "${APP_ENV_FILE}")"
   run_ssh "${APP_INSTANCE_NAME}" "${USE_IAP_FOR_APP}" \
-    "cd ~/app-dev && mv '$(basename "${APP_ENV_FILE}")' .env && chmod 600 .env && if systemctl list-unit-files | grep -q '^gjlearn-app.service'; then sudo systemctl restart gjlearn-app && sleep 3 && sudo systemctl is-active --quiet gjlearn-app && curl -fsS http://127.0.0.1:\${APP_PORT:-8080}/actuator/health; else echo 'App env updated; gjlearn-app.service not installed yet'; fi"
+    "cd ~/app-dev && mv '$(basename "${APP_ENV_FILE}")' .env && chmod 600 .env && if systemctl list-unit-files | grep -q '^gjlearn-app.service'; then sudo systemctl restart gjlearn-app && sleep 3 && sudo systemctl is-active --quiet gjlearn-app && curl -fsS http://127.0.0.1:\${MANAGEMENT_PORT:-9090}/actuator/health; else echo 'App env updated; gjlearn-app.service not installed yet'; fi"
 }
 
 case "${MODE}" in

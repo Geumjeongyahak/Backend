@@ -145,7 +145,7 @@ DB GCE e2-micro
 ```env
 SPRING_PROFILES_ACTIVE=prod
 APP_PORT=8080
-MANAGEMENT_PORT=8080
+MANAGEMENT_PORT=9090
 NODE_EXPORTER_PORT=9100
 LOG_LEVEL_ROOT=WARN
 LOG_LEVEL_APP=WARN
@@ -195,33 +195,39 @@ POSTGRES_PASSWORD=change-me
 
 | 포트 | 대상 | 설명 |
 |------|------|------|
-| `8080` | App GCE Spring Actuator | `/actuator/prometheus` |
+| `9090` | App GCE Spring Actuator | `/actuator/prometheus` |
 | `9100` | App GCE / DB GCE node-exporter | CPU, memory, disk, network metrics |
 | `9187` | DB GCE postgres-exporter | PostgreSQL metrics |
 
-홈서버 Prometheus 예시:
+관측성 설정은 Backend repo의 `infra/monitoring`에서 수정하고, 홈서버 운영 경로인 `/home/min/Infra/monitoring`로 동기화합니다. 금정야학 dev target은 아래 파일에서 관리합니다.
 
-```yaml
-scrape_configs:
-  - job_name: gjlearn-app-node
-    static_configs:
-      - targets: ['gjlearn-app.<tailnet>.ts.net:9100']
-
-  - job_name: gjlearn-api
-    metrics_path: /actuator/prometheus
-    static_configs:
-      - targets: ['gjlearn-app.<tailnet>.ts.net:8080']
-
-  - job_name: gjlearn-db-node
-    static_configs:
-      - targets: ['gjlearn-db.<tailnet>.ts.net:9100']
-
-  - job_name: gjlearn-postgres
-    static_configs:
-      - targets: ['gjlearn-db.<tailnet>.ts.net:9187']
+```text
+infra/monitoring/prometheus/targets/gjlearn/dev/app-actuator.yml
+infra/monitoring/prometheus/targets/gjlearn/dev/node-exporter.yml
+infra/monitoring/prometheus/targets/gjlearn/dev/postgres-exporter.yml
 ```
 
-`infra/monitoring/prometheus.yml`의 target은 실제 Tailscale IP(`100.x.x.x`) 또는 MagicDNS hostname으로 바꿔야 합니다. `8080`, `9100`, `9187`, `5432`는 public internet에 직접 열지 않습니다. GCP firewall/security group에는 Tailscale용 `41641/udp`만 public 허용하면 됩니다.
+prod는 실제 prod App/DB tailnet 노드가 생긴 뒤 `infra/monitoring/prometheus/targets/gjlearn/prod/`에 같은 형식으로 추가합니다. `9090`, `9100`, `9187`, `5432`는 public internet에 직접 열지 않습니다. GCP firewall/security group에는 Tailscale용 `41641/udp`만 public 허용하면 됩니다.
+
+repo 안에서 독립 실행:
+
+```bash
+make up-monitoring
+make down-monitoring
+```
+
+홈서버 운영 경로에 반영:
+
+```bash
+make sync-monitoring-diff
+make sync-monitoring-push
+/home/min/Infra/monitoring/scripts/restart.sh
+```
+
+- Grafana: `http://localhost:3000`
+- Prometheus: `http://localhost:9090`
+- Alertmanager: `http://localhost:9093`
+- Discord webhook은 `infra/monitoring/secrets/alertmanager/...` 또는 `/home/min/Infra/monitoring/secrets/alertmanager/...`에 둡니다. 개인용 실행 스크립트는 `scripts/local/`에 두면 git에 올라가지 않습니다.
 
 ## 아키텍처
 

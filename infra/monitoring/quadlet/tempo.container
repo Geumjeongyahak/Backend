@@ -1,0 +1,17 @@
+[Unit]
+Description=Tempo
+
+[Container]
+Image=docker.io/grafana/tempo:latest
+ContainerName=tempo
+Network=monitoring.network
+PublishPort=127.0.0.1:3200:3200
+Volume=%h/Infra/monitoring/tempo/tempo.yml:/etc/tempo/tempo.yml:ro,Z
+Volume=tempo-data:/var/tempo
+Exec=-config.file=/etc/tempo/tempo.yml -backend-scheduler.provider.work.compaction.block-retention=72h -backend-worker.compaction.block-retention=72h
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

@@ -178,7 +178,7 @@ if [[ "${INSTALL_APP}" == "true" ]]; then
   run_ssh "${APP_INSTANCE_NAME}" "${USE_IAP_FOR_APP}" \
     "cd ~/app-dev && mv $(basename "${APP_ENV_FILE}") .env && mv *.jar app.jar && chmod +x 01_install-app-service.sh && ./01_install-app-service.sh"
   run_ssh "${APP_INSTANCE_NAME}" "${USE_IAP_FOR_APP}" \
-    "curl -fsS http://127.0.0.1:8080/actuator/health >/dev/null && sudo systemctl is-active --quiet gjlearn-app && echo app-ok"
+    "cd ~/app-dev && set -a && . ./.env && set +a && curl -fsS http://127.0.0.1:\${MANAGEMENT_PORT:-9090}/actuator/health >/dev/null && sudo systemctl is-active --quiet gjlearn-app && echo app-ok"
 fi
 
 if [[ "${CONFIGURE_ALERTS}" == "true" ]]; then
@@ -190,8 +190,8 @@ cat <<EOF
 Deployment complete for ENVIRONMENT=${ENVIRONMENT}.
 
 If ENABLE_CADDY=true and API_DOMAIN is set, verify DNS points to the App static IP and then test:
-  curl -fsS https://${API_DOMAIN}/actuator/health
+  curl -fsS https://${API_DOMAIN}/
 
 If Caddy is disabled, test the direct app port instead:
-  curl -fsS http://<APP_STATIC_IP>:8080/actuator/health
+  curl -fsS http://<APP_STATIC_IP>:8080/
 EOF

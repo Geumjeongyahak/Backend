@@ -1,0 +1,84 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: gjlearn-discord-default
+  group_by: ["alertname", "project", "env", "service"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - receiver: gjlearn-discord-default
+      matchers:
+        - project="gjlearn"
+      routes:
+        - receiver: gjlearn-dev-api-discord
+          matchers:
+            - env="dev"
+            - service="api"
+        - receiver: gjlearn-dev-app-discord
+          matchers:
+            - env="dev"
+            - service="app"
+        - receiver: gjlearn-dev-db-discord
+          matchers:
+            - env="dev"
+            - service="db"
+        - receiver: gjlearn-dev-postgres-discord
+          matchers:
+            - env="dev"
+            - service="postgres"
+        - receiver: gjlearn-prod-api-discord
+          matchers:
+            - env="prod"
+            - service="api"
+        - receiver: gjlearn-prod-app-discord
+          matchers:
+            - env="prod"
+            - service="app"
+        - receiver: gjlearn-prod-db-discord
+          matchers:
+            - env="prod"
+            - service="db"
+        - receiver: gjlearn-prod-postgres-discord
+          matchers:
+            - env="prod"
+            - service="postgres"
+
+receivers:
+  - name: gjlearn-discord-default
+    discord_configs:
+      - webhook_url_file: /run/secrets/alertmanager/gjlearn/default/discord/default
+        send_resolved: true
+  - name: gjlearn-dev-api-discord
+    discord_configs:
+      - webhook_url_file: /run/secrets/alertmanager/gjlearn/dev/discord/api
+        send_resolved: true
+  - name: gjlearn-dev-app-discord
+    discord_configs:
+      - webhook_url_file: /run/secrets/alertmanager/gjlearn/dev/discord/app
+        send_resolved: true
+  - name: gjlearn-dev-db-discord
+    discord_configs:
+      - webhook_url_file: /run/secrets/alertmanager/gjlearn/dev/discord/db
+        send_resolved: true
+  - name: gjlearn-dev-postgres-discord
+    discord_configs:
+      - webhook_url_file: /run/secrets/alertmanager/gjlearn/dev/discord/postgres
+        send_resolved: true
+  - name: gjlearn-prod-api-discord
+    discord_configs:
+      - webhook_url_file: /run/secrets/alertmanager/gjlearn/prod/discord/api
+        send_resolved: true
+  - name: gjlearn-prod-app-discord
+    discord_configs:
+      - webhook_url_file: /run/secrets/alertmanager/gjlearn/prod/discord/app
+        send_resolved: true
+  - name: gjlearn-prod-db-discord
+    discord_configs:
+      - webhook_url_file: /run/secrets/alertmanager/gjlearn/prod/discord/db
+        send_resolved: true
+  - name: gjlearn-prod-postgres-discord
+    discord_configs:
+      - webhook_url_file: /run/secrets/alertmanager/gjlearn/prod/discord/postgres
+        send_resolved: true

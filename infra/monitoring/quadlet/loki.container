@@ -1,0 +1,17 @@
+[Unit]
+Description=Loki
+
+[Container]
+Image=docker.io/grafana/loki:latest
+ContainerName=loki
+Network=monitoring.network
+PublishPort=3100:3100
+Volume=%h/Infra/monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro,Z
+Volume=loki-data:/loki
+Exec=-config.file=/etc/loki/local-config.yaml
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

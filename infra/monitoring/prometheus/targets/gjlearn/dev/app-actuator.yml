@@ -1,0 +1,9 @@
+- targets:
+    - gjlearn-dev-app.tail523ef0.ts.net:9090
+  labels:
+    project: gjlearn
+    env: dev
+    service: api
+    role: app-actuator
+    instance_name: gjlearn-dev-app
+    domain: dev.geumjeongschool.com

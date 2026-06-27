@@ -1,0 +1,19 @@
+[Unit]
+Description=Grafana Alloy
+After=tempo.service
+Requires=tempo.service
+
+[Container]
+Image=docker.io/grafana/alloy:latest
+ContainerName=alloy
+Network=monitoring.network
+PublishPort=100.71.128.71:4317:4317
+PublishPort=100.71.128.71:4318:4318
+Volume=%h/Infra/monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro,Z
+Exec=run /etc/alloy/config.alloy
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

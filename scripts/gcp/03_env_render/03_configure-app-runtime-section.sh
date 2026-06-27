@@ -315,7 +315,7 @@ apply_app() {
   fi
   gcloud compute scp "${APP_ENV_FILE}" "${APP_INSTANCE_NAME}:~/app-dev/$(basename "${APP_ENV_FILE}")" "${args[@]}"
   gcloud compute ssh "${APP_INSTANCE_NAME}" "${args[@]}" --command \
-    "cd ~/app-dev && mv '$(basename "${APP_ENV_FILE}")' .env && chmod 600 .env && if systemctl list-unit-files | grep -q '^gjlearn-app.service'; then sudo systemctl restart gjlearn-app && sleep 3 && sudo systemctl is-active --quiet gjlearn-app && curl -fsS http://127.0.0.1:\${APP_PORT:-8080}/actuator/health; else echo 'App env updated; gjlearn-app.service not installed yet'; fi"
+    "cd ~/app-dev && mv '$(basename "${APP_ENV_FILE}")' .env && chmod 600 .env && if systemctl list-unit-files | grep -q '^gjlearn-app.service'; then sudo systemctl restart gjlearn-app && sleep 3 && sudo systemctl is-active --quiet gjlearn-app && curl -fsS http://127.0.0.1:\${MANAGEMENT_PORT:-9090}/actuator/health; else echo 'App env updated; gjlearn-app.service not installed yet'; fi"
 }
 
 if [[ "${MODE}" == "--apply-app" ]]; then

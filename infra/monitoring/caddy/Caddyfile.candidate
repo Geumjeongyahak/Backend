@@ -1,0 +1,84 @@
+# The Caddyfile is an easy way to configure your Caddy web server.
+#i
+# https://caddyserver.com/docs/caddyfile
+
+
+# The configuration below serves a welcome page over HTTP on port 80.  To use
+# your own domain name with automatic HTTPS, ensure your A/AAAA DNS record is
+# pointing to this machine's public IP, then replace `http://` with your domain
+# name.  Refer to the documentation for full instructions on the address
+# specification.
+#
+# https://caddyserver.com/docs/caddyfile/concepts#addresses
+# http:// {
+
+# Set this path to your site's directory.
+#    root * /usr/share/caddy
+
+# Enable the static file server.
+#    file_server
+
+# Another common task is to set up a reverse proxy:
+# reverse_proxy localhost:8080
+
+# Or serve a PHP site through php-fpm:
+# php_fastcgi localhost:9000
+
+# Refer to the directive documentation for more options.
+# https://caddyserver.com/docs/caddyfile/directives
+
+#}
+
+(pretty_errors) {
+	handle_errors {
+		root * /var/www/caddy-errors
+		try_files /{err.status_code}.html /error.html
+		file_server
+	}
+}
+
+dev.leeswallow.click {
+	import pretty_errors
+
+	reverse_proxy localhost:5678 {
+		@not_found status 404
+		handle_response @not_found {
+			root * /var/www/caddy-errors
+			rewrite * /404.html
+			file_server
+		}
+	}
+}
+
+test.leeswallow.click {
+	import pretty_errors
+
+	reverse_proxy localhost:8080 {
+		@not_found status 404
+		handle_response @not_found {
+			root * /var/www/caddy-errors
+			rewrite * /404.html
+			file_server
+		}
+	}
+}
+
+hermes.leeswallow.click {
+	import pretty_errors
+
+	basic_auth {
+		min $2a$14$HlHXXb8IpV8jXXFPW5abn.5kbrd289e1nzFP71GY66YBTkvyxg6B.
+	}
+
+	reverse_proxy 127.0.0.1:8787
+}
+# As an alternative to editing the above site block, you can add your own site
+# block files in the Caddyfile.d directory, and they will be included as long
+# as they use the .caddyfile extension.
+# import Caddyfile.d/*.caddyfilei
+
+dashboard.leeswallow.click {
+	import pretty_errors
+
+	reverse_proxy 127.0.0.1:3000
+}
