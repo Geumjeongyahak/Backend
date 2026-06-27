@@ -387,6 +387,7 @@ CREATE TABLE daily_teacher_attendances (
     status VARCHAR(20) NOT NULL DEFAULT 'ABSENT',
     volunteer_service_minutes INTEGER,
     attended_at TIMESTAMP,
+    checked_out_at TIMESTAMP,
     latitude DECIMAL(10, 7),
     longitude DECIMAL(10, 7),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
