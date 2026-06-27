@@ -21,6 +21,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.UUID;
 
 @Controller
 @RequestMapping("/admin/meeting-records")
@@ -154,6 +157,30 @@ public class MeetingRecordViewController {
         meetingRecordAdminViewService.deleteMeetingRecord(userDetails.getUserId(), recordId);
         redirectAttributes.addFlashAttribute("message", "교학 회의록이 삭제되었습니다.");
         return "redirect:/admin/meeting-records";
+    }
+
+    @PostMapping("/{recordId}/attachments")
+    public String attachAttachment(
+        @PathVariable Long recordId,
+        @RequestParam("file") MultipartFile file,
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        RedirectAttributes redirectAttributes
+    ) {
+        meetingRecordAdminViewService.attachUploadedAttachment(userDetails.getUserId(), recordId, file);
+        redirectAttributes.addFlashAttribute("message", "첨부파일이 추가되었습니다.");
+        return "redirect:/admin/meeting-records/" + recordId;
+    }
+
+    @PostMapping("/{recordId}/attachments/{fileId}/delete")
+    public String detachAttachment(
+        @PathVariable Long recordId,
+        @PathVariable UUID fileId,
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        RedirectAttributes redirectAttributes
+    ) {
+        meetingRecordAdminViewService.detachAttachment(userDetails.getUserId(), recordId, fileId);
+        redirectAttributes.addFlashAttribute("message", "첨부파일이 삭제되었습니다.");
+        return "redirect:/admin/meeting-records/" + recordId;
     }
 
     private void addBaseModel(Model model, Authentication authentication) {
