@@ -244,6 +244,8 @@ permission code로는 표현되지 않습니다.
 | `POST /api/v1/meeting-records` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` |
 | `PATCH /api/v1/meeting-records/{recordId}` | `ADMIN` \| 작성자 본인 |
 | `DELETE /api/v1/meeting-records/{recordId}` | `ADMIN` \| 작성자 본인 |
+| `POST /api/v1/meeting-records/{recordId}/attachments` | `ADMIN` \| 작성자 본인 |
+| `DELETE /api/v1/meeting-records/{recordId}/attachments/{fileId}` | `ADMIN` \| 작성자 본인 |
 | `POST /api/v1/meeting-records/{recordId}/absence-reports` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` (회의 전 상태만) |
 | `PATCH /api/v1/meeting-records/{recordId}/absence-reports/{absenceReportId}` | 작성자 본인 (회의 전 상태만) |
 | `DELETE /api/v1/meeting-records/{recordId}/absence-reports/{absenceReportId}` | 작성자 본인 (회의 전 상태만) |

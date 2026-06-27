@@ -1,13 +1,21 @@
 package geumjeongyahak.domain.meeting_record.service;
 
 import geumjeongyahak.common.exception.BusinessException;
+import geumjeongyahak.common.exception.CommonErrorCode;
+import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
+import geumjeongyahak.domain.file.entity.File;
+import geumjeongyahak.domain.file.repository.FileRepository;
+import geumjeongyahak.domain.file.service.AttachmentUploadService;
+import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
 import geumjeongyahak.domain.meeting_record.entity.MeetingAbsenceReport;
 import geumjeongyahak.domain.meeting_record.entity.MeetingRecord;
+import geumjeongyahak.domain.meeting_record.entity.MeetingRecordAttachment;
 import geumjeongyahak.domain.meeting_record.enums.MeetingRecordStatus;
 import geumjeongyahak.domain.meeting_record.exception.MeetingRecordErrorCode;
 import geumjeongyahak.domain.meeting_record.repository.MeetingAbsenceReportRepository;
+import geumjeongyahak.domain.meeting_record.repository.MeetingRecordAttachmentRepository;
 import geumjeongyahak.domain.meeting_record.repository.MeetingRecordRepository;
 import geumjeongyahak.domain.meeting_record.repository.specification.MeetingRecordSpecs;
 import geumjeongyahak.domain.meeting_record.v1.dto.request.CreateAbsenceReportRequest;
@@ -20,10 +28,12 @@ import geumjeongyahak.domain.meeting_record.v1.dto.response.MeetingRecordDetailR
 import geumjeongyahak.domain.meeting_record.v1.dto.response.MeetingRecordSummaryResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +42,9 @@ public class MeetingRecordService {
 
     private final MeetingRecordRepository meetingRecordRepository;
     private final MeetingAbsenceReportRepository absenceReportRepository;
+    private final MeetingRecordAttachmentRepository attachmentRepository;
+    private final FileRepository fileRepository;
+    private final AttachmentUploadService attachmentUploadService;
     private final UserProxyService userProxyService;
 
     public PaginationResponse<MeetingRecordSummaryResponse> getMeetingRecords(
@@ -103,6 +116,59 @@ public class MeetingRecordService {
         MeetingRecord record = getActiveRecord(recordId);
         assertRecordOwnerOrAdmin(record, requesterId, isAdmin);
         record.delete();
+    }
+
+    @Transactional
+    public FileUploadResponse attachUploadedAttachment(
+        Long requesterId,
+        Long recordId,
+        MultipartFile multipartFile,
+        boolean isAdmin
+    ) {
+        getStaffUser(requesterId);
+        MeetingRecord record = getActiveRecord(recordId);
+        assertRecordOwnerOrAdmin(record, requesterId, isAdmin);
+
+        FileUploadResponse uploaded = attachmentUploadService.uploadAttachment(multipartFile);
+        return attachRegisteredAttachment(requesterId, recordId, uploaded.fileId(), null, isAdmin);
+    }
+
+    @Transactional
+    public FileUploadResponse attachRegisteredAttachment(
+        Long requesterId,
+        Long recordId,
+        UUID fileId,
+        Integer sortOrder,
+        boolean isAdmin
+    ) {
+        getStaffUser(requesterId);
+        MeetingRecord record = getActiveRecord(recordId);
+        assertRecordOwnerOrAdmin(record, requesterId, isAdmin);
+
+        File file = fileRepository.findByIdAndIsDeletedFalse(fileId)
+            .orElseThrow(() -> new ResourceNotFoundException(CommonErrorCode.RESOURCE_NOT_FOUND));
+        if (!attachmentRepository.existsByMeetingRecordIdAndFileId(recordId, file.getId())) {
+            int resolvedSortOrder = sortOrder == null
+                ? Math.toIntExact(attachmentRepository.countByMeetingRecordId(recordId))
+                : sortOrder;
+            attachmentRepository.save(MeetingRecordAttachment.builder()
+                .meetingRecord(record)
+                .file(file)
+                .sortOrder(resolvedSortOrder)
+                .build());
+        }
+        return FileUploadResponse.from(file, file.getPublicUrl());
+    }
+
+    @Transactional
+    public void detachAttachment(Long requesterId, Long recordId, UUID fileId, boolean isAdmin) {
+        getStaffUser(requesterId);
+        MeetingRecord record = getActiveRecord(recordId);
+        assertRecordOwnerOrAdmin(record, requesterId, isAdmin);
+
+        MeetingRecordAttachment attachment = attachmentRepository.findByMeetingRecordIdAndFileId(recordId, fileId)
+            .orElseThrow(() -> new ResourceNotFoundException(CommonErrorCode.RESOURCE_NOT_FOUND));
+        attachmentRepository.delete(attachment);
     }
 
     @Transactional

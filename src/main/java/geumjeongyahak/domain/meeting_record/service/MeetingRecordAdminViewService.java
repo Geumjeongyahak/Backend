@@ -2,6 +2,7 @@ package geumjeongyahak.domain.meeting_record.service;
 
 import geumjeongyahak.domain.base.dto.response.AdminPage;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
+import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
 import geumjeongyahak.domain.meeting_record.enums.MeetingRecordStatus;
 import geumjeongyahak.domain.meeting_record.v1.dto.request.CreateMeetingRecordRequest;
 import geumjeongyahak.domain.meeting_record.v1.dto.request.MeetingRecordSearchRequest;
@@ -9,8 +10,10 @@ import geumjeongyahak.domain.meeting_record.v1.dto.request.UpdateMeetingRecordRe
 import geumjeongyahak.domain.meeting_record.v1.dto.response.MeetingRecordDetailResponse;
 import geumjeongyahak.domain.meeting_record.v1.dto.response.MeetingRecordSummaryResponse;
 import lombok.RequiredArgsConstructor;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -73,6 +76,16 @@ public class MeetingRecordAdminViewService {
     @Transactional
     public void deleteMeetingRecord(Long requesterId, Long recordId) {
         meetingRecordService.deleteMeetingRecord(requesterId, recordId, true);
+    }
+
+    @Transactional
+    public FileUploadResponse attachUploadedAttachment(Long requesterId, Long recordId, MultipartFile file) {
+        return meetingRecordService.attachUploadedAttachment(requesterId, recordId, file, true);
+    }
+
+    @Transactional
+    public void detachAttachment(Long requesterId, Long recordId, UUID fileId) {
+        meetingRecordService.detachAttachment(requesterId, recordId, fileId, true);
     }
 
     public record MeetingRecordFilter(

@@ -57,6 +57,10 @@ public class MeetingRecord extends BaseEntity {
     @OrderBy("createdAt DESC, id DESC")
     private List<MeetingAbsenceReport> absenceReports = new ArrayList<>();
 
+    @OneToMany(mappedBy = "meetingRecord", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC, id ASC")
+    private List<MeetingRecordAttachment> attachments = new ArrayList<>();
+
     public MeetingRecord(@NonNull User author, @NonNull String title, @NonNull String agenda) {
         this.author = author;
         this.title = title;

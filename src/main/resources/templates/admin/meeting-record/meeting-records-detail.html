@@ -40,6 +40,43 @@
         </section>
 
         <section class="panel table-panel">
+            <div class="inline-form" style="justify-content: space-between;">
+                <h2>첨부파일</h2>
+                <form class="inline-form" th:action="@{/admin/meeting-records/{recordId}/attachments(recordId=${record.id})}" method="post" enctype="multipart/form-data">
+                    <input name="file" type="file" required>
+                    <button class="button secondary" type="submit">추가</button>
+                </form>
+            </div>
+            <div class="table-scroll" th:if="${!#lists.isEmpty(record.attachments)}">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>파일명</th>
+                        <th>형식</th>
+                        <th>크기</th>
+                        <th>순서</th>
+                        <th>관리</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="attachment : ${record.attachments}">
+                        <td><a class="link" th:href="${attachment.downloadUrl}" target="_blank" th:text="${attachment.originalName}">file.pdf</a></td>
+                        <td th:text="${attachment.ext}">pdf</td>
+                        <td th:text="${attachment.fileSize ?: '-'}">1024</td>
+                        <td th:text="${attachment.sortOrder}">0</td>
+                        <td>
+                            <form th:action="@{/admin/meeting-records/{recordId}/attachments/{fileId}/delete(recordId=${record.id},fileId=${attachment.fileId})}" method="post" onsubmit="return confirm('이 첨부파일을 삭제하시겠습니까?');">
+                                <button class="button danger" type="submit">삭제</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="empty" th:if="${#lists.isEmpty(record.attachments)}">첨부파일이 없습니다.</div>
+        </section>
+
+        <section class="panel table-panel">
             <h2>불참 사유서</h2>
             <div class="table-scroll">
                 <table>

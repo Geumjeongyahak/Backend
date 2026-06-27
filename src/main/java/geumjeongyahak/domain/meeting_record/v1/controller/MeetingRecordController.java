@@ -2,7 +2,9 @@ package geumjeongyahak.domain.meeting_record.v1.controller;
 
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
+import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
 import geumjeongyahak.domain.meeting_record.service.MeetingRecordService;
+import geumjeongyahak.domain.meeting_record.v1.dto.request.AttachMeetingRecordFileRequest;
 import geumjeongyahak.domain.meeting_record.v1.dto.request.CreateAbsenceReportRequest;
 import geumjeongyahak.domain.meeting_record.v1.dto.request.CreateMeetingRecordRequest;
 import geumjeongyahak.domain.meeting_record.v1.dto.request.MeetingRecordSearchRequest;
@@ -17,6 +19,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,7 +31,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -98,6 +105,51 @@ public class MeetingRecordController {
     ) {
         log.debug("DELETE /api/v1/meeting-records/{}", recordId);
         meetingRecordService.deleteMeetingRecord(userDetails.getUserId(), recordId, userDetails.isAdmin());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize(STAFF_ONLY)
+    @Operation(summary = "교학 회의록 첨부파일 업로드 및 연동")
+    @PostMapping(value = "/{recordId}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<FileUploadResponse> attachUploadedAttachment(
+        @PathVariable Long recordId,
+        @RequestPart("file") MultipartFile file,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("POST /api/v1/meeting-records/{}/attachments multipart", recordId);
+        return ResponseEntity.ok(
+            meetingRecordService.attachUploadedAttachment(userDetails.getUserId(), recordId, file, userDetails.isAdmin())
+        );
+    }
+
+    @PreAuthorize(STAFF_ONLY)
+    @Operation(summary = "등록된 파일을 교학 회의록 첨부파일로 연동")
+    @PostMapping(value = "/{recordId}/attachments", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<FileUploadResponse> attachRegisteredAttachment(
+        @PathVariable Long recordId,
+        @Valid @RequestBody AttachMeetingRecordFileRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("POST /api/v1/meeting-records/{}/attachments json", recordId);
+        return ResponseEntity.ok(meetingRecordService.attachRegisteredAttachment(
+            userDetails.getUserId(),
+            recordId,
+            request.fileId(),
+            request.sortOrder(),
+            userDetails.isAdmin()
+        ));
+    }
+
+    @PreAuthorize(STAFF_ONLY)
+    @Operation(summary = "교학 회의록 첨부파일 삭제")
+    @DeleteMapping("/{recordId}/attachments/{fileId}")
+    public ResponseEntity<Void> detachAttachment(
+        @PathVariable Long recordId,
+        @PathVariable UUID fileId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("DELETE /api/v1/meeting-records/{}/attachments/{}", recordId, fileId);
+        meetingRecordService.detachAttachment(userDetails.getUserId(), recordId, fileId, userDetails.isAdmin());
         return ResponseEntity.noContent().build();
     }
 
