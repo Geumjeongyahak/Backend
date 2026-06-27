@@ -16,6 +16,7 @@ public record MeetingRecordDetailResponse(
     String agenda,
     String discussion,
     String suggestion,
+    List<MeetingRecordAttachmentResponse> attachments,
     List<MeetingAbsenceReportResponse> absenceReports
 ) {
     public static MeetingRecordDetailResponse from(MeetingRecord record) {
@@ -30,6 +31,10 @@ public record MeetingRecordDetailResponse(
             record.getAgenda(),
             record.getDiscussion(),
             record.getSuggestion(),
+            record.getAttachments().stream()
+                .filter(attachment -> !attachment.getFile().isDeleted())
+                .map(MeetingRecordAttachmentResponse::from)
+                .toList(),
             record.getAbsenceReports().stream()
                 .filter(report -> !report.isDeleted())
                 .map(MeetingAbsenceReportResponse::from)
