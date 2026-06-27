@@ -1,6 +1,6 @@
 # File API
 
-파일 API는 GCS 업로드 파일과 Google Drive 파일 메타데이터를 모두 `files` 테이블에 기록하고, 게시글 첨부에서 사용할 `fileId`를 제공합니다.
+파일 API는 GCS 업로드 파일과 Google Drive 파일을 모두 `files` 테이블에 기록하고, 게시글 첨부에서 사용할 `fileId`를 제공합니다.
 
 ## GCS 첨부파일 업로드
 
@@ -41,6 +41,38 @@
   "ext": "pdf",
   "isGoogleDrive": true,
   "url": "https://drive.google.com/file/d/abc123/view?usp=sharing"
+}
+```
+
+## Google Drive 파일 직접 업로드
+
+- **URL**: `POST /api/v1/files/drive/{target}`
+- **권한**: `ADMIN`
+- **Content-Type**: `multipart/form-data`
+- **target**: `handover`, `examMaterials`, `documentForms`, `meetingRecords`, `board`
+- **optional query**: `scopeType=classroom|department`, `scopeId={id}` (`board`에서만 사용)
+- **동작**: 백엔드가 서비스 계정으로 Shared Drive 대상 루트 아래에 `yyyy/MM` 폴더를 보장한 뒤 파일을 업로드하고 `files` 레코드를 생성합니다.
+- **저장 기준**: `files.is_google_drive=true`, `storage_key=Drive file id`, `public_url=Drive view URL`로 저장합니다.
+
+### Folder Rules
+
+- `board`: `{boardRoot}/공통/{yyyy}/{MM}`
+- `board?scopeType=classroom&scopeId=1`: `{boardRoot}/반별/{classroomName}/{yyyy}/{MM}`
+- `board?scopeType=department&scopeId=2`: `{boardRoot}/부서별/{departmentName}/{yyyy}/{MM}`
+- `meetingRecords`: `{meetingRecordsRoot}/{yyyy}/{MM}`
+- `handover`, `examMaterials`, `documentForms`: `{targetRoot}/{yyyy}/{MM}`
+
+### Response
+
+```json
+{
+  "fileId": "550e8400-e29b-41d4-a716-446655440000",
+  "originalName": "2026 자료집.pdf",
+  "contentType": "application/pdf",
+  "fileSize": 204800,
+  "ext": "pdf",
+  "isGoogleDrive": true,
+  "url": "https://drive.google.com/file/d/abc123/view"
 }
 ```
 

@@ -2,6 +2,7 @@ package geumjeongyahak.e2e;
 
 import java.time.Duration;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -13,6 +14,10 @@ import org.springframework.web.multipart.MultipartFile;
 import com.google.cloud.storage.Storage;
 
 import geumjeongyahak.domain.file.service.StorageService;
+import geumjeongyahak.domain.file.enums.DriveUploadTarget;
+import geumjeongyahak.domain.file.service.DriveStorageService;
+import geumjeongyahak.common.mail.MailDeliveryResult;
+import geumjeongyahak.common.mail.MailSenderService;
 
 import static org.mockito.Mockito.mock;
 
@@ -29,6 +34,88 @@ public class TestStorageConfig {
     @Primary
     ControlledStorageService testStorageService() {
         return new ControlledStorageService();
+    }
+
+    @Bean
+    @Primary
+    DriveStorageService testDriveStorageService() {
+        return new ControlledDriveStorageService();
+    }
+
+    @Bean
+    @Primary
+    ControlledMailSenderService testMailSenderService() {
+        return new ControlledMailSenderService();
+    }
+
+    public static class ControlledMailSenderService implements MailSenderService {
+        private String lastSignupRecipient;
+        private String lastPasswordResetRecipient;
+        private String lastPasswordResetCode;
+        private String lastEmailVerificationRecipient;
+        private String lastEmailVerificationCode;
+
+        @Override
+        public MailDeliveryResult sendSignupWelcomeMail(String recipientEmail, String recipientName) {
+            this.lastSignupRecipient = recipientEmail;
+            return MailDeliveryResult.sent("signup-welcome", recipientEmail);
+        }
+
+        @Override
+        public MailDeliveryResult sendPasswordResetMail(String recipientEmail, String recipientName, String resetCode) {
+            this.lastPasswordResetRecipient = recipientEmail;
+            this.lastPasswordResetCode = resetCode;
+            return MailDeliveryResult.sent("password-reset", recipientEmail);
+        }
+
+        @Override
+        public MailDeliveryResult sendEmailVerificationMail(
+            String recipientEmail,
+            String recipientName,
+            String verificationCode
+        ) {
+            this.lastEmailVerificationRecipient = recipientEmail;
+            this.lastEmailVerificationCode = verificationCode;
+            return MailDeliveryResult.sent("email-verification", recipientEmail);
+        }
+
+        public String getLastSignupRecipient() {
+            return lastSignupRecipient;
+        }
+
+        public String getLastPasswordResetRecipient() {
+            return lastPasswordResetRecipient;
+        }
+
+        public String getLastPasswordResetCode() {
+            return lastPasswordResetCode;
+        }
+
+        public String getLastEmailVerificationRecipient() {
+            return lastEmailVerificationRecipient;
+        }
+
+        public String getLastEmailVerificationCode() {
+            return lastEmailVerificationCode;
+        }
+    }
+
+    public static class ControlledDriveStorageService implements DriveStorageService {
+
+        @Override
+        public StoredDriveFile upload(DriveUploadTarget target, List<String> folderPath, MultipartFile file) {
+            String driveFileId = target.path() + "-drive-file";
+            String viewUrl = "https://drive.google.com/file/d/" + driveFileId + "/view";
+            String downloadUrl = "https://drive.google.com/uc?export=download&id=" + driveFileId;
+            return new StoredDriveFile(
+                driveFileId,
+                viewUrl,
+                downloadUrl,
+                file.getOriginalFilename(),
+                file.getContentType(),
+                file.getSize()
+            );
+        }
     }
 
     public static class ControlledStorageService implements StorageService {

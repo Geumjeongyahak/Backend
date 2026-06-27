@@ -105,6 +105,26 @@ class GoogleAuthServiceTest {
     }
 
     @Test
+    void handleCallback_rejectsGoogleAccountWhenEmailIsNotVerified() {
+        GoogleTokenResponse tokenResponse =
+            new GoogleTokenResponse("google-access-token", "google-id-token", "Bearer");
+        GoogleUserInfo userInfo =
+            new GoogleUserInfo(GOOGLE_SUB, EMAIL, false, "Google 사용자", PROFILE_IMAGE_URL);
+        given(googleApiClient.exchangeCode("authorization-code")).willReturn(tokenResponse);
+        given(googleApiClient.verifyIdToken("google-id-token")).willReturn(userInfo);
+
+        assertThatThrownBy(() -> googleAuthService.handleCallback("authorization-code"))
+            .isInstanceOf(OAuthProcessingException.class)
+            .hasMessage("Google 이메일 인증이 완료되지 않은 계정입니다.");
+
+        verify(jwtTokenProvider, never()).createOAuth2TempToken(
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.anyString()
+        );
+    }
+
+    @Test
     void login_rejectsDeactivatedUserBeforeIssuingToken() {
         stubTempTokenClaims();
         UserCredential credential = UserCredential.google(
@@ -123,6 +143,30 @@ class GoogleAuthServiceTest {
             .hasMessage("비활성화된 사용자입니다.");
 
         verify(refreshTokenService, never()).createRefreshToken(org.mockito.ArgumentMatchers.anyLong());
+    }
+
+    @Test
+    void login_marksExistingGoogleCredentialVerifiedAfterVerifiedCallbackToken() {
+        stubTempTokenClaims();
+        User user = User.builder()
+            .name("Google 사용자")
+            .email(EMAIL)
+            .role(RoleType.GUEST)
+            .build();
+        UserCredential credential = UserCredential.google(
+            user,
+            GOOGLE_SUB,
+            EMAIL,
+            false
+        );
+        given(userCredentialService.getCredentialByProviderUserIdAndProvider(
+            GOOGLE_SUB,
+            ProviderType.GOOGLE
+        )).willReturn(credential);
+
+        googleAuthService.login(TEMP_TOKEN);
+
+        assertThat(credential.isEmailVerified()).isTrue();
     }
 
     @Test

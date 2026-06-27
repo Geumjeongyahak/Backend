@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,6 +24,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import geumjeongyahak.common.security.service.CustomUserDetails;
+import geumjeongyahak.domain.file.enums.DriveUploadTarget;
 import geumjeongyahak.domain.file.service.AttachmentUploadService;
 import geumjeongyahak.domain.file.service.DriveFileService;
 import geumjeongyahak.domain.file.service.ImageUploadService;
@@ -163,6 +165,29 @@ public class FileController {
         log.debug("POST /api/v1/files/drive - Google Drive 파일 메타데이터 등록 요청");
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(driveFileService.registerDriveFile(request));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Google Drive 파일 직접 업로드",
+        description = "관리자가 백엔드를 통해 Shared Drive 대상 폴더로 파일을 업로드합니다. "
+            + "target은 handover, examMaterials, documentForms, meetingRecords, board 중 하나입니다."
+    )
+    @PostMapping(value = "/drive/{target}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<FileUploadResponse> uploadDriveFile(
+        @Parameter(description = "Drive 업로드 대상", example = "board")
+        @PathVariable String target,
+        @Parameter(description = "board 업로드 scope. classroom 또는 department")
+        @RequestParam(required = false) String scopeType,
+        @Parameter(description = "scopeType이 있을 때 필수인 scope ID")
+        @RequestParam(required = false) Long scopeId,
+        @Parameter(description = "Drive에 업로드할 문서 파일")
+        @RequestPart("file") MultipartFile file
+    ) {
+        DriveUploadTarget uploadTarget = DriveUploadTarget.fromPath(target);
+        log.debug("POST /api/v1/files/drive/{} - Google Drive 파일 업로드 요청", uploadTarget.path());
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(driveFileService.uploadDriveFile(uploadTarget, scopeType, scopeId, file));
     }
 
     @PreAuthorize("isAuthenticated()")

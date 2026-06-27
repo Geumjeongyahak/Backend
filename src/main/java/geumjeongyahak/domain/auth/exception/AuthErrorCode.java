@@ -19,7 +19,12 @@ public enum AuthErrorCode implements ErrorCode {
     DUPLICATED_CREDENTIAL(HttpStatus.CONFLICT, "AUTH007", "이미 인증 정보가 존재합니다."),
     CREDENTIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "AUTH008", "인증 정보를 찾을 수 없습니다."),
     INVALID_OAUTH_STATE(HttpStatus.UNAUTHORIZED, "AUTH009", "유효하지 않은 OAuth state입니다."),
-    OAUTH_PROCESSING_FAILED(HttpStatus.UNAUTHORIZED, "AUTH010", "Google 인증 처리 중 오류가 발생했습니다.");
+    OAUTH_PROCESSING_FAILED(HttpStatus.UNAUTHORIZED, "AUTH010", "Google 인증 처리 중 오류가 발생했습니다."),
+    PASSWORD_RESET_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "AUTH011", "유효하지 않은 비밀번호 재설정 인증번호입니다."),
+    PASSWORD_RESET_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "AUTH012", "비밀번호 재설정 인증번호가 만료되었습니다."),
+    EMAIL_NOT_VERIFIED(HttpStatus.FORBIDDEN, "AUTH013", "이메일 인증 후 로그인할 수 있습니다."),
+    EMAIL_VERIFICATION_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "AUTH014", "유효하지 않은 이메일 인증번호입니다."),
+    EMAIL_VERIFICATION_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "AUTH015", "이메일 인증번호가 만료되었습니다.");
 
     private final HttpStatus status;
     private final String code;

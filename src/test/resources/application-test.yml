@@ -15,7 +15,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
@@ -30,6 +30,9 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
+  mail:
+    host: localhost
+    port: 2525
 
   cloud:
     gcp:
@@ -79,3 +82,12 @@ app:
         - text/plain
         - application/vnd.ms-powerpoint
         - application/vnd.openxmlformats-officedocument.presentationml.presentation
+    drive:
+      shared-drive-id: test-shared-drive
+      make-link-public: true
+      folder-ids:
+        handover: test-handover-folder
+        exam-materials: test-exam-materials-folder
+        document-forms: test-document-forms-folder
+        meeting-records: test-meeting-records-folder
+        board: test-board-folder

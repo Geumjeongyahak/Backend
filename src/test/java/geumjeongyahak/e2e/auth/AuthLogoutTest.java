@@ -3,12 +3,11 @@ package geumjeongyahak.e2e.auth;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
-import geumjeongyahak.domain.auth.v1.dto.request.LocalSignupRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LogoutRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.RefreshTokenRequest;
 import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
-import java.time.LocalDate;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
@@ -127,25 +126,12 @@ class AuthLogoutTest extends AuthBaseTest {
     @DisplayName("전체 디바이스 로그아웃 성공(200 OK)")
     void logoutAllDevices_Success() {
         String uniqueUsername = "multidevice" + System.currentTimeMillis();
-
-        // 회원가입
-        LocalSignupRequest signupReq = new LocalSignupRequest(
-                "password123!",
-                "멀티 디바이스 테스트",
-                uniqueUsername + "@test.com",
-                "010-1234-5678",
-                LocalDate.of(1990, 1, 1)
+        userTestHelper.createTestUser(
+            uniqueUsername + "@test.com",
+            "멀티 디바이스 테스트",
+            "password123!",
+            RoleType.GUEST
         );
-
-        var signupResponse = given()
-            .contentType(ContentType.JSON)
-            .body(signupReq)
-        .when()
-            .post("/signup")
-        .then()
-            .statusCode(201)
-            .extract()
-            .as(TokenResponse.class);
 
         LocalLoginRequest loginReq = new LocalLoginRequest(uniqueUsername + "@test.com", "password123!");
 
@@ -176,14 +162,6 @@ class AuthLogoutTest extends AuthBaseTest {
         .then()
             .statusCode(200)
             .body("message", equalTo("모든 디바이스에서 로그아웃되었습니다."));
-
-        given()
-            .contentType(ContentType.JSON)
-            .body(new RefreshTokenRequest(signupResponse.refreshToken()))
-        .when()
-            .post("/refresh")
-        .then()
-            .statusCode(401);
 
         given()
             .contentType(ContentType.JSON)

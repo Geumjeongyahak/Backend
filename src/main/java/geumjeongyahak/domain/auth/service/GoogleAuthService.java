@@ -51,6 +51,10 @@ public class GoogleAuthService {
     public GoogleCallbackResponse handleCallback(String code) {
         GoogleTokenResponse tokenResponse = googleApiClient.exchangeCode(code);
         GoogleUserInfo userInfo = googleApiClient.verifyIdToken(tokenResponse.idToken());
+        if (!userInfo.emailVerified()) {
+            log.warn("Google 콜백 거부 - 이메일 미인증: email={}", userInfo.email());
+            throw new OAuthProcessingException("Google 이메일 인증이 완료되지 않은 계정입니다.");
+        }
         boolean signupRequired = !userCredentialService.existsByCredentialEmailAndProvider(userInfo.email(), ProviderType.GOOGLE);
         boolean connectedToLocal = userCredentialService.existsByCredentialEmailAndProvider(userInfo.email(), ProviderType.LOCAL);
 
@@ -78,6 +82,9 @@ public class GoogleAuthService {
             .getCredentialByProviderUserIdAndProvider(googleSub, ProviderType.GOOGLE);
 
         validateActiveUser(credential.getUser());
+        if (!credential.isEmailVerified()) {
+            credential.verifyEmail();
+        }
         credential.setLastLoginAt(LocalDateTime.now());
 
         log.info("Google 로그인 성공: userId={}", credential.getUser().getId());
@@ -96,7 +103,7 @@ public class GoogleAuthService {
             .orElseThrow(() -> new OAuthProcessingException("연결할 로컬 계정을 찾을 수 없습니다."));
 
         validateActiveUser(user);
-        UserCredential credential = userCredentialService.createGoogleCredential(user, googleSub, email, false);
+        UserCredential credential = userCredentialService.createGoogleCredential(user, googleSub, email, true);
         credential.setLastLoginAt(LocalDateTime.now());
 
         log.info("Google 계정 연결 성공: userId={}, email={}", user.getId(), email);

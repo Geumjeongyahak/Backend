@@ -4,8 +4,12 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import geumjeongyahak.domain.auth.enums.ProviderType;
+import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalSignupRequest;
 import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
+import geumjeongyahak.e2e.TestStorageConfig.ControlledMailSenderService;
 import java.time.LocalDate;
 
 import static io.restassured.RestAssured.given;
@@ -15,8 +19,14 @@ import static org.hamcrest.Matchers.*;
 @DisplayName("E2E: 회원가입 테스트")
 class AuthSignupTest extends AuthBaseTest {
 
+    @Autowired
+    private ControlledMailSenderService mailSenderService;
+
+    @Autowired
+    private UserCredentialRepository credentialRepository;
+
     @Test
-    @DisplayName("올바른 정보로 회원가입 성공(201 Created)")
+    @DisplayName("회원가입 후 이메일 인증을 완료해야 로그인할 수 있다")
     void signup_Success() {
         String uniqueEmail = "signuptest" + System.currentTimeMillis() + "@test.com";
         LocalSignupRequest req = new LocalSignupRequest(
@@ -34,21 +44,79 @@ class AuthSignupTest extends AuthBaseTest {
             .post("/signup")
         .then()
             .statusCode(201)
+            .body("message", equalTo("회원가입이 완료되었습니다. 이메일 인증 후 로그인해 주세요."))
+            .body("accessToken", nullValue())
+            .body("refreshToken", nullValue())
+            .log().all()
+            .extract();
+
+        assertThat(userTestHelper.getUser(uniqueEmail).getResidentRegistrationNumberPrefix())
+            .isEqualTo("900101");
+        var credential = credentialRepository.findByCredentialEmailAndProvider(uniqueEmail, ProviderType.LOCAL)
+            .orElseThrow();
+        assertThat(credential.isEmailVerified()).isFalse();
+        assertThat(credential.getEmailVerificationTokenHash()).isNotBlank();
+        assertThat(mailSenderService.getLastEmailVerificationRecipient()).isEqualTo(uniqueEmail);
+        String verificationCode = mailSenderService.getLastEmailVerificationCode();
+        assertThat(verificationCode).isNotBlank();
+
+        given()
+            .contentType(ContentType.JSON)
+            .body("""
+                {
+                  "email": "%s",
+                  "password": "password123!"
+                }
+                """.formatted(uniqueEmail))
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(403)
+            .body("code", equalTo("AUTH013"))
+            .body("detail", equalTo("이메일 인증 후 로그인할 수 있습니다."));
+
+        given()
+            .contentType(ContentType.JSON)
+            .body("""
+                {
+                  "email": "%s",
+                  "verificationCode": "%s"
+                }
+                """.formatted(uniqueEmail, verificationCode))
+        .when()
+            .post("/email-verification/confirm")
+        .then()
+            .statusCode(200)
+            .body("message", equalTo("이메일 인증이 완료되었습니다. 로그인해 주세요."));
+
+        var verifiedCredential = credentialRepository.findByCredentialEmailAndProvider(uniqueEmail, ProviderType.LOCAL)
+            .orElseThrow();
+        assertThat(verifiedCredential.isEmailVerified()).isTrue();
+        assertThat(verifiedCredential.getEmailVerificationTokenHash()).isNull();
+
+        var loginResponse = given()
+            .contentType(ContentType.JSON)
+            .body("""
+                {
+                  "email": "%s",
+                  "password": "password123!"
+                }
+                """.formatted(uniqueEmail))
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(200)
             .body("accessToken", notNullValue())
             .body("refreshToken", notNullValue())
             .body("tokenType", equalTo("Bearer"))
-            .body("accessTokenExpiresAt", notNullValue())
-            .body("refreshTokenExpiresAt", notNullValue())
-            .log().all()
             .extract()
             .as(TokenResponse.class);
 
-        // 발급받은 토큰이 작동하는지 확인 (basePath 임시 초기화)
         String originalBasePath = RestAssured.basePath;
         RestAssured.basePath = "";
 
         given()
-            .header(AUTH_HEADER, getAuthHeader(response.accessToken()))
+            .header(AUTH_HEADER, getAuthHeader(loginResponse.accessToken()))
         .when()
             .get("/api/v1/users/me")
         .then()
@@ -56,8 +124,6 @@ class AuthSignupTest extends AuthBaseTest {
             .body("name", equalTo("회원가입 테스트"));
 
         RestAssured.basePath = originalBasePath;
-        assertThat(userTestHelper.getUser(uniqueEmail).getResidentRegistrationNumberPrefix())
-            .isEqualTo("900101");
     }
 
     @Test
@@ -205,11 +271,28 @@ class AuthSignupTest extends AuthBaseTest {
             .post("/signup")
         .then()
             .statusCode(201)
-            .body("accessToken", notNullValue())
-            .body("refreshToken", notNullValue())
+            .body("message", equalTo("회원가입이 완료되었습니다. 이메일 인증 후 로그인해 주세요."))
+            .body("accessToken", nullValue())
+            .body("refreshToken", nullValue())
             .log().all()
-            .extract()
-            .as(TokenResponse.class);
+            .extract();
+    }
+
+    @Test
+    @DisplayName("이메일 인증 재발송은 계정 존재 여부를 노출하지 않는다")
+    void emailVerification_ResendUnknownEmailStillReturnsOk() {
+        given()
+            .contentType(ContentType.JSON)
+            .body("""
+                {
+                  "email": "unknown-verification@test.com"
+                }
+                """)
+        .when()
+            .post("/email-verification/resend")
+        .then()
+            .statusCode(200)
+            .body("message", equalTo("인증 메일이 발송되었습니다. 메일이 도착하지 않으면 입력한 이메일을 확인해 주세요."));
     }
 
     @Test

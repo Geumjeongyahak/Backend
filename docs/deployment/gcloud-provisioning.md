@@ -504,6 +504,13 @@ receivers:
 
 ## 8. OAuth 설정
 
+OAuth client는 두 용도로 분리한다.
+
+- 로그인/회원가입용: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`
+- Google Drive 업로드용: `GOOGLE_DRIVE_OAUTH_CLIENT_ID`, `GOOGLE_DRIVE_OAUTH_CLIENT_SECRET`, `GOOGLE_DRIVE_OAUTH_REFRESH_TOKEN`
+
+### 8.1 로그인/회원가입용 Google OAuth
+
 Google Cloud Console에서:
 
 1. APIs & Services > OAuth consent screen 구성
@@ -514,7 +521,46 @@ Google Cloud Console에서:
 5. Authorized redirect URIs:
    - `https://API_DOMAIN/api/v1/auth/google/callback`
    - 도메인이 아직 없으면 `http://APP_EXTERNAL_IP:8080/api/v1/auth/google/callback`
-6. 발급된 client id/secret을 앱 서버 `.env`에 입력
+6. 발급된 client id/secret을 앱 서버 `.env`의 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`에 입력
+
+이 client는 서버가 `openid email profile` scope로 Google 로그인/회원가입을 처리할 때만 사용한다.
+
+### 8.2 Google Drive 업로드용 OAuth
+
+Workspace Shared Drive 없이 개인 Google Drive를 쓰는 경우 service account JSON으로는 저장 quota 문제를 피할 수 없다. Drive 소유자 Google 계정으로 OAuth refresh token을 1회 발급해 앱 서버에 저장한다.
+
+Drive 업로드용 OAuth client:
+
+1. APIs & Services > Credentials > Create Credentials > OAuth client ID
+2. Application type: Web application
+3. Authorized redirect URIs:
+   - `https://developers.google.com/oauthplayground`
+4. Authorized JavaScript origins는 비워도 된다.
+
+refresh token 발급:
+
+1. `https://developers.google.com/oauthplayground` 접속
+2. 우측 설정에서 `Use your own OAuth credentials` 체크
+3. Drive 업로드용 client id/secret 입력
+4. scope에 `https://www.googleapis.com/auth/drive` 입력
+5. Drive 소유자 Google 계정으로 승인
+6. `Exchange authorization code for tokens` 실행
+7. 나온 `refresh_token`을 앱 서버 `.env`에 입력
+
+앱 서버 `.env`:
+
+```env
+GOOGLE_DRIVE_OAUTH_CLIENT_ID=<Drive OAuth client id>
+GOOGLE_DRIVE_OAUTH_CLIENT_SECRET=<Drive OAuth client secret>
+GOOGLE_DRIVE_OAUTH_REFRESH_TOKEN=<Drive OAuth refresh token>
+GOOGLE_DRIVE_FOLDER_ID_BOARD=<Drive folder id>
+GOOGLE_DRIVE_FOLDER_ID_HANDOVER=<Drive folder id>
+GOOGLE_DRIVE_FOLDER_ID_EXAM_MATERIALS=<Drive folder id>
+GOOGLE_DRIVE_FOLDER_ID_DOCUMENT_FORMS=<Drive folder id>
+GOOGLE_DRIVE_FOLDER_ID_MEETING_RECORDS=<Drive folder id>
+```
+
+OAuth consent screen이 `Testing` 상태면 refresh token이 7일 만료될 수 있다. 지속 운영은 `Production` 상태로 전환한다.
 
 출력 확인:
 

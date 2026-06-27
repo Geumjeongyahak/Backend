@@ -10,10 +10,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import geumjeongyahak.common.security.service.CustomUserDetails;
+import geumjeongyahak.domain.auth.service.EmailVerificationService;
 import geumjeongyahak.domain.auth.service.LocalAuthService;
+import geumjeongyahak.domain.auth.service.PasswordResetService;
+import geumjeongyahak.domain.auth.v1.dto.request.EmailVerificationConfirmRequest;
+import geumjeongyahak.domain.auth.v1.dto.request.EmailVerificationResendRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalSignupRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LogoutRequest;
+import geumjeongyahak.domain.auth.v1.dto.request.PasswordResetConfirmRequest;
+import geumjeongyahak.domain.auth.v1.dto.request.PasswordResetRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.RefreshTokenRequest;
 import geumjeongyahak.domain.auth.v1.dto.response.AuthMessageResponse;
 import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
@@ -25,10 +31,12 @@ import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
 @Tag(name = "Auth", description = "인증 API")
 public class LocalAuthController {
     private final LocalAuthService localLoginService;
+    private final PasswordResetService passwordResetService;
+    private final EmailVerificationService emailVerificationService;
 
     @Operation(
         summary = "로그인",
-        description = "이메일과 비밀번호로 로그인합니다. 비활성화된 사용자는 로그인할 수 없습니다."
+        description = "이메일과 비밀번호로 로그인합니다. 비활성화되었거나 이메일 인증을 완료하지 않은 Local 사용자는 로그인할 수 없습니다."
     )
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(
@@ -40,7 +48,7 @@ public class LocalAuthController {
 
     @Operation(
         summary = "관리자 로그인",
-        description = "관리자 페이지에서 사용할 ADMIN/MANAGER 전용 JWT 로그인을 수행합니다. 비활성화된 사용자는 로그인할 수 없습니다."
+        description = "관리자 페이지에서 사용할 ADMIN/MANAGER 전용 JWT 로그인을 수행합니다. 비활성화되었거나 이메일 인증을 완료하지 않은 Local 사용자는 로그인할 수 없습니다."
     )
     @PostMapping("/admin/login")
     public ResponseEntity<TokenResponse> adminLogin(
@@ -52,14 +60,66 @@ public class LocalAuthController {
 
     @Operation(
         summary = "회원가입",
-        description = "이메일, 비밀번호, 기본 정보와 생년월일로 새로운 사용자를 등록합니다. 생년월일은 내부 저장 형식으로 변환되며, 프로필 이미지는 가입 후 별도 업로드 API로 등록합니다."
+        description = "이메일, 비밀번호, 기본 정보와 생년월일로 새로운 사용자를 등록하고 이메일 인증번호를 발송합니다. 가입 직후 토큰은 발급하지 않습니다."
     )
     @PostMapping("/signup")
-    public ResponseEntity<TokenResponse> signup(
+    public ResponseEntity<AuthMessageResponse> signup(
             @Valid @RequestBody LocalSignupRequest request
     ) {
         log.debug("POST /api/v1/auth/signup - 회원가입 요청: {}", request.email());
         return ResponseEntity.status(HttpStatus.CREATED).body(localLoginService.signup(request));
+    }
+
+    @Operation(
+        summary = "이메일 인증 확정",
+        description = "회원가입 또는 재발송 메일로 받은 6자리 인증번호로 Local 로그인 이메일을 인증합니다."
+    )
+    @PostMapping("/email-verification/confirm")
+    public ResponseEntity<AuthMessageResponse> confirmEmailVerification(
+            @Valid @RequestBody EmailVerificationConfirmRequest request
+    ) {
+        log.debug("POST /api/v1/auth/email-verification/confirm - 이메일 인증 요청");
+        emailVerificationService.confirm(request.email(), request.verificationCode());
+        return ResponseEntity.ok(AuthMessageResponse.of("이메일 인증이 완료되었습니다. 로그인해 주세요."));
+    }
+
+    @Operation(
+        summary = "이메일 인증 메일 재발송",
+        description = "미인증 Local 계정에 이메일 인증번호를 다시 발송합니다. 계정 존재 여부는 노출하지 않고 항상 동일한 성공 응답을 반환합니다."
+    )
+    @PostMapping("/email-verification/resend")
+    public ResponseEntity<AuthMessageResponse> resendEmailVerification(
+            @Valid @RequestBody EmailVerificationResendRequest request
+    ) {
+        log.debug("POST /api/v1/auth/email-verification/resend - 이메일 인증 재발송 요청: {}", request.email());
+        emailVerificationService.resend(request.email());
+        return ResponseEntity.ok(AuthMessageResponse.of("인증 메일이 발송되었습니다. 메일이 도착하지 않으면 입력한 이메일을 확인해 주세요."));
+    }
+
+    @Operation(
+        summary = "비밀번호 재설정 메일 요청",
+        description = "비밀번호를 모르는 사용자가 Local 로그인 이메일로 6자리 인증번호를 요청합니다. 계정 존재 여부는 노출하지 않고 항상 동일한 성공 응답을 반환합니다."
+    )
+    @PostMapping("/password-reset/request")
+    public ResponseEntity<AuthMessageResponse> requestPasswordReset(
+            @Valid @RequestBody PasswordResetRequest request
+    ) {
+        log.debug("POST /api/v1/auth/password-reset/request - 비밀번호 재설정 요청: {}", request.email());
+        passwordResetService.requestReset(request.email());
+        return ResponseEntity.ok(AuthMessageResponse.of("비밀번호 재설정 안내 메일이 발송되었습니다. 메일이 도착하지 않으면 입력한 이메일을 확인해 주세요."));
+    }
+
+    @Operation(
+        summary = "비밀번호 재설정 확정",
+        description = "메일로 받은 6자리 인증번호와 새 비밀번호로 Local 로그인 비밀번호를 재설정합니다."
+    )
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<AuthMessageResponse> confirmPasswordReset(
+            @Valid @RequestBody PasswordResetConfirmRequest request
+    ) {
+        log.debug("POST /api/v1/auth/password-reset/confirm - 비밀번호 재설정 확정 요청");
+        passwordResetService.resetPassword(request.email(), request.resetCode(), request.newPassword());
+        return ResponseEntity.ok(AuthMessageResponse.of("비밀번호가 재설정되었습니다. 새 비밀번호로 로그인해 주세요."));
     }
 
     @Operation(

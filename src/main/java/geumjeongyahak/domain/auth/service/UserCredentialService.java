@@ -83,7 +83,17 @@ public class UserCredentialService {
         String email,
         String password
     ) {
-log.info("로컬 로그인 자격 증명 생성 요청 - userId: {}, email: {}", user.getId(), user.getEmail());
+        return createLocalCredential(user, email, password, true);
+    }
+
+    @Transactional
+    public UserCredential createLocalCredential(
+        User user,
+        String email,
+        String password,
+        boolean emailVerified
+    ) {
+        log.info("로컬 로그인 자격 증명 생성 요청 - userId: {}, email: {}", user.getId(), user.getEmail());
 
         if (hasCredentialForProvider(user.getId(), ProviderType.LOCAL)) {
             log.info("로컬 로그인 자격 증명 생성 실패 - 이미 로컬 계정으로 가입된 사용자: userId: {}, email: {}", user.getId(), user.getEmail());
@@ -101,9 +111,9 @@ log.info("로컬 로그인 자격 증명 생성 요청 - userId: {}, email: {}",
             user,
             email,
             passwordEncoder.encode(password),
-            true
+            emailVerified
         );
-        
+
         log.debug("로컬 로그인 자격 증명 생성 완료 - userId: {}, email: {}", user.getId(), user.getEmail());
         return userCredentialRepository.save(credential);
     }
@@ -152,7 +162,7 @@ log.info("로컬 로그인 자격 증명 생성 요청 - userId: {}, email: {}",
                 log.info("로컬 로그인 비밀번호 업데이트 실패 - 로컬 계정이 존재하지 않음: userId: {}, email: {}", user.getId(), user.getEmail());
                 throw new CredentialNotFoundException();
             });
-        credential.setPasswordHash(newPasswordHash);
+        credential.changePassword(newPasswordHash);
         userCredentialRepository.save(credential);
         log.debug("로컬 로그인 비밀번호 업데이트 완료 - userId: {}, email: {}", user.getId(), user.getEmail());
     }
@@ -168,9 +178,16 @@ log.info("로컬 로그인 자격 증명 생성 요청 - userId: {}, email: {}",
         if (existsByCredentialEmailAndProvider(newEmail, ProviderType.LOCAL)) {
             throw new DuplicateCredentialException("이미 가입된 계정입니다.");
         }
-        credential.setCredentialEmail(newEmail);
-        credential.setEmailVerified(false);
+        credential.changeCredentialEmail(newEmail);
         userCredentialRepository.save(credential);
+    }
+
+    @Transactional
+    public void clearPasswordResetTokensByUserId(Long userId) {
+        List<UserCredential> credentials = userCredentialRepository.findAllByUserId(userId);
+        credentials.forEach(UserCredential::clearPasswordResetToken);
+        userCredentialRepository.saveAll(credentials);
+        log.debug("사용자 비밀번호 재설정 토큰 정리 완료 - userId: {}", userId);
     }
 
     @Transactional

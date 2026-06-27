@@ -358,6 +358,13 @@ class TeacherAssignmentAdminTest extends BaseE2ETest {
 
     private void cleanupFixtures() {
         jdbcTemplate.update("""
+            DELETE FROM lessons
+            WHERE date = DATE '2099-03-02'
+              AND start_time = TIME '19:20:00'
+              AND end_time = TIME '20:00:00'
+              AND teacher_id IN (2, 3)
+            """);
+        jdbcTemplate.update("""
             DELETE FROM absence_requests
             WHERE daily_schedule_id IN (
                 SELECT id FROM daily_schedules WHERE lesson_date >= DATE '2099-01-01'
