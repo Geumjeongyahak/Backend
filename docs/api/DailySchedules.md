@@ -19,6 +19,7 @@ DailySchedule은 같은 분반과 같은 날짜의 Lesson들을 하루 단위로
 | `DELETE /api/v1/daily-schedules/{dailyScheduleId}/journal` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
 | `PATCH /api/v1/daily-schedules/{dailyScheduleId}/student-attendances` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
 | `PATCH /api/v1/daily-schedules/{dailyScheduleId}/teacher-attendance` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
+| `PATCH /api/v1/daily-schedules/{dailyScheduleId}/teacher-attendance/check-out` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
 | `PATCH /api/v1/daily-schedules/{dailyScheduleId}/status` | `ADMIN`, `daily-schedule:manage:*` |
 
 접근 범위:
@@ -216,9 +217,21 @@ DELETE /api/v1/daily-schedules/1/journal
 
 - 교사 출석을 `PRESENT`, `LATE`, `EXCUSED`로 처리할 때 위치 정보를 함께 저장할 수 있습니다.
 - 교사 출석을 `ABSENT`로 처리하면 출석 시각과 위치 정보는 저장하지 않습니다.
+- 교사 퇴근 처리는 출근 처리 이후에만 가능합니다.
+- 교사 퇴근 처리는 DailySchedule에 연결된 모든 활성 Lesson의 수업 일지 note가 작성된 이후에만 가능합니다.
+- 교사 계정은 퇴근 처리를 최초 1회만 할 수 있으며, 이미 퇴근 처리된 경우 재처리할 수 없습니다.
+- 퇴근 시간은 출근 시간보다 빠를 수 없습니다.
 - 학생 출석 요청에는 같은 학생이 중복으로 들어올 수 없습니다.
 - 학생 출석 요청의 학생은 해당 DailySchedule의 분반에 속한 학생이어야 합니다.
-- `CANCELLED` 상태의 DailySchedule에는 교사 출석과 학생 출석을 처리할 수 없습니다.
+- `CANCELLED` 상태의 DailySchedule에는 교사 출석, 교사 퇴근, 학생 출석을 처리할 수 없습니다.
+
+교사 퇴근 처리:
+
+```http
+PATCH /api/v1/daily-schedules/1/teacher-attendance/check-out
+```
+
+성공 시 현재 서버 시각을 퇴근 시간으로 저장하고 DailySchedule 상세 응답을 반환합니다.
 
 ## 상태 정책
 
@@ -302,4 +315,8 @@ GET /api/v1/daily-schedules/volunteer-hours
 | DailySchedule에 연결되지 않은 학생으로 출석 처리 | `400 Bad Request` |
 | 학생 출석 요청에 같은 학생이 중복됨 | `400 Bad Request` |
 | 휴강 상태에서 수업 일지 또는 출석 처리 시도 | `400 Bad Request` |
+| 출근 처리 전 교사 퇴근 처리 시도 | `400 Bad Request` |
+| 수업 일지 작성 전 교사 퇴근 처리 시도 | `400 Bad Request` |
+| 퇴근 시간이 출근 시간보다 빠름 | `400 Bad Request` |
+| 이미 퇴근 처리된 교사 출석에 다시 퇴근 처리 시도 | `409 Conflict` |
 | 개인정보 동의 여부와 주민번호 앞자리 입력값이 일치하지 않음 | `400 Bad Request` |

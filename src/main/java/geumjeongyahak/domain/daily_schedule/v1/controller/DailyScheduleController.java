@@ -267,6 +267,22 @@ public class DailyScheduleController {
         ));
     }
 
+    @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
+    @Operation(summary = "하루 일정 교사 퇴근 처리", description = "수업 일지 작성과 교사 출근 처리가 완료된 하루 일정의 교사 퇴근 시간을 기록합니다.")
+    @PatchMapping("/{dailyScheduleId}/teacher-attendance/check-out")
+    public ResponseEntity<DailyScheduleDetailResponse> checkOutTeacherAttendance(
+        @PathVariable Long dailyScheduleId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/daily-schedules/{}/teacher-attendance/check-out - 교사 퇴근 처리 요청", dailyScheduleId);
+        return ResponseEntity.ok(dailyScheduleService.checkOutTeacherAttendance(
+            dailyScheduleId,
+            userDetails.getUserId(),
+            canManageAnyDailySchedule(userDetails),
+            canViewSensitiveInfo(userDetails)
+        ));
+    }
+
     private boolean canManageAnyDailySchedule(CustomUserDetails userDetails) {
         return userDetails.isAdmin()
             || userDetails.getAuthorities().stream()

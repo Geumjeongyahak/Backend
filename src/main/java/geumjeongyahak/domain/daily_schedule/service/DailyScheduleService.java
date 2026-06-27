@@ -7,11 +7,15 @@ import geumjeongyahak.domain.daily_schedule.entity.DailyStudentAttendance;
 import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
 import geumjeongyahak.domain.daily_schedule.enums.DailyScheduleStatus;
 import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
+import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleJournalRequiredException;
 import geumjeongyahak.domain.daily_schedule.exception.DuplicateDailyStudentAttendanceException;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleForbiddenException;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleJournalAlreadyExistsException;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleNotFoundException;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleVolunteerHoursForbiddenException;
+import geumjeongyahak.domain.daily_schedule.exception.DailyTeacherAttendanceRequiredException;
+import geumjeongyahak.domain.daily_schedule.exception.DailyTeacherCheckOutAlreadyExistsException;
+import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyTeacherCheckOutTimeException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleAttendanceStateException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleJournalStateException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleJournalLessonsException;
@@ -514,6 +518,42 @@ public class DailyScheduleService {
     }
 
     @Transactional
+    public DailyScheduleDetailResponse checkOutTeacherAttendance(
+        Long dailyScheduleId,
+        Long authorId,
+        boolean canWriteAnyDailySchedule,
+        boolean canViewSensitiveInfo
+    ) {
+        log.debug(
+            "DailySchedule 교사 퇴근 처리 요청 (dailyScheduleId={}, authorId={})",
+            dailyScheduleId,
+            authorId
+        );
+        DailySchedule dailySchedule = dailyScheduleRepository.findByIdAndIsDeletedFalse(dailyScheduleId)
+            .orElseThrow(() -> {
+                log.info("DailySchedule 교사 퇴근 처리 실패 - 하루 일정을 찾을 수 없습니다. ID: {}", dailyScheduleId);
+                return new DailyScheduleNotFoundException(dailyScheduleId);
+            });
+        validateDailyScheduleWritable(dailySchedule, authorId, canWriteAnyDailySchedule, "교사 퇴근 처리");
+        validateAttendanceState(dailySchedule, "교사 퇴근 처리");
+
+        DailyTeacherAttendance teacherAttendance = dailyTeacherAttendanceRepository
+            .findByDailyScheduleIdAndIsDeletedFalse(dailyScheduleId)
+            .orElseThrow(() -> {
+                log.info("DailySchedule 교사 퇴근 처리 실패 - 교사 출근 처리가 필요합니다. dailyScheduleId={}", dailyScheduleId);
+                return new DailyTeacherAttendanceRequiredException(dailyScheduleId);
+            });
+        List<Lesson> lessons = getDailyScheduleLessons(dailySchedule);
+        LocalDateTime checkedOutAt = LocalDateTime.now();
+        validateTeacherCheckOut(dailySchedule, teacherAttendance, lessons, checkedOutAt);
+
+        teacherAttendance.checkOut(checkedOutAt);
+
+        log.debug("DailySchedule 교사 퇴근 처리 완료 (dailyScheduleId={})", dailyScheduleId);
+        return getDailySchedule(dailyScheduleId, authorId, canViewSensitiveInfo);
+    }
+
+    @Transactional
     public void applyApprovedAbsence(Long dailyScheduleId) {
         log.debug(
             "승인된 결석 요청 반영 - DailySchedule 교사 출석 공결 처리 (dailyScheduleId={})",
@@ -643,6 +683,51 @@ public class DailyScheduleService {
             dailySchedule.getStatus()
         );
         throw new InvalidDailyScheduleAttendanceStateException(dailySchedule.getId(), dailySchedule.getStatus());
+    }
+
+    private void validateTeacherCheckOut(
+        DailySchedule dailySchedule,
+        DailyTeacherAttendance teacherAttendance,
+        List<Lesson> lessons,
+        LocalDateTime checkedOutAt
+    ) {
+        if (!teacherAttendance.isAttended()) {
+            log.info(
+                "DailySchedule 교사 퇴근 처리 실패 - 출근 처리 이후에만 퇴근할 수 있습니다. dailyScheduleId={}",
+                dailySchedule.getId()
+            );
+            throw new DailyTeacherAttendanceRequiredException(dailySchedule.getId());
+        }
+
+        if (teacherAttendance.isCheckedOut()) {
+            log.info(
+                "DailySchedule 교사 퇴근 처리 실패 - 이미 퇴근 처리된 출석입니다. dailyScheduleId={}",
+                dailySchedule.getId()
+            );
+            throw new DailyTeacherCheckOutAlreadyExistsException(dailySchedule.getId());
+        }
+
+        if (!isJournalCompleted(lessons)) {
+            log.info(
+                "DailySchedule 교사 퇴근 처리 실패 - 수업 일지 작성 이후에만 퇴근할 수 있습니다. dailyScheduleId={}",
+                dailySchedule.getId()
+            );
+            throw new DailyScheduleJournalRequiredException(dailySchedule.getId());
+        }
+
+        if (checkedOutAt.isBefore(teacherAttendance.getAttendedAt())) {
+            log.info(
+                "DailySchedule 교사 퇴근 처리 실패 - 퇴근 시간이 출근 시간보다 빠릅니다. dailyScheduleId={}, attendedAt={}, checkedOutAt={}",
+                dailySchedule.getId(),
+                teacherAttendance.getAttendedAt(),
+                checkedOutAt
+            );
+            throw new InvalidDailyTeacherCheckOutTimeException(
+                dailySchedule.getId(),
+                teacherAttendance.getAttendedAt(),
+                checkedOutAt
+            );
+        }
     }
 
     private void validateJournalPersonalInfo(
@@ -791,6 +876,10 @@ public class DailyScheduleService {
 
     private boolean hasWrittenJournal(List<Lesson> lessons) {
         return lessons.stream().anyMatch(lesson -> hasText(lesson.getNote()));
+    }
+
+    private boolean isJournalCompleted(List<Lesson> lessons) {
+        return !lessons.isEmpty() && lessons.stream().allMatch(lesson -> hasText(lesson.getNote()));
     }
 
     private boolean matchesKeyword(DailyScheduleWithLessons dailyScheduleWithLessons, String keyword) {
