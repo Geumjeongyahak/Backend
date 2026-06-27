@@ -206,7 +206,7 @@ DELETE /api/v1/daily-schedules/1/journal
 | `ABSENT` | 결석 또는 아직 출석 처리 전 |
 | `PRESENT` | 출석 |
 | `LATE` | 지각 |
-| `EXCUSED` | 공결 |
+| `EXCUSED` | 공결. 실제 출근 기록과 봉사 시간에는 포함하지 않음 |
 
 학생 출석 상태:
 
@@ -216,8 +216,8 @@ DELETE /api/v1/daily-schedules/1/journal
 | `PRESENT` | 출석 |
 | `LATE` | 지각 |
 
-- 교사 출석을 `PRESENT`, `LATE`, `EXCUSED`로 처리할 때 위치 정보를 함께 저장할 수 있습니다.
-- 교사 출석을 `ABSENT`로 처리하면 출석 시각과 위치 정보는 저장하지 않습니다.
+- 교사 출석을 `PRESENT`, `LATE`로 처리할 때 위치 정보를 함께 저장할 수 있습니다.
+- 교사 출석을 `ABSENT`, `EXCUSED`로 처리하면 출석 시각과 위치 정보는 저장하지 않습니다.
 - 교사 퇴근 처리는 출근 처리 이후에만 가능합니다.
 - 교사 퇴근 처리는 DailySchedule에 연결된 모든 활성 Lesson의 수업 일지 note가 작성된 이후에만 가능합니다.
 - 교사 계정은 퇴근 처리를 최초 1회만 할 수 있으며, 이미 퇴근 처리된 경우 재처리할 수 없습니다.
@@ -263,7 +263,7 @@ DailySchedule 상태는 다음 값을 사용합니다.
 
 자동 완료 조건:
 
-- 교사 출석 상태가 `ABSENT`가 아니어야 합니다.
+- 교사 출석 상태가 실제 출근 상태인 `PRESENT` 또는 `LATE`여야 합니다.
 - DailySchedule에 연결된 모든 활성 Lesson에 수업 일지 note가 작성되어야 합니다.
 - 두 조건을 모두 만족하면 DailySchedule은 `COMPLETED`로 변경되고, 같은 날짜/분반의 활성 Lesson도 `COMPLETED`로 연동됩니다.
 
@@ -280,7 +280,8 @@ DailySchedule 상태는 다음 값을 사용합니다.
 
 - 봉사 시간은 `DailyTeacherAttendance.volunteerServiceMinutes`를 기준으로 집계합니다.
 - `COMPLETED` 상태의 DailySchedule만 집계합니다.
-- 교사 출석 상태가 `ABSENT`인 기록은 집계하지 않습니다.
+- 교사 출석 상태가 실제 출근 상태인 `PRESENT` 또는 `LATE`인 기록만 집계합니다.
+- `ABSENT`, `EXCUSED` 기록은 실제 출근이 없으므로 봉사 시간에 집계하지 않습니다.
 - `teacherId`를 입력하지 않으면 본인 기준으로 조회합니다.
 - `from`, `to`를 모두 입력하지 않으면 전체 누적 봉사 시간을 조회합니다.
 - `from`만 입력하면 해당 날짜 이후, `to`만 입력하면 해당 날짜 이전으로 집계합니다.

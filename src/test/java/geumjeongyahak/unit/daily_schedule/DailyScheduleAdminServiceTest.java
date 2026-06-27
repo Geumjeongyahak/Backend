@@ -225,6 +225,46 @@ class DailyScheduleAdminServiceTest {
     }
 
     @Test
+    void correctTeacherAttendance_recalculatesScheduleWhenStatusIsExcused() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        dailySchedule.updateStatus(DailyScheduleStatus.COMPLETED);
+        DailyTeacherAttendance teacherAttendance = teacherAttendance(dailySchedule);
+        teacherAttendance.checkOut(LocalDateTime.of(2026, 5, 20, 16, 0));
+        Lesson lesson = lesson(subject(classroom, teacher, lessonDate), teacher, lessonDate);
+        lesson.updateNote("수업 내용");
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(teacherAttendance));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of(lesson));
+        given(dailyStudentAttendanceRepository.findAllByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(List.of());
+
+        DailyScheduleDetailResponse response = dailyScheduleAdminService.correctTeacherAttendance(
+            dailySchedule.getId(),
+            1L,
+            true,
+            new UpdateDailyTeacherAttendanceCorrectionRequest(DailyTeacherAttendanceStatus.EXCUSED, null, null)
+        );
+
+        assertThat(teacherAttendance.getStatus()).isEqualTo(DailyTeacherAttendanceStatus.EXCUSED);
+        assertThat(teacherAttendance.getAttendedAt()).isNull();
+        assertThat(teacherAttendance.getCheckedOutAt()).isNull();
+        assertThat(dailySchedule.getStatus()).isEqualTo(DailyScheduleStatus.SCHEDULED);
+        assertThat(response.status()).isEqualTo(DailyScheduleStatus.SCHEDULED);
+        verify(lessonProxyService).updateActiveLessonsStatusByClassroomAndDate(
+            classroom.getId(),
+            lessonDate,
+            LessonStatus.SCHEDULED
+        );
+    }
+
+    @Test
     void correctTeacherAttendance_completesScheduleWhenAttendanceAndJournalAreCompleted() {
         LocalDate lessonDate = LocalDate.of(2026, 5, 20);
         Classroom classroom = classroom(1L);

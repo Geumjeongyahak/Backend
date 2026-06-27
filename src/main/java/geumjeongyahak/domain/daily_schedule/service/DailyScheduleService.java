@@ -295,7 +295,7 @@ public class DailyScheduleService {
             request.from(),
             request.to(),
             DailyScheduleStatus.COMPLETED,
-            DailyTeacherAttendanceStatus.ABSENT
+            List.of(DailyTeacherAttendanceStatus.PRESENT, DailyTeacherAttendanceStatus.LATE)
         );
         log.debug(
             "DailySchedule 봉사 시간 조회 완료 (targetTeacherId={}, totalMinutes={})",
@@ -498,9 +498,9 @@ public class DailyScheduleService {
                 dailySchedule,
                 calculateVolunteerServiceMinutes(dailySchedule.getActivityStartTime(), dailySchedule.getActivityEndTime())
             )));
-        LocalDateTime attendedAt = request.status() == DailyTeacherAttendanceStatus.ABSENT
-            ? null
-            : LocalDateTime.now();
+        LocalDateTime attendedAt = request.status().isActualAttendance()
+            ? LocalDateTime.now()
+            : null;
 
         teacherAttendance.updateAttendance(
             request.status(),
@@ -634,7 +634,7 @@ public class DailyScheduleService {
 
         boolean teacherAttendanceCompleted = dailyTeacherAttendanceRepository
             .findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId())
-            .map(attendance -> attendance.getStatus() != DailyTeacherAttendanceStatus.ABSENT)
+            .map(attendance -> attendance.getStatus().isActualAttendance())
             .orElse(false);
         boolean journalCompleted = !lessons.isEmpty()
             && lessons.stream().allMatch(lesson -> lesson.getNote() != null && !lesson.getNote().isBlank());
@@ -741,7 +741,7 @@ public class DailyScheduleService {
         );
         boolean teacherAttendanceCompleted = dailyTeacherAttendanceRepository
             .findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId())
-            .map(attendance -> attendance.getStatus() != DailyTeacherAttendanceStatus.ABSENT)
+            .map(attendance -> attendance.getStatus().isActualAttendance())
             .orElse(false);
         boolean journalCompleted = isJournalCompleted(lessons);
 

@@ -25,9 +25,9 @@ public class DailyTeacherAttendanceLocationValidator
             return false;
         }
 
-        if (value.status() == DailyTeacherAttendanceStatus.ABSENT && hasLatitude) {
+        if (!value.status().isActualAttendance() && hasLatitude) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("결석 상태에서는 위치 정보를 입력할 수 없습니다.")
+            context.buildConstraintViolationWithTemplate("결석 또는 공결 상태에서는 위치 정보를 입력할 수 없습니다.")
                 .addPropertyNode("status")
                 .addConstraintViolation();
             return false;

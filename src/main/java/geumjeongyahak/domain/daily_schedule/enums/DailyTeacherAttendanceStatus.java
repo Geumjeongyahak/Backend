@@ -15,4 +15,8 @@ public enum DailyTeacherAttendanceStatus {
     public String getDisplayName() {
         return displayName;
     }
+
+    public boolean isActualAttendance() {
+        return this == PRESENT || this == LATE;
+    }
 }

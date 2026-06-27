@@ -21,6 +21,7 @@ import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.student.service.StudentProxyService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -58,7 +59,7 @@ class DailyScheduleServiceVolunteerHoursTest {
             from,
             to,
             DailyScheduleStatus.COMPLETED,
-            DailyTeacherAttendanceStatus.ABSENT
+            List.of(DailyTeacherAttendanceStatus.PRESENT, DailyTeacherAttendanceStatus.LATE)
         )).willReturn(360L);
 
         DailyScheduleVolunteerHoursResponse response = dailyScheduleService.getVolunteerHours(
@@ -83,7 +84,7 @@ class DailyScheduleServiceVolunteerHoursTest {
             from,
             to,
             DailyScheduleStatus.COMPLETED,
-            DailyTeacherAttendanceStatus.ABSENT
+            List.of(DailyTeacherAttendanceStatus.PRESENT, DailyTeacherAttendanceStatus.LATE)
         )).willReturn(125L);
 
         DailyScheduleVolunteerHoursResponse response = dailyScheduleService.getVolunteerHours(
@@ -105,7 +106,7 @@ class DailyScheduleServiceVolunteerHoursTest {
             null,
             null,
             DailyScheduleStatus.COMPLETED,
-            DailyTeacherAttendanceStatus.ABSENT
+            List.of(DailyTeacherAttendanceStatus.PRESENT, DailyTeacherAttendanceStatus.LATE)
         )).willReturn(480L);
 
         DailyScheduleVolunteerHoursResponse response = dailyScheduleService.getVolunteerHours(

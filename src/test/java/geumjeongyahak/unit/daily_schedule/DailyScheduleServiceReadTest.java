@@ -721,6 +721,40 @@ class DailyScheduleServiceReadTest {
     }
 
     @Test
+    void updateTeacherAttendance_doesNotCompleteDailyScheduleWhenStatusIsExcused() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Subject subject = subject(classroom, teacher, lessonDate);
+        Lesson lesson = lesson(subject, teacher, lessonDate, 1);
+        lesson.updateNote("수업 내용");
+        DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(teacherAttendance));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of(lesson));
+        given(dailyStudentAttendanceRepository.findAllByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(List.of());
+
+        DailyScheduleDetailResponse response = dailyScheduleService.updateTeacherAttendance(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            false,
+            new UpdateDailyTeacherAttendanceRequest(DailyTeacherAttendanceStatus.EXCUSED, null, null)
+        );
+
+        assertThat(teacherAttendance.getStatus()).isEqualTo(DailyTeacherAttendanceStatus.EXCUSED);
+        assertThat(teacherAttendance.getAttendedAt()).isNull();
+        assertThat(dailySchedule.getStatus()).isEqualTo(DailyScheduleStatus.SCHEDULED);
+        assertThat(response.status()).isEqualTo(DailyScheduleStatus.SCHEDULED);
+    }
+
+    @Test
     void checkOutTeacherAttendance_recordsCheckOutTime() {
         LocalDate lessonDate = LocalDate.of(2026, 5, 20);
         Classroom classroom = classroom(1L);
