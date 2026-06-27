@@ -122,6 +122,7 @@ public class TestStorageConfig {
         private static final String TEST_BUCKET = "test-bucket";
         private final Set<String> failDeletePaths = new HashSet<>();
         private final Set<String> deletedPaths = new HashSet<>();
+        private final Set<String> uploadedPaths = new HashSet<>();
 
         public void failDeleteFor(String path) {
             failDeletePaths.add(path);
@@ -130,10 +131,15 @@ public class TestStorageConfig {
         public void resetFailPaths() {
             failDeletePaths.clear();
             deletedPaths.clear();
+            uploadedPaths.clear();
         }
 
         public Set<String> getDeletedPaths() {
             return Set.copyOf(deletedPaths);
+        }
+
+        public Set<String> getUploadedPaths() {
+            return Set.copyOf(uploadedPaths);
         }
 
         @Override
@@ -150,6 +156,7 @@ public class TestStorageConfig {
         public StoredFile upload(byte[] content, String contentType, String originalFilename, String directory) {
             String safeName = originalFilename == null ? "file" : originalFilename.replace(" ", "_");
             String path = directory + "/" + UUID.randomUUID() + "-" + safeName;
+            uploadedPaths.add(path);
             return new StoredFile(path, TEST_BUCKET, getPublicUrl(path));
         }
 

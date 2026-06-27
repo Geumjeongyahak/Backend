@@ -14,8 +14,11 @@ import geumjeongyahak.domain.meeting_record.v1.dto.request.CreateAbsenceReportRe
 import geumjeongyahak.domain.meeting_record.v1.dto.request.CreateMeetingRecordRequest;
 import geumjeongyahak.domain.meeting_record.v1.dto.request.UpdateAbsenceReportRequest;
 import geumjeongyahak.e2e.BaseE2ETest;
+import geumjeongyahak.e2e.TestStorageConfig;
 import io.restassured.http.ContentType;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -42,6 +45,9 @@ class MeetingRecordApiTest extends BaseE2ETest {
 
     @Autowired
     private MeetingAbsenceReportRepository absenceReportRepository;
+
+    @Autowired
+    private TestStorageConfig.ControlledStorageService storageService;
 
     @BeforeEach
     @Override
@@ -301,6 +307,79 @@ class MeetingRecordApiTest extends BaseE2ETest {
     }
 
     @Test
+    @DisplayName("작성자 또는 ADMIN은 등록된 파일을 회의록 첨부파일로 연동하고 삭제할 수 있다")
+    void meetingRecordAttachment_ownerOrAdminOnly() {
+        Long recordId = createRecord(authorToken, "첨부 회의록", "안건");
+        String driveUrl = "https://drive.google.com/file/d/meeting-record-file-123/view?usp=sharing";
+        String fileId = registerDriveFile(driveUrl, "회의 자료.pdf");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(otherToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("fileId", fileId, "sortOrder", 2))
+        .when()
+            .post("/api/v1/meeting-records/{recordId}/attachments", recordId)
+        .then()
+            .statusCode(403);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(authorToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("fileId", fileId, "sortOrder", 2))
+        .when()
+            .post("/api/v1/meeting-records/{recordId}/attachments", recordId)
+        .then()
+            .statusCode(200)
+            .body("fileId", equalTo(fileId))
+            .body("isGoogleDrive", equalTo(true))
+            .body("url", equalTo(driveUrl));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(authorToken))
+        .when()
+            .get("/api/v1/meeting-records/{recordId}", recordId)
+        .then()
+            .statusCode(200)
+            .body("attachments", hasSize(1))
+            .body("attachments[0].fileId", equalTo(fileId))
+            .body("attachments[0].downloadUrl", equalTo(driveUrl))
+            .body("attachments[0].sortOrder", equalTo(2));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+        .when()
+            .delete("/api/v1/meeting-records/{recordId}/attachments/{fileId}", recordId, UUID.fromString(fileId))
+        .then()
+            .statusCode(204);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(authorToken))
+        .when()
+            .get("/api/v1/meeting-records/{recordId}", recordId)
+        .then()
+            .statusCode(200)
+            .body("attachments", hasSize(0));
+    }
+
+    @Test
+    @DisplayName("작성자가 아닌 사용자의 첨부파일 업로드 시 스토리지 업로드를 수행하지 않는다")
+    void meetingRecordAttachment_uploadByNonOwner_doesNotUploadFile() {
+        Long recordId = createRecord(authorToken, "첨부 업로드 권한", "안건");
+        storageService.resetFailPaths();
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(otherToken))
+            .contentType(ContentType.MULTIPART)
+            .multiPart("file", "unauthorized.pdf", "fake-pdf".getBytes(StandardCharsets.UTF_8), "application/pdf")
+        .when()
+            .post("/api/v1/meeting-records/{recordId}/attachments", recordId)
+        .then()
+            .statusCode(403);
+
+        assertThat(storageService.getUploadedPaths()).isEmpty();
+    }
+
+    @Test
     @DisplayName("관리자는 관리자 화면에서 회의록 목록과 상세를 조회할 수 있다")
     void adminView_listAndDetail_returns200() {
         Long recordId = createRecord(authorToken, "관리자 조회 테스트", "안건");
@@ -443,6 +522,25 @@ class MeetingRecordApiTest extends BaseE2ETest {
             .extract()
             .jsonPath()
             .getLong("id");
+    }
+
+    private String registerDriveFile(String driveUrl, String originalName) {
+        return given()
+            .header(AUTH_HEADER, getAuthHeader(authorToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "driveUrl", driveUrl,
+                "originalName", originalName,
+                "mimeType", "application/pdf",
+                "fileSize", 1024
+            ))
+        .when()
+            .post("/api/v1/files/drive")
+        .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getString("fileId");
     }
 
     private String loginAdminSession(String username, String password) {
