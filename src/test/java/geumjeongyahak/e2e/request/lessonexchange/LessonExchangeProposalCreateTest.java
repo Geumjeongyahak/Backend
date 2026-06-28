@@ -304,6 +304,31 @@ class LessonExchangeProposalCreateTest extends RequestBaseTest {
             .statusCode(404);
     }
 
+    @Test
+    @DisplayName("요청 수업 시간대에 기존 수업이 있으면 교환형 제안 생성 -> 409")
+    void createExchangeProposal_withScheduleConflict_returns409() {
+        LocalDate requestDate = LocalDate.now().plusDays(16);
+        LocalDate proposalDate = LocalDate.now().plusDays(17);
+        Long requestId = createApprovedRequest(requestDate);
+
+        Long proposerSubjectId = registerSubject(2L, TEACHER2_ID);
+        registerLesson(proposerSubjectId, TEACHER2_ID, requestDate, "09:00:00", "10:00:00", 1);
+        registerLesson(proposerSubjectId, TEACHER2_ID, proposalDate, "11:00:00", "11:50:00", 3);
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "lessonDate", proposalDate.toString(),
+                "content", "다른 날짜 수업으로 교환 가능합니다."
+            ))
+            .post("/{requestId}/proposals", requestId)
+            .then()
+            .statusCode(409)
+            .body("code", equalTo("REQ-07-016"));
+    }
+
     private Long createApprovedRequest(LocalDate lessonDate) {
         Long requestId = createPendingRequest(VOLUNTEER_USERNAME, TEACHER_ID, lessonDate);
 

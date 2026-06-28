@@ -60,6 +60,7 @@ public class LessonExchangeProposalService {
 
         String classroomName = null;
         DailySchedule proposalDailySchedule = null;
+        List<Lesson> requestLessons = getRequestLessons(exchangeRequest);
 
         // 교환형 제안과 대체형 제안을 구분
         if (proposalType == LessonExchangeProposalType.EXCHANGE) {
@@ -69,15 +70,9 @@ public class LessonExchangeProposalService {
                 proposalDailySchedule
             );
             classroomName = proposalDailySchedule.getClassroom().getName();
-        } else {
-            List<Lesson> requestLessons = getRequestLessons(exchangeRequest);
-
-            validateNoScheduleConflict(
-                proposerId,
-                exchangeRequest.getLessonDate(),
-                requestLessons
-            );
         }
+
+        validateNoScheduleConflict(proposerId, exchangeRequest.getLessonDate(), requestLessons);
 
         User proposer = userProxyService.getById(proposerId);
 
@@ -136,6 +131,7 @@ public class LessonExchangeProposalService {
 
         String classroomName = null;
         DailySchedule proposalDailySchedule = null;
+        List<Lesson> requestLessons = getRequestLessons(exchangeRequest);
 
         if (proposalType == LessonExchangeProposalType.EXCHANGE) {
             proposalDailySchedule = getProposalDailySchedule(proposerId, request.lessonDate());
@@ -144,10 +140,9 @@ public class LessonExchangeProposalService {
                 proposalDailySchedule
             );
             classroomName = proposalDailySchedule.getClassroom().getName();
-        } else {
-            List<Lesson> requestLessons = getRequestLessons(exchangeRequest);
-            validateNoScheduleConflict(proposerId, exchangeRequest.getLessonDate(), requestLessons);
         }
+
+        validateNoScheduleConflict(proposerId, exchangeRequest.getLessonDate(), requestLessons);
 
         // 수정 이후에도 제안 화면에는 최신 수정 기준의 반 이름이 유지되도록 snapshot을 함께 갱신
         proposal.update(
