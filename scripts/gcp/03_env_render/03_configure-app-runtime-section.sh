@@ -271,6 +271,7 @@ def logging():
     ask('APP_LOG_DIR','App log dir', get('APP_LOG_DIR','./logs/app'))
     ask('LOG_FILE_PATTERN','Logback rolling file pattern', get('LOG_FILE_PATTERN','./logs/app/application.%d{yyyy-MM-dd}.log'))
     ask('LOG_UPLOAD_PATH','Cloud Ops Agent log upload glob', get('LOG_UPLOAD_PATH','./logs/app/application.*.log'))
+    ask('LOG_FILE_LEVEL','Logback file appender threshold', get('LOG_FILE_LEVEL','INFO' if infra.get('ENVIRONMENT','') == 'dev' else 'WARN'), ['DEBUG','INFO','WARN','ERROR'])
     ask('LOG_FILE_MAX_HISTORY','Log max history days', get('LOG_FILE_MAX_HISTORY','30'))
     ask('LOG_FILE_TOTAL_SIZE_CAP','Log total size cap', get('LOG_FILE_TOTAL_SIZE_CAP','1GB'))
     ask('CLOUD_LOGGING_ENABLED','Cloud logging enabled', get('CLOUD_LOGGING_ENABLED','true'), ['true','false'])

@@ -284,6 +284,7 @@ ask_secret(app, app_order, "TAILSCALE_AUTHKEY", "Optional App Tailscale auth key
 ask(app, app_order, "APP_LOG_DIR", "App log dir", get(app, "APP_LOG_DIR", "./logs/app"))
 ask(app, app_order, "LOG_FILE_PATTERN", "Logback rolling file pattern", get(app, "LOG_FILE_PATTERN", "./logs/app/application.%d{yyyy-MM-dd}.log"))
 ask(app, app_order, "LOG_UPLOAD_PATH", "Cloud Ops Agent log upload glob", get(app, "LOG_UPLOAD_PATH", "./logs/app/application.*.log"))
+ask(app, app_order, "LOG_FILE_LEVEL", "Logback file appender threshold", get(app, "LOG_FILE_LEVEL", "INFO" if env == "dev" else "WARN"), choices=["DEBUG", "INFO", "WARN", "ERROR"])
 ask(app, app_order, "LOG_FILE_MAX_HISTORY", "Log max history days", get(app, "LOG_FILE_MAX_HISTORY", "30"))
 ask(app, app_order, "LOG_FILE_TOTAL_SIZE_CAP", "Log total size cap", get(app, "LOG_FILE_TOTAL_SIZE_CAP", "1GB"))
 ask(app, app_order, "CLOUD_LOGGING_ENABLED", "Cloud logging enabled", get(app, "CLOUD_LOGGING_ENABLED", "true"), choices=["true", "false"])

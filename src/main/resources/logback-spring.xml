@@ -6,6 +6,7 @@
     <springProperty scope="context" name="appLogLevel" source="LOG_LEVEL_APP" defaultValue="WARN"/>
     <springProperty scope="context" name="springLogLevel" source="LOG_LEVEL_SPRING" defaultValue="WARN"/>
     <springProperty scope="context" name="sqlLogLevel" source="LOG_LEVEL_SQL" defaultValue="WARN"/>
+    <springProperty scope="context" name="logFileLevel" source="LOG_FILE_LEVEL" defaultValue="WARN"/>
     <springProperty scope="context" name="logFilePattern" source="LOG_FILE_PATTERN" defaultValue="./logs/app/application.%d{yyyy-MM-dd}.log"/>
     <springProperty scope="context" name="logFileMaxHistory" source="LOG_FILE_MAX_HISTORY" defaultValue="30"/>
     <springProperty scope="context" name="logFileTotalSizeCap" source="LOG_FILE_TOTAL_SIZE_CAP" defaultValue="1GB"/>
@@ -24,7 +25,7 @@
 
     <appender name="WARN_ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>WARN</level>
+            <level>${logFileLevel}</level>
         </filter>
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [trace_id=%X{trace_id:-} span_id=%X{span_id:-}] %logger{36} - %msg%n%ex</pattern>

@@ -41,9 +41,15 @@ jobs:
           printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
+          APP_JAR="$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar' | sort | tail -n 1)"
+          if [[ -z "${APP_JAR}" ]]; then
+            echo "app jar not found under build/libs" >&2
+            exit 1
+          fi
+
           ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts
           ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" "mkdir -p ~/app-dev"
-          scp -i ~/.ssh/deploy_key build/libs/*.jar scripts/gcp/05_app/01_install-app-service.sh \
+          scp -i ~/.ssh/deploy_key "${APP_JAR}" scripts/gcp/05_app/01_install-app-service.sh \
             "${SSH_USER}@${SSH_HOST}:~/app-dev/"
           ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" \
-            "cd ~/app-dev && test -f .env && mv *.jar app.jar && chmod +x 01_install-app-service.sh && ./01_install-app-service.sh"
+            "cd ~/app-dev && test -f .env && mv \"$(basename "${APP_JAR}")\" app.jar && chmod +x 01_install-app-service.sh && ./01_install-app-service.sh"

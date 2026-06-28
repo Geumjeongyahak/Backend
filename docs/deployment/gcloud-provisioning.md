@@ -302,7 +302,7 @@ gcloud compute ssh "$APP_INSTANCE_NAME" \
   --command "sudo journalctl -u gjlearn-app -n 200 --no-pager"
 ```
 
-파일 로그는 앱 서버의 `~/app-dev/logs/app/application.yyyy-MM-dd.log`에 일자별로 남는다. Logback이 `LOG_FILE_MAX_HISTORY=30` 기준으로 오래된 파일을 삭제한다. 파일 appender 자체가 `WARN`/`ERROR` 이상만 기록하므로 Cloud Ops Agent는 JSON 파싱 없이 `LOG_UPLOAD_PATH`에 매칭되는 파일을 Cloud Logging log id `gjlearn-<env>-app`으로 전달한다.
+파일 로그는 앱 서버의 `~/app-dev/logs/app/application.yyyy-MM-dd.log`에 일자별로 남는다. Logback이 `LOG_FILE_LEVEL` 이상을 기록하고 `LOG_FILE_MAX_HISTORY=30` 기준으로 오래된 파일을 삭제한다. Cloud Ops Agent는 JSON 파싱 없이 `LOG_UPLOAD_PATH`에 매칭되는 파일을 Cloud Logging log id `gjlearn-<env>-app`으로 전달한다.
 
 Cloud Logging 로그 기반 metric과 alert policy를 생성/갱신한다. 알림 수신 채널을 이미 만든 경우 `scripts/gcp/00_env/<env>.env`에 `ALERT_NOTIFICATION_CHANNELS`를 넣고 실행한다.
 

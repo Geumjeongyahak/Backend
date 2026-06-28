@@ -25,7 +25,7 @@ METRIC_NAME="${CLOUD_LOGGING_WARN_ERROR_METRIC_NAME:-gjlearn_${ENVIRONMENT}_app_
 POLICY_DISPLAY_NAME="${CLOUD_LOGGING_WARN_ERROR_POLICY_NAME:-GJLearn ${ENVIRONMENT} app WARN/ERROR logs}"
 NOTIFICATION_CHANNELS="${ALERT_NOTIFICATION_CHANNELS:-}"
 
-LOG_FILTER="resource.type=\"gce_instance\" AND log_id(\"${LOG_ID}\")"
+LOG_FILTER="resource.type=\"gce_instance\" AND log_id(\"${LOG_ID}\") AND (jsonPayload.message=~\" WARN \" OR jsonPayload.message=~\" ERROR \")"
 
 if gcloud logging metrics describe "${METRIC_NAME}" --project="${PROJECT_ID}" >/dev/null 2>&1; then
   gcloud logging metrics update "${METRIC_NAME}" \
