@@ -15,6 +15,8 @@ import geumjeongyahak.domain.meeting_record.v1.dto.request.CreateMeetingRecordRe
 import geumjeongyahak.domain.meeting_record.v1.dto.request.UpdateAbsenceReportRequest;
 import geumjeongyahak.e2e.BaseE2ETest;
 import geumjeongyahak.e2e.TestStorageConfig;
+import geumjeongyahak.e2e.util.AdminSessionHelper;
+import geumjeongyahak.e2e.util.AdminSessionHelper.AdminSession;
 import io.restassured.http.ContentType;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -384,10 +386,10 @@ class MeetingRecordApiTest extends BaseE2ETest {
     void adminView_listAndDetail_returns200() {
         Long recordId = createRecord(authorToken, "관리자 조회 테스트", "안건");
         createAbsenceReport(recordId, otherToken, "불참 사유", "의견");
-        String adminSessionId = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        AdminSession adminSession = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
 
         given()
-            .cookie("JSESSIONID", adminSessionId)
+            .cookie("JSESSIONID", adminSession.sessionId())
         .when()
             .get("/admin/meeting-records")
         .then()
@@ -395,7 +397,7 @@ class MeetingRecordApiTest extends BaseE2ETest {
             .body(containsString("관리자 조회 테스트"));
 
         given()
-            .cookie("JSESSIONID", adminSessionId)
+            .cookie("JSESSIONID", adminSession.sessionId())
         .when()
             .get("/admin/meeting-records/{recordId}", recordId)
         .then()
@@ -408,10 +410,10 @@ class MeetingRecordApiTest extends BaseE2ETest {
     @DisplayName("관리자 회의록 목록은 keyword 없이도 조회할 수 있다")
     void adminView_withoutKeyword_returns200() {
         createRecord(authorToken, "관리자 keyword 없음", "안건");
-        String adminSessionId = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        AdminSession adminSession = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
 
         given()
-            .cookie("JSESSIONID", adminSessionId)
+            .cookie("JSESSIONID", adminSession.sessionId())
         .when()
             .get("/admin/meeting-records")
         .then()
@@ -422,10 +424,10 @@ class MeetingRecordApiTest extends BaseE2ETest {
     @Test
     @DisplayName("관리자 회의록 목록의 잘못된 status 파라미터는 400을 반환한다")
     void adminView_invalidStatus_returns400() {
-        String adminSessionId = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        AdminSession adminSession = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
 
         given()
-            .cookie("JSESSIONID", adminSessionId)
+            .cookie("JSESSIONID", adminSession.sessionId())
             .queryParam("status", "before")
         .when()
             .get("/admin/meeting-records")
@@ -437,10 +439,10 @@ class MeetingRecordApiTest extends BaseE2ETest {
     @Test
     @DisplayName("MANAGER의 잘못된 관리자 회의록 status 조회 파라미터도 권한 없음으로 처리된다")
     void adminView_invalidStatusAsManager_returns403() {
-        String managerSessionId = loginAdminSession(MANAGER, "password");
+        AdminSession managerSession = loginAdminSession(MANAGER, "password");
 
         given()
-            .cookie("JSESSIONID", managerSessionId)
+            .cookie("JSESSIONID", managerSession.sessionId())
             .queryParam("status", "before")
             .redirects()
             .follow(false)
@@ -454,10 +456,10 @@ class MeetingRecordApiTest extends BaseE2ETest {
     @DisplayName("관리자 수정 화면 조회는 조회수를 증가시키지 않는다")
     void adminEditForm_doesNotIncrementViewCount() {
         Long recordId = createRecord(authorToken, "조회수 테스트", "안건");
-        String adminSessionId = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        AdminSession adminSession = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
 
         given()
-            .cookie("JSESSIONID", adminSessionId)
+            .cookie("JSESSIONID", adminSession.sessionId())
         .when()
             .get("/admin/meeting-records/{recordId}/edit", recordId)
         .then()
@@ -470,10 +472,10 @@ class MeetingRecordApiTest extends BaseE2ETest {
     @Test
     @DisplayName("매니저는 관리자 화면으로 회의록을 조회하거나 생성할 수 없다")
     void adminView_Manager_Forbidden() {
-        String managerSessionId = loginAdminSession(MANAGER, "password");
+        AdminSession managerSession = loginAdminSession(MANAGER, "password");
 
         given()
-            .cookie("JSESSIONID", managerSessionId)
+            .cookie("JSESSIONID", managerSession.sessionId())
             .redirects()
             .follow(false)
         .when()
@@ -482,8 +484,9 @@ class MeetingRecordApiTest extends BaseE2ETest {
             .statusCode(403);
 
         given()
-            .cookie("JSESSIONID", managerSessionId)
+            .cookie("JSESSIONID", managerSession.sessionId())
             .contentType(ContentType.URLENC)
+            .formParam("_csrf", managerSession.csrfToken())
             .formParam("title", "매니저 작성")
             .formParam("agenda", "안건")
             .redirects()
@@ -543,19 +546,7 @@ class MeetingRecordApiTest extends BaseE2ETest {
             .getString("fileId");
     }
 
-    private String loginAdminSession(String username, String password) {
-        return given()
-            .contentType(ContentType.URLENC)
-            .formParam("username", username)
-            .formParam("password", password)
-            .redirects()
-            .follow(false)
-        .when()
-            .post("/admin/auth/login")
-        .then()
-            .statusCode(302)
-            .header("Location", containsString("/admin"))
-            .extract()
-            .cookie("JSESSIONID");
+    private AdminSession loginAdminSession(String username, String password) {
+        return AdminSessionHelper.login(username, password);
     }
 }

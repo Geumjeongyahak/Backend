@@ -17,6 +17,7 @@
 - **Content-Type**: `application/json`
 - **동작**: 프론트가 Google Drive API로 직접 업로드한 뒤 전달한 URL과 메타데이터만 `files` 테이블에 기록합니다.
 - **주의**: 백엔드는 Drive 클라이언트 라이브러리를 사용하지 않고, 실제 파일 업로드/삭제도 수행하지 않습니다.
+- **검증**: `driveUrl`은 `drive.google.com` 또는 `docs.google.com` 계열 Google Drive URL이어야 합니다.
 - **저장 기준**: `files.is_google_drive=true`, `public_url=driveUrl`로 저장합니다.
 
 ### Request
@@ -53,6 +54,7 @@
 - **optional query**: `scopeType=classroom|department`, `scopeId={id}` (`board`에서만 사용)
 - **동작**: 백엔드가 서비스 계정으로 Shared Drive 대상 루트 아래에 `yyyy/MM` 폴더를 보장한 뒤 파일을 업로드하고 `files` 레코드를 생성합니다.
 - **저장 기준**: `files.is_google_drive=true`, `storage_key=Drive file id`, `public_url=Drive view URL`로 저장합니다.
+- **공개 범위**: 기본값은 비공개입니다. `app.file.drive.make-link-public=true`를 설정한 환경에서만 백엔드가 `anyone reader` 권한을 부여합니다.
 
 ### Folder Rules
 
@@ -95,5 +97,12 @@
 ## 다운로드 URL 조회
 
 - **URL**: `GET /api/v1/files/attachments/{fileId}/download-url`
+- **권한**: 인증 필요. `ADMIN`은 모든 첨부파일을 조회할 수 있고, 일반 사용자는 해당 파일이 발행된 게시글 첨부파일이며 그 게시글의 채널을 읽을 수 있을 때 조회할 수 있습니다.
 - GCS 파일은 signed URL을 반환합니다.
 - Google Drive 파일은 등록된 `driveUrl`을 그대로 반환합니다.
+
+## 범용 첨부파일 삭제
+
+- **URL**: `DELETE /api/v1/files/attachments/{fileId}`
+- **권한**: `ADMIN`
+- GCS 파일은 스토리지 객체와 메타데이터를 삭제하고, Google Drive 파일은 외부 파일 삭제 없이 메타데이터만 soft delete 처리합니다.

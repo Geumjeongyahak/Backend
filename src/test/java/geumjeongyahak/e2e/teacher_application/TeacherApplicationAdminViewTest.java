@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 
 import geumjeongyahak.e2e.BaseE2ETest;
+import geumjeongyahak.e2e.util.AdminSessionHelper;
+import geumjeongyahak.e2e.util.AdminSessionHelper.AdminSession;
 import io.restassured.http.ContentType;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.AfterEach;
@@ -26,7 +28,7 @@ class TeacherApplicationAdminViewTest extends BaseE2ETest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private String sessionId;
+    private AdminSession adminSession;
 
     @BeforeEach
     @Override
@@ -36,7 +38,7 @@ class TeacherApplicationAdminViewTest extends BaseE2ETest {
         cleanupTeacherAssignmentFixture();
         insertTeacherAssignmentFixture();
         resetApplicant();
-        sessionId = loginAdminSession();
+        adminSession = loginAdminSession();
     }
 
     @AfterEach
@@ -52,7 +54,7 @@ class TeacherApplicationAdminViewTest extends BaseE2ETest {
         insertTeacherApplication(120L, "PENDING", "이영희", "지원 동기");
 
         given()
-            .cookie("JSESSIONID", sessionId)
+            .cookie("JSESSIONID", adminSession.sessionId())
         .when()
             .get("/admin/request/teacher-applications")
         .then()
@@ -69,7 +71,7 @@ class TeacherApplicationAdminViewTest extends BaseE2ETest {
         insertTeacherApplication(121L, "PENDING", "이영희", "금정열린배움터에서 함께 배우고 싶습니다.");
 
         given()
-            .cookie("JSESSIONID", sessionId)
+            .cookie("JSESSIONID", adminSession.sessionId())
         .when()
             .get("/admin/request/teacher-applications/{applicationId}", 121L)
         .then()
@@ -88,7 +90,7 @@ class TeacherApplicationAdminViewTest extends BaseE2ETest {
         insertTeacherApplication(122L, "PENDING", "이영희", "지원 동기");
 
         given()
-            .cookie("JSESSIONID", sessionId)
+            .cookie("JSESSIONID", adminSession.sessionId())
         .when()
             .get("/admin")
         .then()
@@ -105,8 +107,9 @@ class TeacherApplicationAdminViewTest extends BaseE2ETest {
         insertTeacherApplication(123L, "PENDING", "이영희", "지원 동기");
 
         given()
-            .cookie("JSESSIONID", sessionId)
+            .cookie("JSESSIONID", adminSession.sessionId())
             .contentType(ContentType.URLENC)
+            .formParam("_csrf", adminSession.csrfToken())
             .formParam("assignedSubjectIds", ASSIGNED_SUBJECT_ID)
             .formParam("teacherStartAt", "2026-06-01")
             .formParam("teacherEndAt", "2026-12-31")
@@ -134,8 +137,9 @@ class TeacherApplicationAdminViewTest extends BaseE2ETest {
         insertTeacherApplication(124L, "PENDING", "이영희", "지원 동기");
 
         given()
-            .cookie("JSESSIONID", sessionId)
+            .cookie("JSESSIONID", adminSession.sessionId())
             .contentType(ContentType.URLENC)
+            .formParam("_csrf", adminSession.csrfToken())
             .formParam("note", "reject-note")
             .redirects()
             .follow(false)
@@ -157,19 +161,8 @@ class TeacherApplicationAdminViewTest extends BaseE2ETest {
         assertThat(note).isEqualTo("reject-note");
     }
 
-    private String loginAdminSession() {
-        return given()
-            .contentType(ContentType.URLENC)
-            .formParam("username", TEST_ADMIN_EMAIL)
-            .formParam("password", TEST_ADMIN_PASSWORD)
-            .redirects()
-            .follow(false)
-        .when()
-            .post("/admin/auth/login")
-        .then()
-            .statusCode(302)
-            .extract()
-            .cookie("JSESSIONID");
+    private AdminSession loginAdminSession() {
+        return AdminSessionHelper.login(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
     }
 
     private void insertTeacherApplication(Long id, String status, String applicantName, String motivation) {

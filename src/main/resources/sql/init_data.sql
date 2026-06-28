@@ -268,17 +268,29 @@ VALUES
      'PUBLISHED', FALSE, FALSE, NULL, NULL, 83, FALSE, '2026-05-21 12:00:00', '2026-05-21 12:00:00'),
     (13, 4, 1, '신입 교원 오리엔테이션 현장',
      '<p>신입 교원과 운영진이 모여 수업 운영 흐름과 학생 응대 원칙을 함께 확인했습니다.</p>',
-     'PUBLISHED', FALSE, FALSE, '/mock/event-orientation.svg', NULL, 112, FALSE, '2026-06-02 20:30:00', '2026-06-02 20:30:00'),
+     'PUBLISHED', FALSE, FALSE, '/mock/event-orientation.png', NULL, 112, FALSE, '2026-06-02 20:30:00', '2026-06-02 20:30:00'),
     (14, 4, 1, '상반기 수업 회고 모임',
      '<p>분반별 수업 경험을 나누고 하반기 개선 방향을 정리한 회고 모임입니다.</p>',
-     'PUBLISHED', FALSE, FALSE, '/mock/event-review.svg', NULL, 94, FALSE, '2026-05-29 21:00:00', '2026-05-29 21:00:00'),
+     'PUBLISHED', FALSE, FALSE, '/mock/event-review.png', NULL, 94, FALSE, '2026-05-29 21:00:00', '2026-05-29 21:00:00'),
     (15, 4, 1, '주말 스마트폰반 실습 수업',
      '<p>사진 보내기, 길 찾기, 메시지 확인을 직접 연습한 주말 스마트폰반 수업 기록입니다.</p>',
-     'PUBLISHED', FALSE, FALSE, '/mock/event-smartphone.svg', NULL, 87, FALSE, '2026-05-24 12:20:00', '2026-05-24 12:20:00'),
+     'PUBLISHED', FALSE, FALSE, '/mock/event-smartphone.png', NULL, 87, FALSE, '2026-05-24 12:20:00', '2026-05-24 12:20:00'),
     (16, 4, 1, '학생 발표회 준비 스케치',
      '<p>학생 발표회를 준비하며 낭독과 생활 글쓰기 발표 순서를 맞춰 본 날의 기록입니다.</p>',
-     'PUBLISHED', FALSE, FALSE, '/mock/event-presentation.svg', NULL, 66, FALSE, '2026-05-18 18:40:00', '2026-05-18 18:40:00');
-ALTER SEQUENCE posts_id_seq RESTART WITH 17;
+     'PUBLISHED', FALSE, FALSE, '/mock/event-presentation.png', NULL, 66, FALSE, '2026-05-18 18:40:00', '2026-05-18 18:40:00'),
+    (17, 4, 1, '생활 문해 낭독 모임',
+     '<p>학생들이 직접 고른 생활 글을 함께 읽고 짧은 소감을 나눈 낭독 모임입니다.</p>',
+     'PUBLISHED', FALSE, FALSE, '/mock/event-reading.png', NULL, 72, FALSE, '2026-05-14 19:30:00', '2026-05-14 19:30:00'),
+    (18, 4, 1, '교사 수업 준비 워크숍',
+     '<p>신규 교안 작성법과 수업 자료 정리 방식을 함께 실습한 교사 워크숍입니다.</p>',
+     'PUBLISHED', FALSE, FALSE, '/mock/event-workshop.png', NULL, 58, FALSE, '2026-05-10 14:00:00', '2026-05-10 14:00:00'),
+    (19, 4, 1, '야외 체험 활동 기록',
+     '<p>분반 학생들과 가까운 생활 공간을 걸으며 읽기와 표현 활동을 연결한 체험 기록입니다.</p>',
+     'PUBLISHED', FALSE, FALSE, '/mock/event-field-day.png', NULL, 61, FALSE, '2026-05-04 16:20:00', '2026-05-04 16:20:00'),
+    (20, 4, 1, '작은 발표 전시회',
+     '<p>한 학기 동안 쓴 글과 그림을 모아 서로에게 소개한 작은 발표 전시회입니다.</p>',
+     'PUBLISHED', FALSE, FALSE, '/mock/event-exhibition.png', NULL, 49, FALSE, '2026-04-29 18:00:00', '2026-04-29 18:00:00');
+ALTER SEQUENCE posts_id_seq RESTART WITH 21;
 
 -- 8. Subjects
 INSERT INTO subjects (id, class_id, teacher_id, name, start_at, end_at, day_of_week, start_time, end_time, period, teacher_assigned_at, description)

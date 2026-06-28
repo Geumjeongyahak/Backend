@@ -203,15 +203,16 @@ public class FileController {
             description = "다운로드 URL을 발급할 대상 파일 ID. files 테이블의 UUID 기본 키입니다.",
             example = "550e8400-e29b-41d4-a716-446655440000"
         )
-        @PathVariable UUID fileId
+        @PathVariable UUID fileId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("GET /api/v1/files/attachments/{}/download-url - 첨부파일 다운로드 URL 조회 요청", fileId);
         return ResponseEntity.ok(
-            new FileDownloadUrlResponse(attachmentUploadService.getDownloadUrl(fileId))
+            new FileDownloadUrlResponse(attachmentUploadService.getDownloadUrl(fileId, userDetails))
         );
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(
         summary = "첨부파일 삭제",
         description = "업로드된 첨부파일을 삭제합니다. "

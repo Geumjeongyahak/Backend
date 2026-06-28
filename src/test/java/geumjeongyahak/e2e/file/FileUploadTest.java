@@ -58,8 +58,8 @@ public class FileUploadTest extends BaseFileTest {
     }
 
     @Test
-    @DisplayName("인증된 사용자는 첨부파일을 업로드하고 다운로드 URL을 조회할 수 있다")
-    void uploadAttachment_andGetDownloadUrl_success() {
+    @DisplayName("관리자는 첨부파일 다운로드 URL을 조회할 수 있다")
+    void uploadAttachment_andGetDownloadUrl_admin_success() {
         UUID fileId = UUID.fromString(
             given()
                 .header(AUTH_HEADER, getAuthHeader(userAccessToken))
@@ -78,13 +78,37 @@ public class FileUploadTest extends BaseFileTest {
         );
 
         given()
-            .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
         .when()
             .get("/attachments/{fileId}/download-url", fileId)
         .then()
             .statusCode(200)
             .body("downloadUrl", containsString("/documents/attachments/"))
             .body("downloadUrl", containsString("expires=30"));
+    }
+
+    @Test
+    @DisplayName("봉사자는 범용 첨부파일 다운로드 URL을 조회할 수 없다")
+    void getAttachmentDownloadUrl_volunteer_forbidden() {
+        UUID fileId = UUID.fromString(
+            given()
+                .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+                .contentType(ContentType.MULTIPART)
+                .multiPart("file", "report.pdf", "fake-pdf".getBytes(StandardCharsets.UTF_8), "application/pdf")
+            .when()
+                .post("/attachments")
+            .then()
+                .statusCode(201)
+                .extract()
+                .path("fileId")
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+        .when()
+            .get("/attachments/{fileId}/download-url", fileId)
+        .then()
+            .statusCode(403);
     }
 
     @Test
@@ -154,12 +178,29 @@ public class FileUploadTest extends BaseFileTest {
         assertThat(file.getStorageKey()).isEqualTo("drive-file-123");
 
         given()
-            .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
         .when()
             .get("/attachments/{fileId}/download-url", fileId)
         .then()
             .statusCode(200)
             .body("downloadUrl", equalTo(driveUrl));
+    }
+
+    @Test
+    @DisplayName("Google Drive 파일 등록은 Drive URL만 허용한다")
+    void registerDriveFile_rejectsNonDriveUrl() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "driveUrl", "https://example.com/file/d/drive-file-123/view",
+                "originalName", "자료집.pdf"
+            ))
+        .when()
+            .post("/drive")
+        .then()
+            .statusCode(400)
+            .body("code", equalTo("VAL002"));
     }
 
     @Test
@@ -364,8 +405,40 @@ public class FileUploadTest extends BaseFileTest {
     }
 
     @Test
-    @DisplayName("첨부파일 삭제 요청 시 파일 메타데이터가 soft delete 된다")
-    void deleteAttachment_softDeleteSuccess() {
+    @DisplayName("관리자는 범용 첨부파일 삭제 요청 시 파일 메타데이터를 soft delete 한다")
+    void deleteAttachment_admin_softDeleteSuccess() {
+        UUID fileId = UUID.fromString(
+            given()
+                .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+                .contentType(ContentType.MULTIPART)
+                .multiPart(
+                    "file",
+                    "notes.txt",
+                    "hello file".getBytes(StandardCharsets.UTF_8),
+                    "text/plain"
+                )
+            .when()
+                .post("/attachments")
+            .then()
+                .statusCode(201)
+                .extract()
+                .path("fileId")
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/attachments/{fileId}", fileId)
+        .then()
+            .statusCode(204);
+
+        File deletedFile = fileRepository.findById(fileId).orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(deletedFile.isDeleted()).isTrue();
+    }
+
+    @Test
+    @DisplayName("봉사자는 범용 첨부파일 삭제를 호출할 수 없다")
+    void deleteAttachment_volunteer_forbidden() {
         UUID fileId = UUID.fromString(
             given()
                 .header(AUTH_HEADER, getAuthHeader(userAccessToken))
@@ -389,10 +462,10 @@ public class FileUploadTest extends BaseFileTest {
         .when()
             .delete("/attachments/{fileId}", fileId)
         .then()
-            .statusCode(204);
+            .statusCode(403);
 
-        File deletedFile = fileRepository.findById(fileId).orElseThrow();
-        org.assertj.core.api.Assertions.assertThat(deletedFile.isDeleted()).isTrue();
+        File file = fileRepository.findById(fileId).orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(file.isDeleted()).isFalse();
     }
 
     @Test

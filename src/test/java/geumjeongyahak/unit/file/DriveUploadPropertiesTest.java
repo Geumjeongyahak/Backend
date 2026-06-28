@@ -12,6 +12,13 @@ import geumjeongyahak.domain.file.enums.DriveUploadTarget;
 class DriveUploadPropertiesTest {
 
     @Test
+    void makeLinkPublic_defaultsToFalse() {
+        DriveUploadProperties properties = new DriveUploadProperties();
+
+        assertThat(properties.isMakeLinkPublic()).isFalse();
+    }
+
+    @Test
     void folderIdFor_resolvesConfiguredTargets() {
         DriveUploadProperties properties = new DriveUploadProperties();
         properties.getFolderIds().setHandover("handover-folder");

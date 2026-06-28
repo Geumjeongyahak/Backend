@@ -2,8 +2,8 @@ package geumjeongyahak.domain.department.v1.controller;
 
 import geumjeongyahak.domain.base.service.PermissionRegistryViewService;
 import geumjeongyahak.domain.department.enums.DepartmentRoleType;
-import geumjeongyahak.domain.file.service.DepartmentAdminViewService;
-import geumjeongyahak.domain.file.service.DepartmentAdminViewService.DepartmentFilter;
+import geumjeongyahak.domain.department.service.DepartmentAdminViewService;
+import geumjeongyahak.domain.department.service.DepartmentAdminViewService.DepartmentFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;

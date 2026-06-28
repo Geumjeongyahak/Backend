@@ -79,6 +79,28 @@ class PasswordResetServiceTest {
     }
 
     @Test
+    void requestReset_rejectsRapidRepeatRequest() {
+        User user = User.builder()
+            .name("비밀번호 재설정 사용자")
+            .email(EMAIL)
+            .build();
+        UserCredential credential = UserCredential.local(user, EMAIL, "old-password-hash", true);
+        credential.issuePasswordResetToken(
+            TOKEN_HASH,
+            CLOCK.instant().atZone(ZoneId.of("Asia/Seoul")).toLocalDateTime().plusMinutes(15),
+            CLOCK.instant().atZone(ZoneId.of("Asia/Seoul")).toLocalDateTime().minusSeconds(30)
+        );
+        given(credentialRepository.findByCredentialEmailAndProvider(EMAIL, ProviderType.LOCAL))
+            .willReturn(Optional.of(credential));
+
+        assertThatThrownBy(() -> passwordResetService.requestReset(EMAIL))
+            .isInstanceOf(BusinessException.class)
+            .hasMessage("인증번호는 60초 후 다시 요청할 수 있습니다.");
+
+        verify(mailSenderService, never()).sendPasswordResetMail(any(), any(), any());
+    }
+
+    @Test
     void requestReset_returnsAcceptedWithoutSendingMailWhenAccountDoesNotExist() {
         given(credentialRepository.findByCredentialEmailAndProvider(EMAIL, ProviderType.LOCAL))
             .willReturn(Optional.empty());
@@ -145,7 +167,31 @@ class PasswordResetServiceTest {
 
         assertThat(credential.getPasswordHash()).isEqualTo("old-password-hash");
         assertThat(credential.getPasswordResetTokenHash()).isEqualTo(TOKEN_HASH);
-        verify(credentialRepository, never()).save(any());
+        assertThat(credential.getPasswordResetFailedAttempts()).isEqualTo(1);
+        verify(credentialRepository).save(credential);
+    }
+
+    @Test
+    void resetPassword_clearsTokenAfterFiveInvalidCodes() {
+        User user = User.builder()
+            .name("인증번호 불일치 사용자")
+            .email(EMAIL)
+            .build();
+        UserCredential credential = UserCredential.local(user, EMAIL, "old-password-hash", true);
+        credential.issuePasswordResetToken(TOKEN_HASH, CLOCK.instant().atZone(ZoneId.of("Asia/Seoul")).toLocalDateTime().plusMinutes(15));
+        given(credentialRepository.findByCredentialEmailAndProvider(EMAIL, ProviderType.LOCAL))
+            .willReturn(Optional.of(credential));
+        given(passwordEncoder.matches("654321", TOKEN_HASH)).willReturn(false);
+
+        for (int i = 0; i < 5; i++) {
+            assertThatThrownBy(() -> passwordResetService.resetPassword(EMAIL, "654321", "new-password123!"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("유효하지 않은 비밀번호 재설정 인증번호입니다.");
+        }
+
+        assertThat(credential.getPasswordResetTokenHash()).isNull();
+        assertThat(credential.getPasswordResetTokenExpiresAt()).isNull();
+        assertThat(credential.getPasswordResetFailedAttempts()).isZero();
     }
 
     @Test
@@ -159,7 +205,6 @@ class PasswordResetServiceTest {
         credential.issuePasswordResetToken(TOKEN_HASH, CLOCK.instant().atZone(ZoneId.of("Asia/Seoul")).toLocalDateTime().plusMinutes(15));
         given(credentialRepository.findByCredentialEmailAndProvider(EMAIL, ProviderType.LOCAL))
             .willReturn(Optional.of(credential));
-        given(passwordEncoder.matches(RAW_TOKEN, TOKEN_HASH)).willReturn(true);
 
         assertThatThrownBy(() -> passwordResetService.resetPassword(EMAIL, RAW_TOKEN, "new-password123!"))
             .isInstanceOf(BusinessException.class)

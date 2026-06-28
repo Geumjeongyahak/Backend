@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.auth.service;
 
 import geumjeongyahak.common.exception.BusinessException;
+import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.mail.MailProperties;
 import geumjeongyahak.common.mail.MailSenderService;
 import geumjeongyahak.domain.auth.entity.UserCredential;
@@ -26,6 +27,8 @@ public class EmailVerificationService {
     private final Clock clock;
     private final Supplier<String> verificationCodeSupplier;
     private final long expirationMinutes;
+    private static final int MAX_FAILED_ATTEMPTS = 5;
+    private static final long RESEND_COOLDOWN_SECONDS = 60;
 
     @Autowired
     public EmailVerificationService(
@@ -93,9 +96,14 @@ public class EmailVerificationService {
     public void confirm(String email, String verificationCode) {
         UserCredential credential = credentialRepository.findByCredentialEmailAndProvider(email, ProviderType.LOCAL)
             .filter(candidate -> !candidate.getUser().isDeleted())
-            .filter(candidate -> candidate.getEmailVerificationTokenHash() != null)
-            .filter(candidate -> passwordEncoder.matches(verificationCode, candidate.getEmailVerificationTokenHash()))
             .orElseThrow(() -> new BusinessException(AuthErrorCode.EMAIL_VERIFICATION_TOKEN_INVALID));
+
+        if (credential.getEmailVerificationTokenHash() == null
+            || !passwordEncoder.matches(verificationCode, credential.getEmailVerificationTokenHash())) {
+            credential.recordEmailVerificationFailure(MAX_FAILED_ATTEMPTS);
+            credentialRepository.save(credential);
+            throw new BusinessException(AuthErrorCode.EMAIL_VERIFICATION_TOKEN_INVALID);
+        }
 
         LocalDateTime now = LocalDateTime.now(clock);
         if (credential.isEmailVerificationTokenExpired(now)) {
@@ -121,6 +129,7 @@ public class EmailVerificationService {
     }
 
     private void issueVerificationCode(UserCredential credential) {
+        validateCooldown(credential.getEmailVerificationRequestedAt());
         String verificationCode = verificationCodeSupplier.get();
         LocalDateTime requestedAt = LocalDateTime.now(clock);
         LocalDateTime expiresAt = requestedAt.plusMinutes(expirationMinutes);
@@ -134,4 +143,9 @@ public class EmailVerificationService {
         log.info("이메일 인증 메일 처리 완료: credentialId={}, expiresAt={}", credential.getId(), expiresAt);
     }
 
+    private void validateCooldown(LocalDateTime requestedAt) {
+        if (requestedAt != null && requestedAt.plusSeconds(RESEND_COOLDOWN_SECONDS).isAfter(LocalDateTime.now(clock))) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "인증번호는 60초 후 다시 요청할 수 있습니다.");
+        }
+    }
 }

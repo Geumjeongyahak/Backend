@@ -22,6 +22,16 @@ public interface PostAttachmentRepository extends JpaRepository<PostAttachment, 
     @Query("SELECT pa.file.id FROM PostAttachment pa WHERE pa.post.id = :postId")
     List<UUID> findFileIdsByPostId(@Param("postId") Long postId);
 
+    @Query("""
+        SELECT DISTINCT pa.post.channel.id
+        FROM PostAttachment pa
+        WHERE pa.file.id = :fileId
+          AND pa.file.isDeleted = false
+          AND pa.post.isDeleted = false
+          AND pa.post.status = geumjeongyahak.domain.post.enums.PostStatus.PUBLISHED
+        """)
+    List<Long> findPublishedPostChannelIdsByFileId(@Param("fileId") UUID fileId);
+
     @Query("SELECT DISTINCT pa.file.id FROM PostAttachment pa WHERE pa.file.id IN :fileIds AND pa.post.id <> :postId")
     List<UUID> findReferencedFileIdsByFileIdInAndPostIdNot(
             @Param("fileIds") Collection<UUID> fileIds,

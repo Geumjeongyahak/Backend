@@ -57,6 +57,7 @@ class GoogleDriveStorageServiceTest {
         DriveUploadProperties properties = new DriveUploadProperties();
         properties.setUploadBaseUrl(baseUrl() + "/upload/drive/v3");
         properties.setApiBaseUrl(baseUrl() + "/drive/v3");
+        properties.setMakeLinkPublic(true);
         properties.getFolderIds().setBoard("board-folder");
 
         GoogleCredentials credentials = GoogleCredentials.create(new AccessToken(

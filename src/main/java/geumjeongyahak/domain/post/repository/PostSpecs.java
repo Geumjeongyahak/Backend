@@ -34,6 +34,21 @@ public final class PostSpecs {
         );
     }
 
+    public static Specification<Post> hasGuestReadableChannel() {
+        return (root, query, cb) -> cb.and(
+                cb.isFalse(root.get("channel").get("isDeleted")),
+                cb.isTrue(root.get("channel").get("isActive")),
+                cb.isTrue(root.get("channel").get("allowGuestRead"))
+        );
+    }
+
+    public static Specification<Post> hasActiveChannel() {
+        return (root, query, cb) -> cb.and(
+                cb.isFalse(root.get("channel").get("isDeleted")),
+                cb.isTrue(root.get("channel").get("isActive"))
+        );
+    }
+
     public static Specification<Post> hasChannelId(Long channelId) {
         return (root, query, cb) -> cb.equal(root.get("channel").get("id"), channelId);
     }

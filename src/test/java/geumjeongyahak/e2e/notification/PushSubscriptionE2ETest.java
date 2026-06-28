@@ -3,8 +3,9 @@ package geumjeongyahak.e2e.notification;
 import geumjeongyahak.domain.notification.entity.PushSubscription;
 import geumjeongyahak.domain.notification.enums.PushDeviceType;
 import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.e2e.util.AdminSessionHelper;
+import geumjeongyahak.e2e.util.AdminSessionHelper.AdminSession;
 import io.restassured.http.ContentType;
-import io.restassured.http.Cookies;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -125,11 +126,12 @@ class PushSubscriptionE2ETest extends BaseNotificationTest {
     @Test
     @DisplayName("관리자 웹 세션에서 Push 구독을 등록하면 활성 구독 레코드가 생성된다")
     void subscribe_adminWebSession_createsActiveSubscription() {
-        Cookies cookies = loginAdmin();
+        AdminSession adminSession = loginAdmin();
 
         Long subscriptionId = given()
             .basePath("")
-            .cookies(cookies)
+            .cookie("JSESSIONID", adminSession.sessionId())
+            .header("X-CSRF-TOKEN", adminSession.csrfToken())
             .contentType(ContentType.JSON)
             .body(Map.of(
                 "token", "admin-web-fcm-token",
@@ -164,17 +166,7 @@ class PushSubscriptionE2ETest extends BaseNotificationTest {
             .extract().jsonPath().getLong("id");
     }
 
-    private Cookies loginAdmin() {
-        return given()
-            .basePath("")
-            .contentType("application/x-www-form-urlencoded")
-            .formParam("username", adminEmail)
-            .formParam("password", adminPassword)
-            .redirects().follow(false)
-        .when()
-            .post("/admin/auth/login")
-        .then()
-            .statusCode(302)
-            .extract().response().detailedCookies();
+    private AdminSession loginAdmin() {
+        return AdminSessionHelper.login(adminEmail, adminPassword);
     }
 }

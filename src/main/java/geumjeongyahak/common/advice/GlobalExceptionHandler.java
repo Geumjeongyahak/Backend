@@ -258,8 +258,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
         log.warn("DataIntegrityViolationException 발생 - {}", ex.getMessage());
 
-        // 중복 키 에러인 경우
-        if (ex.getMessage() != null && ex.getMessage().contains("Unique")) {
+        if (isDuplicateConstraintViolation(ex)) {
             ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                     HttpStatus.CONFLICT,
                     CommonErrorCode.DUPLICATE_RESOURCE.getMessage()
@@ -351,6 +350,22 @@ public class GlobalExceptionHandler {
             return missingPart.getRequestPartName();
         }
         return null;
+    }
+
+    private boolean isDuplicateConstraintViolation(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof java.sql.SQLException sqlException && "23505".equals(sqlException.getSQLState())) {
+                return true;
+            }
+            String className = current.getClass().getName();
+            if (className.equals("org.hibernate.exception.ConstraintViolationException")
+                || className.equals("org.springframework.dao.DuplicateKeyException")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private record FieldError(String field, String message) {}

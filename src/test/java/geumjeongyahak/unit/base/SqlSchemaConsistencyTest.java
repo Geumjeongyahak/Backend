@@ -24,9 +24,12 @@ class SqlSchemaConsistencyTest {
     private static final List<String> USER_CREDENTIAL_COLUMNS = List.of(
         "password_reset_token_hash",
         "password_reset_token_expires_at",
+        "password_reset_requested_at",
+        "password_reset_failed_attempts",
         "email_verification_token_hash",
         "email_verification_token_expires_at",
-        "email_verification_requested_at"
+        "email_verification_requested_at",
+        "email_verification_failed_attempts"
     );
     private static final Pattern CREATE_TABLE_PATTERN = Pattern.compile(
         "(?i)CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?([a-z_]+)"
