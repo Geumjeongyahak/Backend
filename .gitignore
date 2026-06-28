@@ -55,6 +55,9 @@ infra/monitoring/grafana/data/
 infra/monitoring/grafana/admin-login.txt
 infra/monitoring/caddy/*auth*
 
+# Local LLM harness run artifacts
+harness/runs/
+
 docs/issue/*
 docs/pr/*
 src/test/resources/images/*
