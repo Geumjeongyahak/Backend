@@ -4,6 +4,7 @@ import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
 import geumjeongyahak.domain.daily_schedule.enums.DailyScheduleStatus;
 import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,6 +19,8 @@ public interface DailyTeacherAttendanceRepository extends JpaRepository<DailyTea
 
     List<DailyTeacherAttendance> findAllByDailyScheduleIdAndIsDeletedFalse(Long dailyScheduleId);
 
+    List<DailyTeacherAttendance> findAllByDailyScheduleIdInAndIsDeletedFalse(Collection<Long> dailyScheduleIds);
+
     @Query("""
         select coalesce(sum(attendance.volunteerServiceMinutes), 0)
         from DailyTeacherAttendance attendance
@@ -25,7 +28,7 @@ public interface DailyTeacherAttendanceRepository extends JpaRepository<DailyTea
         where attendance.isDeleted = false
             and dailySchedule.isDeleted = false
             and dailySchedule.status = :dailyScheduleStatus
-            and attendance.status <> :excludedAttendanceStatus
+            and attendance.status in :includedAttendanceStatuses
             and dailySchedule.teacher.id = :teacherId
             and (:from is null or dailySchedule.lessonDate >= :from)
             and (:to is null or dailySchedule.lessonDate <= :to)
@@ -35,6 +38,6 @@ public interface DailyTeacherAttendanceRepository extends JpaRepository<DailyTea
         @Param("from") LocalDate from,
         @Param("to") LocalDate to,
         @Param("dailyScheduleStatus") DailyScheduleStatus dailyScheduleStatus,
-        @Param("excludedAttendanceStatus") DailyTeacherAttendanceStatus excludedAttendanceStatus
+        @Param("includedAttendanceStatuses") Collection<DailyTeacherAttendanceStatus> includedAttendanceStatuses
     );
 }

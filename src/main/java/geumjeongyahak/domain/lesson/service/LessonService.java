@@ -16,6 +16,7 @@ import geumjeongyahak.common.event.EventPublisher;
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
+import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleProxyService;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
@@ -98,9 +99,10 @@ public class LessonService {
         List<Lesson> lessonList = lessonRepository
             .findAllByIsDeletedFalseAndDateBetweenOrderByDateAscPeriodAsc(request.from(), request.to());
         Map<DailyScheduleKey, DailySchedule> dailySchedules = getDailyScheduleMap(request.from(), request.to());
+        Map<Long, DailyTeacherAttendance> teacherAttendances = getTeacherAttendanceMap(dailySchedules);
         log.debug("전체 수업 목록 조회 완료 - 총 {}개", lessonList.size());
         return lessonList.stream()
-            .map(lesson -> toSummaryResponse(lesson, dailySchedules))
+            .map(lesson -> toSummaryResponse(lesson, dailySchedules, teacherAttendances))
             .toList();
     }
 
@@ -114,9 +116,10 @@ public class LessonService {
                 userId, request.from(), request.to()
             );
         Map<DailyScheduleKey, DailySchedule> dailySchedules = getDailyScheduleMap(request.from(), request.to());
+        Map<Long, DailyTeacherAttendance> teacherAttendances = getTeacherAttendanceMap(dailySchedules);
         log.debug("내 수업 목록 조회 완료 - 총 {}개", lessonList.size());
         return lessonList.stream()
-            .map(lesson -> toSummaryResponse(lesson, dailySchedules))
+            .map(lesson -> toSummaryResponse(lesson, dailySchedules, teacherAttendances))
             .toList();
     }
 
@@ -413,12 +416,16 @@ public class LessonService {
         if (dailySchedule == null) {
             return LessonDetailResponse.from(lesson);
         }
+        DailyTeacherAttendance teacherAttendance = dailyScheduleProxyService
+            .findActiveTeacherAttendanceByDailyScheduleId(dailySchedule.getId())
+            .orElse(null);
         return LessonDetailResponse.from(
             lesson,
             dailySchedule.getId(),
             dailySchedule.isExchanged(),
             dailySchedule.isAbsent(),
-            dailySchedule.getExchangedLessonDate()
+            dailySchedule.getExchangedLessonDate(),
+            teacherAttendance
         );
     }
 
@@ -432,7 +439,8 @@ public class LessonService {
 
     private LessonSummaryResponse toSummaryResponse(
         Lesson lesson,
-        Map<DailyScheduleKey, DailySchedule> dailySchedules
+        Map<DailyScheduleKey, DailySchedule> dailySchedules,
+        Map<Long, DailyTeacherAttendance> teacherAttendances
     ) {
         DailySchedule dailySchedule = dailySchedules.get(DailyScheduleKey.from(lesson));
         if (dailySchedule == null) {
@@ -442,8 +450,24 @@ public class LessonService {
             lesson,
             dailySchedule.isExchanged(),
             dailySchedule.isAbsent(),
-            dailySchedule.getExchangedLessonDate()
+            dailySchedule.getExchangedLessonDate(),
+            teacherAttendances.get(dailySchedule.getId())
         );
+    }
+
+    private Map<Long, DailyTeacherAttendance> getTeacherAttendanceMap(
+        Map<DailyScheduleKey, DailySchedule> dailySchedules
+    ) {
+        return dailyScheduleProxyService.findActiveTeacherAttendancesByDailyScheduleIds(
+                dailySchedules.values().stream()
+                    .map(DailySchedule::getId)
+                    .collect(Collectors.toSet())
+            )
+            .stream()
+            .collect(Collectors.toMap(
+                attendance -> attendance.getDailySchedule().getId(),
+                Function.identity()
+            ));
     }
 
     private record DailyScheduleKey(Long classroomId, LocalDate lessonDate) {

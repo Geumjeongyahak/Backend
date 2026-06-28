@@ -20,6 +20,15 @@ public record DailyTeacherAttendanceResponse(
     @Schema(description = "출석 처리 시각. 출석 상태가 ABSENT이면 null입니다.", example = "2026-06-20T14:00:00")
     LocalDateTime attendedAt,
 
+    @Schema(description = "출석 처리 여부", example = "true")
+    boolean isAttended,
+
+    @Schema(description = "퇴근 처리 시각. 퇴근 처리 전이면 null입니다.", example = "2026-06-20T16:00:00")
+    LocalDateTime checkedOutAt,
+
+    @Schema(description = "퇴근 처리 여부", example = "false")
+    boolean isCheckedOut,
+
     @Schema(description = "출석 처리 위치 위도. 출석 상태가 ABSENT이면 null입니다.", example = "35.1795543")
     BigDecimal latitude,
 
@@ -38,6 +47,9 @@ public record DailyTeacherAttendanceResponse(
             attendance.getId(),
             attendance.getStatus(),
             attendance.getAttendedAt(),
+            attendance.isAttended(),
+            attendance.getCheckedOutAt(),
+            attendance.isCheckedOut(),
             attendance.getLatitude(),
             attendance.getLongitude(),
             attendance.getVolunteerServiceMinutes()

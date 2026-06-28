@@ -91,6 +91,48 @@ public class LessonReadTest extends LessonBaseTest {
     }
 
     @Test
+    @DisplayName("전체 수업 목록에서 DailySchedule 교사 출석/퇴근 여부를 반환한다")
+    void getAllLessons_returnsDailyScheduleTeacherAttendance() {
+        LocalDate lessonDate = LocalDate.of(2027, 5, 21);
+        createTrackedLessonFixture(
+            "read-list-teacher-attendance",
+            TEACHER_ID,
+            "2042-05-21",
+            "MONDAY",
+            1,
+            lessonDate.toString(),
+            "19:20:00",
+            "20:00:00",
+            1
+        );
+
+        var dailySchedule = dailyScheduleRepository
+            .findByClassroomIdAndLessonDateAndIsDeletedFalse(CLASSROOM_ID, lessonDate)
+            .orElseThrow();
+        jdbcTemplate.update(
+            """
+                UPDATE daily_teacher_attendances
+                SET status = 'PRESENT',
+                    attended_at = '2027-05-21 19:20:00',
+                    checked_out_at = '2027-05-21 20:00:00'
+                WHERE daily_schedule_id = ?
+                """,
+            dailySchedule.getId()
+        );
+
+        given()
+            .queryParam("from", lessonDate.toString())
+            .queryParam("to", lessonDate.toString())
+            .when()
+            .get()
+            .then()
+            .statusCode(200)
+            .body("size()", is(1))
+            .body("[0].teacherAttendance.isAttended", is(true))
+            .body("[0].teacherAttendance.isCheckedOut", is(true));
+    }
+
+    @Test
     @DisplayName("일반 선생님 권한으로 전체 수업 목록(기간 조회) 성공(200 OK)")
     void getAllLessons_Success_Volunteer() {
         createTrackedLessonFixture("read-list-volunteer", TEACHER_ID, "2042-05-14", "WEDNESDAY", 3, "2027-05-14", "19:20:00", "20:00:00", 1);
@@ -355,6 +397,46 @@ public class LessonReadTest extends LessonBaseTest {
             .body("isExchanged", is(true))
             .body("isAbsent", is(true))
             .body("exchangedLessonDate", is(exchangedLessonDate.toString()));
+    }
+
+    @Test
+    @DisplayName("수업 상세에서 DailySchedule 교사 출석/퇴근 여부를 반환한다")
+    void getLessonDetail_returnsDailyScheduleTeacherAttendance() {
+        LocalDate lessonDate = LocalDate.of(2027, 7, 22);
+        long lessonId = createTrackedLessonFixture(
+            "read-detail-teacher-attendance",
+            TEACHER_ID,
+            "2042-07-22",
+            "MONDAY",
+            1,
+            lessonDate.toString(),
+            "19:20:00",
+            "20:00:00",
+            1
+        );
+
+        var dailySchedule = dailyScheduleRepository
+            .findByClassroomIdAndLessonDateAndIsDeletedFalse(CLASSROOM_ID, lessonDate)
+            .orElseThrow();
+        jdbcTemplate.update(
+            """
+                UPDATE daily_teacher_attendances
+                SET status = 'LATE',
+                    attended_at = '2027-07-22 19:30:00',
+                    checked_out_at = '2027-07-22 20:00:00'
+                WHERE daily_schedule_id = ?
+                """,
+            dailySchedule.getId()
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
+            .when()
+            .get("/{lessonId}", lessonId)
+            .then()
+            .statusCode(200)
+            .body("teacherAttendance.isAttended", is(true))
+            .body("teacherAttendance.isCheckedOut", is(true));
     }
 
     @Test

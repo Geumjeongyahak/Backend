@@ -36,6 +36,9 @@ public class DailyTeacherAttendance extends BaseEntity {
     @Column(name = "attended_at")
     private LocalDateTime attendedAt;
 
+    @Column(name = "checked_out_at")
+    private LocalDateTime checkedOutAt;
+
     @Column(precision = 10, scale = 7)
     private BigDecimal latitude;
 
@@ -66,6 +69,35 @@ public class DailyTeacherAttendance extends BaseEntity {
         this.attendedAt = attendedAt;
         this.latitude = latitude;
         this.longitude = longitude;
+        if (attendedAt == null) {
+            this.checkedOutAt = null;
+        }
+    }
+
+    public boolean isAttended() {
+        return attendedAt != null;
+    }
+
+    public boolean isCheckedOut() {
+        return checkedOutAt != null;
+    }
+
+    public void checkOut(LocalDateTime checkedOutAt) {
+        this.checkedOutAt = checkedOutAt;
+    }
+
+    public void correctAttendance(
+        DailyTeacherAttendanceStatus status,
+        LocalDateTime attendedAt,
+        LocalDateTime checkedOutAt
+    ) {
+        this.status = status;
+        this.attendedAt = attendedAt;
+        this.checkedOutAt = checkedOutAt;
+        if (attendedAt == null) {
+            this.latitude = null;
+            this.longitude = null;
+        }
     }
 
     public void restore() {

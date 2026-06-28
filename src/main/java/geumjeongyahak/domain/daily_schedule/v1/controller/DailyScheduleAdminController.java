@@ -3,6 +3,7 @@ package geumjeongyahak.domain.daily_schedule.v1.controller;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleAdminService;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleStatusRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyTeacherAttendanceCorrectionRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -48,6 +49,32 @@ public class DailyScheduleAdminController {
             request.status()
         );
         return ResponseEntity.ok(dailyScheduleAdminService.updateStatus(
+            dailyScheduleId,
+            userDetails.getUserId(),
+            canViewSensitiveInfo(userDetails),
+            request
+        ));
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_MANAGE_ACCESS)
+    @Operation(
+        summary = "교사 출석 보정",
+        description = "관리자가 하루 일정의 교사 출석 상태, 출근 시간, 퇴근 시간을 보정합니다."
+    )
+    @PatchMapping("/{dailyScheduleId}/teacher-attendance/adjustment")
+    public ResponseEntity<DailyScheduleDetailResponse> correctTeacherAttendance(
+        @PathVariable Long dailyScheduleId,
+        @Valid @RequestBody UpdateDailyTeacherAttendanceCorrectionRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug(
+            "PATCH /api/v1/daily-schedules/{}/teacher-attendance/adjustment - 관리자 교사 출석 보정 요청 (status={}, attendedAt={}, checkedOutAt={})",
+            dailyScheduleId,
+            request.status(),
+            request.attendedAt(),
+            request.checkedOutAt()
+        );
+        return ResponseEntity.ok(dailyScheduleAdminService.correctTeacherAttendance(
             dailyScheduleId,
             userDetails.getUserId(),
             canViewSensitiveInfo(userDetails),

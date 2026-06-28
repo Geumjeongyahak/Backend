@@ -17,7 +17,11 @@ import geumjeongyahak.domain.daily_schedule.enums.DailyStudentAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleForbiddenException;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleJournalAlreadyExistsException;
+import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleJournalRequiredException;
+import geumjeongyahak.domain.daily_schedule.exception.DailyTeacherAttendanceRequiredException;
+import geumjeongyahak.domain.daily_schedule.exception.DailyTeacherCheckOutAlreadyExistsException;
 import geumjeongyahak.domain.daily_schedule.exception.DuplicateDailyStudentAttendanceException;
+import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyTeacherCheckOutTimeException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleAttendanceStateException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleJournalStateException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleJournalLessonsException;
@@ -85,6 +89,13 @@ class DailyScheduleServiceReadTest {
         dailySchedule.markExchanged(exchangedLessonDate);
         dailySchedule.markAbsent();
         DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
+        teacherAttendance.updateAttendance(
+            DailyTeacherAttendanceStatus.PRESENT,
+            LocalDateTime.of(2026, 5, 20, 14, 0),
+            null,
+            null
+        );
+        teacherAttendance.checkOut(LocalDateTime.of(2026, 5, 20, 16, 0));
 
         given(dailyScheduleRepository.findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(
             lessonDate,
@@ -102,6 +113,9 @@ class DailyScheduleServiceReadTest {
         assertThat(responses).hasSize(1);
         assertThat(responses.get(0).dailyScheduleId()).isEqualTo(dailySchedule.getId());
         assertThat(responses.get(0).volunteerServiceMinutes()).isEqualTo(120);
+        assertThat(responses.get(0).teacherAttendanceStatus()).isEqualTo(DailyTeacherAttendanceStatus.PRESENT);
+        assertThat(responses.get(0).isTeacherAttended()).isTrue();
+        assertThat(responses.get(0).isTeacherCheckedOut()).isTrue();
         assertThat(responses.get(0).lessonCount()).isEqualTo(1);
         assertThat(responses.get(0).isExchanged()).isTrue();
         assertThat(responses.get(0).isAbsent()).isTrue();
@@ -714,6 +728,195 @@ class DailyScheduleServiceReadTest {
             lessonDate,
             LessonStatus.COMPLETED
         );
+    }
+
+    @Test
+    void updateTeacherAttendance_doesNotCompleteDailyScheduleWhenStatusIsExcused() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Subject subject = subject(classroom, teacher, lessonDate);
+        Lesson lesson = lesson(subject, teacher, lessonDate, 1);
+        lesson.updateNote("수업 내용");
+        DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(teacherAttendance));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of(lesson));
+        given(dailyStudentAttendanceRepository.findAllByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(List.of());
+
+        DailyScheduleDetailResponse response = dailyScheduleService.updateTeacherAttendance(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            false,
+            new UpdateDailyTeacherAttendanceRequest(DailyTeacherAttendanceStatus.EXCUSED, null, null)
+        );
+
+        assertThat(teacherAttendance.getStatus()).isEqualTo(DailyTeacherAttendanceStatus.EXCUSED);
+        assertThat(teacherAttendance.getAttendedAt()).isNull();
+        assertThat(dailySchedule.getStatus()).isEqualTo(DailyScheduleStatus.SCHEDULED);
+        assertThat(response.status()).isEqualTo(DailyScheduleStatus.SCHEDULED);
+    }
+
+    @Test
+    void checkOutTeacherAttendance_recordsCheckOutTime() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Subject subject = subject(classroom, teacher, lessonDate);
+        Lesson lesson = lesson(subject, teacher, lessonDate, 1);
+        lesson.updateNote("수업 내용");
+        DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
+        teacherAttendance.updateAttendance(
+            DailyTeacherAttendanceStatus.PRESENT,
+            LocalDateTime.now().minusHours(1),
+            null,
+            null
+        );
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(teacherAttendance));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of(lesson));
+        given(dailyStudentAttendanceRepository.findAllByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(List.of());
+
+        DailyScheduleDetailResponse response = dailyScheduleService.checkOutTeacherAttendance(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            false
+        );
+
+        assertThat(teacherAttendance.getCheckedOutAt()).isNotNull();
+        assertThat(teacherAttendance.isCheckedOut()).isTrue();
+        assertThat(response.teacherAttendance().checkedOutAt()).isNotNull();
+        assertThat(response.teacherAttendance().isCheckedOut()).isTrue();
+    }
+
+    @Test
+    void checkOutTeacherAttendance_throwsWhenTeacherIsNotAttended() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(teacherAttendance));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of());
+
+        assertThatThrownBy(() -> dailyScheduleService.checkOutTeacherAttendance(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            false
+        )).isInstanceOf(DailyTeacherAttendanceRequiredException.class);
+    }
+
+    @Test
+    void checkOutTeacherAttendance_throwsWhenJournalIsNotCompleted() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Lesson lesson = lesson(subject(classroom, teacher, lessonDate), teacher, lessonDate, 1);
+        DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
+        teacherAttendance.updateAttendance(
+            DailyTeacherAttendanceStatus.PRESENT,
+            LocalDateTime.now().minusHours(1),
+            null,
+            null
+        );
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(teacherAttendance));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of(lesson));
+
+        assertThatThrownBy(() -> dailyScheduleService.checkOutTeacherAttendance(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            false
+        )).isInstanceOf(DailyScheduleJournalRequiredException.class);
+    }
+
+    @Test
+    void checkOutTeacherAttendance_throwsWhenAlreadyCheckedOut() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Lesson lesson = lesson(subject(classroom, teacher, lessonDate), teacher, lessonDate, 1);
+        lesson.updateNote("수업 내용");
+        DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
+        teacherAttendance.updateAttendance(
+            DailyTeacherAttendanceStatus.PRESENT,
+            LocalDateTime.now().minusHours(2),
+            null,
+            null
+        );
+        teacherAttendance.checkOut(LocalDateTime.now().minusHours(1));
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(teacherAttendance));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of(lesson));
+
+        assertThatThrownBy(() -> dailyScheduleService.checkOutTeacherAttendance(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            false
+        )).isInstanceOf(DailyTeacherCheckOutAlreadyExistsException.class);
+    }
+
+    @Test
+    void checkOutTeacherAttendance_throwsWhenCheckOutTimeIsBeforeAttendanceTime() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Lesson lesson = lesson(subject(classroom, teacher, lessonDate), teacher, lessonDate, 1);
+        lesson.updateNote("수업 내용");
+        DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
+        teacherAttendance.updateAttendance(
+            DailyTeacherAttendanceStatus.PRESENT,
+            LocalDateTime.now().plusHours(1),
+            null,
+            null
+        );
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(teacherAttendance));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of(lesson));
+
+        assertThatThrownBy(() -> dailyScheduleService.checkOutTeacherAttendance(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            false
+        )).isInstanceOf(InvalidDailyTeacherCheckOutTimeException.class);
     }
 
     @Test

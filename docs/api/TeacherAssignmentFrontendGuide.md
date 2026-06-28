@@ -293,14 +293,15 @@ DELETE /api/v1/admin/teacher-schedule-assignments
 
 ## 7. DailySchedule과 Lesson
 
-교사 출석은 Lesson이 아니라 DailySchedule 레벨입니다.
+교사 출석의 원본 데이터와 처리는 DailySchedule 레벨입니다.
 
-- `LessonDetailResponse`에는 `teacherAttendance`가 없습니다.
-- 교사 출석은 `DailyScheduleDetailResponse.teacherAttendance`에서 확인합니다.
+- `LessonSummaryResponse`, `LessonDetailResponse`에는 같은 날짜/분반 DailySchedule 기준 `teacherAttendance`가 포함됩니다.
+- Lesson의 `teacherAttendance`는 `isAttended`, `isCheckedOut` 여부만 제공합니다.
+- 교사 출석 상태, 출퇴근 시간, 위치, 봉사 시간은 `DailyScheduleDetailResponse.teacherAttendance`에서 확인합니다.
 - Lesson은 교시 단위 수업입니다.
 - DailySchedule은 같은 분반, 같은 날짜의 Lesson들을 묶은 하루 운영 단위입니다.
 
-프론트에서 하루 출석/일지를 표시하려면 DailySchedule API를 사용해야 합니다.
+프론트에서 하루 출석 상세/일지를 표시하려면 DailySchedule API를 사용해야 합니다.
 
 ## 8. Dev 초기 데이터
 
@@ -344,6 +345,6 @@ DELETE /api/v1/admin/teacher-schedule-assignments
 |------|------|-------------|
 | 승인 요청에 `classroomId` 전송 | `assignedSubjectIds` 검증 실패로 400 | `assignedSubjectIds` 전송 |
 | `User.classroomId`만 보고 담당 분반 판단 | 다른 분반 담당 표시 누락 | `teacherAssignments` 사용 |
-| Lesson 상세에서 `teacherAttendance` 기대 | 항상 없음 | DailySchedule 상세 조회 |
+| Lesson의 `teacherAttendance`에서 출퇴근 시간 기대 | 여부만 제공됨 | 상세 시간은 DailySchedule 상세 조회 |
 | 신청 폼에서 Subject 단일 목록만 표시 | 하루 2과목 배정 맥락 누락 | `available-schedules` 사용 |
 | 기존 교사 교체 시 confirm 없이 요청 | 409 Conflict | `confirmTeacherReplacement: true` |
