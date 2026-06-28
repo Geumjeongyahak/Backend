@@ -5,6 +5,7 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import geumjeongyahak.common.security.jwt.JwtTokenProvider;
 import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalSignupRequest;
@@ -24,6 +25,9 @@ class AuthSignupTest extends AuthBaseTest {
 
     @Autowired
     private UserCredentialRepository credentialRepository;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("회원가입 후 이메일 인증을 완료해야 로그인할 수 있다")
@@ -122,6 +126,50 @@ class AuthSignupTest extends AuthBaseTest {
         .then()
             .statusCode(200)
             .body("name", equalTo("회원가입 테스트"));
+
+        RestAssured.basePath = originalBasePath;
+    }
+
+    @Test
+    @DisplayName("Google 회원가입 후 발급된 accessToken으로 내 정보를 조회할 수 있다")
+    void googleSignup_accessTokenCanReadMe() {
+        String uniqueEmail = "google-signup" + System.currentTimeMillis() + "@test.com";
+        String tempToken = jwtTokenProvider.createOAuth2TempToken(
+            "google-sub-" + System.currentTimeMillis(),
+            uniqueEmail,
+            "https://example.com/profile.png"
+        );
+
+        TokenResponse tokenResponse = given()
+            .contentType(ContentType.JSON)
+            .body("""
+                {
+                  "tempToken": "%s",
+                  "name": "구글 가입",
+                  "phoneNumber": "010-1234-5678",
+                  "birthDate": "1990-01-01"
+                }
+                """.formatted(tempToken))
+        .when()
+            .post("/google/signup")
+        .then()
+            .statusCode(201)
+            .body("accessToken", notNullValue())
+            .body("refreshToken", notNullValue())
+            .extract()
+            .as(TokenResponse.class);
+
+        String originalBasePath = RestAssured.basePath;
+        RestAssured.basePath = "";
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(tokenResponse.accessToken()))
+        .when()
+            .get("/api/v1/users/me")
+        .then()
+            .statusCode(200)
+            .body("email", equalTo(uniqueEmail))
+            .body("name", equalTo("구글 가입"));
 
         RestAssured.basePath = originalBasePath;
     }

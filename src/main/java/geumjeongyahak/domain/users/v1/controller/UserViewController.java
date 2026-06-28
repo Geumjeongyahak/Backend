@@ -181,9 +181,13 @@ public class UserViewController {
         @RequestParam String scopeTarget,
         RedirectAttributes redirectAttributes
     ) {
-        String permissionCode = permissionRegistryViewService.buildPermissionCode(permissionKey, scopeTarget);
-        userAdminViewService.addPermission(userId, permissionCode);
-        redirectAttributes.addFlashAttribute("message", "사용자 직접 권한을 추가했습니다.");
+        try {
+            String permissionCode = permissionRegistryViewService.buildPermissionCode(permissionKey, scopeTarget);
+            userAdminViewService.addPermission(userId, permissionCode);
+            redirectAttributes.addFlashAttribute("message", "사용자 직접 권한을 추가했습니다.");
+        } catch (IllegalArgumentException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
+        }
         return "redirect:/admin/user/users/" + userId;
     }
 }

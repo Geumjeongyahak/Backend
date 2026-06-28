@@ -62,6 +62,7 @@ app:
   jwt:
     secret: ${JWT_SECRET:1mvd5sX+y8zbGg1nOK08et6KoWnanipf0DKrygENcd0UVF6IvIYfVTJ7UliwCvhb}
     access-exp-seconds: ${JWT_ACCESS_EXP_SECONDS:1800}
+    oauth2-temp-exp-seconds: ${JWT_OAUTH2_TEMP_EXP_SECONDS:300}
     refresh-exp-seconds: ${JWT_REFRESH_EXP_SECONDS:1209600}
   file:
     image:

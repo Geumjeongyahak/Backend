@@ -37,6 +37,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Transactional(readOnly = true)
     public UserDetails loadUserByUserId(Long userId) throws UsernameNotFoundException {
         UserCredential credential = userCredentialRepository.findByUserIdAndProvider(userId, ProviderType.LOCAL)
+            .or(() -> userCredentialRepository.findAllByUserId(userId).stream().findFirst())
             .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + userId));
         return toUserDetails(credential);
     }

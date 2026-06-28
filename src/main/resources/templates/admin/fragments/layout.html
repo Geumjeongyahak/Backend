@@ -267,6 +267,10 @@
             color: var(--green-dark);
             font-weight: 800;
         }
+        .flash.error {
+            background: #fff0ed;
+            color: var(--danger);
+        }
         .table-panel { padding: 0; overflow: hidden; }
         .table-scroll { overflow-x: auto; }
         .pager {
@@ -523,6 +527,7 @@
             <span th:text="${adminName}">admin@example.com</span>
         </div>
         <div class="flash" th:if="${message}" th:text="${message}">완료되었습니다.</div>
+        <div class="flash error" th:if="${error}" th:text="${error}">처리할 수 없습니다.</div>
         <th:block th:replace="${content}"></th:block>
     </div>
     <div class="push-modal-backdrop" data-push-prompt hidden>

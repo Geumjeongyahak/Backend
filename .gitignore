@@ -57,6 +57,7 @@ infra/monitoring/caddy/*auth*
 
 # Local LLM harness run artifacts
 harness/runs/
+harness/tasks/issue-*-feature-task.md
 
 docs/issue/*
 docs/pr/*
