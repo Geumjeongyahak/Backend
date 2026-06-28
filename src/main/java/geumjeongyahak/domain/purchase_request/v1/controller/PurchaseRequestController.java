@@ -79,7 +79,7 @@ public class PurchaseRequestController {
     ) {
         log.debug("GET /api/v1/purchase-requests/{}", requestId);
         return ResponseEntity.ok(
-            purchaseRequestService.getPurchaseRequest(userDetails.getUserId(), requestId, false)
+            purchaseRequestService.getPurchaseRequest(userDetails.getUserId(), requestId, userDetails.isAdmin())
         );
     }
 
