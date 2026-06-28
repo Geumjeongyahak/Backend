@@ -252,7 +252,6 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
 
         Long proposerSubjectId = registerSubject(CLASSROOM_ID, TEACHER2_ID);
         registerLesson(proposerSubjectId, TEACHER2_ID, LocalDate.now().plusDays(15), "11:00:00", "11:50:00", 3);
-        registerLesson(proposerSubjectId, TEACHER2_ID, requestDate, "09:00:00", "09:50:00", 1);
 
         Long proposalId = createProposal(
             requestId,
@@ -324,6 +323,41 @@ class LessonExchangeProposalUpdateTest extends RequestBaseTest {
             .patch("/{requestId}/proposals/{proposalId}", requestId, proposalId)
             .then()
             .statusCode(409);
+    }
+
+    @Test
+    @DisplayName("요청 수업 시간대에 기존 수업이 있으면 교환형 제안 수정 -> 409")
+    void updateExchangeProposal_withScheduleConflict_returns409() {
+        LocalDate requestDate = LocalDate.now().plusDays(22);
+        LocalDate originalProposalDate = LocalDate.now().plusDays(23);
+        LocalDate updatedProposalDate = LocalDate.now().plusDays(24);
+        Long requestId = createApprovedRequest(requestDate);
+
+        Long proposerSubjectId = registerSubject(2L, TEACHER2_ID);
+        registerLesson(proposerSubjectId, TEACHER2_ID, originalProposalDate, "11:00:00", "11:50:00", 3);
+
+        Long proposalId = createProposal(
+            requestId,
+            getAuthHeader(volunteer2Token),
+            Map.of("lessonDate", originalProposalDate.toString(), "content", "기존 교환형 제안")
+        );
+        proposalIds.add(proposalId);
+
+        registerLesson(proposerSubjectId, TEACHER2_ID, requestDate, "09:00:00", "10:00:00", 1);
+        registerLesson(proposerSubjectId, TEACHER2_ID, updatedProposalDate, "11:00:00", "11:50:00", 3);
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "lessonDate", updatedProposalDate.toString(),
+                "content", "충돌 상태의 교환형 제안 수정"
+            ))
+            .patch("/{requestId}/proposals/{proposalId}", requestId, proposalId)
+            .then()
+            .statusCode(409)
+            .body("code", equalTo("REQ-07-016"));
     }
 
     private Long createApprovedRequest(LocalDate lessonDate) {
