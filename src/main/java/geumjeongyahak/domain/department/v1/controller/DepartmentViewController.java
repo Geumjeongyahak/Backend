@@ -105,9 +105,13 @@ public class DepartmentViewController {
         @RequestParam String scopeTarget,
         RedirectAttributes redirectAttributes
     ) {
-        String permissionCode = permissionRegistryViewService.buildPermissionCode(permissionKey, scopeTarget);
-        departmentAdminViewService.addPermission(departmentId, roleType, permissionCode);
-        redirectAttributes.addFlashAttribute("message", "부서 권한을 추가했습니다.");
+        try {
+            String permissionCode = permissionRegistryViewService.buildPermissionCode(permissionKey, scopeTarget);
+            departmentAdminViewService.addPermission(departmentId, roleType, permissionCode);
+            redirectAttributes.addFlashAttribute("message", "부서 권한을 추가했습니다.");
+        } catch (IllegalArgumentException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
+        }
         return "redirect:/admin/department/departments/" + departmentId;
     }
 }

@@ -137,6 +137,7 @@ public class WebSecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowCredentials(false);
+        config.setAllowPrivateNetwork(true);
 
         List<String> origins = Arrays.stream(corsAllowedOrigins.split(","))
             .map(String::trim)
