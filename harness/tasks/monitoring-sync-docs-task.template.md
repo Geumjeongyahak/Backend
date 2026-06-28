@@ -12,6 +12,7 @@
 
 - `AGENTS.md`
 - `HARNESS.md`
+- `harness/v1/2026-06-28/guide.md`
 - `README.md`
 - `DEPLOY.md`
 - `docs/deployment/gcloud-provisioning.md`
@@ -40,6 +41,21 @@ Allowed examples. 실제 작업에 필요한 최소 파일만 수정한다.
 - deploy/apply/destructive command는 실행하지 않는다.
 - Cloud/GitHub/Tailscale secrets 값은 출력하지 않는다.
 - Codex/Hermes self-report만으로 완료 처리하지 않는다.
+
+## Guardrails
+
+- Scope: `Modify`에 적힌 경로 밖을 바꾸지 않는다.
+- Secrets: `.env`, `*.env`, credential, token 값을 prompt/result/artifact에 넣지 않는다.
+- Commands: test/lint/diff는 허용하지만 deploy, sudo, force push, destructive cleanup은 별도 승인 없이는 실행하지 않는다.
+- Verification: runner가 실행한 검증 결과가 Codex self-report보다 우선한다.
+
+## Harness team
+
+- Harness Owner: workflow와 v1/v2 구조 결정.
+- Prompt Librarian: task packet과 prompt recipe 유지.
+- Runner Engineer: hook, schema, verifier 수정.
+- Verifier: 실제 command output으로 완료 판정.
+- Reviewer/Operator: PR risk와 외부 side effect 승인.
 
 ## Acceptance criteria
 

@@ -22,16 +22,19 @@ if [[ ! -f "${TASK_FILE}" ]]; then
 fi
 
 RUN_ID="${HARNESS_RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
-HARNESS_VERSION="${HARNESS_VERSION:-v1-2026-06-28}"
+HARNESS_VERSION="${HARNESS_VERSION:-v1}"
+HARNESS_DATE="${HARNESS_DATE:-2026-06-28}"
+HARNESS_CAPTURE_INPUT="${HARNESS_CAPTURE_INPUT:-metadata}"
 ARTIFACT_DIR="${REPO_ROOT}/harness/runs/${RUN_ID}"
 PROMPT_FILE="${ARTIFACT_DIR}/prompt.txt"
+USER_INPUT_FILE="${ARTIFACT_DIR}/user-input.md"
 EVENTS_FILE="${ARTIFACT_DIR}/events.jsonl"
 RESULT_FILE="${ARTIFACT_DIR}/result.json"
 VERIFY_LOG="${ARTIFACT_DIR}/verify.log"
 VERIFY_SUMMARY="${ARTIFACT_DIR}/verify-summary.txt"
 DIFF_SUMMARY="${ARTIFACT_DIR}/diff-summary.md"
 SCHEMA_FILE="${REPO_ROOT}/harness/schemas/task-result.schema.json"
-VERSIONED_PROMPT_FILE="${REPO_ROOT}/harness/versions/${HARNESS_VERSION}/prompts/issue-branch-commit-pr.md"
+VERSIONED_PROMPT_FILE="${REPO_ROOT}/harness/${HARNESS_VERSION}/${HARNESS_DATE}/prompts/issue-branch-commit-pr.md"
 BASE_PROMPT_FILE="${VERSIONED_PROMPT_FILE}"
 if [[ ! -f "${BASE_PROMPT_FILE}" ]]; then
   BASE_PROMPT_FILE="${REPO_ROOT}/harness/prompts/issue-branch-commit-pr.md"
@@ -40,11 +43,29 @@ HOOK="${REPO_ROOT}/scripts/harness/monitor-hook.sh"
 
 mkdir -p "${ARTIFACT_DIR}"
 
+case "${HARNESS_CAPTURE_INPUT}" in
+  off)
+    HARNESS_ARTIFACT_DIR="${ARTIFACT_DIR}" "${HOOK}" "${RUN_ID}" "task.input" "${TASK_FILE}" "capture-off"
+    ;;
+  full)
+    cp "${TASK_FILE}" "${USER_INPUT_FILE}"
+    HARNESS_ARTIFACT_DIR="${ARTIFACT_DIR}" "${HOOK}" "${RUN_ID}" "task.input" "${USER_INPUT_FILE}" "captured-full"
+    ;;
+  metadata)
+    HARNESS_ARTIFACT_DIR="${ARTIFACT_DIR}" "${HOOK}" "${RUN_ID}" "task.input" "${TASK_FILE}" "metadata-only"
+    ;;
+  *)
+    echo "invalid HARNESS_CAPTURE_INPUT=${HARNESS_CAPTURE_INPUT}; expected off|metadata|full" >&2
+    exit 2
+    ;;
+esac
+
 {
   echo "# Harness Run Prompt"
   echo
   echo "Run ID: ${RUN_ID}"
-  echo "Harness version: ${HARNESS_VERSION}"
+  echo "Harness version: ${HARNESS_VERSION} (${HARNESS_DATE})"
+  echo "Input capture: ${HARNESS_CAPTURE_INPUT}"
   echo "Task file: ${TASK_FILE}"
   echo
   echo "## Base prompt"

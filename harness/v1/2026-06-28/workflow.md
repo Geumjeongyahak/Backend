@@ -112,7 +112,7 @@ v1 기본 검증:
 PR 본문 필수 항목:
 
 - Closes #issue
-- Harness version: `v1-2026-06-28`
+- Harness version: `v1 (2026-06-28)`
 - 변경 요약
 - 검증 evidence
 - blocker/follow-up

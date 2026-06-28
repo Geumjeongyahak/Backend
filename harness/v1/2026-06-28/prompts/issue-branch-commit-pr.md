@@ -1,6 +1,6 @@
 # Issue -> Branch -> Commit -> PR Prompt
 
-Harness version: v1-2026-06-28
+Harness version: v1 (2026-06-28)
 
 Follow `AGENTS.md` and `HARNESS.md`.
 
@@ -22,6 +22,8 @@ You are operating inside the GJLearn Backend repository. Treat the task file as 
 - If verification fails, report the exact command and failure summary.
 - If the task touches monitoring or deployment, include rollback/risk notes in `risks`.
 - Include the harness version in final `next_steps` or reviewer notes when relevant.
+- Treat the task packet `Guardrails` as mandatory. If a requested action violates them, stop and report a blocker.
+- Do not include raw secrets or private env values in final JSON.
 
 ## Final JSON fields
 

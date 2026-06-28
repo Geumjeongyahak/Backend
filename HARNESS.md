@@ -53,19 +53,23 @@ retry = 실패 로그를 먹인 복구 loop
 
 `harness/runs/`는 `.gitignore` 대상이다. 실행 결과는 재현/리뷰용 로컬 evidence이며 secrets를 넣지 않는다.
 
-하네스 설계 문서는 날짜가 붙은 버전 폴더에 누적한다. 현재 active baseline은 `harness/versions/v1-2026-06-28/`이다. prompt recipe, workflow, folder structure, monitoring contract가 의미 있게 바뀌면 기존 문서를 덮어쓰지 말고 `v2-yyyy-mm-dd/`를 추가한다.
+하네스 설계 문서는 `harness/v1/{yyyy-mm-dd}/`, `harness/v2/{yyyy-mm-dd}/`처럼 버전 폴더 아래 날짜별로 누적한다. 현재 active baseline은 `harness/v1/2026-06-28/`이다. prompt recipe, workflow, folder structure, monitoring contract가 의미 있게 바뀌면 기존 문서를 덮어쓰지 말고 `harness/v2/{yyyy-mm-dd}/`를 추가한다.
 
 ```text
 harness/
-├── versions/
-│   ├── README.md
-│   └── v1-2026-06-28/
+├── README.md
+├── v1/
+│   └── 2026-06-28/
 │       ├── README.md
 │       ├── folder-structure.md
 │       ├── workflow.md
+│       ├── guide.md
 │       ├── prompt-monitoring.md
 │       └── prompts/
 │           └── issue-branch-commit-pr.md
+├── v2/
+│   └── {yyyy-mm-dd}/
+│       └── ...
 ├── prompts/
 │   └── issue-branch-commit-pr.md
 ├── schemas/
@@ -99,6 +103,7 @@ Codex final output은 `harness/schemas/task-result.schema.json`을 따라야 한
 
 | 이벤트 | 파일 | 의미 |
 | --- | --- | --- |
+| `task.input` | task file 또는 `user-input.md` | 사용자/태스크 입력 수집 상태 기록 |
 | `prompt.rendered` | `prompt.txt` | task packet과 repo 규칙으로 실행 프롬프트 생성 |
 | `codex.finished` | `result.json` | Codex structured result 생성 |
 | `verify.finished` | `verify-summary.txt` | runner 검증 결과 요약 |
@@ -117,6 +122,9 @@ Codex final output은 `harness/schemas/task-result.schema.json`을 따라야 한
 ```bash
 # task prompt만 렌더링하고 hook artifact 생성
 scripts/harness/run-task.sh --dry-run harness/tasks/monitoring-sync-docs-task.template.md
+
+# 사용자 입력까지 로컬 artifact로 복사해서 수집
+HARNESS_CAPTURE_INPUT=full scripts/harness/run-task.sh --dry-run harness/tasks/monitoring-sync-docs-task.template.md
 
 # repo 검증
 scripts/harness/verify.sh
