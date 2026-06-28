@@ -170,13 +170,18 @@ if [[ "${BUILD_JAR}" == "true" ]]; then
 fi
 
 if [[ "${INSTALL_APP}" == "true" ]]; then
+  APP_JAR="$(find "${ROOT_DIR}/build/libs" -maxdepth 1 -type f -name "*.jar" ! -name "*-plain.jar" | sort | tail -n 1)"
+  if [[ -z "${APP_JAR}" ]]; then
+    echo "app jar not found under ${ROOT_DIR}/build/libs" >&2
+    exit 1
+  fi
   run_scp "${USE_IAP_FOR_APP}" \
-    "${ROOT_DIR}"/build/libs/*.jar \
+    "${APP_JAR}" \
     "${ROOT_DIR}/scripts/gcp/05_app/01_install-app-service.sh" \
     "${APP_ENV_FILE}" \
     "${APP_INSTANCE_NAME}:~/app-dev/"
   run_ssh "${APP_INSTANCE_NAME}" "${USE_IAP_FOR_APP}" \
-    "cd ~/app-dev && mv $(basename "${APP_ENV_FILE}") .env && mv *.jar app.jar && chmod +x 01_install-app-service.sh && ./01_install-app-service.sh"
+    "cd ~/app-dev && mv $(basename "${APP_ENV_FILE}") .env && mv $(basename "${APP_JAR}") app.jar && chmod +x 01_install-app-service.sh && ./01_install-app-service.sh"
   run_ssh "${APP_INSTANCE_NAME}" "${USE_IAP_FOR_APP}" \
     "cd ~/app-dev && set -a && . ./.env && set +a && curl -fsS http://127.0.0.1:\${MANAGEMENT_PORT:-9090}/actuator/health >/dev/null && sudo systemctl is-active --quiet gjlearn-app && echo app-ok"
 fi

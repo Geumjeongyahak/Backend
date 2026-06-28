@@ -261,5 +261,6 @@ WantedBy=multi-user.target
 EOF
 
 sudo systemctl daemon-reload
-sudo systemctl enable --now "${SERVICE_NAME}.service"
+sudo systemctl enable "${SERVICE_NAME}.service"
+sudo systemctl restart "${SERVICE_NAME}.service"
 sudo systemctl --no-pager --full status "${SERVICE_NAME}.service"

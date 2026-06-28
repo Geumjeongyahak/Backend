@@ -401,7 +401,7 @@ gcloud compute ssh "$APP_INSTANCE_NAME" \
 
 ## 6. Cloud Logging WARN/ERROR 알림
 
-App VM은 `~/app-dev/logs/app/application.yyyy-MM-dd.log` 형식으로 일자별 파일 로그를 남깁니다. Logback 파일 appender는 `WARN`/`ERROR` 이상만 기록하고 `LOG_FILE_MAX_HISTORY=30` 기준으로 30일 이후 파일을 삭제합니다. Cloud Ops Agent는 JSON 파싱 없이 `LOG_UPLOAD_PATH`에 매칭되는 파일을 Cloud Logging으로 전달합니다.
+App VM은 `~/app-dev/logs/app/application.yyyy-MM-dd.log` 형식으로 일자별 파일 로그를 남깁니다. Logback 파일 appender는 `LOG_FILE_LEVEL` 이상을 기록하고 `LOG_FILE_MAX_HISTORY=30` 기준으로 30일 이후 파일을 삭제합니다. Cloud Ops Agent는 JSON 파싱 없이 `LOG_UPLOAD_PATH`에 매칭되는 파일을 Cloud Logging으로 전달합니다.
 
 알림 정책 생성/갱신:
 
