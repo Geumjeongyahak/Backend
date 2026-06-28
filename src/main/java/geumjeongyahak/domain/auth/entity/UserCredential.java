@@ -68,6 +68,12 @@ public class UserCredential extends BaseEntity {
     @Column(name = "password_reset_token_expires_at")
     private LocalDateTime passwordResetTokenExpiresAt;
 
+    @Column(name = "password_reset_requested_at")
+    private LocalDateTime passwordResetRequestedAt;
+
+    @Column(name = "password_reset_failed_attempts", nullable = false)
+    private int passwordResetFailedAttempts;
+
     @Column(name = "email_verification_token_hash", length = 512)
     private String emailVerificationTokenHash;
 
@@ -76,6 +82,9 @@ public class UserCredential extends BaseEntity {
 
     @Column(name = "email_verification_requested_at")
     private LocalDateTime emailVerificationRequestedAt;
+
+    @Column(name = "email_verification_failed_attempts", nullable = false)
+    private int emailVerificationFailedAttempts;
 
     @Builder
     private UserCredential(
@@ -88,9 +97,12 @@ public class UserCredential extends BaseEntity {
         LocalDateTime lastLoginAt,
         String passwordResetTokenHash,
         LocalDateTime passwordResetTokenExpiresAt,
+        LocalDateTime passwordResetRequestedAt,
+        int passwordResetFailedAttempts,
         String emailVerificationTokenHash,
         LocalDateTime emailVerificationTokenExpiresAt,
-        LocalDateTime emailVerificationRequestedAt
+        LocalDateTime emailVerificationRequestedAt,
+        int emailVerificationFailedAttempts
     ) {
         this.user = user;
         this.provider = provider;
@@ -101,9 +113,12 @@ public class UserCredential extends BaseEntity {
         this.lastLoginAt = lastLoginAt;
         this.passwordResetTokenHash = passwordResetTokenHash;
         this.passwordResetTokenExpiresAt = passwordResetTokenExpiresAt;
+        this.passwordResetRequestedAt = passwordResetRequestedAt;
+        this.passwordResetFailedAttempts = passwordResetFailedAttempts;
         this.emailVerificationTokenHash = emailVerificationTokenHash;
         this.emailVerificationTokenExpiresAt = emailVerificationTokenExpiresAt;
         this.emailVerificationRequestedAt = emailVerificationRequestedAt;
+        this.emailVerificationFailedAttempts = emailVerificationFailedAttempts;
     }
 
     public static UserCredential local(
@@ -137,8 +152,14 @@ public class UserCredential extends BaseEntity {
     }
 
     public void issuePasswordResetToken(String tokenHash, LocalDateTime expiresAt) {
+        issuePasswordResetToken(tokenHash, expiresAt, LocalDateTime.now());
+    }
+
+    public void issuePasswordResetToken(String tokenHash, LocalDateTime expiresAt, LocalDateTime requestedAt) {
         this.passwordResetTokenHash = tokenHash;
         this.passwordResetTokenExpiresAt = expiresAt;
+        this.passwordResetRequestedAt = requestedAt;
+        this.passwordResetFailedAttempts = 0;
     }
 
     public void issueEmailVerificationToken(
@@ -149,6 +170,7 @@ public class UserCredential extends BaseEntity {
         this.emailVerificationTokenHash = tokenHash;
         this.emailVerificationTokenExpiresAt = expiresAt;
         this.emailVerificationRequestedAt = requestedAt;
+        this.emailVerificationFailedAttempts = 0;
     }
 
     public void verifyEmail() {
@@ -183,11 +205,30 @@ public class UserCredential extends BaseEntity {
     public void clearPasswordResetToken() {
         this.passwordResetTokenHash = null;
         this.passwordResetTokenExpiresAt = null;
+        this.passwordResetRequestedAt = null;
+        this.passwordResetFailedAttempts = 0;
     }
 
     public void clearEmailVerificationToken() {
         this.emailVerificationTokenHash = null;
         this.emailVerificationTokenExpiresAt = null;
         this.emailVerificationRequestedAt = null;
+        this.emailVerificationFailedAttempts = 0;
+    }
+
+    public int recordPasswordResetFailure(int maxAttempts) {
+        this.passwordResetFailedAttempts++;
+        if (this.passwordResetFailedAttempts >= maxAttempts) {
+            clearPasswordResetToken();
+        }
+        return this.passwordResetFailedAttempts;
+    }
+
+    public int recordEmailVerificationFailure(int maxAttempts) {
+        this.emailVerificationFailedAttempts++;
+        if (this.emailVerificationFailedAttempts >= maxAttempts) {
+            clearEmailVerificationToken();
+        }
+        return this.emailVerificationFailedAttempts;
     }
 }

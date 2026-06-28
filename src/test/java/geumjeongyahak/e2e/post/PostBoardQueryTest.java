@@ -13,6 +13,7 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
 @DisplayName("E2E: 게시판 통합 조회 테스트")
@@ -141,8 +142,8 @@ public class PostBoardQueryTest extends BasePostTest {
     }
 
     @Test
-    @DisplayName("비인증 사용자는 게시글 목록을 조회할 수 있지만 본문 검색과 비공개 상세 조회는 제한된다")
-    void getBoardPosts_WithoutAuth_AllowsListButRestrictsContentSearchAndPrivateDetail() {
+    @DisplayName("비인증 사용자는 닫힌 채널 게시글 목록과 상세를 조회할 수 없다")
+    void getBoardPosts_WithoutAuth_RestrictsClosedChannelListAndDetail() {
         Channel closedChannel = channelRepository.save(Channel.builder()
                 .name("닫힌 운영 채널")
                 .description("목록 노출 테스트")
@@ -160,7 +161,7 @@ public class PostBoardQueryTest extends BasePostTest {
                 .get("/api/v1/posts")
                 .then()
                 .statusCode(200)
-                .body("content.title", hasItem("닫힌 채널 목록 노출"));
+                .body("content.title", not(hasItem("닫힌 채널 목록 노출")));
 
         given()
                 .queryParam("content", "닫힌")
@@ -174,12 +175,32 @@ public class PostBoardQueryTest extends BasePostTest {
                 .get("/api/v1/channels/{channelId}/posts/{postId}", closedChannel.getId(), postId)
                 .then()
                 .statusCode(403);
+
+        given()
+                .when()
+                .get("/api/v1/channels/{channelId}/posts", closedChannel.getId())
+                .then()
+                .statusCode(403);
     }
 
     @Test
     @DisplayName("비인증 사용자는 공개 채널의 초안 게시글 상세를 조회할 수 없다")
     void getPost_WithoutAuth_RejectsDraftEvenInGuestReadableChannel() {
         Long draftId = testPostHelper.createDraftAndRegister(noticeChannelId, adminAccessToken);
+
+        given()
+                .when()
+                .get("/api/v1/channels/{channelId}/posts", noticeChannelId)
+                .then()
+                .statusCode(200)
+                .body("content.id", not(hasItem(draftId.intValue())));
+
+        given()
+                .when()
+                .get("/api/v1/posts")
+                .then()
+                .statusCode(200)
+                .body("content.id", not(hasItem(draftId.intValue())));
 
         given()
                 .when()

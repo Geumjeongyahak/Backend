@@ -52,7 +52,6 @@ public class WebSecurityConfig {
     public SecurityFilterChain adminFilterChain(HttpSecurity http) throws Exception {
         return http
             .securityMatcher("/admin/**")
-            .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/admin/auth/login").permitAll()
                 .requestMatchers("/admin/meeting-records/**").hasRole("ADMIN")

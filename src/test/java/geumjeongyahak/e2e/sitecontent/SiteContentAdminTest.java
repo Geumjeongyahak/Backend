@@ -10,6 +10,8 @@ import static org.hamcrest.Matchers.is;
 import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.sitecontent.entity.SiteContent;
 import geumjeongyahak.domain.sitecontent.enums.SiteContentType;
+import geumjeongyahak.e2e.util.AdminSessionHelper;
+import geumjeongyahak.e2e.util.AdminSessionHelper.AdminSession;
 import io.restassured.http.ContentType;
 import java.util.HashMap;
 import java.util.List;
@@ -413,12 +415,13 @@ class SiteContentAdminTest extends SiteContentBaseTest {
     @Test
     @DisplayName("관리자 화면 연혁 링크 입력은 잘못된 형식을 저장하지 않는다")
     void createHistory_AdminViewInvalidLinks_BadRequest() {
-        String adminSessionId = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        AdminSession adminSession = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
 
         given()
             .basePath("")
-            .cookie("JSESSIONID", adminSessionId)
+            .cookie("JSESSIONID", adminSession.sessionId())
             .contentType(ContentType.URLENC)
+            .formParam("_csrf", adminSession.csrfToken())
             .formParam("title", "금정열린배움터 시작")
             .formParam("historyDate", "1997-01-01")
             .formParam("linksText", "소개 https://example.com/history")
@@ -435,13 +438,14 @@ class SiteContentAdminTest extends SiteContentBaseTest {
     @Test
     @DisplayName("관리자 화면 연혁 링크 입력은 빈 URL과 긴 라벨을 저장하지 않는다")
     void createHistory_AdminViewBlankHrefAndLongLabel_BadRequest() {
-        String adminSessionId = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        AdminSession adminSession = loginAdminSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
         String longLabel = "가".repeat(121);
 
         given()
             .basePath("")
-            .cookie("JSESSIONID", adminSessionId)
+            .cookie("JSESSIONID", adminSession.sessionId())
             .contentType(ContentType.URLENC)
+            .formParam("_csrf", adminSession.csrfToken())
             .formParam("title", "금정열린배움터 시작")
             .formParam("historyDate", "1997-01-01")
             .formParam("linksText", "소개|")
@@ -454,8 +458,9 @@ class SiteContentAdminTest extends SiteContentBaseTest {
 
         given()
             .basePath("")
-            .cookie("JSESSIONID", adminSessionId)
+            .cookie("JSESSIONID", adminSession.sessionId())
             .contentType(ContentType.URLENC)
+            .formParam("_csrf", adminSession.csrfToken())
             .formParam("title", "금정열린배움터 시작")
             .formParam("historyDate", "1997-01-01")
             .formParam("linksText", longLabel + "|https://example.com/history")
@@ -723,12 +728,13 @@ class SiteContentAdminTest extends SiteContentBaseTest {
     @Test
     @DisplayName("매니저는 관리자 화면으로 사이트 콘텐츠를 수정할 수 없다")
     void adminViewWriteSiteContent_Manager_Forbidden() {
-        String managerSessionId = loginAdminSession(TEST_MANAGER_USERNAME + "@test.com", "pw_" + TEST_MANAGER_USERNAME);
+        AdminSession managerSession = loginAdminSession(TEST_MANAGER_USERNAME + "@test.com", "pw_" + TEST_MANAGER_USERNAME);
 
         given()
             .basePath("")
-            .cookie("JSESSIONID", managerSessionId)
+            .cookie("JSESSIONID", managerSession.sessionId())
             .contentType(ContentType.URLENC)
+            .formParam("_csrf", managerSession.csrfToken())
             .formParam("contentType", "DEPARTMENT")
             .formParam("title", "교무기획부")
             .formParam("itemsText", "야학 행사 계획")
@@ -783,20 +789,7 @@ class SiteContentAdminTest extends SiteContentBaseTest {
             .build());
     }
 
-    private String loginAdminSession(String username, String password) {
-        return given()
-            .basePath("")
-            .contentType(ContentType.URLENC)
-            .formParam("username", username)
-            .formParam("password", password)
-            .redirects()
-            .follow(false)
-        .when()
-            .post("/admin/auth/login")
-        .then()
-            .statusCode(302)
-            .header("Location", containsString("/admin"))
-            .extract()
-            .cookie("JSESSIONID");
+    private AdminSession loginAdminSession(String username, String password) {
+        return AdminSessionHelper.login(username, password);
     }
 }

@@ -54,7 +54,8 @@ public class DriveFileService {
         String driveUrl = request.driveUrl().trim();
         String originalName = request.originalName().trim();
         String contentType = normalizeContentType(request.mimeType());
-        String storageKey = extractDriveFileId(driveUrl).orElse(driveUrl);
+        String storageKey = extractDriveFileId(driveUrl)
+            .orElseThrow(() -> new BadRequestException(CommonErrorCode.INVALID_INPUT, "Google Drive 파일 URL만 등록할 수 있습니다."));
         String ext = resolveExtension(originalName);
 
         File file = fileRepository.findByPublicUrlAndIsGoogleDriveTrue(driveUrl)
@@ -174,6 +175,11 @@ public class DriveFileService {
     private Optional<String> extractDriveFileId(String driveUrl) {
         try {
             URI uri = URI.create(driveUrl);
+            String host = uri.getHost();
+            if (host == null || !(host.equals("drive.google.com") || host.endsWith(".drive.google.com")
+                || host.equals("docs.google.com") || host.endsWith(".docs.google.com"))) {
+                return Optional.empty();
+            }
             Matcher pathMatcher = DRIVE_FILE_PATH_PATTERN.matcher(uri.getPath());
             if (pathMatcher.find()) {
                 return Optional.of(URLDecoder.decode(pathMatcher.group(1), StandardCharsets.UTF_8));

@@ -14,6 +14,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.channel.entity.Channel;
+import geumjeongyahak.domain.channel.enums.ChannelAccessLevel;
+import geumjeongyahak.domain.channel.enums.ChannelBindingType;
+import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.file.repository.FileRepository;
 import geumjeongyahak.domain.post.v1.dto.request.PublishPostRequest;
@@ -162,7 +167,95 @@ class PostFileTest extends BasePostTest {
             .body("attachments.sortOrder", hasItem(3));
     }
 
+    @Test
+    @DisplayName("채널을 읽을 수 있는 봉사자는 게시글 Drive 첨부파일 다운로드 URL을 조회할 수 있다")
+    void getAttachmentDownloadUrl_PostAttachmentReadableChannel_Success() {
+        String volunteer = "post-download-volunteer";
+        userTestHelper.createTestUser(volunteer, RoleType.VOLUNTEER);
+        String volunteerToken = userTestHelper.generateAccessTokenByUserKey(volunteer);
+        Long postId = testPostHelper.createDraftAndRegister(noticeChannelId, adminAccessToken);
+        String driveUrl = "https://drive.google.com/file/d/readable-drive-file/view?usp=sharing";
+        String fileId = registerDriveFile(driveUrl);
+        attachRegisteredFile(noticeChannelId, postId, fileId);
+        publishDraft(noticeChannelId, postId, "다운로드 가능한 첨부");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+        .when()
+            .get("/api/v1/files/attachments/{fileId}/download-url", fileId)
+        .then()
+            .statusCode(200)
+            .body("downloadUrl", equalTo(driveUrl));
+    }
+
+    @Test
+    @DisplayName("채널을 읽을 수 없는 봉사자는 게시글 첨부파일 다운로드 URL을 조회할 수 없다")
+    void getAttachmentDownloadUrl_PostAttachmentUnreadableChannel_Forbidden() {
+        String volunteer = "post-download-blocked-volunteer";
+        userTestHelper.createTestUser(volunteer, RoleType.VOLUNTEER);
+        String volunteerToken = userTestHelper.generateAccessTokenByUserKey(volunteer);
+        Channel closedChannel = channelRepository.save(Channel.builder()
+            .name("비공개 자료실")
+            .description("다운로드 권한 테스트")
+            .channelType(ChannelType.RESOURCE)
+            .bindingType(ChannelBindingType.STANDALONE)
+            .accessLevel(ChannelAccessLevel.CLOSED)
+            .isActive(true)
+            .build());
+        testChannelHelper.registerChannel(closedChannel.getId());
+        Long postId = testPostHelper.createDraftAndRegister(closedChannel.getId(), adminAccessToken);
+        String fileId = registerDriveFile("https://drive.google.com/file/d/closed-drive-file/view?usp=sharing");
+        attachRegisteredFile(closedChannel.getId(), postId, fileId);
+        publishDraft(closedChannel.getId(), postId, "비공개 첨부");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+        .when()
+            .get("/api/v1/files/attachments/{fileId}/download-url", fileId)
+        .then()
+            .statusCode(403);
+    }
+
     private String imageTag(String imageUrl) {
         return "<p>본문</p><img src=\"" + imageUrl + "\" alt=\"image\">";
+    }
+
+    private void publishDraft(Long channelId, Long postId, String title) {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new PublishPostRequest(title, "<p>" + title + "</p>", true, null))
+        .when()
+            .put("/api/v1/channels/{channelId}/posts/{postId}/publish", channelId, postId)
+        .then()
+            .statusCode(200);
+    }
+
+    private String registerDriveFile(String driveUrl) {
+        return given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "driveUrl", driveUrl,
+                "originalName", "자료실 첨부.pdf",
+                "mimeType", "application/pdf",
+                "fileSize", 1024
+            ))
+        .when()
+            .post("/api/v1/files/drive")
+        .then()
+            .statusCode(201)
+            .extract().jsonPath().getString("fileId");
+    }
+
+    private void attachRegisteredFile(Long channelId, Long postId, String fileId) {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("fileId", fileId, "sortOrder", 0))
+        .when()
+            .post("/api/v1/channels/{channelId}/posts/{postId}/attachments", channelId, postId)
+        .then()
+            .statusCode(200);
     }
 }

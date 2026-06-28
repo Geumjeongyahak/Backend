@@ -41,6 +41,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.GrantedAuthority;
 
 @Slf4j
 @Service
@@ -82,10 +83,14 @@ public class PostCrudService {
     }
 
     public PaginationResponse<PostSummaryResponse> getPosts(Long channelId, CustomUserDetails userDetails, PostSearchRequest request) {
+        if (!channelAccessChecker.can("read", channelId, userDetails)) {
+            throw new AccessDeniedException("게시글 목록 조회 권한이 없습니다.");
+        }
         ensureContentSearchAllowed(channelId, userDetails, request);
 
         Specification<Post> spec = postSearchSpecificationBuilder.build(request)
-                .and(PostSpecs.hasChannelId(channelId));
+                .and(PostSpecs.hasChannelId(channelId))
+                .and(readableStatusSpec(userDetails));
 
         return PaginationResponse.from(
                 postRepository.findAll(spec, request.toRequest()),
@@ -97,7 +102,12 @@ public class PostCrudService {
         ensureContentSearchAllowed(request.getChannelId(), userDetails, request);
 
         return PaginationResponse.from(
-                postRepository.findAll(postSearchSpecificationBuilder.build(request), request.toRequest()),
+                postRepository.findAll(
+                    postSearchSpecificationBuilder.build(request)
+                        .and(readableBoardChannelSpec(userDetails))
+                        .and(readableStatusSpec(userDetails)),
+                    request.toRequest()
+                ),
                 PostSummaryResponse::from
         );
     }
@@ -273,6 +283,52 @@ public class PostCrudService {
                 .anyMatch(a -> a.getAuthority().equals("channel:read:*")
                         || a.getAuthority().equals("channel:write:*")
                         || a.getAuthority().equals("channel:manage:*"));
+    }
+
+    private Specification<Post> readableStatusSpec(CustomUserDetails userDetails) {
+        if (userDetails != null && userDetails.isAdmin()) {
+            return Specification.allOf();
+        }
+        return PostSpecs.hasStatus(PostStatus.PUBLISHED);
+    }
+
+    private Specification<Post> readableBoardChannelSpec(CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            return PostSpecs.hasGuestReadableChannel();
+        }
+        if (userDetails.isAdmin() || hasWildcardChannelPermission(userDetails)) {
+            return PostSpecs.hasActiveChannel();
+        }
+
+        Set<Long> channelIds = explicitChannelReadIds(userDetails);
+        Specification<Post> visible = PostSpecs.hasVisibleChannel();
+        if (channelIds.isEmpty()) {
+            return visible;
+        }
+        return visible.or(PostSpecs.hasAnyChannelId(channelIds).and(PostSpecs.hasActiveChannel()));
+    }
+
+    private Set<Long> explicitChannelReadIds(CustomUserDetails userDetails) {
+        return userDetails.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .flatMap(authority -> java.util.stream.Stream.of(
+                parseChannelId(authority, "channel:read:"),
+                parseChannelId(authority, "channel:write:"),
+                parseChannelId(authority, "channel:manage:")
+            ))
+            .flatMap(java.util.Optional::stream)
+            .collect(java.util.stream.Collectors.toSet());
+    }
+
+    private java.util.Optional<Long> parseChannelId(String authority, String prefix) {
+        if (!authority.startsWith(prefix) || authority.endsWith(":*")) {
+            return java.util.Optional.empty();
+        }
+        try {
+            return java.util.Optional.of(Long.parseLong(authority.substring(prefix.length())));
+        } catch (NumberFormatException exception) {
+            return java.util.Optional.empty();
+        }
     }
 
     private boolean hasText(String value) {

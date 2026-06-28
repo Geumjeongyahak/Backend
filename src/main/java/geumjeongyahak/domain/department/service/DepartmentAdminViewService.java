@@ -1,4 +1,4 @@
-package geumjeongyahak.domain.file.service;
+package geumjeongyahak.domain.department.service;
 
 import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
@@ -7,8 +7,6 @@ import geumjeongyahak.domain.department.entity.Department;
 import geumjeongyahak.domain.department.entity.DepartmentPermission;
 import geumjeongyahak.domain.department.enums.DepartmentRoleType;
 import geumjeongyahak.domain.department.repository.DepartmentRepository;
-import geumjeongyahak.domain.department.service.DepartmentCrudService;
-import geumjeongyahak.domain.department.service.DepartmentPermissionService;
 import geumjeongyahak.domain.department.v1.dto.request.CreateDepartmentRequest;
 import geumjeongyahak.domain.department.v1.dto.request.UpdateDepartmentRequest;
 import geumjeongyahak.domain.department.v1.dto.response.DepartmentDetailResponse;

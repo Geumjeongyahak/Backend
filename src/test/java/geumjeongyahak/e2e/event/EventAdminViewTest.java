@@ -6,6 +6,8 @@ import static org.hamcrest.Matchers.containsString;
 
 import io.restassured.http.ContentType;
 import java.time.LocalDate;
+import geumjeongyahak.e2e.util.AdminSessionHelper;
+import geumjeongyahak.e2e.util.AdminSessionHelper.AdminSession;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -21,7 +23,7 @@ class EventAdminViewTest extends BaseEventTest {
 
         given()
             .basePath("")
-            .cookie("JSESSIONID", loginAdminSession())
+            .cookie("JSESSIONID", loginAdminSession().sessionId())
         .when()
             .get("/admin/event/events")
         .then()
@@ -35,12 +37,13 @@ class EventAdminViewTest extends BaseEventTest {
     @Test
     @DisplayName("관리자 화면에서 행사를 등록할 수 있다")
     void createEventFromAdminPage_redirectsAndCreates() {
-        String sessionId = loginAdminSession();
+        AdminSession session = loginAdminSession();
 
         String location = given()
             .basePath("")
-            .cookie("JSESSIONID", sessionId)
+            .cookie("JSESSIONID", session.sessionId())
             .contentType(ContentType.URLENC)
+            .formParam("_csrf", session.csrfToken())
             .formParam("title", "admin-created-event")
             .formParam("description", "created-from-admin-page")
             .formParam("eventDate", "2026-06-02")
@@ -72,11 +75,13 @@ class EventAdminViewTest extends BaseEventTest {
     @DisplayName("관리자 화면에서 행사를 수정할 수 있다")
     void updateEventFromAdminPage_redirectsAndUpdates() {
         insertEvent(210L, "수정 전 행사", "2026-06-03", "18:00:00", "20:00:00", false);
+        AdminSession session = loginAdminSession();
 
         given()
             .basePath("")
-            .cookie("JSESSIONID", loginAdminSession())
+            .cookie("JSESSIONID", session.sessionId())
             .contentType(ContentType.URLENC)
+            .formParam("_csrf", session.csrfToken())
             .formParam("title", "admin-updated-event")
             .formParam("description", "")
             .formParam("eventDate", "2026-06-04")
@@ -103,10 +108,12 @@ class EventAdminViewTest extends BaseEventTest {
     @DisplayName("관리자 화면에서 행사를 삭제할 수 있다")
     void deleteEventFromAdminPage_redirectsAndDeletes() {
         insertEvent(220L, "삭제 대상 행사", "2026-06-05", "18:00:00", "20:00:00", false);
+        AdminSession session = loginAdminSession();
 
         given()
             .basePath("")
-            .cookie("JSESSIONID", loginAdminSession())
+            .cookie("JSESSIONID", session.sessionId())
+            .formParam("_csrf", session.csrfToken())
             .redirects()
             .follow(false)
         .when()
@@ -128,7 +135,7 @@ class EventAdminViewTest extends BaseEventTest {
 
         given()
             .basePath("")
-            .cookie("JSESSIONID", loginAdminSession())
+            .cookie("JSESSIONID", loginAdminSession().sessionId())
         .when()
             .get("/admin")
         .then()
@@ -140,20 +147,8 @@ class EventAdminViewTest extends BaseEventTest {
             .body(containsString("/admin/event/events"));
     }
 
-    private String loginAdminSession() {
-        return given()
-            .basePath("")
-            .contentType(ContentType.URLENC)
-            .formParam("username", TEST_ADMIN_EMAIL)
-            .formParam("password", TEST_ADMIN_PASSWORD)
-            .redirects()
-            .follow(false)
-        .when()
-            .post("/admin/auth/login")
-        .then()
-            .statusCode(302)
-            .extract()
-            .cookie("JSESSIONID");
+    private AdminSession loginAdminSession() {
+        return AdminSessionHelper.login(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
     }
 
     private Long extractEventId(String location) {

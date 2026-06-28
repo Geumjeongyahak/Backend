@@ -17,7 +17,7 @@ public class DriveUploadProperties {
     private String sharedDriveId;
     private final FolderIds folderIds = new FolderIds();
     private final OAuth oauth = new OAuth();
-    private boolean makeLinkPublic = true;
+    private boolean makeLinkPublic = false;
     private String uploadBaseUrl = "https://www.googleapis.com/upload/drive/v3";
     private String apiBaseUrl = "https://www.googleapis.com/drive/v3";
 

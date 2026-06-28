@@ -261,8 +261,8 @@ permission code로는 표현되지 않습니다.
 | `POST /api/v1/files/images/purchase-items` | 인증만 |
 | `POST /api/v1/files/attachments` | 인증만 |
 | `POST /api/v1/files/drive` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` |
-| `GET /api/v1/files/attachments/{fileId}/download-url` | 인증만 |
-| `DELETE /api/v1/files/attachments/{fileId}` | 인증만 |
+| `GET /api/v1/files/attachments/{fileId}/download-url` | 인증 + `ADMIN` 또는 연결된 발행 게시글 채널 `read` |
+| `DELETE /api/v1/files/attachments/{fileId}` | `ADMIN` |
 
 ---
 

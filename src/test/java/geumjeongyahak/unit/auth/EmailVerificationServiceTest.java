@@ -124,7 +124,27 @@ class EmailVerificationServiceTest {
 
         assertThat(credential.isEmailVerified()).isFalse();
         assertThat(credential.getEmailVerificationTokenHash()).isEqualTo(TOKEN_HASH);
-        verify(credentialRepository, never()).save(any());
+        assertThat(credential.getEmailVerificationFailedAttempts()).isEqualTo(1);
+        verify(credentialRepository).save(credential);
+    }
+
+    @Test
+    void confirm_clearsTokenAfterFiveInvalidCodes() {
+        UserCredential credential = unverifiedCredential();
+        credential.issueEmailVerificationToken(TOKEN_HASH, LocalDateTime.now(CLOCK).plusMinutes(15), LocalDateTime.now(CLOCK));
+        given(credentialRepository.findByCredentialEmailAndProvider(EMAIL, ProviderType.LOCAL))
+            .willReturn(Optional.of(credential));
+        given(passwordEncoder.matches("654321", TOKEN_HASH)).willReturn(false);
+
+        for (int i = 0; i < 5; i++) {
+            assertThatThrownBy(() -> emailVerificationService.confirm(EMAIL, "654321"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("유효하지 않은 이메일 인증번호입니다.");
+        }
+
+        assertThat(credential.isEmailVerified()).isFalse();
+        assertThat(credential.getEmailVerificationTokenHash()).isNull();
+        assertThat(credential.getEmailVerificationFailedAttempts()).isZero();
     }
 
     @Test
@@ -137,7 +157,11 @@ class EmailVerificationServiceTest {
             () -> "222222"
         );
         UserCredential credential = unverifiedCredential();
-        credential.issueEmailVerificationToken("old-hash", LocalDateTime.now(CLOCK).plusMinutes(15), LocalDateTime.now(CLOCK));
+        credential.issueEmailVerificationToken(
+            "old-hash",
+            LocalDateTime.now(CLOCK).plusMinutes(15),
+            LocalDateTime.now(CLOCK).minusSeconds(61)
+        );
         given(credentialRepository.findByCredentialEmailAndProvider(EMAIL, ProviderType.LOCAL))
             .willReturn(Optional.of(credential));
         given(passwordEncoder.encode("222222")).willReturn("new-hash");
@@ -148,6 +172,24 @@ class EmailVerificationServiceTest {
 
         assertThat(credential.getEmailVerificationTokenHash()).isEqualTo("new-hash");
         verify(mailSenderService).sendEmailVerificationMail(EMAIL, "이메일 인증 사용자", "222222");
+    }
+
+    @Test
+    void resend_rejectsRapidRepeatRequest() {
+        UserCredential credential = unverifiedCredential();
+        credential.issueEmailVerificationToken(
+            "old-hash",
+            LocalDateTime.now(CLOCK).plusMinutes(15),
+            LocalDateTime.now(CLOCK).minusSeconds(30)
+        );
+        given(credentialRepository.findByCredentialEmailAndProvider(EMAIL, ProviderType.LOCAL))
+            .willReturn(Optional.of(credential));
+
+        assertThatThrownBy(() -> emailVerificationService.resend(EMAIL))
+            .isInstanceOf(BusinessException.class)
+            .hasMessage("인증번호는 60초 후 다시 요청할 수 있습니다.");
+
+        verify(mailSenderService, never()).sendEmailVerificationMail(any(), any(), any());
     }
 
     @Test
