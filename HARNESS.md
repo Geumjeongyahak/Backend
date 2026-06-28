@@ -2,7 +2,7 @@
 
 ## 목적
 
-이 하네스는 금정야학 백엔드에서 반복되는 모니터링, 동기화, 문서화 작업을 `issue -> branch -> commit -> PR` 흐름으로 고정하고, LLM 실행의 프롬프트와 결과를 artifact로 남기기 위한 repo-local 계약이다.
+이 하네스는 금정야학 백엔드에서 반복되는 기능 구현, 모니터링, 동기화, 문서화 작업을 `issue -> branch -> implementation -> commit -> PR` 흐름으로 고정하고, LLM 실행의 프롬프트와 결과를 artifact로 남기기 위한 repo-local 계약이다.
 
 LLM Wiki의 `Codex Harness Engineering`, `Codex 기반 Agent Harness Engineering 리서치`, `SW Maestro Harness Research`를 기준으로 한다. 핵심은 역할형 subagent tree가 아니라 다음 네 단위다.
 
@@ -49,6 +49,44 @@ retry = 실패 로그를 먹인 복구 loop
    - PR 본문에는 issue link, 변경 요약, 검증 증거, 남은 blocker를 포함한다.
    - PR 생성 후 URL과 실제 검증 명령 결과를 보고한다.
 
+## 기능 요청 자동화 플로우
+
+기능 요청이 들어오면 기존 issue/PR 양식을 먼저 수집하고, 그 결과를 task prompt에 넣어 구현/PR 문체가 저장소 관행에서 벗어나지 않게 한다.
+
+```mermaid
+flowchart LR
+    Request[기능 요청] --> Issue[GitHub Issue 작성/확정]
+    Issue --> Context[collect-github-context.sh\n템플릿 + 최근 issue/PR 수집]
+    Context --> Prepare[prepare-feature-task.sh\nbranch/task/pr-draft 준비]
+    Prepare --> Implement[run-task.sh\nCodex/Hermes 구현]
+    Implement --> Verify[focused test + scripts/harness/verify.sh]
+    Verify --> Commit[작은 논리 commit]
+    Commit --> PR[PR 생성\n기본 PR 구조 + 검증 증거]
+```
+
+권장 명령:
+
+```bash
+# 기존 GitHub issue를 기준으로 branch/task/pr draft 준비
+scripts/harness/prepare-feature-task.sh --issue 161
+
+# Codex 실행 전 prompt와 GitHub context artifact만 확인
+scripts/harness/run-task.sh --dry-run harness/tasks/issue-161-feature-task.md
+
+# PR 본문 초안만 재생성
+scripts/harness/draft-pr-body.sh 161 > /tmp/pr-161.md
+```
+
+시동어는 `harness/startup-words.md`를 따른다. `/plan`은 issue 수준 요구사항 구체화만 수행하고, `implement /goal ...` 또는 `implement --issue <number>`는 issue 확인, branch/task 준비, 구현, 검증, PR handoff까지 진행하는 구현 모드다.
+
+자동화 원칙:
+
+- issue 본문은 `.github/ISSUE_TEMPLATE`와 최근 issue를 참고해 기존 `기능 설명`, `배경`, `상세 요구사항`, `참고 자료`, `추가 정보` 구조를 유지한다.
+- PR 본문은 최근 PR 관행에 맞춰 `개요`, `변경 유형`, `변경 내용`, `관련 이슈`, `스크린샷 (선택)`, `체크리스트`, `리뷰어에게`, `검증` 기본 구조를 유지한다.
+- API/domain/data 흐름이 바뀌면 Mermaid `sequenceDiagram`, `erDiagram`, `classDiagram`, `flowchart` 중 필요한 것만 실제 변경 이름으로 추가한다.
+- 구현 agent는 먼저 유사 controller/service/repository/DTO/test를 찾고, 기존 예외/권한/transaction convention을 따른다.
+- commit/push/PR 생성은 실제 `git`/`gh` 출력으로 확인한다. 자동 merge/deploy는 하네스 범위 밖이다.
+
 ## Artifact 구조
 
 `harness/runs/`는 `.gitignore` 대상이다. 실행 결과는 재현/리뷰용 로컬 evidence이며 secrets를 넣지 않는다.
@@ -58,6 +96,7 @@ retry = 실패 로그를 먹인 복구 loop
 ```text
 harness/
 ├── README.md
+├── startup-words.md
 ├── v1/
 │   └── 2026-06-28/
 │       ├── README.md
@@ -76,6 +115,7 @@ harness/
 │   └── task-result.schema.json
 ├── tasks/
 │   └── monitoring-sync-docs-task.template.md
+│   └── issue-<number>-feature-task.md
 └── runs/
     └── <run-id>/
         ├── prompt.txt
@@ -105,6 +145,10 @@ Codex final output은 `harness/schemas/task-result.schema.json`을 따라야 한
 | --- | --- | --- |
 | `task.input` | task file 또는 `user-input.md` | 사용자/태스크 입력 수집 상태 기록 |
 | `prompt.rendered` | `prompt.txt` | task packet과 repo 규칙으로 실행 프롬프트 생성 |
+| `github.context` | `github-context.md` | 로컬 템플릿과 최근 issue/PR 양식 수집 |
+| `issue.snapshot` | `issue-<number>.json` | 구현 기준이 되는 GitHub issue 원문 저장 |
+| `task.prepared` | `harness/tasks/issue-<number>-feature-task.md` | issue 기반 구현 task packet 생성 |
+| `pr.drafted` | `pr-draft.md` | PR body 초안 생성 |
 | `codex.finished` | `result.json` | Codex structured result 생성 |
 | `verify.finished` | `verify-summary.txt` | runner 검증 결과 요약 |
 | `diff.summarized` | `diff-summary.md` | PR handoff용 diff summary 생성 |

@@ -25,9 +25,11 @@ RUN_ID="${HARNESS_RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
 HARNESS_VERSION="${HARNESS_VERSION:-v1}"
 HARNESS_DATE="${HARNESS_DATE:-2026-06-28}"
 HARNESS_CAPTURE_INPUT="${HARNESS_CAPTURE_INPUT:-metadata}"
+HARNESS_GITHUB_CONTEXT="${HARNESS_GITHUB_CONTEXT:-auto}"
 ARTIFACT_DIR="${REPO_ROOT}/harness/runs/${RUN_ID}"
 PROMPT_FILE="${ARTIFACT_DIR}/prompt.txt"
 USER_INPUT_FILE="${ARTIFACT_DIR}/user-input.md"
+GITHUB_CONTEXT_FILE="${ARTIFACT_DIR}/github-context.md"
 EVENTS_FILE="${ARTIFACT_DIR}/events.jsonl"
 RESULT_FILE="${ARTIFACT_DIR}/result.json"
 VERIFY_LOG="${ARTIFACT_DIR}/verify.log"
@@ -60,12 +62,28 @@ case "${HARNESS_CAPTURE_INPUT}" in
     ;;
 esac
 
+case "${HARNESS_GITHUB_CONTEXT}" in
+  off)
+    ;;
+  auto|on)
+    if [[ ! -f "${GITHUB_CONTEXT_FILE}" ]]; then
+      scripts/harness/collect-github-context.sh > "${GITHUB_CONTEXT_FILE}"
+    fi
+    HARNESS_ARTIFACT_DIR="${ARTIFACT_DIR}" "${HOOK}" "${RUN_ID}" "github.context" "${GITHUB_CONTEXT_FILE}" "ok"
+    ;;
+  *)
+    echo "invalid HARNESS_GITHUB_CONTEXT=${HARNESS_GITHUB_CONTEXT}; expected off|auto|on" >&2
+    exit 2
+    ;;
+esac
+
 {
   echo "# Harness Run Prompt"
   echo
   echo "Run ID: ${RUN_ID}"
   echo "Harness version: ${HARNESS_VERSION} (${HARNESS_DATE})"
   echo "Input capture: ${HARNESS_CAPTURE_INPUT}"
+  echo "GitHub context: ${HARNESS_GITHUB_CONTEXT}"
   echo "Task file: ${TASK_FILE}"
   echo
   echo "## Base prompt"
@@ -73,6 +91,11 @@ esac
   echo
   echo "## Task packet"
   cat "${TASK_FILE}"
+  if [[ -f "${GITHUB_CONTEXT_FILE}" ]]; then
+    echo
+    echo "## GitHub issue/PR/template context"
+    cat "${GITHUB_CONTEXT_FILE}"
+  fi
 } > "${PROMPT_FILE}"
 
 HARNESS_ARTIFACT_DIR="${ARTIFACT_DIR}" "${HOOK}" "${RUN_ID}" "prompt.rendered" "${PROMPT_FILE}" "ok"
