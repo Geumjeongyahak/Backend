@@ -186,4 +186,13 @@ domain/{도메인명}/
 
 - [PR 템플릿](./pr_template.md)
 - [Issue 템플릿 - Feature](./issue_feature_template.md)
-- [Issue 템플릿 - Bug](./issue_bug_template.md)
+- [Issue 템플릿 - Fix](./issue_bug_template.md)
+
+### 4.1 Issue 제목 규칙
+
+이슈 제목은 다음 형식을 사용합니다.
+
+```
+[FEAT] 새 기능 요약
+[FIX] 수정 사항 요약
+```

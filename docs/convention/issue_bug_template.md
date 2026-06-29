@@ -1,6 +1,6 @@
-# Issue 템플릿 - Bug Report
+# Issue 템플릿 - Fix Request
 
-버그 리포트 시 사용하는 템플릿입니다.
+수정 요청 시 사용하는 템플릿입니다.
 
 ---
 
@@ -8,9 +8,9 @@
 
 ```markdown
 ---
-name: Bug Report
-about: 버그를 제보합니다
-title: '[BUG] '
+name: Fix Request
+about: 수정이 필요한 문제를 제보합니다
+title: '[FIX] '
 labels: bug
 assignees: ''
 ---
