@@ -156,6 +156,20 @@ public class User extends BaseEntity {
         this.deletedAt = LocalDateTime.now();
     }
 
+    public void reactivateForSignup(String name, String phoneNumber, String residentRegistrationNumberPrefix) {
+        this.isDeleted = false;
+        this.deletedAt = null;
+        this.name = name;
+        this.phoneNumber = phoneNumber;
+        this.residentRegistrationNumberPrefix = residentRegistrationNumberPrefix;
+        this.department = null;
+        this.classroom = null;
+        this.teacherStartAt = null;
+        this.teacherEndAt = null;
+        this.role = RoleType.GUEST;
+        clearPermissions();
+    }
+
     private Optional<UserCredential> findLocalCredential() {
         return credentials.stream()
             .filter(credential -> credential.getProvider() == ProviderType.LOCAL)
