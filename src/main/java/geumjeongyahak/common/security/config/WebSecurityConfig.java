@@ -104,6 +104,7 @@ public class WebSecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // 관리자 로그인 페이지로 redirect 용
                 .requestMatchers(HttpMethod.GET, "/").permitAll()
+                .requestMatchers(HttpMethod.GET, "/auth/email-verification").permitAll()
                 // 정적 리소스 및 문서/헬스체크
                 .requestMatchers("/favicon.ico", "/sw.js", "/icons/**", "/mock/**", "/site.webmanifest", "/actuator/health", "/actuator/prometheus", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/swagger-ui").permitAll()
                 // 인증 API (로그인, 회원가입, 토큰 재발급, 로그아웃)

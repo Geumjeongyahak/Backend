@@ -2,14 +2,20 @@ package geumjeongyahak.domain.auth.v1.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
+import geumjeongyahak.common.exception.BusinessException;
+import geumjeongyahak.common.mail.MailProperties;
 import geumjeongyahak.common.security.service.CustomUserDetails;
+import geumjeongyahak.domain.auth.exception.AuthErrorCode;
 import geumjeongyahak.domain.auth.service.EmailVerificationService;
 import geumjeongyahak.domain.auth.service.LocalAuthService;
 import geumjeongyahak.domain.auth.service.PasswordResetService;
@@ -33,6 +39,7 @@ public class LocalAuthController {
     private final LocalAuthService localLoginService;
     private final PasswordResetService passwordResetService;
     private final EmailVerificationService emailVerificationService;
+    private final MailProperties mailProperties;
 
     @Operation(
         summary = "로그인",
@@ -81,6 +88,34 @@ public class LocalAuthController {
         log.debug("POST /api/v1/auth/email-verification/confirm - 이메일 인증 요청");
         emailVerificationService.confirm(request.email(), request.verificationCode());
         return ResponseEntity.ok(AuthMessageResponse.of("이메일 인증이 완료되었습니다. 로그인해 주세요."));
+    }
+
+    @Operation(
+        summary = "이메일 인증 링크 처리",
+        description = "메일의 인증 버튼에서 호출되며, 인증 결과를 프론트엔드 인증 결과 페이지로 리다이렉트합니다."
+    )
+    @GetMapping("/email-verification/confirm")
+    public void confirmEmailVerificationLink(
+            @RequestParam String email,
+            @RequestParam("code") String verificationCode,
+            HttpServletResponse response
+    ) throws IOException {
+        String status = "success";
+        try {
+            emailVerificationService.confirm(email, verificationCode);
+        } catch (BusinessException exception) {
+            status = AuthErrorCode.EMAIL_VERIFICATION_TOKEN_EXPIRED.getCode().equals(exception.getCode())
+                ? "expired"
+                : "invalid";
+            log.info("이메일 인증 링크 처리 실패 - email={}, status={}", email, status);
+        }
+
+        response.sendRedirect(UriComponentsBuilder
+            .fromUriString(mailProperties.frontendBaseUrl())
+            .replacePath("/auth/email-verification")
+            .queryParam("status", status)
+            .queryParam("email", email)
+            .toUriString());
     }
 
     @Operation(

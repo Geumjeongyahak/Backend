@@ -13,6 +13,7 @@ import geumjeongyahak.domain.auth.entity.UserCredential;
 import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.auth.exception.AuthErrorCode;
+import geumjeongyahak.domain.auth.exception.DuplicateCredentialException;
 import geumjeongyahak.domain.auth.exception.InvalidRefreshTokenException;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalSignupRequest;
@@ -85,11 +86,38 @@ public class LocalAuthService {
     public AuthMessageResponse signup(LocalSignupRequest request) {
         log.debug("회원가입 시도: {}", request.email());
 
+        if (request.email() != null
+            && userCredentialService.existsByCredentialEmailAndProvider(request.email(), ProviderType.GOOGLE)) {
+            throw new DuplicateCredentialException("이미 Google 계정으로 가입된 이메일입니다. Google로 로그인해 주세요.");
+        }
+
+        var localCredential = userCredentialService.findOptionalByCredentialEmailAndProvider(
+            request.email(),
+            ProviderType.LOCAL
+        );
+        if (localCredential.isPresent()) {
+            UserCredential credential = localCredential.get();
+            if (!credential.getUser().isDeleted()) {
+                throw new DuplicateEmailException(request.email());
+            }
+            credential.getUser().reactivateForSignup(
+                request.name(),
+                request.phoneNumber(),
+                UserBirthDateConverter.toResidentRegistrationNumberPrefix(request.birthDate())
+            );
+            credential.changePassword(passwordEncoder.encode(request.password()));
+            credential.setEmailVerified(false);
+            credential.clearEmailVerificationToken();
+            emailVerificationService.issueVerification(credential);
+            log.info("비활성 사용자 재가입 성공: userId={}, email={}", credential.getUser().getId(), request.email());
+            return AuthMessageResponse.of("회원가입이 완료되었습니다. 이메일 인증 후 로그인해 주세요.");
+        }
+
         if (request.email() != null && userProxyService.existsByEmailIncludingDeleted(request.email())) {
             throw new DuplicateEmailException(request.email());
         }
 
-        User user = User.builder()
+        User savedUser = userProxyService.save(User.builder()
             .name(request.name())
             .email(request.email())
             .phoneNumber(request.phoneNumber())
@@ -97,9 +125,7 @@ public class LocalAuthService {
                 UserBirthDateConverter.toResidentRegistrationNumberPrefix(request.birthDate())
             )
             .role(RoleType.GUEST)
-            .build();
-
-        User savedUser = userProxyService.save(user);
+            .build());
         UserCredential credential = userCredentialService.createLocalCredential(
             savedUser,
             request.email(),
