@@ -18,10 +18,14 @@ public record TeacherContactResponse(
     String phoneNumber
 ) {
     public static TeacherContactResponse from(User user) {
+        return from(user, user.getClassroom() != null ? user.getClassroom().getName() : null);
+    }
+
+    public static TeacherContactResponse from(User user, String classroomName) {
         return new TeacherContactResponse(
             user.getId(),
             user.getName(),
-            user.getClassroom() != null ? user.getClassroom().getName() : null,
+            classroomName,
             user.getPhoneNumber()
         );
     }

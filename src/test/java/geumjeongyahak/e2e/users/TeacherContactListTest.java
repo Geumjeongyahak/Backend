@@ -5,20 +5,25 @@ import geumjeongyahak.domain.classroom.repository.ClassroomRepository;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.repository.UserRepository;
 import io.restassured.RestAssured;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDate;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
 
 @DisplayName("E2E: 교사 연락망 조회 테스트")
 class TeacherContactListTest extends UserBaseTest {
+
+    private static final long TEACHER_CONTACT_SUBJECT_ID = 9190L;
 
     private String guestAccessToken;
 
@@ -28,6 +33,9 @@ class TeacherContactListTest extends UserBaseTest {
     @Autowired
     private ClassroomRepository classroomRepository;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     @BeforeEach
     @Override
     protected void setUp() {
@@ -35,6 +43,11 @@ class TeacherContactListTest extends UserBaseTest {
         RestAssured.basePath = "";
         userTestHelper.createTestUser("teacherContactGuest@test.com", "Teacher Contact Guest", "pw_guest", RoleType.GUEST);
         guestAccessToken = userTestHelper.generateAccessTokenByEmail("teacherContactGuest@test.com");
+    }
+
+    @AfterEach
+    void cleanUpTeacherContactSubjects() {
+        jdbcTemplate.update("DELETE FROM subjects WHERE id = ?", TEACHER_CONTACT_SUBJECT_ID);
     }
 
     @Test
@@ -94,6 +107,29 @@ class TeacherContactListTest extends UserBaseTest {
     }
 
     @Test
+    @DisplayName("교사 연락망은 담당 과목의 분반명을 반환한다")
+    void getTeacherContactList_UsesAssignedSubjectClassroom() {
+        User teacher = createTeacherContact(
+            "contact-assigned-subject@test.com",
+            "Assigned Subject Teacher",
+            "010-1212-3434",
+            LocalDate.now().minusDays(1),
+            null
+        );
+        teacher.setClassroom(null);
+        userRepository.save(teacher);
+        insertTeacherContactSubject(teacher.getId());
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
+        .when()
+            .get("/api/v1/teachers/contact-list")
+        .then()
+            .statusCode(200)
+            .body("find { it.name == 'Assigned Subject Teacher' }.classroomName", equalTo("장미반"));
+    }
+
+    @Test
     @DisplayName("게스트는 교사 연락망을 조회할 수 없다")
     void getTeacherContactList_Forbidden_Guest() {
         given()
@@ -129,5 +165,19 @@ class TeacherContactListTest extends UserBaseTest {
         userRepository.save(user);
         userTestHelper.setUser(email);
         return user;
+    }
+
+    private void insertTeacherContactSubject(Long teacherId) {
+        jdbcTemplate.update("""
+            MERGE INTO subjects (
+                id, class_id, teacher_id, name, start_at, end_at, day_of_week,
+                start_time, end_time, period, teacher_assigned_at, description, is_active
+            )
+            KEY(id)
+            VALUES (
+                ?, 2, ?, '교사 연락망 배정 과목', DATE '2099-03-02', DATE '2099-06-30', 'MONDAY',
+                TIME '19:20:00', TIME '20:00:00', 1, CURRENT_TIMESTAMP, '교사 연락망 테스트', TRUE
+            )
+            """, TEACHER_CONTACT_SUBJECT_ID, teacherId);
     }
 }
