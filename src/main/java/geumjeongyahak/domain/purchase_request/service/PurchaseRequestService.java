@@ -256,8 +256,7 @@ public class PurchaseRequestService {
         PurchaseRequest purchaseRequest = findById(requestId);
         checkAccess(purchaseRequest, requesterId, isAdmin);
 
-        if (purchaseRequest.getStatus() == PurchaseRequestStatus.PENDING
-            || purchaseRequest.getStatus() == PurchaseRequestStatus.REJECTED) {
+        if (purchaseRequest.getStatus() != PurchaseRequestStatus.PURCHASED) {
             throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
         }
 

@@ -644,6 +644,30 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .body("balance", equalTo(100000));
     }
 
+    @Test
+    @DisplayName("CONFIRMED 구입 요청 거래 수정 → 409")
+    void updateItemReceipts_confirmedRequest_returns409() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = setupPurchasedRequest(createdVendorId, 20000L, null);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", currentRequestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("CONFIRMED"));
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(reportBody(createdVendorId, 25000L, null))
+            .post("/{requestId}/item-receipts", currentRequestId)
+            .then()
+            .statusCode(409);
+    }
+
     // ── 조회 ──────────────────────────────────────────────
 
     @Test
@@ -726,6 +750,30 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .then()
             .statusCode(200)
             .body("id", equalTo(currentRequestId.intValue()));
+    }
+
+    @Test
+    @DisplayName("게스트 구입 요청 목록 조회 → 403")
+    void getList_asGuest_returns403() {
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .get()
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("게스트 구입 요청 상세 조회 → 403")
+    void getDetail_asGuest_returns403() {
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .get("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(403);
     }
 
     @Test
