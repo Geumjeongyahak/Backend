@@ -15,7 +15,17 @@ public enum PurchaseRequestErrorCode implements ErrorCode {
     ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "PR-004", "구입 요청 항목을 찾을 수 없습니다."),
     PURCHASE_DEADLINE_EXCEEDED(HttpStatus.CONFLICT, "PR-005", "구매 기한(승인 후 7일)이 초과되었습니다."),
     INVALID_STATUS(HttpStatus.CONFLICT, "PR-006", "현재 상태에서는 처리할 수 없는 요청입니다."),
-    INVALID_PAYMENT_METHOD(HttpStatus.BAD_REQUEST, "PR-007", "결제 방식과 거래처 정보가 올바르지 않습니다.");
+    INVALID_PAYMENT_METHOD(HttpStatus.BAD_REQUEST, "PR-007", "결제 방식과 거래처 정보가 올바르지 않습니다."),
+    EXPENSE_DOCUMENT_TEMPLATE_NOT_FOUND(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        "PR-008",
+        "지출증빙서류 템플릿을 찾을 수 없습니다."
+    ),
+    EXPENSE_DOCUMENT_TEMPLATE_READ_FAILED(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        "PR-009",
+        "지출증빙서류 템플릿을 읽을 수 없습니다."
+    );
 
     private final HttpStatus status;
     private final String code;

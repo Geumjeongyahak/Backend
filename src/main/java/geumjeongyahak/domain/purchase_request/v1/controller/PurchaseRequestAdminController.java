@@ -6,7 +6,11 @@ import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,9 +25,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
+import geumjeongyahak.domain.purchase_request.service.ExpenseDocumentService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestService;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestByAdminRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.GenerateExpenseDocumentRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReviewPurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.UpdatePurchaseRequestByAdminRequest;
@@ -38,6 +44,7 @@ import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSum
 public class PurchaseRequestAdminController {
 
     private final PurchaseRequestService purchaseRequestService;
+    private final ExpenseDocumentService expenseDocumentService;
 
     @Operation(
         summary = "구입 요청 대리 생성",
@@ -199,5 +206,29 @@ public class PurchaseRequestAdminController {
         return ResponseEntity.ok(
             purchaseRequestService.updateItemReceipts(userDetails.getUserId(), requestId, request, true)
         );
+    }
+
+    @Operation(
+        summary = "지출증빙서류 DOCX 생성",
+        description = "선결제 구매 요청의 품의서/결의서 DOCX 문서를 생성해 다운로드합니다."
+    )
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
+    @PostMapping("/{requestId}/expense-document")
+    public ResponseEntity<Resource> generateExpenseDocument(
+        @PathVariable Long requestId,
+        @Valid @RequestBody GenerateExpenseDocumentRequest request
+    ) {
+        log.debug("POST /api/v1/admin/purchase-requests/{}/expense-document", requestId);
+        byte[] document = expenseDocumentService.generate(requestId, request);
+        ByteArrayResource resource = new ByteArrayResource(document);
+
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(ExpenseDocumentService.DOCX_CONTENT_TYPE))
+            .contentLength(document.length)
+            .header(
+                HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"expense-document-" + requestId + ".docx\""
+            )
+            .body(resource);
     }
 }
