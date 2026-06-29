@@ -1,1 +1,9 @@
-[]
+- targets:
+    - 100.120.214.43:9187
+  labels:
+    project: gjlearn
+    env: prod
+    service: postgres
+    role: postgres-exporter
+    instance_name: gjlearn-prod-db
+    domain: api.geumjeongschool.com
