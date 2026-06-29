@@ -1,1 +1,19 @@
-[]
+- targets:
+    - 100.82.86.118:9100
+  labels:
+    project: gjlearn
+    env: prod
+    service: app
+    role: node-exporter
+    instance_name: gjlearn-prod-app
+    domain: api.geumjeongschool.com
+
+- targets:
+    - 100.120.214.43:9100
+  labels:
+    project: gjlearn
+    env: prod
+    service: db
+    role: node-exporter
+    instance_name: gjlearn-prod-db
+    domain: api.geumjeongschool.com
