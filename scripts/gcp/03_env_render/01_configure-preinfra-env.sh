@@ -192,7 +192,7 @@ ask("MAIL_FROM_EMAIL", "Mail from email", get("MAIL_FROM_EMAIL") or "no-reply@ex
 ask("MAIL_FROM_NAME", "Mail from name", get("MAIL_FROM_NAME") or "금정야학")
 ask("MAIL_PASSWORD_RESET_PATH", "Password reset frontend path", get("MAIL_PASSWORD_RESET_PATH") or "/auth/reset-password")
 ask("PASSWORD_RESET_EXPIRATION_MINUTES", "Password reset code expiration minutes", get("PASSWORD_RESET_EXPIRATION_MINUTES") or "15")
-ask("MAIL_EMAIL_VERIFICATION_PATH", "Email verification frontend path", get("MAIL_EMAIL_VERIFICATION_PATH") or "/auth/email-verification")
+ask("MAIL_EMAIL_VERIFICATION_PATH", "Email verification backend confirm path", get("MAIL_EMAIL_VERIFICATION_PATH") or "/api/v1/auth/email-verification/confirm")
 ask("EMAIL_VERIFICATION_EXPIRATION_MINUTES", "Email verification code expiration minutes", get("EMAIL_VERIFICATION_EXPIRATION_MINUTES") or "15")
 
 # Preserve comments and original ordering where possible.
