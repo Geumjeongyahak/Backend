@@ -29,6 +29,7 @@ import geumjeongyahak.domain.student.service.StudentProxyService;
 import geumjeongyahak.domain.subject.entity.Subject;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -72,7 +73,8 @@ class DailyScheduleAdminServiceTest {
             dailyStudentAttendanceRepository,
             lessonProxyService,
             studentProxyService,
-            userProxyService
+            userProxyService,
+            Clock.systemDefaultZone()
         );
         dailyScheduleAdminService = new DailyScheduleAdminService(
             dailyScheduleRepository,

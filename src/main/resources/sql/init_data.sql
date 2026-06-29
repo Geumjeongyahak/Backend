@@ -31,11 +31,11 @@ INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, r
 
 -- teacher01 / teacher01
 INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
-    (2, '홍길동', 'teacher01@test.com', 'VOLUNTEER', 2, NULL, '800101', '2026-02-01', NULL);
+    (2, '홍길동', 'teacher01@test.com', 'VOLUNTEER', 2, 1, '800101', '2026-02-01', NULL);
 
 -- teacher02 / teacher02
 INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
-    (3, '김철수', 'teacher02@test.com', 'VOLUNTEER', 2, NULL, '850505', '2026-02-01', NULL);
+    (3, '김철수', 'teacher02@test.com', 'VOLUNTEER', 2, 8, '850505', '2026-02-01', NULL);
 
 -- guest01 / guest01
 INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
@@ -64,7 +64,14 @@ INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, r
 INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
     (10, 'Apps Script Bot', 'geumjeongyahak-apps-script-bot@gmail.com', 'VOLUNTEER', NULL, NULL, NULL, NULL, NULL);
 
-ALTER SEQUENCE users_id_seq RESTART WITH 11;
+INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
+    (11, '노제훈', 'seed-teacher01@test.com', 'VOLUNTEER', 2, 3, '900201', '2026-07-01', NULL),
+    (12, '김단아', 'seed-teacher02@test.com', 'VOLUNTEER', 2, 4, '920315', '2026-07-01', NULL),
+    (13, '박진우', 'seed-teacher03@test.com', 'VOLUNTEER', 2, 5, '880917', '2026-07-01', NULL),
+    (14, '김수민', 'seed-teacher04@test.com', 'VOLUNTEER', 2, 7, '940422', '2026-07-01', NULL),
+    (15, '손혜주', 'seed-teacher05@test.com', 'VOLUNTEER', 2, 9, '960811', '2026-07-01', NULL);
+
+ALTER SEQUENCE users_id_seq RESTART WITH 16;
 
 -- 3. User Credentials
 INSERT INTO user_credentials (id, user_id, provider, credential_email, password_hash, email_verified) VALUES
@@ -77,9 +84,14 @@ INSERT INTO user_credentials (id, user_id, provider, credential_email, password_
     (7, 7, 'LOCAL', 'rejected-applicant01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
     (8, 8, 'LOCAL', 'direct-assign-edge01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
     (9, 9, 'LOCAL', 'cancelled-applicant01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
-    (10, 10, 'LOCAL', 'geumjeongyahak-apps-script-bot@gmail.com', '$2a$10$6w/cCD2l06.TF3GK7FuCv.uMBX7gqIvgMdwkuSe3D3F6WYbgctibW', TRUE);
+    (10, 10, 'LOCAL', 'geumjeongyahak-apps-script-bot@gmail.com', '$2a$10$6w/cCD2l06.TF3GK7FuCv.uMBX7gqIvgMdwkuSe3D3F6WYbgctibW', TRUE),
+    (11, 11, 'LOCAL', 'seed-teacher01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
+    (12, 12, 'LOCAL', 'seed-teacher02@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
+    (13, 13, 'LOCAL', 'seed-teacher03@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
+    (14, 14, 'LOCAL', 'seed-teacher04@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
+    (15, 15, 'LOCAL', 'seed-teacher05@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE);
 
-ALTER SEQUENCE user_credentials_id_seq RESTART WITH 11;
+ALTER SEQUENCE user_credentials_id_seq RESTART WITH 16;
 
 -- 4. User Permissions
 INSERT INTO user_permissions (user_id, permission_code) VALUES
@@ -187,14 +199,82 @@ ALTER SEQUENCE site_content_items_id_seq RESTART WITH 29;
 
 INSERT INTO site_histories (id, title, detail, history_date, sort_order)
 VALUES
-    (1, '1997년', '금정열린배움터 설립', DATE '1997-01-01', 1),
-    (2, '2002년', '문해 기초반과 생활 한글 수업을 정규 과정으로 정비', DATE '2002-03-01', 2),
-    (3, '2008년', '교사 회의와 분반별 수업 기록 체계를 도입', DATE '2008-03-01', 3),
-    (4, '2014년', '주말반을 확대하고 스마트폰 활용 수업을 시범 운영', DATE '2014-09-01', 4),
-    (5, '2019년', '학생 출석과 수업 일지를 디지털 방식으로 병행 관리', DATE '2019-03-01', 5),
-    (6, '2023년', '교학회의록, 행사 기록, 요청 업무를 통합 관리하는 운영 체계 정비', DATE '2023-03-01', 6),
-    (7, '2026년', '교원 신청과 시간표 배정 흐름을 온라인으로 전환', DATE '2026-06-01', 7);
-ALTER SEQUENCE site_histories_id_seq RESTART WITH 8;
+    (1, '1994년 5월 2일', '부산 성화야학에서 분리해 금정열린배움터 개교', DATE '1994-05-02', 1),
+    (2, '1996년 4월', 'PSB, 현 KNN 방송국 취재 및 방송', DATE '1996-04-01', 2),
+    (3, '2009년 9월 21일', '채널PNU 기사 나를 돌아보게 한 잡채와 편지 소개', DATE '2009-09-21', 3),
+    (4, '2014년 6월 9일', '채널PNU 조정환 교장 인터뷰 20년이 흘러도 변하지 않은 것 보도', DATE '2014-06-09', 4),
+    (5, '2017년 3월', '학생 1명과 교사 1명이 부산문화재단 불쏘시개에서 일반인 대상 강연', DATE '2017-03-01', 5),
+    (6, '2017년 12월', '금정구자원봉사센터 우수수요처 감사패 수상', DATE '2017-12-01', 6),
+    (7, '2018년 5월 11일', '051초대석 18회에 김수연 선생님과 이재빈 선생님 출연', DATE '2018-05-11', 7),
+    (8, '2018년 9월 21일', '예소디자인을 통해 금정열린배움터 공식 로고 제작', DATE '2018-09-21', 8),
+    (9, '2018년 9월 23일', '전국 방영 성인문해 KBS 골든벨에 두 명 출전, 전국 2위 배출', DATE '2018-09-23', 9),
+    (10, '2019년', '부산광역시 성인문해교육 시화전 하루하루 장려상 김영자 수상', DATE '2019-01-01', 10),
+    (11, '2020년', '전국 성인문해교육 시화전 어머니와 코로나19 우수상 정숙자 수상', DATE '2020-01-01', 11),
+    (12, '2021년 10월 10일', '공오일에프엠뉴스 201회 깜짝초대석에 이영주 선생님과 김현 선생님 출연', DATE '2021-10-10', 12),
+    (13, '2022년 8월 23일', 'MBC 라디오 배움에 나이가 있나요 편에 정해웅 교장 출연', DATE '2022-08-23', 13),
+    (14, '2022년 10월 13일', 'KBS 생생투데이 배움엔 나이가 없다 편 방송', DATE '2022-10-13', 14),
+    (15, '2022년 10월 17일', '금정열린배움터 출신 학생 손정화 시집 엄마의 꽁당보리밥 출간', DATE '2022-10-17', 15),
+    (16, '2022년 11월 10일', '채널PNU 영상뉴스 부산대생 15명, 야학에서 교육 봉사 진행 보도', DATE '2022-11-10', 16),
+    (17, '2022년 12월', '금정구청 평생학습활성화 평생학습도시조성 표창 수상', DATE '2022-12-01', 17),
+    (18, '2023년', '전국 성인문해교육 시화전 공부 장려상 김금자 수상', DATE '2023-01-01', 18),
+    (19, '2023년 3월 20일', 'KBS 대담한 K 배움 전하는 야학 금정열린배움터 편에 정해웅 교장 출연', DATE '2023-03-20', 19),
+    (20, '2023년 12월 7일', '부산대 사회공헌 포럼에서 정해웅 교장 금정열린배움터 소개 강연', DATE '2023-12-07', 20),
+    (21, '2023년 12월 18일', '금정열린배움터 교가 정성을 다하여 완성', DATE '2023-12-18', 21),
+    (22, '2024년 2월 19일', 'KTV 국민방송 국민리포트 열린배움터, 나이 잊고 배움의 문 열다 소개', DATE '2024-02-19', 22),
+    (23, '2024년 2월 26일', '부산시청자미디어센터 TBN 시민리포트 소개', DATE '2024-02-26', 23),
+    (24, '2024년 5월 30일', 'KBS 라디오 시사포커스 부산에 정해웅 교장 출연', DATE '2024-05-30', 24),
+    (25, '2025년 1월 10일', '금정열린배움터 교가 빠른 버전 및 MR 편곡', DATE '2025-01-10', 25),
+    (26, '2025년 8월 22일', '대동대학교와 산학협력 협약 체결', DATE '2025-08-22', 26),
+    (27, '2025년 8월 25일', '야학 어플 개발팀 손길모아 창의융합 SW 해커톤 대상 수상', DATE '2025-08-25', 27),
+    (28, '2025년', '제12회 부산광역시 성인문해교육 시화전 엽서1 배움의 즐거움 장려상 심광자 수상', DATE '2025-01-01', 28),
+    (29, '2017년', '부산광역시 성인문해교육 시화전 시작한지 1년 부산인재평생교육진흥원장상 이말순 수상', DATE '2017-01-01', 29),
+    (30, '2017년', '부산광역시 성인문해교육 시화전 할머니 부산지역 우수 손말이, 손정화 수상', DATE '2017-01-02', 30),
+    (31, '2018년', '부산광역시 성인문해교육 시화전 꽃에게 부산인재평생교육진흥원장상 최정자 수상', DATE '2018-01-01', 31),
+    (32, '2018년', '부산광역시 성인문해교육 시화전 나의 꿈 부산지역 우수작 손말이, 손정화 수상', DATE '2018-01-02', 32),
+    (33, '2019년', '부산광역시 성인문해교육 시화전 밥상 우수작 정숙자 선정', DATE '2019-01-02', 33),
+    (34, '2020년', '부산광역시 성인문해교육 시화전 6월 16일 저녁 입선 손정조 수상', DATE '2020-01-02', 34),
+    (35, '2023년', '문해교육 공로 하수정 선생님 부산여성가족과 평생교육진흥원장상 수상', DATE '2023-01-02', 35);
+ALTER SEQUENCE site_histories_id_seq RESTART WITH 36;
+
+INSERT INTO site_history_links (id, history_id, label, href, sort_order)
+VALUES
+    (1, 3, '채널PNU 기사', 'https://channelpnu.pusan.ac.kr/news/articleView.html?idxno=280', 1),
+    (2, 4, '채널PNU 인터뷰', 'https://channelpnu.pusan.ac.kr/news/articleView.html?idxno=3783', 1),
+    (3, 7, '051초대석 18회 영상', 'https://youtu.be/Tz6n4QLEE6U?si=RpmvvntKg3lFPB05', 1),
+    (4, 9, 'KBS 골든벨 영상', 'https://youtu.be/BWVaXn94S4w?si=Y_uiAmgpzH4uPzk9', 1),
+    (5, 11, '전국 성인문해교육 시화전 확인 페이지', 'https://le.or.kr/contentView.do?menuId=20', 1),
+    (6, 12, '공오일에프엠뉴스 201회 영상', 'https://youtu.be/unRgnMYVVF4?si=sehQW08DTk9Fw88k', 1),
+    (7, 13, 'MBC 라디오 영상', 'https://youtu.be/hD-9oa7GOEQ', 1),
+    (8, 14, 'KBS 생생투데이 영상', 'https://youtu.be/lQHiJIxMu0w?si=coz8Xupkd_L6JQT-', 1),
+    (9, 15, '네이버 도서', 'https://naver.me/GIGG7S7w', 1),
+    (10, 16, '채널PNU 영상뉴스', 'https://channelpnu.pusan.ac.kr/news/articleView.html?idxno=32111', 1),
+    (11, 19, 'KBS 대담한 K 영상', 'https://youtu.be/RuieGL1Wb8Q?si=eXBKCVkdip4e5XSR', 1),
+    (12, 20, 'PNU 사회공헌 포럼 기사', 'https://naver.me/FSSSKDf5', 1),
+    (13, 20, 'PNU 사회공헌 포럼 안내', 'https://m.blog.naver.com/projectbee/223278204575', 2),
+    (14, 21, '교가 음원 및 가사', 'https://cafe.naver.com/openlearn/1230?tc=shared_link', 1),
+    (15, 22, 'KTV 국민방송 국민리포트', 'http://m.ktv.go.kr/program/again/view?content_id=695739', 1),
+    (16, 23, 'TBN 시민리포트 영상', 'https://youtu.be/gzsrsKhcE90?si=2A2fPeel-rw03opg', 1),
+    (17, 24, 'KBS 라디오 시사포커스 부산', 'https://www.youtube.com/live/nLXbfCqBBjg?si=HykBA21Gqb3w_s-T', 1),
+    (18, 25, '교가 빠른 버전 및 MR', 'https://cafe.naver.com/openlearn/1568?tc=shared_link', 1),
+    (19, 26, '대동대학교 행사 안내', 'https://www.daedong.ac.kr/www/CMS/Board/Board.do?mCode=MN084&mode=view&board_seq=104239', 1),
+    (20, 26, '대동대 봉사활동 블로그', 'https://blog.naver.com/oil_bean/223994357154', 2);
+ALTER SEQUENCE site_history_links_id_seq RESTART WITH 21;
+
+INSERT INTO site_history_photos (id, history_id, src, alt, sort_order)
+VALUES
+    (1, 3, 'https://channelpnu.pusan.ac.kr/news/photo/200909/280_86_3513.jpg', '2009년 채널PNU 금정열린배움터 기사 이미지', 1),
+    (2, 4, 'https://channelpnu.pusan.ac.kr/news/photo/201406/3783_2012_355.JPG', '2014년 채널PNU 조정환 교장 인터뷰 이미지', 1),
+    (3, 7, 'https://i.ytimg.com/vi/Tz6n4QLEE6U/hqdefault.jpg', '051초대석 18회 영상 썸네일', 1),
+    (4, 9, 'https://i.ytimg.com/vi/BWVaXn94S4w/hqdefault.jpg', 'KBS 골든벨 영상 썸네일', 1),
+    (5, 12, 'https://i.ytimg.com/vi/unRgnMYVVF4/hqdefault.jpg', '공오일에프엠뉴스 201회 영상 썸네일', 1),
+    (6, 14, 'https://i.ytimg.com/vi/lQHiJIxMu0w/hqdefault.jpg', 'KBS 생생투데이 영상 썸네일', 1),
+    (7, 16, 'https://channelpnu.pusan.ac.kr/news/photo/202211/32111_12630_2037.jpg', '2022년 채널PNU 영상뉴스 이미지', 1),
+    (8, 20, 'https://imgnews.pstatic.net/image/056/2023/12/07/0011617980_001_20231207220656117.jpg?type=w800', '2023년 PNU 사회공헌 포럼 보도 이미지', 1),
+    (9, 20, 'https://blogthumb.pstatic.net/MjAyMzExMzBfMjE2/MDAxNzAxMzIzMjA2OTk4.9iEuIsj9mUFMJhzKGbqFL7hurwZN8SEaQoOGZPzKTpMg.3nZuO_vONXIEHH0jCYDXmI8A59r6bWJIIgxMxmH_Ryog.JPEG.projectbee/%25BA%25D9%25C0%25D32_%25B5%25FB%25B6%25E6%25C7%25D1_%25B0%25F8%25B5%25BF%25C3%25BC%25B8%25A6_%25C0%25A7%25C7%25D1_PNU_%25BB%25E7%25C8%25B8%25B0%25F8%25C7%25E5_%25C6%25F7%25B7%25B3_%25C6%25F7%25BD%25BA%25C5%25CD.jpg?type=w2', '2023년 PNU 사회공헌 포럼 안내 이미지', 2),
+    (10, 22, 'https://m.ktv.go.kr/media/contents/image/2024/02/19/brqgQEfzXY.jpg', '2024년 KTV 국민리포트 이미지', 1),
+    (11, 24, 'https://i.ytimg.com/vi/nLXbfCqBBjg/maxresdefault.jpg', 'KBS 라디오 시사포커스 부산 영상 썸네일', 1),
+    (12, 26, 'https://cafeptthumb-phinf.pstatic.net/MjAyNTA4MjlfMjk4/MDAxNzU2NDY5NzI5OTU5.xcyCS-tH6fcZy0Gh8FjPQ0n0Wzg0p5cKXewQlgs_Aycg.ZkJMtn5gs-XXPuvF0DAHg8PHl1gYTU6F5W4ZzmedyQUg.JPEG/IMG%EF%BC%BF8170.JPG?type=w1600', '2025년 대동대학교 산학협력 관련 이미지', 1);
+ALTER SEQUENCE site_history_photos_id_seq RESTART WITH 13;
 
 -- 7. Channels
 INSERT INTO channels (id, name, description, channel_type, binding_type, ref_id, access_level, allow_guest_read, is_default, is_active)
@@ -268,28 +348,28 @@ VALUES
      'PUBLISHED', FALSE, FALSE, NULL, NULL, 83, FALSE, '2026-05-21 12:00:00', '2026-05-21 12:00:00'),
     (13, 4, 1, '신입 교원 오리엔테이션 현장',
      '<p>신입 교원과 운영진이 모여 수업 운영 흐름과 학생 응대 원칙을 함께 확인했습니다.</p>',
-     'PUBLISHED', FALSE, FALSE, '/mock/event-orientation.png', NULL, 112, FALSE, '2026-06-02 20:30:00', '2026-06-02 20:30:00'),
+     'PUBLISHED', FALSE, FALSE, 'https://picsum.photos/seed/gjlearn-orientation/800/450', NULL, 112, FALSE, '2026-06-02 20:30:00', '2026-06-02 20:30:00'),
     (14, 4, 1, '상반기 수업 회고 모임',
      '<p>분반별 수업 경험을 나누고 하반기 개선 방향을 정리한 회고 모임입니다.</p>',
-     'PUBLISHED', FALSE, FALSE, '/mock/event-review.png', NULL, 94, FALSE, '2026-05-29 21:00:00', '2026-05-29 21:00:00'),
+     'PUBLISHED', FALSE, FALSE, 'https://picsum.photos/seed/gjlearn-review/800/450', NULL, 94, FALSE, '2026-05-29 21:00:00', '2026-05-29 21:00:00'),
     (15, 4, 1, '주말 스마트폰반 실습 수업',
      '<p>사진 보내기, 길 찾기, 메시지 확인을 직접 연습한 주말 스마트폰반 수업 기록입니다.</p>',
-     'PUBLISHED', FALSE, FALSE, '/mock/event-smartphone.png', NULL, 87, FALSE, '2026-05-24 12:20:00', '2026-05-24 12:20:00'),
+     'PUBLISHED', FALSE, FALSE, 'https://picsum.photos/seed/gjlearn-smartphone/800/450', NULL, 87, FALSE, '2026-05-24 12:20:00', '2026-05-24 12:20:00'),
     (16, 4, 1, '학생 발표회 준비 스케치',
      '<p>학생 발표회를 준비하며 낭독과 생활 글쓰기 발표 순서를 맞춰 본 날의 기록입니다.</p>',
-     'PUBLISHED', FALSE, FALSE, '/mock/event-presentation.png', NULL, 66, FALSE, '2026-05-18 18:40:00', '2026-05-18 18:40:00'),
+     'PUBLISHED', FALSE, FALSE, 'https://picsum.photos/seed/gjlearn-presentation/800/450', NULL, 66, FALSE, '2026-05-18 18:40:00', '2026-05-18 18:40:00'),
     (17, 4, 1, '생활 문해 낭독 모임',
      '<p>학생들이 직접 고른 생활 글을 함께 읽고 짧은 소감을 나눈 낭독 모임입니다.</p>',
-     'PUBLISHED', FALSE, FALSE, '/mock/event-reading.png', NULL, 72, FALSE, '2026-05-14 19:30:00', '2026-05-14 19:30:00'),
+     'PUBLISHED', FALSE, FALSE, 'https://picsum.photos/seed/gjlearn-reading/800/450', NULL, 72, FALSE, '2026-05-14 19:30:00', '2026-05-14 19:30:00'),
     (18, 4, 1, '교사 수업 준비 워크숍',
      '<p>신규 교안 작성법과 수업 자료 정리 방식을 함께 실습한 교사 워크숍입니다.</p>',
-     'PUBLISHED', FALSE, FALSE, '/mock/event-workshop.png', NULL, 58, FALSE, '2026-05-10 14:00:00', '2026-05-10 14:00:00'),
+     'PUBLISHED', FALSE, FALSE, 'https://picsum.photos/seed/gjlearn-workshop/800/450', NULL, 58, FALSE, '2026-05-10 14:00:00', '2026-05-10 14:00:00'),
     (19, 4, 1, '야외 체험 활동 기록',
      '<p>분반 학생들과 가까운 생활 공간을 걸으며 읽기와 표현 활동을 연결한 체험 기록입니다.</p>',
-     'PUBLISHED', FALSE, FALSE, '/mock/event-field-day.png', NULL, 61, FALSE, '2026-05-04 16:20:00', '2026-05-04 16:20:00'),
+     'PUBLISHED', FALSE, FALSE, 'https://picsum.photos/seed/gjlearn-field-day/800/450', NULL, 61, FALSE, '2026-05-04 16:20:00', '2026-05-04 16:20:00'),
     (20, 4, 1, '작은 발표 전시회',
      '<p>한 학기 동안 쓴 글과 그림을 모아 서로에게 소개한 작은 발표 전시회입니다.</p>',
-     'PUBLISHED', FALSE, FALSE, '/mock/event-exhibition.png', NULL, 49, FALSE, '2026-04-29 18:00:00', '2026-04-29 18:00:00');
+     'PUBLISHED', FALSE, FALSE, 'https://picsum.photos/seed/gjlearn-exhibition/800/450', NULL, 49, FALSE, '2026-04-29 18:00:00', '2026-04-29 18:00:00');
 ALTER SEQUENCE posts_id_seq RESTART WITH 21;
 
 -- 8. Subjects
@@ -310,6 +390,19 @@ VALUES
     (13, 2, 3, '생활 수학', '2026-02-01', '2026-06-30', 'WEDNESDAY', '20:10:00', '20:50:00', 2, '2026-02-01 00:00:00', '개나리반 2교시 생활 수학 수업'),
     (14, 2, 3, '수학 응용', '2026-02-01', '2026-06-30', 'WEDNESDAY', '21:00:00', '21:40:00', 3, '2026-02-01 00:00:00', '개나리반 3교시 수학 응용 수업');
 ALTER SEQUENCE subjects_id_seq RESTART WITH 15;
+
+INSERT INTO subjects (id, class_id, teacher_id, name, start_at, end_at, day_of_week, start_time, end_time, period, teacher_assigned_at, description)
+VALUES
+    (15, 1, 2, '생활 한글', '2026-07-01', '2026-09-30', 'MONDAY', '19:20:00', '20:50:00', 1, '2026-06-30 00:00:00', '7월부터 9월까지 벚꽃반 생활 한글 수업'),
+    (16, 2, 6, '문해 복습', '2026-07-01', '2026-09-30', 'FRIDAY', '19:20:00', '20:50:00', 1, '2026-06-30 00:00:00', '7월부터 9월까지 개나리반 문해 복습 수업'),
+    (17, 3, 11, '생활 한글', '2026-07-01', '2026-09-30', 'TUESDAY', '19:20:00', '20:50:00', 1, '2026-06-30 00:00:00', '7월부터 9월까지 민들레반 생활 한글 수업'),
+    (18, 4, 12, '생활 수학', '2026-07-01', '2026-09-30', 'WEDNESDAY', '19:20:00', '20:50:00', 1, '2026-06-30 00:00:00', '7월부터 9월까지 동백반 생활 수학 수업'),
+    (19, 5, 13, '국어 읽기', '2026-07-01', '2026-09-30', 'THURSDAY', '19:20:00', '20:50:00', 1, '2026-06-30 00:00:00', '7월부터 9월까지 해바라기반 국어 읽기 수업'),
+    (20, 6, 8, '과학 생활', '2026-07-01', '2026-09-30', 'THURSDAY', '19:20:00', '20:50:00', 1, '2026-06-30 00:00:00', '7월부터 9월까지 국화반 과학 생활 수업'),
+    (21, 7, 14, '영어 첫걸음', '2026-07-01', '2026-09-30', 'SATURDAY', '10:00:00', '11:20:00', 1, '2026-06-30 00:00:00', '7월부터 9월까지 주말 영어반 수업'),
+    (22, 8, 3, '스마트폰 실습', '2026-07-01', '2026-09-30', 'SATURDAY', '10:00:00', '11:20:00', 1, '2026-06-30 00:00:00', '7월부터 9월까지 주말 스마트폰반 수업'),
+    (23, 9, 15, '계절 보충', '2026-07-01', '2026-09-30', 'WEDNESDAY', '19:20:00', '20:50:00', 1, '2026-06-30 00:00:00', '7월부터 9월까지 겨울반 보충 수업');
+ALTER SEQUENCE subjects_id_seq RESTART WITH 24;
 
 -- 8-1. Teacher Applications and Schedule Assignments
 INSERT INTO teacher_applications (
@@ -390,6 +483,37 @@ UPDATE lessons SET note = '2교시에는 짧은 단어 읽기와 받아쓰기를
 UPDATE lessons SET note = '3교시에는 생활 문장 읽기 활동과 개별 피드백을 진행했습니다.' WHERE id = 9;
 ALTER SEQUENCE lessons_id_seq RESTART WITH 32;
 
+INSERT INTO lessons (id, subject_id, teacher_id, period, date, start_time, end_time, status)
+VALUES
+    (32, 15, 2, 1, '2026-07-06', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (33, 16, 6, 1, '2026-07-03', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (34, 17, 11, 1, '2026-07-07', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (35, 18, 12, 1, '2026-07-08', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (36, 19, 13, 1, '2026-07-09', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (37, 20, 8, 1, '2026-07-02', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (38, 21, 14, 1, '2026-07-04', '10:00:00', '11:20:00', 'SCHEDULED'),
+    (39, 22, 3, 1, '2026-07-11', '10:00:00', '11:20:00', 'SCHEDULED'),
+    (40, 23, 15, 1, '2026-07-15', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (41, 15, 2, 1, '2026-08-03', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (42, 16, 6, 1, '2026-08-07', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (43, 17, 11, 1, '2026-08-04', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (44, 18, 12, 1, '2026-08-05', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (45, 19, 13, 1, '2026-08-06', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (46, 20, 8, 1, '2026-08-13', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (47, 21, 14, 1, '2026-08-08', '10:00:00', '11:20:00', 'SCHEDULED'),
+    (48, 22, 3, 1, '2026-08-15', '10:00:00', '11:20:00', 'SCHEDULED'),
+    (49, 23, 15, 1, '2026-08-19', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (50, 15, 2, 1, '2026-09-21', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (51, 16, 6, 1, '2026-09-18', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (52, 17, 11, 1, '2026-09-08', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (53, 18, 12, 1, '2026-09-09', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (54, 19, 13, 1, '2026-09-10', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (55, 20, 8, 1, '2026-09-17', '19:20:00', '20:50:00', 'SCHEDULED'),
+    (56, 21, 14, 1, '2026-09-19', '10:00:00', '11:20:00', 'SCHEDULED'),
+    (57, 22, 3, 1, '2026-09-12', '10:00:00', '11:20:00', 'SCHEDULED'),
+    (58, 23, 15, 1, '2026-09-23', '19:20:00', '20:50:00', 'SCHEDULED');
+ALTER SEQUENCE lessons_id_seq RESTART WITH 59;
+
 -- 10. Daily Schedules
 INSERT INTO daily_schedules (
     id, classroom_id, teacher_id, lesson_date, activity_start_time, activity_end_time, status, is_deleted,
@@ -415,6 +539,40 @@ SET resident_registration_number_prefix = '900101',
 WHERE id = 6;
 ALTER SEQUENCE daily_schedules_id_seq RESTART WITH 14;
 
+INSERT INTO daily_schedules (
+    id, classroom_id, teacher_id, lesson_date, activity_start_time, activity_end_time, status, is_deleted,
+    created_at, updated_at
+)
+VALUES
+    (14, 1, 2, '2026-07-06', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (15, 2, 6, '2026-07-03', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (16, 3, 11, '2026-07-07', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (17, 4, 12, '2026-07-08', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (18, 5, 13, '2026-07-09', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (19, 6, 8, '2026-07-02', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (20, 7, 14, '2026-07-04', '10:00:00', '11:20:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (21, 8, 3, '2026-07-11', '10:00:00', '11:20:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (22, 9, 15, '2026-07-15', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (23, 1, 2, '2026-08-03', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (24, 2, 6, '2026-08-07', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (25, 3, 11, '2026-08-04', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (26, 4, 12, '2026-08-05', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (27, 5, 13, '2026-08-06', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (28, 6, 8, '2026-08-13', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (29, 7, 14, '2026-08-08', '10:00:00', '11:20:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (30, 8, 3, '2026-08-15', '10:00:00', '11:20:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (31, 9, 15, '2026-08-19', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (32, 1, 2, '2026-09-21', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (33, 2, 6, '2026-09-18', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (34, 3, 11, '2026-09-08', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (35, 4, 12, '2026-09-09', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (36, 5, 13, '2026-09-10', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (37, 6, 8, '2026-09-17', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (38, 7, 14, '2026-09-19', '10:00:00', '11:20:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (39, 8, 3, '2026-09-12', '10:00:00', '11:20:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (40, 9, 15, '2026-09-23', '19:20:00', '20:50:00', 'SCHEDULED', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00');
+ALTER SEQUENCE daily_schedules_id_seq RESTART WITH 41;
+
 -- 10-1. Daily Teacher Attendances
 INSERT INTO daily_teacher_attendances (
     id, daily_schedule_id, status, volunteer_service_minutes, attended_at, latitude, longitude, is_deleted,
@@ -435,6 +593,40 @@ VALUES
     (12, 12, 'ABSENT', 140, NULL, NULL, NULL, FALSE, '2026-06-01 00:00:00', '2026-06-01 00:00:00'),
     (13, 13, 'ABSENT', 80, NULL, NULL, NULL, FALSE, '2026-06-01 00:00:00', '2026-06-01 00:00:00');
 ALTER SEQUENCE daily_teacher_attendances_id_seq RESTART WITH 14;
+
+INSERT INTO daily_teacher_attendances (
+    id, daily_schedule_id, status, volunteer_service_minutes, attended_at, latitude, longitude, is_deleted,
+    created_at, updated_at
+)
+VALUES
+    (14, 14, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (15, 15, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (16, 16, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (17, 17, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (18, 18, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (19, 19, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (20, 20, 'ABSENT', 80, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (21, 21, 'ABSENT', 80, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (22, 22, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (23, 23, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (24, 24, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (25, 25, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (26, 26, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (27, 27, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (28, 28, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (29, 29, 'ABSENT', 80, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (30, 30, 'ABSENT', 80, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (31, 31, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (32, 32, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (33, 33, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (34, 34, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (35, 35, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (36, 36, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (37, 37, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (38, 38, 'ABSENT', 80, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (39, 39, 'ABSENT', 80, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (40, 40, 'ABSENT', 90, NULL, NULL, NULL, FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00');
+ALTER SEQUENCE daily_teacher_attendances_id_seq RESTART WITH 41;
 
 -- 11. Absence Requests
 INSERT INTO absence_requests (
@@ -564,6 +756,49 @@ VALUES
     (6, '장복희', '010-5555-6666', '주말 스마트폰반 학습자', 'ENROLLED');
 ALTER SEQUENCE students_id_seq RESTART WITH 7;
 
+INSERT INTO students (id, name, phone_number, description, status)
+VALUES
+    (7, '정말순', '010-6000-0007', '벚꽃반 생활 한글 학습자', 'ENROLLED'),
+    (8, '윤복자', '010-6000-0008', '벚꽃반 읽기 복습 학습자', 'ENROLLED'),
+    (9, '하명자', '010-6000-0009', '벚꽃반 쓰기 연습 학습자', 'ENROLLED'),
+    (10, '문정숙', '010-6000-0010', '개나리반 문해 학습자', 'ENROLLED'),
+    (11, '서금례', '010-6000-0011', '개나리반 생활 수학 학습자', 'ENROLLED'),
+    (12, '배순이', '010-6000-0012', '개나리반 받아쓰기 학습자', 'ENROLLED'),
+    (13, '강옥분', '010-6000-0013', '민들레반 생활 한글 학습자', 'ENROLLED'),
+    (14, '노영자', '010-6000-0014', '민들레반 읽기 학습자', 'ENROLLED'),
+    (15, '신귀남', '010-6000-0015', '민들레반 수학 복습 학습자', 'ENROLLED'),
+    (16, '안순덕', '010-6000-0016', '민들레반 문장 쓰기 학습자', 'ENROLLED'),
+    (17, '임말자', '010-6000-0017', '민들레반 기초 문해 학습자', 'ENROLLED'),
+    (18, '조복례', '010-6000-0018', '동백반 생활 수학 학습자', 'ENROLLED'),
+    (19, '백춘자', '010-6000-0019', '동백반 한글 복습 학습자', 'ENROLLED'),
+    (20, '유정희', '010-6000-0020', '동백반 읽기 학습자', 'ENROLLED'),
+    (21, '장분이', '010-6000-0021', '동백반 쓰기 학습자', 'ENROLLED'),
+    (22, '손광자', '010-6000-0022', '동백반 생활 문해 학습자', 'ENROLLED'),
+    (23, '한옥순', '010-6000-0023', '해바라기반 국어 읽기 학습자', 'ENROLLED'),
+    (24, '민영희', '010-6000-0024', '해바라기반 말하기 학습자', 'ENROLLED'),
+    (25, '고순자', '010-6000-0025', '해바라기반 생활 글쓰기 학습자', 'ENROLLED'),
+    (26, '양정례', '010-6000-0026', '해바라기반 독해 학습자', 'ENROLLED'),
+    (27, '전명숙', '010-6000-0027', '해바라기반 받아쓰기 학습자', 'ENROLLED'),
+    (28, '홍순임', '010-6000-0028', '국화반 과학 생활 학습자', 'ENROLLED'),
+    (29, '차복순', '010-6000-0029', '국화반 사회 읽기 학습자', 'ENROLLED'),
+    (30, '남정자', '010-6000-0030', '국화반 수학 복습 학습자', 'ENROLLED'),
+    (31, '구연희', '010-6000-0031', '국화반 한글 복습 학습자', 'ENROLLED'),
+    (32, '박경자', '010-6000-0032', '주말 영어반 생활 영어 학습자', 'ENROLLED'),
+    (33, '최덕순', '010-6000-0033', '주말 영어반 읽기 학습자', 'ENROLLED'),
+    (34, '이정례', '010-6000-0034', '주말 영어반 말하기 학습자', 'ENROLLED'),
+    (35, '오금순', '010-6000-0035', '주말 영어반 알파벳 학습자', 'ENROLLED'),
+    (36, '김복남', '010-6000-0036', '주말 영어반 생활 표현 학습자', 'ENROLLED'),
+    (37, '성옥자', '010-6000-0037', '주말 스마트폰반 앱 사용 학습자', 'ENROLLED'),
+    (38, '권순례', '010-6000-0038', '주말 스마트폰반 사진 보내기 학습자', 'ENROLLED'),
+    (39, '황말숙', '010-6000-0039', '주말 스마트폰반 길 찾기 학습자', 'ENROLLED'),
+    (40, '정금자', '010-6000-0040', '주말 스마트폰반 메시지 학습자', 'ENROLLED'),
+    (41, '송영순', '010-6000-0041', '겨울반 계절 보충 학습자', 'ENROLLED'),
+    (42, '류옥희', '010-6000-0042', '겨울반 한글 복습 학습자', 'ENROLLED'),
+    (43, '곽순자', '010-6000-0043', '겨울반 생활 수학 학습자', 'ENROLLED'),
+    (44, '심정자', '010-6000-0044', '겨울반 읽기 보충 학습자', 'ENROLLED'),
+    (45, '우명희', '010-6000-0045', '겨울반 쓰기 보충 학습자', 'ENROLLED');
+ALTER SEQUENCE students_id_seq RESTART WITH 46;
+
 -- 15. Student Classrooms
 INSERT INTO student_classrooms (id, student_id, classroom_id)
 VALUES
@@ -574,6 +809,49 @@ VALUES
     (5, 5, 6),
     (6, 6, 8);
 ALTER SEQUENCE student_classrooms_id_seq RESTART WITH 7;
+
+INSERT INTO student_classrooms (id, student_id, classroom_id)
+VALUES
+    (7, 7, 1),
+    (8, 8, 1),
+    (9, 9, 1),
+    (10, 10, 2),
+    (11, 11, 2),
+    (12, 12, 2),
+    (13, 13, 3),
+    (14, 14, 3),
+    (15, 15, 3),
+    (16, 16, 3),
+    (17, 17, 3),
+    (18, 18, 4),
+    (19, 19, 4),
+    (20, 20, 4),
+    (21, 21, 4),
+    (22, 22, 4),
+    (23, 23, 5),
+    (24, 24, 5),
+    (25, 25, 5),
+    (26, 26, 5),
+    (27, 27, 5),
+    (28, 28, 6),
+    (29, 29, 6),
+    (30, 30, 6),
+    (31, 31, 6),
+    (32, 32, 7),
+    (33, 33, 7),
+    (34, 34, 7),
+    (35, 35, 7),
+    (36, 36, 7),
+    (37, 37, 8),
+    (38, 38, 8),
+    (39, 39, 8),
+    (40, 40, 8),
+    (41, 41, 9),
+    (42, 42, 9),
+    (43, 43, 9),
+    (44, 44, 9),
+    (45, 45, 9);
+ALTER SEQUENCE student_classrooms_id_seq RESTART WITH 46;
 
 -- 15. Daily Student Attendances
 INSERT INTO daily_student_attendances (
@@ -605,3 +883,156 @@ VALUES
     (23, 12, 4, 'ABSENT', FALSE, '2026-06-01 00:00:00', '2026-06-01 00:00:00'),
     (24, 13, 6, 'ABSENT', FALSE, '2026-06-01 00:00:00', '2026-06-01 00:00:00');
 ALTER SEQUENCE daily_student_attendances_id_seq RESTART WITH 25;
+
+INSERT INTO daily_student_attendances (
+    id, daily_schedule_id, student_id, status, is_deleted, created_at, updated_at
+)
+VALUES
+    (25, 7, 7, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (26, 7, 8, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (27, 7, 9, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (28, 9, 7, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (29, 9, 8, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (30, 9, 9, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (31, 8, 10, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (32, 8, 11, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (33, 8, 12, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (34, 10, 10, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (35, 10, 11, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (36, 10, 12, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (37, 14, 1, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (38, 14, 2, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (39, 14, 7, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (40, 14, 8, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (41, 14, 9, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (42, 15, 3, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (43, 15, 4, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (44, 15, 10, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (45, 15, 11, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (46, 15, 12, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (47, 16, 13, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (48, 16, 14, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (49, 16, 15, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (50, 16, 16, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (51, 16, 17, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (52, 17, 18, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (53, 17, 19, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (54, 17, 20, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (55, 17, 21, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (56, 17, 22, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (57, 18, 23, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (58, 18, 24, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (59, 18, 25, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (60, 18, 26, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (61, 18, 27, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (62, 19, 5, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (63, 19, 28, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (64, 19, 29, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (65, 19, 30, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (66, 19, 31, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (67, 20, 32, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (68, 20, 33, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (69, 20, 34, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (70, 20, 35, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (71, 20, 36, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (72, 21, 6, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (73, 21, 37, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (74, 21, 38, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (75, 21, 39, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (76, 21, 40, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (77, 22, 41, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (78, 22, 42, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (79, 22, 43, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (80, 22, 44, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (81, 22, 45, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (82, 23, 1, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (83, 23, 2, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (84, 23, 7, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (85, 23, 8, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (86, 23, 9, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (87, 24, 3, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (88, 24, 4, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (89, 24, 10, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (90, 24, 11, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (91, 24, 12, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (92, 25, 13, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (93, 25, 14, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (94, 25, 15, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (95, 25, 16, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (96, 25, 17, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (97, 26, 18, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (98, 26, 19, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (99, 26, 20, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (100, 26, 21, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (101, 26, 22, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (102, 27, 23, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (103, 27, 24, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (104, 27, 25, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (105, 27, 26, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (106, 27, 27, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (107, 28, 5, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (108, 28, 28, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (109, 28, 29, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (110, 28, 30, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (111, 28, 31, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (112, 29, 32, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (113, 29, 33, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (114, 29, 34, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (115, 29, 35, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (116, 29, 36, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (117, 30, 6, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (118, 30, 37, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (119, 30, 38, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (120, 30, 39, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (121, 30, 40, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (122, 31, 41, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (123, 31, 42, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (124, 31, 43, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (125, 31, 44, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (126, 31, 45, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (127, 32, 1, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (128, 32, 2, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (129, 32, 7, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (130, 32, 8, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (131, 32, 9, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (132, 33, 3, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (133, 33, 4, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (134, 33, 10, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (135, 33, 11, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (136, 33, 12, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (137, 34, 13, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (138, 34, 14, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (139, 34, 15, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (140, 34, 16, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (141, 34, 17, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (142, 35, 18, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (143, 35, 19, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (144, 35, 20, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (145, 35, 21, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (146, 35, 22, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (147, 36, 23, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (148, 36, 24, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (149, 36, 25, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (150, 36, 26, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (151, 36, 27, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (152, 37, 5, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (153, 37, 28, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (154, 37, 29, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (155, 37, 30, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (156, 37, 31, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (157, 38, 32, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (158, 38, 33, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (159, 38, 34, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (160, 38, 35, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (161, 38, 36, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (162, 39, 6, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (163, 39, 37, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (164, 39, 38, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (165, 39, 39, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (166, 39, 40, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (167, 40, 41, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (168, 40, 42, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (169, 40, 43, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (170, 40, 44, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00'),
+    (171, 40, 45, 'ABSENT', FALSE, '2026-06-30 00:00:00', '2026-06-30 00:00:00');
+ALTER SEQUENCE daily_student_attendances_id_seq RESTART WITH 172;

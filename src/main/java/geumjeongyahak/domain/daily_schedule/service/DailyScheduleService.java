@@ -44,6 +44,7 @@ import geumjeongyahak.domain.student.entity.Student;
 import geumjeongyahak.domain.student.service.StudentProxyService;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -76,6 +77,7 @@ public class DailyScheduleService {
     private final LessonProxyService lessonProxyService;
     private final StudentProxyService studentProxyService;
     private final UserProxyService userProxyService;
+    private final Clock clock;
 
     @Transactional
     public void synchronizeByLesson(Lesson lesson) {
@@ -499,7 +501,7 @@ public class DailyScheduleService {
                 calculateVolunteerServiceMinutes(dailySchedule.getActivityStartTime(), dailySchedule.getActivityEndTime())
             )));
         LocalDateTime attendedAt = request.status().isActualAttendance()
-            ? LocalDateTime.now()
+            ? LocalDateTime.now(clock)
             : null;
 
         teacherAttendance.updateAttendance(
@@ -544,7 +546,7 @@ public class DailyScheduleService {
                 return new DailyTeacherAttendanceRequiredException(dailyScheduleId);
             });
         List<Lesson> lessons = getDailyScheduleLessons(dailySchedule);
-        LocalDateTime checkedOutAt = LocalDateTime.now();
+        LocalDateTime checkedOutAt = LocalDateTime.now(clock);
         validateTeacherCheckOut(dailySchedule, teacherAttendance, lessons, checkedOutAt);
 
         teacherAttendance.checkOut(checkedOutAt);
