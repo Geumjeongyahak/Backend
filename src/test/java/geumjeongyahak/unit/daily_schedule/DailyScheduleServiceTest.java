@@ -11,20 +11,25 @@ import geumjeongyahak.domain.classroom.enums.ClassroomType;
 import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.entity.DailyStudentAttendance;
 import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
+import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyStudentAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyTeacherAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleService;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyTeacherAttendanceRequest;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.student.entity.Student;
 import geumjeongyahak.domain.student.service.StudentProxyService;
 import geumjeongyahak.domain.subject.entity.Subject;
 import geumjeongyahak.domain.users.entity.User;
+import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -108,6 +113,57 @@ class DailyScheduleServiceTest {
         assertThat(studentAttendanceCaptor.getValue().getStudent()).isEqualTo(student);
     }
 
+    @Test
+    void updateAndCheckOutTeacherAttendance_usesConfiguredSeoulClock() {
+        Clock seoulClock = Clock.fixed(Instant.parse("2026-07-01T10:15:30Z"), ZoneId.of("Asia/Seoul"));
+        DailyScheduleService service = new DailyScheduleService(
+            dailyScheduleRepository,
+            dailyTeacherAttendanceRepository,
+            dailyStudentAttendanceRepository,
+            lessonProxyService,
+            studentProxyService,
+            null,
+            seoulClock
+        );
+        LocalDate lessonDate = LocalDate.of(2026, 7, 1);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 140);
+        Lesson lesson = lesson(
+            subject(classroom, teacher, lessonDate),
+            teacher,
+            lessonDate,
+            LocalTime.of(19, 20),
+            LocalTime.of(20, 0),
+            1
+        );
+        lesson.updateNote("KST 출석 시간 테스트 일지");
+
+        given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(Optional.of(teacherAttendance));
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of(lesson));
+        given(dailyStudentAttendanceRepository.findAllByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId()))
+            .willReturn(List.of());
+
+        service.updateTeacherAttendance(
+            dailySchedule.getId(),
+            teacher.getId(),
+            false,
+            true,
+            new UpdateDailyTeacherAttendanceRequest(DailyTeacherAttendanceStatus.PRESENT, null, null)
+        );
+
+        assertThat(teacherAttendance.getAttendedAt()).isEqualTo(LocalDateTime.of(2026, 7, 1, 19, 15, 30));
+
+        service.checkOutTeacherAttendance(dailySchedule.getId(), teacher.getId(), false, true);
+
+        assertThat(teacherAttendance.getCheckedOutAt()).isEqualTo(LocalDateTime.of(2026, 7, 1, 19, 15, 30));
+    }
+
     private Classroom classroom(Long id) {
         Classroom classroom = Classroom.builder()
             .name("장미반")
@@ -122,6 +178,24 @@ class DailyScheduleServiceTest {
             .name(name)
             .role(RoleType.VOLUNTEER)
             .build();
+    }
+
+    private User teacher(Long id, String name) {
+        User teacher = teacher(name);
+        ReflectionTestUtils.setField(teacher, "id", id);
+        return teacher;
+    }
+
+    private DailySchedule dailySchedule(Long id, Classroom classroom, User teacher, LocalDate lessonDate) {
+        DailySchedule dailySchedule = new DailySchedule(
+            classroom,
+            teacher,
+            lessonDate,
+            LocalTime.of(19, 20),
+            LocalTime.of(21, 40)
+        );
+        ReflectionTestUtils.setField(dailySchedule, "id", id);
+        return dailySchedule;
     }
 
     private Subject subject(Classroom classroom, User teacher, LocalDate lessonDate) {

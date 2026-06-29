@@ -47,10 +47,12 @@ import geumjeongyahak.domain.student.entity.Student;
 import geumjeongyahak.domain.subject.entity.Subject;
 import geumjeongyahak.domain.users.entity.User;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -58,11 +60,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class DailyScheduleServiceReadTest {
+
+    private static final LocalDateTime FIXED_SEOUL_NOW = LocalDateTime.of(2026, 5, 20, 15, 0);
 
     @Mock
     private DailyScheduleRepository dailyScheduleRepository;
@@ -75,6 +80,12 @@ class DailyScheduleServiceReadTest {
 
     @Mock
     private LessonProxyService lessonProxyService;
+
+    @Spy
+    private Clock clock = Clock.fixed(
+        FIXED_SEOUL_NOW.atZone(ZoneId.of("Asia/Seoul")).toInstant(),
+        ZoneId.of("Asia/Seoul")
+    );
 
     @InjectMocks
     private DailyScheduleService dailyScheduleService;
@@ -378,7 +389,7 @@ class DailyScheduleServiceReadTest {
         Lesson lesson = lesson(subject, teacher, lessonDate, 1);
         ReflectionTestUtils.setField(lesson, "id", 11L);
         DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
-        teacherAttendance.updateAttendance(DailyTeacherAttendanceStatus.PRESENT, LocalDateTime.now(), null, null);
+        teacherAttendance.updateAttendance(DailyTeacherAttendanceStatus.PRESENT, FIXED_SEOUL_NOW, null, null);
 
         given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
             .willReturn(Optional.of(dailySchedule));
@@ -777,7 +788,7 @@ class DailyScheduleServiceReadTest {
         DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
         teacherAttendance.updateAttendance(
             DailyTeacherAttendanceStatus.PRESENT,
-            LocalDateTime.now().minusHours(1),
+            FIXED_SEOUL_NOW.minusHours(1),
             null,
             null
         );
@@ -837,7 +848,7 @@ class DailyScheduleServiceReadTest {
         DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
         teacherAttendance.updateAttendance(
             DailyTeacherAttendanceStatus.PRESENT,
-            LocalDateTime.now().minusHours(1),
+            FIXED_SEOUL_NOW.minusHours(1),
             null,
             null
         );
@@ -868,11 +879,11 @@ class DailyScheduleServiceReadTest {
         DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
         teacherAttendance.updateAttendance(
             DailyTeacherAttendanceStatus.PRESENT,
-            LocalDateTime.now().minusHours(2),
+            FIXED_SEOUL_NOW.minusHours(2),
             null,
             null
         );
-        teacherAttendance.checkOut(LocalDateTime.now().minusHours(1));
+        teacherAttendance.checkOut(FIXED_SEOUL_NOW.minusHours(1));
 
         given(dailyScheduleRepository.findByIdAndIsDeletedFalse(dailySchedule.getId()))
             .willReturn(Optional.of(dailySchedule));
@@ -900,7 +911,7 @@ class DailyScheduleServiceReadTest {
         DailyTeacherAttendance teacherAttendance = new DailyTeacherAttendance(dailySchedule, 120);
         teacherAttendance.updateAttendance(
             DailyTeacherAttendanceStatus.PRESENT,
-            LocalDateTime.now().plusHours(1),
+            FIXED_SEOUL_NOW.plusHours(1),
             null,
             null
         );
@@ -1018,7 +1029,7 @@ class DailyScheduleServiceReadTest {
             LocalTime.of(14, 0),
             LocalTime.of(16, 0),
             1,
-            LocalDateTime.now(),
+            FIXED_SEOUL_NOW,
             null
         );
     }
