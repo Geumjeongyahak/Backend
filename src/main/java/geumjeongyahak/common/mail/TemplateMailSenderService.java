@@ -41,12 +41,12 @@ public class TemplateMailSenderService implements MailSenderService {
 
     @Override
     public MailDeliveryResult sendPasswordResetMail(String recipientEmail, String recipientName, String resetCode) {
-        String resetUrl = buildPasswordResetUrl(resetCode);
+        String resetUrl = buildPasswordResetUrl(recipientEmail, resetCode);
         return sendHtmlMail(
             "password-reset",
             PASSWORD_RESET_TEMPLATE,
             recipientEmail,
-            "금정야학 비밀번호 재설정 인증번호",
+            "금정야학 비밀번호 변경 안내",
             Map.of(
                 "name", defaultName(recipientName),
                 "resetCode", resetCode,
@@ -67,7 +67,7 @@ public class TemplateMailSenderService implements MailSenderService {
             "email-verification",
             EMAIL_VERIFICATION_TEMPLATE,
             recipientEmail,
-            "금정야학 이메일 인증번호",
+            "금정야학 이메일 인증 안내",
             Map.of(
                 "name", defaultName(recipientName),
                 "verificationCode", verificationCode,
@@ -136,8 +136,9 @@ public class TemplateMailSenderService implements MailSenderService {
             : MailDeliveryResult.skipped(templateKey, recipientEmail, message);
     }
 
-    private String buildPasswordResetUrl(String resetCode) {
+    private String buildPasswordResetUrl(String recipientEmail, String resetCode) {
         return UriComponentsBuilder.fromUriString(buildFrontendUrl(mailProperties.passwordResetPath()))
+            .queryParam("email", recipientEmail)
             .queryParam("code", resetCode)
             .toUriString();
     }

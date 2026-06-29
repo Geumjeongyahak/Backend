@@ -77,6 +77,19 @@ class EmailVerificationServiceTest {
     }
 
     @Test
+    void issueVerification_keepsTokenWhenMailDeliveryFails() {
+        UserCredential credential = unverifiedCredential();
+        given(passwordEncoder.encode(RAW_CODE)).willReturn(TOKEN_HASH);
+        given(mailSenderService.sendEmailVerificationMail(eq(EMAIL), eq("이메일 인증 사용자"), eq(RAW_CODE)))
+            .willThrow(new RuntimeException("smtp down"));
+
+        emailVerificationService.issueVerification(credential);
+
+        assertThat(credential.getEmailVerificationTokenHash()).isEqualTo(TOKEN_HASH);
+        verify(credentialRepository).save(credential);
+    }
+
+    @Test
     void confirm_marksEmailVerifiedAndClearsVerificationToken() {
         UserCredential credential = unverifiedCredential();
         credential.issueEmailVerificationToken(TOKEN_HASH, LocalDateTime.now(CLOCK).plusMinutes(15), LocalDateTime.now(CLOCK));

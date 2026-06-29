@@ -135,11 +135,20 @@ public class EmailVerificationService {
         LocalDateTime expiresAt = requestedAt.plusMinutes(expirationMinutes);
         credential.issueEmailVerificationToken(passwordEncoder.encode(verificationCode), expiresAt, requestedAt);
         credentialRepository.save(credential);
-        mailSenderService.sendEmailVerificationMail(
-            credential.getCredentialEmail(),
-            credential.getUser().getName(),
-            verificationCode
-        );
+        try {
+            mailSenderService.sendEmailVerificationMail(
+                credential.getCredentialEmail(),
+                credential.getUser().getName(),
+                verificationCode
+            );
+        } catch (Exception exception) {
+            log.warn(
+                "이메일 인증 메일 발송 실패 - credentialId={}, email={}",
+                credential.getId(),
+                credential.getCredentialEmail(),
+                exception
+            );
+        }
         log.info("이메일 인증 메일 처리 완료: credentialId={}, expiresAt={}", credential.getId(), expiresAt);
     }
 
