@@ -18,7 +18,7 @@ configure_tailscale() {
     sudo tailscale set --accept-dns="${accept_dns}"
     if [[ -n "${tags}" ]]; then
       sudo tailscale set --advertise-tags="${tags}" 2>/dev/null \
-        || sudo tailscale up --advertise-tags="${tags}" --accept-dns="${accept_dns}"
+        || sudo tailscale up --reset --advertise-tags="${tags}" --accept-dns="${accept_dns}"
     fi
     echo "tailscale already authenticated: $(sudo tailscale ip -4)"
     return 0
