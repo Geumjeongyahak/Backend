@@ -98,12 +98,16 @@ public class PurchaseRequestService {
         return createPurchaseRequest(requester, classroom, request.title(), request.content(), items);
     }
 
-    public List<PurchaseRequestSummaryResponse> getPurchaseRequests(Long requesterId, PurchaseRequestStatus status) {
-        log.debug("구입 요청 목록 조회 (requesterId={}, status={})", requesterId, status);
+    public List<PurchaseRequestSummaryResponse> getPurchaseRequests(
+        Long requesterId,
+        PurchaseRequestStatus status,
+        boolean mine
+    ) {
+        log.debug("구입 요청 목록 조회 (requesterId={}, status={}, mine={})", requesterId, status, mine);
 
-        List<PurchaseRequest> list = status != null
-            ? purchaseRequestRepository.findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(status, requesterId)
-            : purchaseRequestRepository.findAllByRequestedBy_IdOrderByCreatedAtDesc(requesterId);
+        List<PurchaseRequest> list = mine
+            ? findPurchaseRequestsByRequester(requesterId, status)
+            : findPurchaseRequests(status);
 
         return list.stream().map(PurchaseRequestSummaryResponse::from).toList();
     }
@@ -116,6 +120,21 @@ public class PurchaseRequestService {
             : purchaseRequestRepository.findAllByOrderByCreatedAtDesc();
 
         return list.stream().map(PurchaseRequestSummaryResponse::from).toList();
+    }
+
+    private List<PurchaseRequest> findPurchaseRequests(PurchaseRequestStatus status) {
+        return status != null
+            ? purchaseRequestRepository.findAllByStatusOrderByCreatedAtDesc(status)
+            : purchaseRequestRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    private List<PurchaseRequest> findPurchaseRequestsByRequester(
+        Long requesterId,
+        PurchaseRequestStatus status
+    ) {
+        return status != null
+            ? purchaseRequestRepository.findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(status, requesterId)
+            : purchaseRequestRepository.findAllByRequestedBy_IdOrderByCreatedAtDesc(requesterId);
     }
 
     public PurchaseRequestDetailResponse getPurchaseRequest(Long requesterId, Long requestId, boolean isAdmin) {

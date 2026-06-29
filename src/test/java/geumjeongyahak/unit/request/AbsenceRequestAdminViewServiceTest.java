@@ -40,7 +40,6 @@ class AbsenceRequestAdminViewServiceTest {
         AbsenceRequestResponse response = absenceRequestResponse(10L, RequestStatus.PENDING);
         given(absenceRequestService.getAbsenceRequests(
             eq(1L),
-            eq(true),
             eq(RequestStatus.PENDING),
             any(AbsenceRequestPaginationRequest.class)
         )).willReturn(new PaginationResponse<>(new PageImpl<>(
@@ -65,7 +64,6 @@ class AbsenceRequestAdminViewServiceTest {
     void getAbsenceRequests_normalizesInvalidPageAndSize() {
         given(absenceRequestService.getAbsenceRequests(
             eq(1L),
-            eq(true),
             eq(null),
             any(AbsenceRequestPaginationRequest.class)
         )).willReturn(new PaginationResponse<>(new PageImpl<>(
@@ -82,7 +80,7 @@ class AbsenceRequestAdminViewServiceTest {
         );
 
         then(absenceRequestService).should()
-            .getAbsenceRequests(eq(1L), eq(true), eq(null), captor.capture());
+            .getAbsenceRequests(eq(1L), eq(null), captor.capture());
         AbsenceRequestPaginationRequest pageRequest = captor.getValue();
         assertThat(pageRequest.getPage()).isZero();
         assertThat(pageRequest.getSize()).isEqualTo(10);

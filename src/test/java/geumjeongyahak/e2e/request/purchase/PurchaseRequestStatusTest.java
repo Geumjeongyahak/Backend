@@ -647,8 +647,8 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     // ── 조회 ──────────────────────────────────────────────
 
     @Test
-    @DisplayName("관리자는 전체 목록 / 봉사자는 본인 요청만 조회")
-    void getList_adminSeesAll_volunteerSeesOnlyOwn() {
+    @DisplayName("구입 요청 목록 기본 조회는 전체 요청, mine=true는 본인 요청만 조회")
+    void getList_defaultSeesAll_mineTrueSeesOnlyOwn() {
         Long request1Id = createPurchaseRequest(
             getAuthHeader(volunteerToken), CLASSROOM_ID, "v1 요청", "내용1", 1000L);
         Long request2Id = createPurchaseRequest(
@@ -672,14 +672,23 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
                 .body("find { it.id == " + request1Id + " }.classroomId", equalTo((int) CLASSROOM_ID))
                 .body("find { it.id == " + request1Id + " }.requestedById", equalTo((int) TEACHER_ID));
 
-            List<Long> v1Ids = given()
+            List<Long> v1AllIds = given()
                 .basePath("/api/v1/purchase-requests")
                 .header(AUTH_HEADER, getAuthHeader(volunteerToken))
                 .get()
                 .then().statusCode(200)
                 .extract().jsonPath().getList("id", Long.class);
-            assertThat(v1Ids).contains(request1Id);
-            assertThat(v1Ids).doesNotContain(request2Id);
+            assertThat(v1AllIds).contains(request1Id, request2Id);
+
+            List<Long> v1MineIds = given()
+                .basePath("/api/v1/purchase-requests")
+                .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+                .queryParam("mine", true)
+                .get()
+                .then().statusCode(200)
+                .extract().jsonPath().getList("id", Long.class);
+            assertThat(v1MineIds).contains(request1Id);
+            assertThat(v1MineIds).doesNotContain(request2Id);
 
         } finally {
             purchaseRequestRepository.deleteById(request1Id);

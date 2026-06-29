@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AbsenceRequestAdminViewService {
 
-    private static final boolean ADMIN_CAN_READ_ALL = true;
     private static final int FIRST_PAGE = 0;
     private static final int MIN_PAGE_SIZE = 1;
     private static final int DEFAULT_PAGE_SIZE = 10;
@@ -32,7 +31,6 @@ public class AbsenceRequestAdminViewService {
 
         PaginationResponse<AbsenceRequestResponse> response = absenceRequestService.getAbsenceRequests(
             requesterId,
-            ADMIN_CAN_READ_ALL,
             filter.status(),
             pageRequest
         );

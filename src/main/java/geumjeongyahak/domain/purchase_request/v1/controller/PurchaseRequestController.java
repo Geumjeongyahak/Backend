@@ -57,16 +57,18 @@ public class PurchaseRequestController {
     @PreAuthorize("isAuthenticated()")
     @Operation(
         summary = "구입 요청 목록 조회",
-        description = "본인이 신청한 구입 요청 목록을 조회합니다. status 파라미터로 필터링할 수 있습니다."
+        description = "구입 요청 목록을 조회합니다. 기본 목록은 전체 요청을 반환하며, mine=true 파라미터를 전달하면 본인이 신청한 요청만 반환합니다. "
+            + "status 파라미터로 필터링할 수 있습니다."
     )
     @GetMapping
     public ResponseEntity<List<PurchaseRequestSummaryResponse>> getPurchaseRequests(
         @RequestParam(required = false) PurchaseRequestStatus status,
+        @RequestParam(defaultValue = "false") boolean mine,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.debug("GET /api/v1/purchase-requests (status={})", status);
+        log.debug("GET /api/v1/purchase-requests (status={}, mine={})", status, mine);
         return ResponseEntity.ok(
-            purchaseRequestService.getPurchaseRequests(userDetails.getUserId(), status)
+            purchaseRequestService.getPurchaseRequests(userDetails.getUserId(), status, mine)
         );
     }
 
