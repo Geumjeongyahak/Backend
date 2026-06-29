@@ -331,14 +331,15 @@ class AbsenceRequestReadTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("매니저가 타인 요청 단건 조회 → 403")
-    void getDetail_asManagerForOthersRequest_returns403() {
+    @DisplayName("매니저가 타인 요청 단건 조회 → 200")
+    void getDetail_asManagerForOthersRequest_returns200() {
         given()
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(managerToken))
             .get("/{id}", requestIdByVolunteer1)
             .then()
-            .statusCode(403);
+            .statusCode(200)
+            .body("id", equalTo(requestIdByVolunteer1.intValue()));
     }
 
     @Test

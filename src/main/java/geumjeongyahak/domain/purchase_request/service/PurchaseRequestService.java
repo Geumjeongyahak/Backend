@@ -143,6 +143,10 @@ public class PurchaseRequestService {
         return toDetailResponse(purchaseRequest);
     }
 
+    public PurchaseRequestDetailResponse getPurchaseRequest(Long requestId) {
+        return toDetailResponse(findById(requestId));
+    }
+
     @Transactional
     public PurchaseRequestDetailResponse updatePurchaseRequest(
         Long requesterId, Long requestId, CreatePurchaseRequestRequest request, boolean isAdmin

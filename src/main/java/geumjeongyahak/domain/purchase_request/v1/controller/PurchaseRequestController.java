@@ -73,15 +73,18 @@ public class PurchaseRequestController {
     }
 
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "구입 요청 상세 조회")
+    @Operation(
+        summary = "구입 요청 상세 조회",
+        description = "인증된 사용자가 구입 요청 단건 상세 정보를 조회합니다. "
+            + "목록 조회와 동일하게 기본 상세 조회는 전체 요청에 대해 허용됩니다."
+    )
     @GetMapping("/{requestId}")
     public ResponseEntity<PurchaseRequestDetailResponse> getPurchaseRequest(
-        @PathVariable Long requestId,
-        @AuthenticationPrincipal CustomUserDetails userDetails
+        @PathVariable Long requestId
     ) {
         log.debug("GET /api/v1/purchase-requests/{}", requestId);
         return ResponseEntity.ok(
-            purchaseRequestService.getPurchaseRequest(userDetails.getUserId(), requestId, userDetails.isAdmin())
+            purchaseRequestService.getPurchaseRequest(requestId)
         );
     }
 

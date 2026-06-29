@@ -714,8 +714,8 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("타인의 단건 조회 → 403")
-    void getDetail_byNonOwner_returns403() {
+    @DisplayName("타인의 단건 조회 → 200")
+    void getDetail_byNonOwner_returns200() {
         currentRequestId = createPurchaseRequest(
             getAuthHeader(volunteerToken), CLASSROOM_ID, "개인 요청", "내용", 5000L);
 
@@ -724,7 +724,8 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
             .get("/{requestId}", currentRequestId)
             .then()
-            .statusCode(403);
+            .statusCode(200)
+            .body("id", equalTo(currentRequestId.intValue()));
     }
 
     @Test

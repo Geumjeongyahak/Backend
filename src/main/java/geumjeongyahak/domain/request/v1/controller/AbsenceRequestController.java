@@ -102,21 +102,17 @@ public class AbsenceRequestController {
     @Operation(
         summary = "결석 요청 상세 조회",
         description = "VOLUNTEER, MANAGER, ADMIN 또는 absence-request:read:* 권한 사용자가 결석 요청 단건 상세 정보를 조회합니다. "
-            + "ADMIN 또는 absence-request:read:* 권한 사용자는 모든 결석 요청을 조회할 수 있습니다. "
-            + "그 외 VOLUNTEER, MANAGER 사용자는 본인이 생성한 요청만 조회할 수 있습니다. "
+            + "교원 이상 권한 사용자는 모든 결석 요청을 조회할 수 있습니다. "
             + "응답에는 대상 하루 일정, 요청자, 결석 사유, 만료 시각, 요청 상태, 승인/반려 정보가 포함됩니다. "
             + "만료 시각은 대상 하루 일정 수업일의 00:00이며, 해당 시각이 지난 PENDING 요청은 EXPIRED 상태로 자동 전환됩니다. "
             + "조회 API는 side effect 를 발생시키지 않습니다."
     )
     @GetMapping("/{requestId}")
     public ResponseEntity<AbsenceRequestResponse> getAbsenceRequest(
-        @PathVariable Long requestId,
-        @AuthenticationPrincipal CustomUserDetails userDetails
+        @PathVariable Long requestId
     ) {
         log.debug("GET /api/v1/absence-requests/{} - 결석 요청 상세 조회", requestId);
-        AbsenceRequestResponse response = absenceRequestService.getAbsenceRequest(
-            userDetails.getUserId(), requestId, canReadAllAbsenceRequests(userDetails)
-        );
+        AbsenceRequestResponse response = absenceRequestService.getAbsenceRequest(requestId);
         return ResponseEntity.ok(response);
     }
 

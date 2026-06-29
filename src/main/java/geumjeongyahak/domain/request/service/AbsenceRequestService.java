@@ -88,14 +88,10 @@ public class AbsenceRequestService {
         return PaginationResponse.from(page, AbsenceRequestResponse::from);
     }
 
-    public AbsenceRequestResponse getAbsenceRequest(Long requesterId, Long requestId, boolean isAdmin) {
+    public AbsenceRequestResponse getAbsenceRequest(Long requestId) {
         log.debug("결석 요청 상세 조회 (requestId={})", requestId);
         AbsenceRequest absenceRequest = absenceRequestRepository.findById(requestId)
             .orElseThrow(() -> new RequestNotFoundException(requestId));
-
-        if (!isAdmin && !absenceRequest.getRequestedBy().getId().equals(requesterId)) {
-            throw new RequestForbiddenException();
-        }
 
         return AbsenceRequestResponse.from(absenceRequest);
     }
