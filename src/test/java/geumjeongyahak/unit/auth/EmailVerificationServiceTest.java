@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 class EmailVerificationServiceTest {
@@ -34,13 +33,10 @@ class EmailVerificationServiceTest {
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-06-25T10:15:30Z"), ZoneId.of("Asia/Seoul"));
     private static final String EMAIL = "verify@test.com";
     private static final String RAW_CODE = "123456";
-    private static final String TOKEN_HASH = "hashed-verification-token";
+    private static final String TOKEN_HASH = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92";
 
     @Mock
     private UserCredentialRepository credentialRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
 
     @Mock
     private MailSenderService mailSenderService;
@@ -51,7 +47,6 @@ class EmailVerificationServiceTest {
     void setUp() {
         emailVerificationService = new EmailVerificationService(
             credentialRepository,
-            passwordEncoder,
             mailSenderService,
             CLOCK,
             () -> RAW_CODE
@@ -59,9 +54,8 @@ class EmailVerificationServiceTest {
     }
 
     @Test
-    void issueVerification_storesHashedTokenAndSendsEmailVerificationMail() {
+    void issueVerification_storesSha256TokenHashAndSendsRawTokenOnlyInMail() {
         UserCredential credential = unverifiedCredential();
-        given(passwordEncoder.encode(RAW_CODE)).willReturn(TOKEN_HASH);
         given(mailSenderService.sendEmailVerificationMail(eq(EMAIL), eq("이메일 인증 사용자"), eq(RAW_CODE)))
             .willReturn(MailDeliveryResult.sent("email-verification", EMAIL));
 
@@ -79,7 +73,6 @@ class EmailVerificationServiceTest {
     @Test
     void issueVerification_keepsTokenWhenMailDeliveryFails() {
         UserCredential credential = unverifiedCredential();
-        given(passwordEncoder.encode(RAW_CODE)).willReturn(TOKEN_HASH);
         given(mailSenderService.sendEmailVerificationMail(eq(EMAIL), eq("이메일 인증 사용자"), eq(RAW_CODE)))
             .willThrow(new RuntimeException("smtp down"));
 
@@ -95,7 +88,6 @@ class EmailVerificationServiceTest {
         credential.issueEmailVerificationToken(TOKEN_HASH, LocalDateTime.now(CLOCK).plusMinutes(15), LocalDateTime.now(CLOCK));
         given(credentialRepository.findByCredentialEmailAndProvider(EMAIL, ProviderType.LOCAL))
             .willReturn(Optional.of(credential));
-        given(passwordEncoder.matches(RAW_CODE, TOKEN_HASH)).willReturn(true);
 
         emailVerificationService.confirm(EMAIL, RAW_CODE);
 
@@ -112,7 +104,6 @@ class EmailVerificationServiceTest {
         credential.issueEmailVerificationToken(TOKEN_HASH, LocalDateTime.now(CLOCK).minusMinutes(1), LocalDateTime.now(CLOCK).minusMinutes(16));
         given(credentialRepository.findByCredentialEmailAndProvider(EMAIL, ProviderType.LOCAL))
             .willReturn(Optional.of(credential));
-        given(passwordEncoder.matches(RAW_CODE, TOKEN_HASH)).willReturn(true);
 
         assertThatThrownBy(() -> emailVerificationService.confirm(EMAIL, RAW_CODE))
             .isInstanceOf(BusinessException.class)
@@ -129,7 +120,6 @@ class EmailVerificationServiceTest {
         credential.issueEmailVerificationToken(TOKEN_HASH, LocalDateTime.now(CLOCK).plusMinutes(15), LocalDateTime.now(CLOCK));
         given(credentialRepository.findByCredentialEmailAndProvider(EMAIL, ProviderType.LOCAL))
             .willReturn(Optional.of(credential));
-        given(passwordEncoder.matches("654321", TOKEN_HASH)).willReturn(false);
 
         assertThatThrownBy(() -> emailVerificationService.confirm(EMAIL, "654321"))
             .isInstanceOf(BusinessException.class)
@@ -147,7 +137,6 @@ class EmailVerificationServiceTest {
         credential.issueEmailVerificationToken(TOKEN_HASH, LocalDateTime.now(CLOCK).plusMinutes(15), LocalDateTime.now(CLOCK));
         given(credentialRepository.findByCredentialEmailAndProvider(EMAIL, ProviderType.LOCAL))
             .willReturn(Optional.of(credential));
-        given(passwordEncoder.matches("654321", TOKEN_HASH)).willReturn(false);
 
         for (int i = 0; i < 5; i++) {
             assertThatThrownBy(() -> emailVerificationService.confirm(EMAIL, "654321"))
@@ -164,7 +153,6 @@ class EmailVerificationServiceTest {
     void resend_replacesExistingVerificationCode() {
         emailVerificationService = new EmailVerificationService(
             credentialRepository,
-            passwordEncoder,
             mailSenderService,
             CLOCK,
             () -> "222222"
@@ -177,14 +165,38 @@ class EmailVerificationServiceTest {
         );
         given(credentialRepository.findByCredentialEmailAndProvider(EMAIL, ProviderType.LOCAL))
             .willReturn(Optional.of(credential));
-        given(passwordEncoder.encode("222222")).willReturn("new-hash");
         given(mailSenderService.sendEmailVerificationMail(eq(EMAIL), eq("이메일 인증 사용자"), eq("222222")))
             .willReturn(MailDeliveryResult.sent("email-verification", EMAIL));
 
         emailVerificationService.resend(EMAIL);
 
-        assertThat(credential.getEmailVerificationTokenHash()).isEqualTo("new-hash");
+        assertThat(credential.getEmailVerificationTokenHash())
+            .isEqualTo("4cc8f4d609b717356701c57a03e737e5ac8fe885da8c7163d3de47e01849c635");
         verify(mailSenderService).sendEmailVerificationMail(EMAIL, "이메일 인증 사용자", "222222");
+    }
+
+    @Test
+    void confirmByToken_marksEmailVerifiedWithoutEmailLookup() {
+        UserCredential credential = unverifiedCredential();
+        credential.issueEmailVerificationToken(TOKEN_HASH, LocalDateTime.now(CLOCK).plusMinutes(15), LocalDateTime.now(CLOCK));
+        given(credentialRepository.findByEmailVerificationTokenHash(TOKEN_HASH))
+            .willReturn(Optional.of(credential));
+
+        emailVerificationService.confirmByToken(RAW_CODE);
+
+        assertThat(credential.isEmailVerified()).isTrue();
+        assertThat(credential.getEmailVerificationTokenHash()).isNull();
+        verify(credentialRepository).save(credential);
+    }
+
+    @Test
+    void confirmByToken_rejectsInvalidToken() {
+        given(credentialRepository.findByEmailVerificationTokenHash(TOKEN_HASH))
+            .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> emailVerificationService.confirmByToken(RAW_CODE))
+            .isInstanceOf(BusinessException.class)
+            .hasMessage("유효하지 않은 이메일 인증번호입니다.");
     }
 
     @Test
@@ -223,7 +235,6 @@ class EmailVerificationServiceTest {
         credential.issueEmailVerificationToken(TOKEN_HASH, LocalDateTime.now(CLOCK).plusMinutes(15), LocalDateTime.now(CLOCK));
         given(credentialRepository.findByCredentialEmailAndProvider(EMAIL, ProviderType.LOCAL))
             .willReturn(Optional.of(credential));
-        given(passwordEncoder.matches(RAW_CODE, TOKEN_HASH)).willReturn(true);
 
         emailVerificationService.confirm(EMAIL, RAW_CODE);
 

@@ -13,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 import geumjeongyahak.common.exception.BusinessException;
+import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.mail.MailProperties;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.auth.exception.AuthErrorCode;
@@ -96,26 +97,38 @@ public class LocalAuthController {
     )
     @GetMapping("/email-verification/confirm")
     public void confirmEmailVerificationLink(
-            @RequestParam String email,
-            @RequestParam("code") String verificationCode,
+            @RequestParam(required = false) String token,
+            @RequestParam(required = false) String email,
+            @RequestParam(value = "code", required = false) String verificationCode,
             HttpServletResponse response
     ) throws IOException {
         String status = "success";
+        String errorCode = null;
         try {
-            emailVerificationService.confirm(email, verificationCode);
+            if (token != null && !token.isBlank()) {
+                emailVerificationService.confirmByToken(token);
+            } else if (email != null && !email.isBlank() && verificationCode != null && !verificationCode.isBlank()) {
+                emailVerificationService.confirm(email, verificationCode);
+            } else {
+                status = "invalid";
+                errorCode = CommonErrorCode.MISSING_REQUIRED_FIELD.getCode();
+            }
         } catch (BusinessException exception) {
             status = AuthErrorCode.EMAIL_VERIFICATION_TOKEN_EXPIRED.getCode().equals(exception.getCode())
                 ? "expired"
                 : "invalid";
-            log.info("이메일 인증 링크 처리 실패 - email={}, status={}", email, status);
+            errorCode = exception.getCode();
+            log.info("이메일 인증 링크 처리 실패 - status={}, code={}", status, errorCode);
         }
 
-        response.sendRedirect(UriComponentsBuilder
+        UriComponentsBuilder builder = UriComponentsBuilder
             .fromUriString(mailProperties.frontendBaseUrl())
             .replacePath("/auth/email-verification")
-            .queryParam("status", status)
-            .queryParam("email", email)
-            .toUriString());
+            .queryParam("status", status);
+        if (errorCode != null) {
+            builder.queryParam("errorCode", errorCode);
+        }
+        response.sendRedirect(builder.toUriString());
     }
 
     @Operation(

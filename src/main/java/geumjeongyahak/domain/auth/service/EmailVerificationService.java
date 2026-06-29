@@ -8,12 +8,15 @@ import geumjeongyahak.domain.auth.entity.UserCredential;
 import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.exception.AuthErrorCode;
 import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.HexFormat;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class EmailVerificationService {
 
     private final UserCredentialRepository credentialRepository;
-    private final PasswordEncoder passwordEncoder;
     private final MailSenderService mailSenderService;
     private final Clock clock;
     private final Supplier<String> verificationCodeSupplier;
@@ -33,31 +35,27 @@ public class EmailVerificationService {
     @Autowired
     public EmailVerificationService(
         UserCredentialRepository credentialRepository,
-        PasswordEncoder passwordEncoder,
         MailSenderService mailSenderService,
         Clock clock,
         MailProperties mailProperties
     ) {
         this(
             credentialRepository,
-            passwordEncoder,
             mailSenderService,
             clock,
-            new NumericCodeGenerator(),
+            new UrlTokenGenerator(),
             mailProperties.emailVerificationExpirationMinutes()
         );
     }
 
     public EmailVerificationService(
         UserCredentialRepository credentialRepository,
-        PasswordEncoder passwordEncoder,
         MailSenderService mailSenderService,
         Clock clock,
         Supplier<String> verificationCodeSupplier
     ) {
         this(
             credentialRepository,
-            passwordEncoder,
             mailSenderService,
             clock,
             verificationCodeSupplier,
@@ -67,14 +65,12 @@ public class EmailVerificationService {
 
     private EmailVerificationService(
         UserCredentialRepository credentialRepository,
-        PasswordEncoder passwordEncoder,
         MailSenderService mailSenderService,
         Clock clock,
         Supplier<String> verificationCodeSupplier,
         long expirationMinutes
     ) {
         this.credentialRepository = credentialRepository;
-        this.passwordEncoder = passwordEncoder;
         this.mailSenderService = mailSenderService;
         this.clock = clock;
         this.verificationCodeSupplier = verificationCodeSupplier;
@@ -98,8 +94,21 @@ public class EmailVerificationService {
             .filter(candidate -> !candidate.getUser().isDeleted())
             .orElseThrow(() -> new BusinessException(AuthErrorCode.EMAIL_VERIFICATION_TOKEN_INVALID));
 
+        confirmCredential(credential, verificationCode);
+    }
+
+    @Transactional
+    public void confirmByToken(String token) {
+        UserCredential credential = credentialRepository.findByEmailVerificationTokenHash(hashToken(token))
+            .filter(candidate -> !candidate.getUser().isDeleted())
+            .orElseThrow(() -> new BusinessException(AuthErrorCode.EMAIL_VERIFICATION_TOKEN_INVALID));
+
+        confirmCredential(credential, token);
+    }
+
+    private void confirmCredential(UserCredential credential, String token) {
         if (credential.getEmailVerificationTokenHash() == null
-            || !passwordEncoder.matches(verificationCode, credential.getEmailVerificationTokenHash())) {
+            || !hashToken(token).equals(credential.getEmailVerificationTokenHash())) {
             credential.recordEmailVerificationFailure(MAX_FAILED_ATTEMPTS);
             credentialRepository.save(credential);
             throw new BusinessException(AuthErrorCode.EMAIL_VERIFICATION_TOKEN_INVALID);
@@ -130,16 +139,16 @@ public class EmailVerificationService {
 
     private void issueVerificationCode(UserCredential credential) {
         validateCooldown(credential.getEmailVerificationRequestedAt());
-        String verificationCode = verificationCodeSupplier.get();
+        String verificationToken = verificationCodeSupplier.get();
         LocalDateTime requestedAt = LocalDateTime.now(clock);
         LocalDateTime expiresAt = requestedAt.plusMinutes(expirationMinutes);
-        credential.issueEmailVerificationToken(passwordEncoder.encode(verificationCode), expiresAt, requestedAt);
+        credential.issueEmailVerificationToken(hashToken(verificationToken), expiresAt, requestedAt);
         credentialRepository.save(credential);
         try {
             mailSenderService.sendEmailVerificationMail(
                 credential.getCredentialEmail(),
                 credential.getUser().getName(),
-                verificationCode
+                verificationToken
             );
         } catch (Exception exception) {
             log.warn(
@@ -155,6 +164,15 @@ public class EmailVerificationService {
     private void validateCooldown(LocalDateTime requestedAt) {
         if (requestedAt != null && requestedAt.plusSeconds(RESEND_COOLDOWN_SECONDS).isAfter(LocalDateTime.now(clock))) {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT, "인증번호는 60초 후 다시 요청할 수 있습니다.");
+        }
+    }
+
+    private static String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(token.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 algorithm is unavailable", exception);
         }
     }
 }
