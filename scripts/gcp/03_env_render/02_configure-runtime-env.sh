@@ -244,7 +244,7 @@ ask(app, app_order, "MAIL_FROM_EMAIL", "Mail from email", get(app, "MAIL_FROM_EM
 ask(app, app_order, "MAIL_FROM_NAME", "Mail from name", get(app, "MAIL_FROM_NAME", infra.get("MAIL_FROM_NAME", "금정야학")))
 ask(app, app_order, "MAIL_PASSWORD_RESET_PATH", "Password reset frontend path", get(app, "MAIL_PASSWORD_RESET_PATH", infra.get("MAIL_PASSWORD_RESET_PATH", "/auth/reset-password")))
 ask(app, app_order, "PASSWORD_RESET_EXPIRATION_MINUTES", "Password reset code expiration minutes", get(app, "PASSWORD_RESET_EXPIRATION_MINUTES", infra.get("PASSWORD_RESET_EXPIRATION_MINUTES", "15")))
-ask(app, app_order, "MAIL_EMAIL_VERIFICATION_PATH", "Email verification frontend path", get(app, "MAIL_EMAIL_VERIFICATION_PATH", infra.get("MAIL_EMAIL_VERIFICATION_PATH", "/auth/email-verification")))
+ask(app, app_order, "MAIL_EMAIL_VERIFICATION_PATH", "Email verification backend confirm path", get(app, "MAIL_EMAIL_VERIFICATION_PATH", infra.get("MAIL_EMAIL_VERIFICATION_PATH", "/api/v1/auth/email-verification/confirm")))
 ask(app, app_order, "EMAIL_VERIFICATION_EXPIRATION_MINUTES", "Email verification code expiration minutes", get(app, "EMAIL_VERIFICATION_EXPIRATION_MINUTES", infra.get("EMAIL_VERIFICATION_EXPIRATION_MINUTES", "15")))
 
 section("6. GCP Storage credentials")
