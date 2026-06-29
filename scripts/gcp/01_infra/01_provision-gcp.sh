@@ -85,7 +85,6 @@ require APP_INSTANCE_NAME
 require DB_INSTANCE_NAME
 require APP_MACHINE_TYPE
 require DB_MACHINE_TYPE
-require BOOT_DISK_SIZE_GB
 require APP_STATIC_IP_NAME
 require DB_INTERNAL_IP_NAME
 require APP_NETWORK_TAG
@@ -94,6 +93,9 @@ require APP_SERVICE_ACCOUNT_NAME
 require STORAGE_BUCKET_NAME
 require STORAGE_LOCATION
 require DEPLOY_OS_USER
+
+APP_BOOT_DISK_SIZE_GB="${APP_BOOT_DISK_SIZE_GB:-${BOOT_DISK_SIZE_GB:-10}}"
+DB_BOOT_DISK_SIZE_GB="${DB_BOOT_DISK_SIZE_GB:-${BOOT_DISK_SIZE_GB:-20}}"
 
 gcloud config set project "${PROJECT_ID}" >/dev/null
 
@@ -250,7 +252,7 @@ if ! exists_instance "${APP_INSTANCE_NAME}"; then
     --zone="${ZONE}" \
     --machine-type="${APP_MACHINE_TYPE}" \
     --network-interface="network=${NETWORK},subnet=${SUBNET},address=${APP_STATIC_IP}" \
-    --boot-disk-size="${BOOT_DISK_SIZE_GB}GB" \
+    --boot-disk-size="${APP_BOOT_DISK_SIZE_GB}GB" \
     --boot-disk-type="${BOOT_DISK_TYPE:-pd-standard}" \
     --boot-disk-device-name="${APP_BOOT_DISK_NAME:-${APP_INSTANCE_NAME}-boot}" \
     --image-family="${IMAGE_FAMILY:-ubuntu-2204-lts}" \
@@ -277,7 +279,7 @@ else
       --zone="${ZONE}" \
       --machine-type="${DB_MACHINE_TYPE}" \
       --network-interface="${DB_NETWORK_INTERFACE}" \
-      --boot-disk-size="${BOOT_DISK_SIZE_GB}GB" \
+      --boot-disk-size="${DB_BOOT_DISK_SIZE_GB}GB" \
       --boot-disk-type="${BOOT_DISK_TYPE:-pd-standard}" \
       --boot-disk-device-name="${DB_BOOT_DISK_NAME:-${DB_INSTANCE_NAME}-boot}" \
       --image-family="${IMAGE_FAMILY:-ubuntu-2204-lts}" \

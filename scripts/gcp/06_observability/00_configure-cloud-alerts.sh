@@ -50,7 +50,7 @@ EXISTING_POLICY="$(gcloud monitoring policies list \
 POLICY_FILE="$(mktemp)"
 trap 'rm -f "${POLICY_FILE}"' EXIT
 
-python - <<'PY' "${POLICY_FILE}" "${POLICY_DISPLAY_NAME}" "${METRIC_NAME}" "${NOTIFICATION_CHANNELS}" "${ENVIRONMENT}"
+python3 - <<'PY' "${POLICY_FILE}" "${POLICY_DISPLAY_NAME}" "${METRIC_NAME}" "${NOTIFICATION_CHANNELS}" "${ENVIRONMENT}"
 import json
 import sys
 from pathlib import Path
