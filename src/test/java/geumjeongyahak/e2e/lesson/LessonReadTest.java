@@ -128,7 +128,9 @@ public class LessonReadTest extends LessonBaseTest {
             .then()
             .statusCode(200)
             .body("size()", is(1))
+            .body("[0].teacherAttendance.attendedAt", is("2027-05-21T19:20:00"))
             .body("[0].teacherAttendance.isAttended", is(true))
+            .body("[0].teacherAttendance.checkedOutAt", is("2027-05-21T20:00:00"))
             .body("[0].teacherAttendance.isCheckedOut", is(true));
     }
 
@@ -435,7 +437,9 @@ public class LessonReadTest extends LessonBaseTest {
             .get("/{lessonId}", lessonId)
             .then()
             .statusCode(200)
+            .body("teacherAttendance.attendedAt", is("2027-07-22T19:30:00"))
             .body("teacherAttendance.isAttended", is(true))
+            .body("teacherAttendance.checkedOutAt", is("2027-07-22T20:00:00"))
             .body("teacherAttendance.isCheckedOut", is(true));
     }
 
