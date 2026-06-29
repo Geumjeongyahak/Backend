@@ -14,6 +14,9 @@ public record DailyStudentAttendanceResponse(
     @Schema(description = "학생 이름", example = "최양지")
     String studentName,
 
+    @Schema(description = "학생 연락처", example = "010-1234-5678")
+    String studentPhoneNumber,
+
     @Schema(
         description = "학생 출석 상태",
         example = "ABSENT",
@@ -27,6 +30,7 @@ public record DailyStudentAttendanceResponse(
             attendance.getId(),
             attendance.getStudent().getId(),
             attendance.getStudent().getName(),
+            attendance.getStudent().getPhoneNumber(),
             attendance.getStatus()
         );
     }
