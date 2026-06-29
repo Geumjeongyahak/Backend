@@ -295,6 +295,29 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .statusCode(401);
     }
 
+    @Test
+    @DisplayName("게스트 구입 요청 생성 → 403")
+    void createRequest_asGuest_returns403() {
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .contentType(ContentType.JSON)
+            .body(Map.ofEntries(
+                entry("title", "제목"),
+                entry("content", "내용"),
+                entry("classroomId", CLASSROOM_ID),
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "품목"),
+                    entry("reason", "사유"),
+                    entry("quantity", 1),
+                    entry("paymentType", "ACTUAL")
+                )))
+            ))
+            .post()
+            .then()
+            .statusCode(403);
+    }
+
     // ── 도메인 오류 ───────────────────────────────────────
 
     @Test

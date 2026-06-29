@@ -25,7 +25,7 @@ import geumjeongyahak.e2e.request.RequestBaseTest;
  *
  * <h3>격리 전략</h3>
  * @BeforeEach 에서 독립 수업 + 결석 요청을 생성하고, @AfterEach 에서 삭제한다.
- * 관리자 전체 조회 / 봉사자 본인 조회 / 상태 필터 / 단건 조회 / 권한 오류를 검증한다.
+ * 관리자/교원 전체 조회 / mine=true 본인 조회 / 상태 필터 / 단건 조회 / 권한 오류를 검증한다.
  */
 @Tag("absence-request")
 @DisplayName("E2E: 결석 요청 조회 테스트")
@@ -135,8 +135,8 @@ class AbsenceRequestReadTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("매니저 목록 조회 → 본인 요청 범위만 조회")
-    void getList_asManager_seesOnlyOwnRequests() {
+    @DisplayName("매니저 목록 조회 → 두 요청 모두 포함")
+    void getList_asManager_seesAllRequests() {
         List<Long> ids = given()
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(managerToken))
@@ -147,7 +147,25 @@ class AbsenceRequestReadTest extends RequestBaseTest {
             .jsonPath()
             .getList("content.id", Long.class);
 
-        assertThat(ids).doesNotContain(requestIdByVolunteer1, requestIdByVolunteer2);
+        assertThat(ids).contains(requestIdByVolunteer1, requestIdByVolunteer2);
+    }
+
+    @Test
+    @DisplayName("mine=true 목록 조회 → 본인 요청만 포함")
+    void getList_withMineTrue_seesOnlyOwnRequests() {
+        List<Long> ids = given()
+            .basePath("/api/v1/absence-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .queryParam("mine", true)
+            .get()
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getList("content.id", Long.class);
+
+        assertThat(ids).contains(requestIdByVolunteer1);
+        assertThat(ids).doesNotContain(requestIdByVolunteer2);
     }
 
     @Test
@@ -313,14 +331,15 @@ class AbsenceRequestReadTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("매니저가 타인 요청 단건 조회 → 403")
-    void getDetail_asManagerForOthersRequest_returns403() {
+    @DisplayName("매니저가 타인 요청 단건 조회 → 200")
+    void getDetail_asManagerForOthersRequest_returns200() {
         given()
             .basePath("/api/v1/absence-requests")
             .header(AUTH_HEADER, getAuthHeader(managerToken))
             .get("/{id}", requestIdByVolunteer1)
             .then()
-            .statusCode(403);
+            .statusCode(200)
+            .body("id", equalTo(requestIdByVolunteer1.intValue()));
     }
 
     @Test

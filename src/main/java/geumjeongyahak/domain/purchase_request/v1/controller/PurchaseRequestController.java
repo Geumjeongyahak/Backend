@@ -34,10 +34,13 @@ import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSum
 @Tag(name = "PurchaseRequest", description = "기자재 구입 요청 API")
 public class PurchaseRequestController {
 
+    private static final String TEACHER_OR_HIGHER_ACCESS =
+        "hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN')";
+
     private final PurchaseRequestService purchaseRequestService;
     private final PurchaseRequestReconfirmationService purchaseRequestReconfirmationService;
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "구입 요청 생성",
         description = "classroomId 로 지정한 분반에 대한 기자재 구입 요청을 생성합니다. "
@@ -54,36 +57,41 @@ public class PurchaseRequestController {
             .body(purchaseRequestService.createPurchaseRequest(userDetails.getUserId(), request));
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "구입 요청 목록 조회",
-        description = "본인이 신청한 구입 요청 목록을 조회합니다. status 파라미터로 필터링할 수 있습니다."
+        description = "구입 요청 목록을 조회합니다. 기본 목록은 전체 요청을 반환하며, mine=true 파라미터를 전달하면 본인이 신청한 요청만 반환합니다. "
+            + "status 파라미터로 필터링할 수 있습니다."
     )
     @GetMapping
     public ResponseEntity<List<PurchaseRequestSummaryResponse>> getPurchaseRequests(
         @RequestParam(required = false) PurchaseRequestStatus status,
+        @RequestParam(defaultValue = "false") boolean mine,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.debug("GET /api/v1/purchase-requests (status={})", status);
+        log.debug("GET /api/v1/purchase-requests (status={}, mine={})", status, mine);
         return ResponseEntity.ok(
-            purchaseRequestService.getPurchaseRequests(userDetails.getUserId(), status)
+            purchaseRequestService.getPurchaseRequests(userDetails.getUserId(), status, mine)
         );
     }
 
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "구입 요청 상세 조회")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
+    @Operation(
+        summary = "구입 요청 상세 조회",
+        description = "인증된 사용자가 구입 요청 단건 상세 정보를 조회합니다. "
+            + "목록 조회와 동일하게 기본 상세 조회는 전체 요청에 대해 허용됩니다."
+    )
     @GetMapping("/{requestId}")
     public ResponseEntity<PurchaseRequestDetailResponse> getPurchaseRequest(
-        @PathVariable Long requestId,
-        @AuthenticationPrincipal CustomUserDetails userDetails
+        @PathVariable Long requestId
     ) {
         log.debug("GET /api/v1/purchase-requests/{}", requestId);
         return ResponseEntity.ok(
-            purchaseRequestService.getPurchaseRequest(userDetails.getUserId(), requestId, userDetails.isAdmin())
+            purchaseRequestService.getPurchaseRequest(requestId)
         );
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "구입 요청 삭제",
         description = "본인이 작성한 PENDING 상태의 구입 요청을 삭제합니다. "
@@ -99,7 +107,7 @@ public class PurchaseRequestController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "구매 완료 보고",
         description = "APPROVED 상태에서 승인 후 7일 이내에 실제 구매 금액과 영수증을 제출합니다. "
@@ -117,7 +125,7 @@ public class PurchaseRequestController {
         );
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "구입 요청 재확인 요청",
         description = "PURCHASED 상태의 구입 요청에 대해 결재 확인 재확인을 요청합니다. "
@@ -133,7 +141,7 @@ public class PurchaseRequestController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(summary = "구매 완료 거래 수정")
     @PostMapping("/{requestId}/item-receipts")
     public ResponseEntity<PurchaseRequestDetailResponse> updateItemReceipts(

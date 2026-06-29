@@ -188,6 +188,7 @@ class DailyScheduleServiceReadTest {
         assertThat(response.dailyScheduleId()).isEqualTo(dailySchedule.getId());
         assertThat(response.lessons()).hasSize(1);
         assertThat(response.studentAttendances()).hasSize(1);
+        assertThat(response.studentAttendances().get(0).studentPhoneNumber()).isEqualTo("010-1234-5678");
         assertThat(response.teacherAttendance().volunteerServiceMinutes()).isEqualTo(120);
         assertThat(response.isExchanged()).isTrue();
         assertThat(response.isAbsent()).isTrue();
@@ -1027,7 +1028,7 @@ class DailyScheduleServiceReadTest {
     }
 
     private Student student(Long id, Classroom classroom) {
-        Student student = new Student("최양지", null, null, classroom);
+        Student student = new Student("최양지", "010-1234-5678", null, classroom);
         ReflectionTestUtils.setField(student, "id", id);
         return student;
     }

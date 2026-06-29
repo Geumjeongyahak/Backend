@@ -15,6 +15,9 @@ public class AbsenceRequestPaginationRequest extends BasePaginationRequest {
     @Schema(description = "제목, 사유, 작성자 이름, 반 이름 검색어", example = "개인 사정")
     private String keyword;
 
+    @Schema(description = "본인 요청만 조회할지 여부", example = "false")
+    private boolean mine = false;
+
     @Override
     public PageRequest toRequest() {
         return PageRequest.of(

@@ -75,28 +75,23 @@ public class AbsenceRequestService {
 
     public PaginationResponse<AbsenceRequestResponse> getAbsenceRequests(
         Long requesterId,
-        boolean isAdmin,
         RequestStatus status,
         AbsenceRequestPaginationRequest pageRequest
     ) {
-        log.debug("결석 요청 목록 조회 (isAdmin={}, status={})", isAdmin, status);
+        log.debug("결석 요청 목록 조회 (status={}, mine={})", status, pageRequest.isMine());
 
         Page<AbsenceRequest> page = absenceRequestRepository.findAll(
-            buildListSpecification(requesterId, isAdmin, status, pageRequest),
+            buildListSpecification(requesterId, status, pageRequest),
             pageRequest.toRequest()
         );
 
         return PaginationResponse.from(page, AbsenceRequestResponse::from);
     }
 
-    public AbsenceRequestResponse getAbsenceRequest(Long requesterId, Long requestId, boolean isAdmin) {
+    public AbsenceRequestResponse getAbsenceRequest(Long requestId) {
         log.debug("결석 요청 상세 조회 (requestId={})", requestId);
         AbsenceRequest absenceRequest = absenceRequestRepository.findById(requestId)
             .orElseThrow(() -> new RequestNotFoundException(requestId));
-
-        if (!isAdmin && !absenceRequest.getRequestedBy().getId().equals(requesterId)) {
-            throw new RequestForbiddenException();
-        }
 
         return AbsenceRequestResponse.from(absenceRequest);
     }
@@ -240,13 +235,12 @@ public class AbsenceRequestService {
 
     private Specification<AbsenceRequest> buildListSpecification(
         Long requesterId,
-        boolean canReadAll,
         RequestStatus status,
         AbsenceRequestPaginationRequest pageRequest
     ) {
         return Specification.allOf(
             hasStatus(status),
-            matchesRequesterScope(requesterId, canReadAll),
+            matchesRequesterIfMine(requesterId, pageRequest.isMine()),
             containsKeyword(pageRequest.getKeyword())
         );
     }
@@ -256,13 +250,10 @@ public class AbsenceRequestService {
             status == null ? null : criteriaBuilder.equal(root.get("status"), status);
     }
 
-    private Specification<AbsenceRequest> matchesRequesterScope(Long requesterId, boolean canReadAll) {
-        return (root, query, criteriaBuilder) -> {
-            if (canReadAll) {
-                return null;
-            }
-            return criteriaBuilder.equal(root.get("requestedBy").get("id"), requesterId);
-        };
+    private Specification<AbsenceRequest> matchesRequesterIfMine(Long requesterId, boolean mine) {
+        return (root, query, criteriaBuilder) -> mine
+            ? criteriaBuilder.equal(root.get("requestedBy").get("id"), requesterId)
+            : null;
     }
 
     private Specification<AbsenceRequest> containsKeyword(String keyword) {

@@ -644,11 +644,35 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .body("balance", equalTo(100000));
     }
 
+    @Test
+    @DisplayName("CONFIRMED 구입 요청 거래 수정 → 409")
+    void updateItemReceipts_confirmedRequest_returns409() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = setupPurchasedRequest(createdVendorId, 20000L, null);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", currentRequestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("CONFIRMED"));
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(reportBody(createdVendorId, 25000L, null))
+            .post("/{requestId}/item-receipts", currentRequestId)
+            .then()
+            .statusCode(409);
+    }
+
     // ── 조회 ──────────────────────────────────────────────
 
     @Test
-    @DisplayName("관리자는 전체 목록 / 봉사자는 본인 요청만 조회")
-    void getList_adminSeesAll_volunteerSeesOnlyOwn() {
+    @DisplayName("구입 요청 목록 기본 조회는 전체 요청, mine=true는 본인 요청만 조회")
+    void getList_defaultSeesAll_mineTrueSeesOnlyOwn() {
         Long request1Id = createPurchaseRequest(
             getAuthHeader(volunteerToken), CLASSROOM_ID, "v1 요청", "내용1", 1000L);
         Long request2Id = createPurchaseRequest(
@@ -672,14 +696,23 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
                 .body("find { it.id == " + request1Id + " }.classroomId", equalTo((int) CLASSROOM_ID))
                 .body("find { it.id == " + request1Id + " }.requestedById", equalTo((int) TEACHER_ID));
 
-            List<Long> v1Ids = given()
+            List<Long> v1AllIds = given()
                 .basePath("/api/v1/purchase-requests")
                 .header(AUTH_HEADER, getAuthHeader(volunteerToken))
                 .get()
                 .then().statusCode(200)
                 .extract().jsonPath().getList("id", Long.class);
-            assertThat(v1Ids).contains(request1Id);
-            assertThat(v1Ids).doesNotContain(request2Id);
+            assertThat(v1AllIds).contains(request1Id, request2Id);
+
+            List<Long> v1MineIds = given()
+                .basePath("/api/v1/purchase-requests")
+                .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+                .queryParam("mine", true)
+                .get()
+                .then().statusCode(200)
+                .extract().jsonPath().getList("id", Long.class);
+            assertThat(v1MineIds).contains(request1Id);
+            assertThat(v1MineIds).doesNotContain(request2Id);
 
         } finally {
             purchaseRequestRepository.deleteById(request1Id);
@@ -705,14 +738,39 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("타인의 단건 조회 → 403")
-    void getDetail_byNonOwner_returns403() {
+    @DisplayName("타인의 단건 조회 → 200")
+    void getDetail_byNonOwner_returns200() {
         currentRequestId = createPurchaseRequest(
             getAuthHeader(volunteerToken), CLASSROOM_ID, "개인 요청", "내용", 5000L);
 
         given()
             .basePath("/api/v1/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
+            .get("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(200)
+            .body("id", equalTo(currentRequestId.intValue()));
+    }
+
+    @Test
+    @DisplayName("게스트 구입 요청 목록 조회 → 403")
+    void getList_asGuest_returns403() {
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
+            .get()
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("게스트 구입 요청 상세 조회 → 403")
+    void getDetail_asGuest_returns403() {
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(guestToken))
             .get("/{requestId}", currentRequestId)
             .then()
             .statusCode(403);
