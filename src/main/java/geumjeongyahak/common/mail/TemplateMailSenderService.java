@@ -60,9 +60,9 @@ public class TemplateMailSenderService implements MailSenderService {
     public MailDeliveryResult sendEmailVerificationMail(
         String recipientEmail,
         String recipientName,
-        String verificationCode
+        String verificationToken
     ) {
-        String verificationUrl = buildEmailVerificationUrl(recipientEmail, verificationCode);
+        String verificationUrl = buildEmailVerificationUrl(verificationToken);
         return sendHtmlMail(
             "email-verification",
             EMAIL_VERIFICATION_TEMPLATE,
@@ -70,7 +70,6 @@ public class TemplateMailSenderService implements MailSenderService {
             "금정야학 이메일 인증 안내",
             Map.of(
                 "name", defaultName(recipientName),
-                "verificationCode", verificationCode,
                 "verificationUrl", verificationUrl,
                 "expiresMinutes", mailProperties.emailVerificationExpirationMinutes()
             )
@@ -143,10 +142,9 @@ public class TemplateMailSenderService implements MailSenderService {
             .toUriString();
     }
 
-    private String buildEmailVerificationUrl(String recipientEmail, String verificationCode) {
+    private String buildEmailVerificationUrl(String verificationToken) {
         return UriComponentsBuilder.fromUriString(buildFrontendUrl(mailProperties.emailVerificationPath()))
-            .queryParam("email", recipientEmail)
-            .queryParam("code", verificationCode)
+            .queryParam("token", verificationToken)
             .toUriString();
     }
 

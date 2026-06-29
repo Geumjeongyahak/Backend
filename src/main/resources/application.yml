@@ -51,7 +51,7 @@ app:
     frontend-base-url: ${FRONTEND_BASE_URL:https://geumjeongschool.com}
     password-reset-path: ${MAIL_PASSWORD_RESET_PATH:/auth/reset-password}
     password-reset-expiration-minutes: ${PASSWORD_RESET_EXPIRATION_MINUTES:15}
-    email-verification-path: ${MAIL_EMAIL_VERIFICATION_PATH:/auth/email-verification}
+    email-verification-path: ${MAIL_EMAIL_VERIFICATION_PATH:/api/v1/auth/email-verification/confirm}
     email-verification-expiration-minutes: ${EMAIL_VERIFICATION_EXPIRATION_MINUTES:15}
   oauth2:
     google:

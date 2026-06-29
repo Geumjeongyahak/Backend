@@ -28,7 +28,7 @@
               <table role="presentation" cellspacing="0" cellpadding="0" align="center" style="margin:0 auto 24px;">
                 <tr>
                   <td align="center" style="background:#4f9d34;border-radius:8px;">
-                    <a th:href="${verificationUrl}" href="https://geumjeongschool.com/auth/email-verification" style="display:inline-block;padding:14px 22px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:800;">이메일 인증하기</a>
+                    <a th:href="${verificationUrl}" href="https://geumjeongschool.com/api/v1/auth/email-verification/confirm" style="display:inline-block;padding:14px 22px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:800;">이메일 인증하기</a>
                   </td>
                 </tr>
               </table>
@@ -39,7 +39,7 @@
                 <tr>
                   <td style="padding-top:18px;">
                     <p style="margin:0 0 8px;font-size:13px;line-height:1.7;color:#6a746f;">새 인증 메일을 발급받으면 이전 링크는 사용할 수 없습니다.</p>
-                    <p style="margin:0;font-size:13px;line-height:1.7;color:#6a746f;">버튼이 열리지 않으면 아래 주소로 접속해 주세요.<br><span style="word-break:break-all;color:#4f9d34;" th:text="${verificationUrl}">https://geumjeongschool.com/auth/email-verification</span></p>
+                    <p style="margin:0;font-size:13px;line-height:1.7;color:#6a746f;">버튼이 열리지 않으면 아래 주소로 접속해 주세요.<br><span style="word-break:break-all;color:#4f9d34;" th:text="${verificationUrl}">https://geumjeongschool.com/api/v1/auth/email-verification/confirm</span></p>
                   </td>
                 </tr>
               </table>

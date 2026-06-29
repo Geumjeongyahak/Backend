@@ -54,6 +54,7 @@ public class TestStorageConfig {
         private String lastPasswordResetCode;
         private String lastEmailVerificationRecipient;
         private String lastEmailVerificationCode;
+        private String lastEmailVerificationUrl;
 
         @Override
         public MailDeliveryResult sendSignupWelcomeMail(String recipientEmail, String recipientName) {
@@ -76,6 +77,7 @@ public class TestStorageConfig {
         ) {
             this.lastEmailVerificationRecipient = recipientEmail;
             this.lastEmailVerificationCode = verificationCode;
+            this.lastEmailVerificationUrl = "/api/v1/auth/email-verification/confirm?token=" + verificationCode;
             return MailDeliveryResult.sent("email-verification", recipientEmail);
         }
 
@@ -97,6 +99,10 @@ public class TestStorageConfig {
 
         public String getLastEmailVerificationCode() {
             return lastEmailVerificationCode;
+        }
+
+        public String getLastEmailVerificationUrl() {
+            return lastEmailVerificationUrl;
         }
     }
 

@@ -68,6 +68,7 @@ class AuthSignupTest extends AuthBaseTest {
         assertThat(mailSenderService.getLastEmailVerificationRecipient()).isEqualTo(uniqueEmail);
         String verificationCode = mailSenderService.getLastEmailVerificationCode();
         assertThat(verificationCode).isNotBlank();
+        assertThat(mailSenderService.getLastEmailVerificationUrl()).doesNotContain("email=");
 
         given()
             .contentType(ContentType.JSON)
@@ -180,7 +181,7 @@ class AuthSignupTest extends AuthBaseTest {
     }
 
     @Test
-    @DisplayName("메일 인증 링크는 인증 후 프론트 결과 페이지로 리다이렉트한다")
+    @DisplayName("메일 인증 링크는 token만으로 인증 후 이메일 없는 프론트 결과 페이지로 리다이렉트한다")
     void emailVerification_LinkRedirectsToFrontendResultPage() {
         String uniqueEmail = "verify-link" + System.currentTimeMillis() + "@test.com";
         LocalSignupRequest req = new LocalSignupRequest(
@@ -199,17 +200,16 @@ class AuthSignupTest extends AuthBaseTest {
         .then()
             .statusCode(201);
 
-        String verificationCode = mailSenderService.getLastEmailVerificationCode();
+        String verificationToken = mailSenderService.getLastEmailVerificationCode();
 
         given()
             .redirects().follow(false)
-            .queryParam("email", uniqueEmail)
-            .queryParam("code", verificationCode)
+            .queryParam("token", verificationToken)
         .when()
             .get("/email-verification/confirm")
         .then()
             .statusCode(302)
-            .header("Location", startsWith("https://geumjeongschool.com/auth/email-verification?status=success"));
+            .header("Location", equalTo("https://geumjeongschool.com/auth/email-verification?status=success"));
 
         var verifiedCredential = credentialRepository.findByCredentialEmailAndProvider(uniqueEmail, ProviderType.LOCAL)
             .orElseThrow();
@@ -217,7 +217,7 @@ class AuthSignupTest extends AuthBaseTest {
     }
 
     @Test
-    @DisplayName("프론트 인증 경로가 백엔드로 들어와도 인증 API로 리다이렉트한다")
+    @DisplayName("프론트 인증 경로가 백엔드로 들어와도 token만으로 인증 후 프론트 결과 페이지로 리다이렉트한다")
     void emailVerification_FrontendPathOnApiRedirectsToVerificationEndpoint() {
         String uniqueEmail = "verify-api-host" + System.currentTimeMillis() + "@test.com";
         LocalSignupRequest req = new LocalSignupRequest(
@@ -236,19 +236,39 @@ class AuthSignupTest extends AuthBaseTest {
         .then()
             .statusCode(201);
 
-        String verificationCode = mailSenderService.getLastEmailVerificationCode();
+        String verificationToken = mailSenderService.getLastEmailVerificationCode();
         String originalBasePath = RestAssured.basePath;
         RestAssured.basePath = "";
 
         given()
             .redirects().follow(false)
-            .queryParam("email", uniqueEmail)
-            .queryParam("code", verificationCode)
+            .queryParam("token", verificationToken)
         .when()
             .get("/auth/email-verification")
         .then()
             .statusCode(302)
-            .header("Location", containsString("/api/v1/auth/email-verification/confirm?"));
+            .header("Location", equalTo("https://geumjeongschool.com/auth/email-verification?status=success"));
+
+        var verifiedCredential = credentialRepository.findByCredentialEmailAndProvider(uniqueEmail, ProviderType.LOCAL)
+            .orElseThrow();
+        assertThat(verifiedCredential.isEmailVerified()).isTrue();
+
+        RestAssured.basePath = originalBasePath;
+    }
+
+    @Test
+    @DisplayName("인증 링크 필수값 누락도 JSON 대신 프론트 실패 페이지로 리다이렉트한다")
+    void emailVerification_MissingTokenRedirectsToFrontendErrorPage() {
+        String originalBasePath = RestAssured.basePath;
+        RestAssured.basePath = "";
+
+        given()
+            .redirects().follow(false)
+        .when()
+            .get("/auth/email-verification")
+        .then()
+            .statusCode(302)
+            .header("Location", equalTo("https://geumjeongschool.com/auth/email-verification?status=invalid&errorCode=VAL003"));
 
         RestAssured.basePath = originalBasePath;
     }
@@ -275,13 +295,12 @@ class AuthSignupTest extends AuthBaseTest {
 
         given()
             .redirects().follow(false)
-            .queryParam("email", uniqueEmail)
-            .queryParam("code", "000000")
+            .queryParam("token", "invalid-token")
         .when()
             .get("/email-verification/confirm")
         .then()
             .statusCode(302)
-            .header("Location", startsWith("https://geumjeongschool.com/auth/email-verification?status=invalid"));
+            .header("Location", equalTo("https://geumjeongschool.com/auth/email-verification?status=invalid&errorCode=AUTH014"));
     }
 
     @Test

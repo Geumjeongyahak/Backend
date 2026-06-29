@@ -31,7 +31,7 @@ public record MailProperties(
             passwordResetExpirationMinutes = 15;
         }
         if (emailVerificationPath == null || emailVerificationPath.isBlank()) {
-            emailVerificationPath = "/auth/email-verification";
+            emailVerificationPath = "/api/v1/auth/email-verification/confirm";
         }
         if (emailVerificationExpirationMinutes <= 0) {
             emailVerificationExpirationMinutes = 15;
