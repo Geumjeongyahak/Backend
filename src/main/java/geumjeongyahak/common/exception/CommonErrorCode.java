@@ -18,7 +18,8 @@ public enum CommonErrorCode implements ErrorCode {
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SYS001", "서버 내부 오류가 발생했습니다."),
     DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SYS002", "데이터베이스 오류가 발생했습니다."),
     EXTERNAL_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SYS003", "외부 API 호출 중 오류가 발생했습니다."),
-    FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SYS004", "파일 업로드에 실패했습니다.");
+    FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SYS004", "파일 업로드에 실패했습니다."),
+    FILE_DOWNLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SYS005", "파일 다운로드에 실패했습니다.");
 
     private final HttpStatus status;
     private final String code;

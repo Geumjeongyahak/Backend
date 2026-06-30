@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.purchase_request.service;
 
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -12,6 +13,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
+import javax.imageio.ImageIO;
+
+import org.apache.poi.util.Units;
+import org.apache.poi.xwpf.usermodel.Document;
+import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
@@ -21,6 +30,9 @@ import com.deepoove.poi.XWPFTemplate;
 
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
+import geumjeongyahak.domain.file.entity.File;
+import geumjeongyahak.domain.file.service.DriveStorageService;
+import geumjeongyahak.domain.file.service.StorageService;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestPaymentTransaction;
@@ -50,15 +62,19 @@ public class ExpenseDocumentService {
     private static final int TEMPLATE_TRANSACTION_ROW_COUNT = 3;
     private static final int TEMPLATE_APPROVAL_SLOT_COUNT = 9;
     private static final int TEMPLATE_PLACEHOLDER_START_INDEX = 1;
+    private static final int RECEIPT_IMAGE_MAX_WIDTH_POINT = 451;
+    private static final int RECEIPT_IMAGE_MAX_HEIGHT_POINT = 650;
 
     private final PurchaseRequestRepository purchaseRequestRepository;
+    private final StorageService storageService;
+    private final DriveStorageService driveStorageService;
 
     public byte[] generate(Long purchaseRequestId, GenerateExpenseDocumentRequest request) {
         log.debug("지출증빙서류 생성 요청 (purchaseRequestId={})", purchaseRequestId);
         PurchaseRequest purchaseRequest = findPurchaseRequest(purchaseRequestId);
         validateGeneratable(purchaseRequest);
 
-        return renderTemplate(buildRenderData(purchaseRequest, request));
+        return renderTemplate(purchaseRequest, buildRenderData(purchaseRequest, request));
     }
 
     private byte[] loadTemplate() {
@@ -75,14 +91,17 @@ public class ExpenseDocumentService {
         }
     }
 
-    private byte[] renderTemplate(Map<String, Object> data) {
+    private byte[] renderTemplate(PurchaseRequest purchaseRequest, Map<String, Object> data) {
         try (
             ByteArrayInputStream templateInputStream = new ByteArrayInputStream(loadTemplate());
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             XWPFTemplate template = XWPFTemplate.compile(templateInputStream).render(data)
         ) {
+            appendReceiptImages(template.getXWPFDocument(), purchaseRequest.getTransactions());
             template.write(outputStream);
             return outputStream.toByteArray();
+        } catch (BusinessException e) {
+            throw e;
         } catch (IOException | RuntimeException e) {
             log.error("지출증빙서류 DOCX 렌더링 실패", e);
             throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_GENERATION_FAILED);
@@ -313,6 +332,105 @@ public class ExpenseDocumentService {
         }
     }
 
+    private void appendReceiptImages(
+        XWPFDocument document,
+        List<PurchaseRequestPaymentTransaction> transactions
+    ) {
+        for (PurchaseRequestPaymentTransaction transaction : transactions) {
+            File receiptFile = transaction.getReceiptFile();
+            if (receiptFile == null || receiptFile.isDeleted()) {
+                continue;
+            }
+
+            byte[] content = downloadReceiptImage(receiptFile);
+            BufferedImage image = readReceiptImage(content);
+            ImageSize imageSize = fitReceiptImage(image);
+            int pictureType = pictureType(receiptFile);
+
+            XWPFParagraph paragraph = document.createParagraph();
+            paragraph.setPageBreak(true);
+            paragraph.setAlignment(ParagraphAlignment.CENTER);
+
+            XWPFRun run = paragraph.createRun();
+            addReceiptPicture(run, receiptFile, content, pictureType, imageSize);
+        }
+    }
+
+    private void addReceiptPicture(
+        XWPFRun run,
+        File receiptFile,
+        byte[] content,
+        int pictureType,
+        ImageSize imageSize
+    ) {
+        try {
+            run.addPicture(
+                new ByteArrayInputStream(content),
+                pictureType,
+                defaultText(receiptFile.getOriginalName(), "receipt"),
+                Units.toEMU(imageSize.widthPoint()),
+                Units.toEMU(imageSize.heightPoint())
+            );
+        } catch (IOException | org.apache.poi.openxml4j.exceptions.InvalidFormatException e) {
+            log.error("지출증빙서류 영수증 이미지 삽입 실패 (fileId={})", receiptFile.getId(), e);
+            throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_GENERATION_FAILED);
+        }
+    }
+
+    private byte[] downloadReceiptImage(File receiptFile) {
+        try {
+            if (receiptFile.isGoogleDriveFile()) {
+                return driveStorageService.download(receiptFile.getStorageKey());
+            }
+            return storageService.download(receiptFile.getStorageKey());
+        } catch (BusinessException e) {
+            log.error("지출증빙서류 영수증 파일 읽기 실패 (fileId={})", receiptFile.getId(), e);
+            throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_RECEIPT_READ_FAILED);
+        }
+    }
+
+    private BufferedImage readReceiptImage(byte[] content) {
+        try {
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(content));
+            if (image == null) {
+                throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_UNSUPPORTED_RECEIPT_IMAGE);
+            }
+            return image;
+        } catch (IOException e) {
+            log.error("지출증빙서류 영수증 이미지 읽기 실패", e);
+            throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_RECEIPT_READ_FAILED);
+        }
+    }
+
+    private ImageSize fitReceiptImage(BufferedImage image) {
+        double widthScale = (double) RECEIPT_IMAGE_MAX_WIDTH_POINT / image.getWidth();
+        double heightScale = (double) RECEIPT_IMAGE_MAX_HEIGHT_POINT / image.getHeight();
+        double scale = Math.min(widthScale, heightScale);
+        return new ImageSize(
+            Math.max(1, (int) Math.round(image.getWidth() * scale)),
+            Math.max(1, (int) Math.round(image.getHeight() * scale))
+        );
+    }
+
+    private int pictureType(File receiptFile) {
+        String contentType = defaultText(receiptFile.getContentType(), "").toLowerCase(Locale.ROOT);
+        String extension = defaultText(receiptFile.getExt(), "").toLowerCase(Locale.ROOT);
+        if ("image/png".equals(contentType) || "png".equals(extension)) {
+            return Document.PICTURE_TYPE_PNG;
+        }
+        if ("image/jpeg".equals(contentType) || "image/jpg".equals(contentType)
+            || "jpeg".equals(extension) || "jpg".equals(extension)) {
+            return Document.PICTURE_TYPE_JPEG;
+        }
+        if ("image/gif".equals(contentType) || "gif".equals(extension)) {
+            return Document.PICTURE_TYPE_GIF;
+        }
+        if ("image/bmp".equals(contentType) || "bmp".equals(extension)) {
+            return Document.PICTURE_TYPE_BMP;
+        }
+        throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_UNSUPPORTED_RECEIPT_IMAGE);
+    }
+
     private String summarizeItemNames(List<PurchaseRequestItem> items) {
         if (items.isEmpty()) {
             return "";
@@ -348,5 +466,8 @@ public class ExpenseDocumentService {
 
     private String formatMoney(Long amount) {
         return MONEY_FORMATTER.format(Objects.requireNonNullElse(amount, 0L)) + "원";
+    }
+
+    private record ImageSize(int widthPoint, int heightPoint) {
     }
 }

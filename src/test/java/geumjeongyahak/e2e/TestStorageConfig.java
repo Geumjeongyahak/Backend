@@ -1,8 +1,11 @@
 package geumjeongyahak.e2e;
 
+import java.io.IOException;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -101,12 +104,14 @@ public class TestStorageConfig {
     }
 
     public static class ControlledDriveStorageService implements DriveStorageService {
+        private final Map<String, byte[]> files = new HashMap<>();
 
         @Override
         public StoredDriveFile upload(DriveUploadTarget target, List<String> folderPath, MultipartFile file) {
             String driveFileId = target.path() + "-drive-file";
             String viewUrl = "https://drive.google.com/file/d/" + driveFileId + "/view";
             String downloadUrl = "https://drive.google.com/uc?export=download&id=" + driveFileId;
+            files.put(driveFileId, bytes(file));
             return new StoredDriveFile(
                 driveFileId,
                 viewUrl,
@@ -116,6 +121,11 @@ public class TestStorageConfig {
                 file.getSize()
             );
         }
+
+        @Override
+        public byte[] download(String fileId) {
+            return files.getOrDefault(fileId, new byte[0]);
+        }
     }
 
     public static class ControlledStorageService implements StorageService {
@@ -123,6 +133,7 @@ public class TestStorageConfig {
         private final Set<String> failDeletePaths = new HashSet<>();
         private final Set<String> deletedPaths = new HashSet<>();
         private final Set<String> uploadedPaths = new HashSet<>();
+        private final Map<String, byte[]> files = new HashMap<>();
 
         public void failDeleteFor(String path) {
             failDeletePaths.add(path);
@@ -145,7 +156,7 @@ public class TestStorageConfig {
         @Override
         public StoredFile upload(MultipartFile file, String directory) {
             return upload(
-                new byte[0],
+                bytes(file),
                 file.getContentType(),
                 file.getOriginalFilename(),
                 directory
@@ -157,6 +168,7 @@ public class TestStorageConfig {
             String safeName = originalFilename == null ? "file" : originalFilename.replace(" ", "_");
             String path = directory + "/" + UUID.randomUUID() + "-" + safeName;
             uploadedPaths.add(path);
+            files.put(path, content);
             return new StoredFile(path, TEST_BUCKET, getPublicUrl(path));
         }
 
@@ -170,6 +182,11 @@ public class TestStorageConfig {
         }
 
         @Override
+        public byte[] download(String path) {
+            return files.getOrDefault(path, new byte[0]);
+        }
+
+        @Override
         public String getPublicUrl(String path) {
             return "https://test-storage.local/" + TEST_BUCKET + "/" + path;
         }
@@ -177,6 +194,14 @@ public class TestStorageConfig {
         @Override
         public String generateDownloadUrl(String path, Duration duration) {
             return "https://test-storage.local/" + TEST_BUCKET + "/" + path + "?expires=" + duration.toMinutes();
+        }
+    }
+
+    private static byte[] bytes(MultipartFile file) {
+        try {
+            return file.getBytes();
+        } catch (IOException exception) {
+            throw new IllegalStateException("테스트 파일을 읽을 수 없습니다.", exception);
         }
     }
 }

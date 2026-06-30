@@ -116,6 +116,28 @@ public class GoogleDriveStorageService implements DriveStorageService {
         }
     }
 
+    @Override
+    public byte[] download(String fileId) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder(fileDownloadUri(fileId))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken())
+                .GET()
+                .build();
+            HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                log.warn("Google Drive 파일 다운로드 실패: status={}, fileId={}", response.statusCode(), fileId);
+                throw new BusinessException(CommonErrorCode.FILE_DOWNLOAD_FAILED, "Google Drive 파일 다운로드에 실패했습니다.");
+            }
+            return response.body();
+        } catch (IOException exception) {
+            log.error("Google Drive 파일 다운로드 실패: fileId={}", fileId, exception);
+            throw new BusinessException(CommonErrorCode.FILE_DOWNLOAD_FAILED, "Google Drive 파일 다운로드에 실패했습니다.");
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(CommonErrorCode.FILE_DOWNLOAD_FAILED, "Google Drive 파일 다운로드가 중단되었습니다.");
+        }
+    }
+
     public String findOrCreateFolder(String parentId, String folderName) throws IOException, InterruptedException {
         JsonNode files = sendJson(HttpRequest.newBuilder(folderSearchUri(parentId, folderName))
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken())
@@ -218,6 +240,12 @@ public class GoogleDriveStorageService implements DriveStorageService {
         return URI.create(properties.getApiBaseUrl()
             + "/files/" + URLEncoder.encode(fileId, StandardCharsets.UTF_8)
             + "/permissions?supportsAllDrives=true");
+    }
+
+    private URI fileDownloadUri(String fileId) {
+        return URI.create(properties.getApiBaseUrl()
+            + "/files/" + URLEncoder.encode(fileId, StandardCharsets.UTF_8)
+            + "?alt=media&supportsAllDrives=true");
     }
 
     private String escapeDriveQuery(String value) {

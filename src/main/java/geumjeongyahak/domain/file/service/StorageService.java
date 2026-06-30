@@ -12,6 +12,8 @@ public interface StorageService {
 
     boolean delete(String path);
 
+    byte[] download(String path);
+
     String getPublicUrl(String path);
 
     String generateDownloadUrl(String path, Duration duration);
