@@ -1,4 +1,4 @@
-name: Deploy to Prod (IAP)
+name: Deploy to Prod (SSH)
 
 on:
   push:
