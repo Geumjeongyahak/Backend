@@ -1,6 +1,8 @@
 package geumjeongyahak.domain.purchase_request.v1.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
+import geumjeongyahak.domain.purchase_request.enums.ExpenseDocumentPaymentMethod;
 
 @Schema(description = "지출증빙서류 생성 요청")
 public record GenerateExpenseDocumentRequest(
@@ -26,14 +28,17 @@ public record GenerateExpenseDocumentRequest(
     @Schema(description = "요구부서", example = "교육연구부")
     String requestDepartment,
 
+    @Schema(description = "품의일자", example = "2026. 06. 25.")
+    String draftDate,
+
     @Schema(description = "완료 요청일", example = "2026. 06. 30.")
     String completionDate,
 
     @Schema(description = "수신처", example = "금정열린배움터 교장")
     String receiver,
 
-    @Schema(description = "지급구분", example = "법인카드")
-    String paymentMethod,
+    @Schema(description = "지급구분", example = "CARD")
+    ExpenseDocumentPaymentMethod paymentMethod,
 
     @Schema(description = "발의일자", example = "2026. 06. 29.")
     String initiationDate,
@@ -60,6 +65,25 @@ public record GenerateExpenseDocumentRequest(
     String contact,
 
     @Schema(description = "비고")
-    String note
+    String note,
+
+    @Schema(description = "품의서 신청 결재라인")
+    List<ApprovalLine> draftApprovals,
+
+    @Schema(description = "품의서 협조라인")
+    List<ApprovalLine> draftCooperations,
+
+    @Schema(description = "결의서 확인 결재라인")
+    List<ApprovalLine> resolutionApprovals
 ) {
+    @Schema(description = "문서 결재라인 항목")
+    public record ApprovalLine(
+
+        @Schema(description = "직위", example = "총무부장")
+        String position,
+
+        @Schema(description = "이름", example = "김단아")
+        String name
+    ) {
+    }
 }

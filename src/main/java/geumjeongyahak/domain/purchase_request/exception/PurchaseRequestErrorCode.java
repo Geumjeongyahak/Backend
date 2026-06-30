@@ -25,6 +25,21 @@ public enum PurchaseRequestErrorCode implements ErrorCode {
         HttpStatus.INTERNAL_SERVER_ERROR,
         "PR-009",
         "지출증빙서류 템플릿을 읽을 수 없습니다."
+    ),
+    EXPENSE_DOCUMENT_UNSUPPORTED_STATUS(
+        HttpStatus.CONFLICT,
+        "PR-010",
+        "지출증빙서류를 생성할 수 없는 구매 요청 상태입니다."
+    ),
+    EXPENSE_DOCUMENT_ONLY_PREPAID_ALLOWED(
+        HttpStatus.CONFLICT,
+        "PR-011",
+        "선결제 구매 요청만 지출증빙서류를 생성할 수 있습니다."
+    ),
+    EXPENSE_DOCUMENT_GENERATION_FAILED(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        "PR-012",
+        "지출증빙서류 생성에 실패했습니다."
     );
 
     private final HttpStatus status;
