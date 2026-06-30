@@ -46,6 +46,7 @@ import geumjeongyahak.domain.purchase_request.exception.PurchaseRequestErrorCode
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.GenerateExpenseDocumentRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.GenerateExpenseDocumentRequest.ApprovalLine;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.GenerateExpenseDocumentRequest.ExpenseDocumentItem;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -170,7 +171,7 @@ public class ExpenseDocumentService {
         data.put("receiver", defaultText(request.receiver(), ""));
         data.put("draftNote", defaultText(request.note(), ""));
 
-        fillItemRows(data, purchaseRequest.getItems(), amount);
+        fillItemRows(data, purchaseRequest.getItems(), request.items(), amount);
 
         data.put("initiationDate", initiationDate);
         data.put("resolutionDate", resolutionDate);
@@ -267,23 +268,43 @@ public class ExpenseDocumentService {
         }
     }
 
-    private void fillItemRows(Map<String, Object> data, List<PurchaseRequestItem> items, String amount) {
+    private void fillItemRows(
+        Map<String, Object> data,
+        List<PurchaseRequestItem> items,
+        List<ExpenseDocumentItem> documentItems,
+        String totalAmount
+    ) {
         List<Map<String, Object>> itemRows = new ArrayList<>();
+        long documentItemAmountTotal = 0L;
+        boolean hasDocumentItemAmount = false;
         for (int index = 0; index < items.size(); index++) {
             PurchaseRequestItem item = items.get(index);
+            ExpenseDocumentItem documentItem = getDocumentItem(documentItems, index);
+            Long itemAmount = documentItem != null ? documentItem.amount() : null;
+            if (itemAmount != null) {
+                documentItemAmountTotal += itemAmount;
+                hasDocumentItemAmount = true;
+            }
             int row = index + TEMPLATE_PLACEHOLDER_START_INDEX;
             itemRows.add(Map.of(
                 "no", String.valueOf(row),
                 "description", defaultText(item.getName(), ""),
-                "spec", "",
+                "spec", documentItem != null ? defaultText(documentItem.spec(), "") : "",
                 "quantity", String.valueOf(item.getQuantity()),
-                "unitPrice", "",
-                "amount", ""
+                "unitPrice", formatNullableMoney(documentItem != null ? documentItem.unitPrice() : null),
+                "amount", formatNullableMoney(itemAmount)
             ));
         }
         data.put("itemRows", itemRows);
         data.put("itemTotalQuantity", String.valueOf(items.stream().mapToInt(PurchaseRequestItem::getQuantity).sum()));
-        data.put("itemTotalAmount", amount);
+        data.put("itemTotalAmount", hasDocumentItemAmount ? formatMoney(documentItemAmountTotal) : totalAmount);
+    }
+
+    private ExpenseDocumentItem getDocumentItem(List<ExpenseDocumentItem> documentItems, int index) {
+        if (documentItems == null || index >= documentItems.size()) {
+            return null;
+        }
+        return documentItems.get(index);
     }
 
     private void fillTransactionRows(
@@ -469,6 +490,10 @@ public class ExpenseDocumentService {
 
     private String formatMoney(Long amount) {
         return MONEY_FORMATTER.format(Objects.requireNonNullElse(amount, 0L)) + "원";
+    }
+
+    private String formatNullableMoney(Long amount) {
+        return amount != null ? formatMoney(amount) : "";
     }
 
     private record ImageSize(int widthPoint, int heightPoint) {

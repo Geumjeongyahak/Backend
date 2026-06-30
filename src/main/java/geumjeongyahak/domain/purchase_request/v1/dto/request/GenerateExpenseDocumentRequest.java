@@ -67,6 +67,9 @@ public record GenerateExpenseDocumentRequest(
     @Schema(description = "비고")
     String note,
 
+    @Schema(description = "품목별 지출증빙서류 보완 입력값. 구매 요청 품목 순서와 같은 순서로 매칭됩니다.")
+    List<ExpenseDocumentItem> items,
+
     @Schema(description = "품의서 신청 결재라인")
     List<ApprovalLine> draftApprovals,
 
@@ -84,6 +87,20 @@ public record GenerateExpenseDocumentRequest(
 
         @Schema(description = "이름", example = "김단아")
         String name
+    ) {
+    }
+
+    @Schema(description = "지출증빙서류 품목 보완 입력값")
+    public record ExpenseDocumentItem(
+
+        @Schema(description = "규격", example = "A4")
+        String spec,
+
+        @Schema(description = "예상단가", example = "10000")
+        Long unitPrice,
+
+        @Schema(description = "예상금액", example = "20000")
+        Long amount
     ) {
     }
 }
