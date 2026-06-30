@@ -63,8 +63,12 @@ configure_tailscale() {
         || sudo tailscale up --reset --advertise-routes="${advertise_routes}" --accept-dns="${accept_dns}"
     fi
     if [[ -n "${tags}" ]]; then
+      local tag_up_args=(--reset --advertise-tags="${tags}" --accept-dns="${accept_dns}")
+      if [[ -n "${advertise_routes}" ]]; then
+        tag_up_args+=(--advertise-routes="${advertise_routes}")
+      fi
       sudo tailscale set --advertise-tags="${tags}" 2>/dev/null \
-        || sudo tailscale up --reset --advertise-tags="${tags}" --accept-dns="${accept_dns}"
+        || sudo tailscale up "${tag_up_args[@]}"
     fi
     echo "tailscale already authenticated: $(sudo tailscale ip -4)"
     return 0
