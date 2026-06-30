@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -27,6 +28,8 @@ import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 
 import com.deepoove.poi.XWPFTemplate;
+import com.deepoove.poi.config.Configure;
+import com.deepoove.poi.plugin.table.LoopRowTableRenderPolicy;
 
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
@@ -58,12 +61,14 @@ public class ExpenseDocumentService {
     private static final String UNCHECKED = "□";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy. MM. dd.");
     private static final NumberFormat MONEY_FORMATTER = NumberFormat.getNumberInstance(Locale.KOREA);
-    private static final int TEMPLATE_ITEM_ROW_COUNT = 3;
-    private static final int TEMPLATE_TRANSACTION_ROW_COUNT = 3;
     private static final int TEMPLATE_APPROVAL_SLOT_COUNT = 9;
     private static final int TEMPLATE_PLACEHOLDER_START_INDEX = 1;
     private static final int RECEIPT_IMAGE_MAX_WIDTH_POINT = 451;
     private static final int RECEIPT_IMAGE_MAX_HEIGHT_POINT = 650;
+    private static final Configure RENDER_CONFIG = Configure.builder()
+        .bind("itemRows", new LoopRowTableRenderPolicy(true))
+        .bind("transactionRows", new LoopRowTableRenderPolicy(true))
+        .build();
 
     private final PurchaseRequestRepository purchaseRequestRepository;
     private final StorageService storageService;
@@ -95,7 +100,7 @@ public class ExpenseDocumentService {
         try (
             ByteArrayInputStream templateInputStream = new ByteArrayInputStream(loadTemplate());
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            XWPFTemplate template = XWPFTemplate.compile(templateInputStream).render(data)
+            XWPFTemplate template = XWPFTemplate.compile(templateInputStream, RENDER_CONFIG).render(data)
         ) {
             appendReceiptImages(template.getXWPFDocument(), purchaseRequest.getTransactions());
             template.write(outputStream);
@@ -165,7 +170,7 @@ public class ExpenseDocumentService {
         data.put("receiver", defaultText(request.receiver(), ""));
         data.put("draftNote", defaultText(request.note(), ""));
 
-        fillItems(data, purchaseRequest.getItems());
+        fillItemRows(data, purchaseRequest.getItems(), amount);
 
         data.put("initiationDate", initiationDate);
         data.put("resolutionDate", resolutionDate);
@@ -185,7 +190,7 @@ public class ExpenseDocumentService {
         data.put("contact", defaultText(request.contact(), ""));
 
         fillPaymentMethod(data, request.paymentMethod());
-        fillTransactions(data, purchaseRequest.getTransactions(), paymentDate);
+        fillTransactionRows(data, purchaseRequest.getTransactions(), paymentDate);
         fillApprovalLines(data, "draftApproval", request.draftApprovals());
         fillApprovalLines(data, "draftCooperation", request.draftCooperations());
         fillApprovalLines(data, "resolutionApproval", request.resolutionApprovals());
@@ -252,22 +257,8 @@ public class ExpenseDocumentService {
             "contact"
         ).forEach(key -> data.put(key, ""));
 
-        for (int i = TEMPLATE_PLACEHOLDER_START_INDEX; i <= TEMPLATE_ITEM_ROW_COUNT; i++) {
-            data.put("itemNo" + i, "");
-            data.put("itemDescription" + i, "");
-            data.put("itemSpec" + i, "");
-            data.put("itemQuantity" + i, "");
-            data.put("itemUnitPrice" + i, "");
-            data.put("itemAmount" + i, "");
-        }
-
-        for (int i = TEMPLATE_PLACEHOLDER_START_INDEX; i <= TEMPLATE_TRANSACTION_ROW_COUNT; i++) {
-            data.put("transactionNo" + i, "");
-            data.put("transactionDate" + i, "");
-            data.put("transactionDetail" + i, "");
-            data.put("transactionAmount" + i, "");
-            data.put("transactionNote" + i, "");
-        }
+        data.put("itemRows", List.of());
+        data.put("transactionRows", List.of());
 
         for (int i = TEMPLATE_PLACEHOLDER_START_INDEX; i <= TEMPLATE_APPROVAL_SLOT_COUNT; i++) {
             data.put("draftApproval" + i, "");
@@ -276,31 +267,43 @@ public class ExpenseDocumentService {
         }
     }
 
-    private void fillItems(Map<String, Object> data, List<PurchaseRequestItem> items) {
-        for (int index = 0; index < Math.min(items.size(), TEMPLATE_ITEM_ROW_COUNT); index++) {
+    private void fillItemRows(Map<String, Object> data, List<PurchaseRequestItem> items, String amount) {
+        List<Map<String, Object>> itemRows = new ArrayList<>();
+        for (int index = 0; index < items.size(); index++) {
             PurchaseRequestItem item = items.get(index);
             int row = index + TEMPLATE_PLACEHOLDER_START_INDEX;
-            data.put("itemNo" + row, String.valueOf(row));
-            data.put("itemDescription" + row, item.getName());
-            data.put("itemQuantity" + row, String.valueOf(item.getQuantity()));
+            itemRows.add(Map.of(
+                "no", String.valueOf(row),
+                "description", defaultText(item.getName(), ""),
+                "spec", "",
+                "quantity", String.valueOf(item.getQuantity()),
+                "unitPrice", "",
+                "amount", ""
+            ));
         }
+        data.put("itemRows", itemRows);
         data.put("itemTotalQuantity", String.valueOf(items.stream().mapToInt(PurchaseRequestItem::getQuantity).sum()));
+        data.put("itemTotalAmount", amount);
     }
 
-    private void fillTransactions(
+    private void fillTransactionRows(
         Map<String, Object> data,
         List<PurchaseRequestPaymentTransaction> transactions,
         String paymentDate
     ) {
-        for (int index = 0; index < Math.min(transactions.size(), TEMPLATE_TRANSACTION_ROW_COUNT); index++) {
+        List<Map<String, Object>> transactionRows = new ArrayList<>();
+        for (int index = 0; index < transactions.size(); index++) {
             PurchaseRequestPaymentTransaction transaction = transactions.get(index);
             int row = index + TEMPLATE_PLACEHOLDER_START_INDEX;
-            data.put("transactionNo" + row, String.valueOf(row));
-            data.put("transactionDate" + row, paymentDate);
-            data.put("transactionDetail" + row, String.join(", ", transaction.getItemNames()));
-            data.put("transactionAmount" + row, formatMoney(transaction.getAmount()));
-            data.put("transactionNote" + row, transaction.getVendor().getName());
+            transactionRows.add(Map.of(
+                "no", String.valueOf(row),
+                "date", paymentDate,
+                "detail", String.join(", ", transaction.getItemNames()),
+                "amount", formatMoney(transaction.getAmount()),
+                "note", defaultText(transaction.getVendor().getName(), "")
+            ));
         }
+        data.put("transactionRows", transactionRows);
     }
 
     private void fillPaymentMethod(Map<String, Object> data, ExpenseDocumentPaymentMethod paymentMethod) {
