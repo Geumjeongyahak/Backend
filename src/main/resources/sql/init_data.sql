@@ -550,8 +550,72 @@ VALUES
     (1, '예소디자인', '부산대 인근 거래처', 0, TRUE),
     (2, '목민서관', '야학 부근 거래처', 0, TRUE),
     (3, '지성문구', '부산대 인근 거래처', 0, TRUE),
-    (4, '마트', '야학 부근 거래처', 0, TRUE);
-ALTER SEQUENCE vendors_id_seq RESTART WITH 5;
+    (4, '마트', '야학 부근 거래처', 0, TRUE),
+    (5, '지출증빙 테스트 거래처', '지출증빙서류 생성 API 테스트용 거래처', 79000, TRUE);
+ALTER SEQUENCE vendors_id_seq RESTART WITH 6;
+
+-- 14-1. Purchased Purchase Request for Expense Document API Test
+INSERT INTO purchase_requests (
+    id, classroom_id, requested_by, title, content, total_price, status,
+    approval_at, approval_by, purchased_at, note, created_at, updated_at
+)
+VALUES
+    (
+        1,
+        1,
+        2,
+        '지출증빙서류 API 테스트',
+        '지출증빙서류 생성 API 호출을 확인하기 위한 구매 완료 테스트 데이터입니다.',
+        21000,
+        'PURCHASED',
+        '2026-06-25 10:00:00',
+        1,
+        '2026-06-30 14:00:00',
+        '지출증빙서류 생성 테스트용 승인 데이터',
+        '2026-06-24 09:00:00',
+        '2026-06-30 14:00:00'
+    );
+ALTER SEQUENCE purchase_requests_id_seq RESTART WITH 2;
+
+INSERT INTO purchase_requests_items (id, purchase_request_id, name, reason, quantity, payment_type)
+VALUES
+    (1, 1, '교재 제본', '수업 교재 배부용', 1, 'PREPAID'),
+    (2, 1, '수업용 문구 세트', '분반 수업 진행용', 1, 'PREPAID'),
+    (3, 1, '학생 배부용 파일', '학습 자료 정리용', 1, 'PREPAID'),
+    (4, 1, '화이트보드 마커', '교실 판서용', 1, 'PREPAID'),
+    (5, 1, '출석부 바인더', '출석 자료 보관용', 1, 'PREPAID'),
+    (6, 1, '수업 안내 인쇄물', '학생 안내문 배부용', 1, 'PREPAID');
+ALTER SEQUENCE purchase_requests_items_id_seq RESTART WITH 7;
+
+INSERT INTO purchase_request_payment_transactions (id, purchase_request_id, vendor_id, amount, receipt_file_id)
+VALUES
+    (1, 1, 5, 12000, NULL),
+    (2, 1, 5, 9000, NULL);
+ALTER SEQUENCE purchase_request_payment_transactions_id_seq RESTART WITH 3;
+
+INSERT INTO purchase_request_payment_transaction_item_names (transaction_id, sort_order, item_name)
+VALUES
+    (1, 0, '교재 제본'),
+    (1, 1, '수업용 문구 세트'),
+    (2, 0, '학생 배부용 파일'),
+    (2, 1, '화이트보드 마커'),
+    (2, 2, '출석부 바인더'),
+    (2, 3, '수업 안내 인쇄물');
+
+INSERT INTO vendor_balance_histories (
+    id, vendor_id, type, amount, balance_after, memo, receipt_file_id, purchase_request_id,
+    created_by, occurred_at, is_deleted, created_at, updated_at
+)
+VALUES
+    (
+        1, 5, 'CHARGE', 100000, 100000, '지출증빙서류 테스트 거래처 초기 충전',
+        NULL, NULL, 1, '2026-06-24 09:30:00', FALSE, '2026-06-24 09:30:00', '2026-06-24 09:30:00'
+    ),
+    (
+        2, 5, 'DEDUCT', 21000, 79000, '지출증빙서류 API 테스트 구매 완료',
+        NULL, 1, 1, '2026-06-30 14:00:00', FALSE, '2026-06-30 14:00:00', '2026-06-30 14:00:00'
+    );
+ALTER SEQUENCE vendor_balance_histories_id_seq RESTART WITH 3;
 
 -- 15. Students
 INSERT INTO students (id, name, phone_number, description, status)
