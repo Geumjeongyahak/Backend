@@ -3,11 +3,13 @@ package geumjeongyahak.domain.purchase_request.v1.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -219,15 +221,18 @@ public class PurchaseRequestAdminController {
         @Valid @RequestBody GenerateExpenseDocumentRequest request
     ) {
         log.debug("POST /api/v1/admin/purchase-requests/{}/expense-document", requestId);
-        byte[] document = expenseDocumentService.generate(requestId, request);
-        ByteArrayResource resource = new ByteArrayResource(document);
+        ExpenseDocumentService.ExpenseDocumentResult document = expenseDocumentService.generate(requestId, request);
+        ByteArrayResource resource = new ByteArrayResource(document.content());
 
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(ExpenseDocumentService.DOCX_CONTENT_TYPE))
-            .contentLength(document.length)
+            .contentLength(document.content().length)
             .header(
                 HttpHeaders.CONTENT_DISPOSITION,
-                "attachment; filename=\"expense-document-" + requestId + ".docx\""
+                ContentDisposition.attachment()
+                    .filename(document.filename(), StandardCharsets.UTF_8)
+                    .build()
+                    .toString()
             )
             .body(resource);
     }

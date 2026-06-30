@@ -5,6 +5,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.NumberFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -64,8 +65,11 @@ public class ExpenseDocumentService {
     private static final String CHECKED = "■";
     private static final String UNCHECKED = "□";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy. MM. dd.");
+    private static final DateTimeFormatter FILE_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final Pattern DATE_TEXT_PATTERN =
         Pattern.compile("^(\\d{4})[.\\-/]\\s*(\\d{1,2})[.\\-/]\\s*(\\d{1,2})\\.?$");
+    private static final Pattern INVALID_FILENAME_CHARACTER_PATTERN = Pattern.compile("[\\\\/:*?\"<>|]");
+    private static final int MAX_FILENAME_TITLE_LENGTH = 60;
     private static final NumberFormat MONEY_FORMATTER = NumberFormat.getNumberInstance(Locale.KOREA);
     private static final int TEMPLATE_APPROVAL_SLOT_COUNT = 9;
     private static final int TEMPLATE_PLACEHOLDER_START_INDEX = 1;
@@ -82,12 +86,18 @@ public class ExpenseDocumentService {
     private final DriveStorageService driveStorageService;
 
     @Transactional(readOnly = true)
-    public byte[] generate(Long purchaseRequestId, GenerateExpenseDocumentRequest request) {
+    public ExpenseDocumentResult generate(Long purchaseRequestId, GenerateExpenseDocumentRequest request) {
         log.debug("지출증빙서류 생성 요청 (purchaseRequestId={})", purchaseRequestId);
         PurchaseRequest purchaseRequest = findPurchaseRequest(purchaseRequestId);
         validateGeneratable(purchaseRequest);
 
-        return renderTemplate(purchaseRequest, buildRenderData(purchaseRequest, request));
+        return new ExpenseDocumentResult(
+            renderTemplate(purchaseRequest, buildRenderData(purchaseRequest, request)),
+            buildDownloadFilename(purchaseRequest)
+        );
+    }
+
+    public record ExpenseDocumentResult(byte[] content, String filename) {
     }
 
     private byte[] loadTemplate() {
@@ -520,6 +530,27 @@ public class ExpenseDocumentService {
 
     private String formatDate(LocalDateTime dateTime) {
         return dateTime != null ? dateTime.format(DATE_FORMATTER) : "";
+    }
+
+    private String buildDownloadFilename(PurchaseRequest purchaseRequest) {
+        return "지출증빙서류-%s-%s.docx".formatted(
+            sanitizeFilenameTitle(purchaseRequest.getTitle()),
+            LocalDate.now().format(FILE_DATE_FORMATTER)
+        );
+    }
+
+    private String sanitizeFilenameTitle(String title) {
+        String sanitized = INVALID_FILENAME_CHARACTER_PATTERN.matcher(defaultText(title, "구매요청"))
+            .replaceAll(" ")
+            .replaceAll("\\s+", " ")
+            .trim();
+        if (sanitized.isBlank()) {
+            return "구매요청";
+        }
+        if (sanitized.length() <= MAX_FILENAME_TITLE_LENGTH) {
+            return sanitized;
+        }
+        return sanitized.substring(0, MAX_FILENAME_TITLE_LENGTH).trim();
     }
 
     private String formatKoreanDate(String date) {

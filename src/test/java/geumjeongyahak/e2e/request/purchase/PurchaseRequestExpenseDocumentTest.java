@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -107,12 +108,17 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
             .then()
             .statusCode(200)
             .contentType(DOCX_CONTENT_TYPE)
-            .header("Content-Disposition", "attachment; filename=\"expense-document-" + createdRequestId + ".docx\"")
             .extract()
             .response();
 
         byte[] docx = response.asByteArray();
         assertThat(docx).isNotEmpty();
+        assertThat(response.header("Content-Disposition"))
+            .startsWith("attachment; filename=")
+            .contains("filename*=UTF-8''")
+            .contains("E2E")
+            .contains(LocalDate.now().toString())
+            .contains(".docx");
 
         try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(docx))) {
             String documentText = document.getTables()
