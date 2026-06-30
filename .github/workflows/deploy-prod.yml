@@ -11,26 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
-
-    env:
-      GCP_PROJECT_ID: project-4d44e135-cd9f-4802-8be
-      GCP_ZONE: asia-northeast1-a
-      GCE_INSTANCE: gjlearn-prod-app
-      GCE_USER: min
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_PROD }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_PROD }}
-
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -42,9 +26,20 @@ jobs:
       - name: Build Spring Boot jar
         run: ./gradlew bootJar -x test
 
-      - name: Deploy jar over IAP
+      - name: Deploy jar over SSH
+        env:
+          SSH_HOST: ${{ secrets.PROD_GCE_HOST }}
+          SSH_USER: ${{ secrets.PROD_GCE_USER }}
+          SSH_KEY: ${{ secrets.PROD_GCE_SSH_KEY }}
         run: |
           set -euo pipefail
+          test -n "${SSH_HOST}"
+          test -n "${SSH_USER}"
+          test -n "${SSH_KEY}"
+
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
 
           APP_JAR="$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar' | sort | tail -n 1)"
           if [[ -z "${APP_JAR}" ]]; then
@@ -52,29 +47,21 @@ jobs:
             exit 1
           fi
 
-          gcloud compute ssh "${GCE_USER}@${GCE_INSTANCE}" \
-            --project "${GCP_PROJECT_ID}" \
-            --zone "${GCP_ZONE}" \
-            --tunnel-through-iap \
-            --command "mkdir -p ~/app-dev"
-          gcloud compute scp "${APP_JAR}" scripts/gcp/05_app/01_install-app-service.sh \
-            "${GCE_USER}@${GCE_INSTANCE}:~/app-dev/" \
-            --project "${GCP_PROJECT_ID}" \
-            --zone "${GCP_ZONE}" \
-            --tunnel-through-iap
-          gcloud compute ssh "${GCE_USER}@${GCE_INSTANCE}" \
-            --project "${GCP_PROJECT_ID}" \
-            --zone "${GCP_ZONE}" \
-            --tunnel-through-iap \
-            --command \
+          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" "mkdir -p ~/app-dev"
+          scp -i ~/.ssh/deploy_key "${APP_JAR}" scripts/gcp/05_app/01_install-app-service.sh \
+            "${SSH_USER}@${SSH_HOST}:~/app-dev/"
+          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" \
             "cd ~/app-dev && test -f .env && mv \"$(basename "${APP_JAR}")\" app.jar && chmod +x 01_install-app-service.sh && ./01_install-app-service.sh"
 
       - name: Verify prod health
+        env:
+          SSH_HOST: ${{ secrets.PROD_GCE_HOST }}
+          SSH_USER: ${{ secrets.PROD_GCE_USER }}
+          SSH_KEY: ${{ secrets.PROD_GCE_SSH_KEY }}
         run: |
           set -euo pipefail
-          gcloud compute ssh "${GCE_USER}@${GCE_INSTANCE}" \
-            --project "${GCP_PROJECT_ID}" \
-            --zone "${GCP_ZONE}" \
-            --tunnel-through-iap \
-            --command \
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" \
             "curl -fsS http://127.0.0.1:8080/actuator/health >/dev/null && sudo systemctl is-active --quiet gjlearn-app"
