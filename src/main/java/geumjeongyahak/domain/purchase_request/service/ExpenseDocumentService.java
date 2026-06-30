@@ -24,6 +24,7 @@ import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 
@@ -75,6 +76,7 @@ public class ExpenseDocumentService {
     private final StorageService storageService;
     private final DriveStorageService driveStorageService;
 
+    @Transactional(readOnly = true)
     public byte[] generate(Long purchaseRequestId, GenerateExpenseDocumentRequest request) {
         log.debug("지출증빙서류 생성 요청 (purchaseRequestId={})", purchaseRequestId);
         PurchaseRequest purchaseRequest = findPurchaseRequest(purchaseRequestId);
