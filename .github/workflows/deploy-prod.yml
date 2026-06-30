@@ -77,4 +77,4 @@ jobs:
             --zone "${GCP_ZONE}" \
             --tunnel-through-iap \
             --command \
-            "cd ~/app-dev && set -a && . ./.env && set +a && curl -fsS http://127.0.0.1:\${MANAGEMENT_PORT:-9090}/actuator/health >/dev/null && sudo systemctl is-active --quiet gjlearn-app"
+            "cd ~/app-dev && set -a && . ./.env && set +a && for i in \$(seq 1 60); do curl -fsS http://127.0.0.1:\${MANAGEMENT_PORT:-9090}/actuator/health >/dev/null && sudo systemctl is-active --quiet gjlearn-app && exit 0; sleep 5; done; sudo journalctl -u gjlearn-app -n 120 --no-pager; exit 1"
