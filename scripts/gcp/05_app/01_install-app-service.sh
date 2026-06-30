@@ -33,6 +33,7 @@ configure_tailscale() {
   local auth_key="${TAILSCALE_AUTHKEY:-}"
   local tags="${TAILSCALE_TAGS:-}"
   local accept_dns="${TAILSCALE_ACCEPT_DNS:-}"
+  local advertise_routes="${TAILSCALE_ADVERTISE_ROUTES:-}"
 
   if [[ -z "${auth_key}" ]]; then
     auth_key="$(read_env_value TAILSCALE_AUTHKEY)"
@@ -43,12 +44,24 @@ configure_tailscale() {
   if [[ -z "${accept_dns}" ]]; then
     accept_dns="$(read_env_value TAILSCALE_ACCEPT_DNS)"
   fi
+  if [[ -z "${advertise_routes}" ]]; then
+    advertise_routes="$(read_env_value TAILSCALE_ADVERTISE_ROUTES)"
+  fi
   accept_dns="${accept_dns:-false}"
+
+  if [[ -n "${advertise_routes}" ]]; then
+    printf 'net.ipv4.ip_forward = 1\n' | sudo tee /etc/sysctl.d/99-gjlearn-tailscale-router.conf >/dev/null
+    sudo sysctl --system >/dev/null
+  fi
 
   sudo systemctl enable --now tailscaled
 
   if sudo tailscale ip -4 >/dev/null 2>&1; then
     sudo tailscale set --accept-dns="${accept_dns}"
+    if [[ -n "${advertise_routes}" ]]; then
+      sudo tailscale set --advertise-routes="${advertise_routes}" 2>/dev/null \
+        || sudo tailscale up --reset --advertise-routes="${advertise_routes}" --accept-dns="${accept_dns}"
+    fi
     if [[ -n "${tags}" ]]; then
       sudo tailscale set --advertise-tags="${tags}" 2>/dev/null \
         || sudo tailscale up --reset --advertise-tags="${tags}" --accept-dns="${accept_dns}"
@@ -62,6 +75,9 @@ configure_tailscale() {
     if [[ -n "${tags}" ]]; then
       up_args+=(--advertise-tags="${tags}")
     fi
+    if [[ -n "${advertise_routes}" ]]; then
+      up_args+=(--advertise-routes="${advertise_routes}")
+    fi
     sudo tailscale up "${up_args[@]}"
     echo "tailscale authenticated: $(sudo tailscale ip -4)"
     return 0
@@ -74,7 +90,8 @@ Run this once on the VM and open the printed URL:
 
 For non-interactive setup, set TAILSCALE_AUTHKEY in the environment or in the app .env file, then rerun this script.
 To advertise ACL tags, also set TAILSCALE_TAGS as a comma-separated list such as tag:gjlearn-app,tag:prod.
-This simple-node setup intentionally does not advertise subnet routes; set TAILSCALE_ACCEPT_DNS=false to preserve GCE DNS.
+To route private DB traffic through the App VM, set TAILSCALE_ADVERTISE_ROUTES to the GCP subnet CIDR, then approve the route in Tailscale.
+Set TAILSCALE_ACCEPT_DNS=false to preserve GCE DNS.
 EOF
 }
 

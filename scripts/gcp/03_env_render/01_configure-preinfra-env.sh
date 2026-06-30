@@ -164,13 +164,11 @@ ask("SERVER_DB_DIR", "Remote DB dir", get("SERVER_DB_DIR") or f"/home/min/db-{en
 ask("DEPLOY_OS_USER", "Remote deploy OS user", get("DEPLOY_OS_USER") or "min")
 ask("SKIP_DB_INSTANCE", "Skip separate DB VM?", get("SKIP_DB_INSTANCE") or "false", choices=["true", "false"])
 
-section("6. Tailscale - 서버 생성 후 인증 가능, 태그는 미리 기록 권장")
+section("6. Tailscale - App VM만 tailnet에 붙이고 DB는 App subnet route 뒤에 둠")
 ask("APP_TAILSCALE_HOST", "Optional App Tailscale MagicDNS", get("APP_TAILSCALE_HOST"))
-ask("DB_TAILSCALE_HOST", "Optional DB Tailscale MagicDNS", get("DB_TAILSCALE_HOST"))
 ask("APP_TAILSCALE_TAGS", "App Tailscale tags", get("APP_TAILSCALE_TAGS") or f"tag:gjlearn-{env}-app,tag:gjlearn-app,tag:{env}")
-ask("DB_TAILSCALE_TAGS", "DB Tailscale tags", get("DB_TAILSCALE_TAGS") or f"tag:gjlearn-{env}-db,tag:gjlearn-db,tag:{env}")
+ask("APP_TAILSCALE_ROUTES", "App subnet routes to advertise, comma-separated", get("APP_TAILSCALE_ROUTES"))
 ask("APP_TAILSCALE_ACCEPT_DNS", "App Tailscale accept DNS?", get("APP_TAILSCALE_ACCEPT_DNS") or "false", choices=["true", "false"])
-ask("DB_TAILSCALE_ACCEPT_DNS", "DB Tailscale accept DNS?", get("DB_TAILSCALE_ACCEPT_DNS") or "false", choices=["true", "false"])
 
 section("7. Observability 이름 - 서버 생성 전/후 모두 수정 가능")
 ask("CLOUD_LOGGING_LOG_ID", "Cloud Logging log id", get("CLOUD_LOGGING_LOG_ID") or f"gjlearn-{env}-app")

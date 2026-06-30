@@ -261,11 +261,6 @@ ensure_firewall "gjlearn-prod-allow-tailscale-app" \
   --source-ranges="0.0.0.0/0" \
   --target-tags="${APP_NETWORK_TAG}"
 
-ensure_firewall "gjlearn-prod-allow-tailscale-db" \
-  --allow=udp:41641 \
-  --source-ranges="0.0.0.0/0" \
-  --target-tags="${DB_NETWORK_TAG}"
-
 ensure_firewall "gjlearn-prod-allow-app-to-postgres" \
   --allow=tcp:5432 \
   --source-tags="${APP_NETWORK_TAG}" \
@@ -291,6 +286,11 @@ ensure_firewall "gjlearn-prod-allow-iap-ssh-db" \
 if exists_instance "${APP_INSTANCE_NAME}"; then
   echo "instance exists: ${APP_INSTANCE_NAME}"
 else
+  APP_FORWARDING_ARGS=()
+  if [[ -n "${APP_TAILSCALE_ROUTES:-}" ]]; then
+    APP_FORWARDING_ARGS+=(--can-ip-forward)
+  fi
+
   run gcloud compute instances create "${APP_INSTANCE_NAME}" \
     --project="${PROJECT_ID}" \
     --zone="${ZONE}" \
@@ -306,6 +306,7 @@ else
     --service-account="${APP_SERVICE_ACCOUNT_EMAIL}" \
     --scopes=https://www.googleapis.com/auth/cloud-platform \
     --tags="${APP_NETWORK_TAG}" \
+    "${APP_FORWARDING_ARGS[@]}" \
     --metadata-from-file=startup-script="${STARTUP_APP_RENDERED}"
 fi
 
@@ -346,7 +347,7 @@ fi
 
 echo
 echo "Next steps:"
-echo "1. SSH/IAP into both VMs and run: sudo tailscale up"
+echo "1. SSH into the App VM and run: sudo tailscale up --advertise-routes=<gcp-subnet-cidr>"
 echo "2. Generate app/db env files with scripts/gcp/03_env_render/00_render-server-env.sh and copy them to ~/app-dev/.env and ~/db-dev/.env"
 echo "3. Run scripts/gcp/04_db/01_install-db-service.sh on ${DB_INSTANCE_NAME}"
 echo "4. Build and deploy the jar to ${APP_INSTANCE_NAME} via Tailscale/GitHub Actions"

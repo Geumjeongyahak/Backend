@@ -1,6 +1,84 @@
 # GJLearn GCE 배포 가이드
 
-이 문서는 GCP/GCE dev/prod 배포를 순서대로 실행하기 위한 최상위 runbook입니다. 현재 운영 형태는 App VM + DB VM 분리, Spring Boot jar + systemd, PostgreSQL apt 패키지, Tailscale 단순 노드 모드입니다.
+이 문서는 GCP/GCE dev/prod 배포를 순서대로 실행하기 위한 최상위 runbook입니다. 현재 운영 형태는 App VM + DB VM 분리, Spring Boot jar + systemd, PostgreSQL apt 패키지, App VM Tailscale subnet route입니다. DB VM은 tailnet에 직접 붙이지 않습니다.
+
+## 배포 구조
+
+```mermaid
+flowchart TB
+    GitHub["GitHub Actions"] -->|scp jar and install script| App["App GCE e2-small"]
+    App -->|private VPC :5432| DB[("DB GCE e2-micro PostgreSQL")]
+    App -->|actuator :9090| Home["Home server Prometheus and Grafana"]
+    App -->|node-exporter :9100| Home
+    Home -. Tailscale .-> App
+    App -. advertised subnet route .-> Home
+    Home -. private DB IP via App route .-> DB
+
+    classDef ciStyle fill:#e7f5ff,stroke:#1971c2,color:#0b3558
+    classDef appStyle fill:#e5dbff,stroke:#5f3dc4,color:#2b165c
+    classDef dataStyle fill:#fff4e6,stroke:#e67700,color:#5f3200
+    classDef opsStyle fill:#d3f9d8,stroke:#2f9e44,color:#103b1a
+    class GitHub ciStyle
+    class App appStyle
+    class DB dataStyle
+    class Home opsStyle
+```
+
+public internet에는 필요한 경우 API HTTP/HTTPS와 App VM Tailscale direct path용 `41641/udp`만 엽니다. `5432`, `9090`, `9100`, `9187`은 public에 열지 않습니다. 홈서버는 App VM tailnet IP/MagicDNS로 App exporter를 scrape하고, DB exporter는 App VM이 advertise한 GCP subnet route를 통해 DB private IP로 scrape합니다.
+
+현재 `tailscale status` 기준으로 tailnet에는 `gjlearn-dev-app`, `gjlearn-prod-app`만 GJLearn 서버 노드로 보이며, `gjlearn-prod-app`은 `10.146.0.0/20`을 primary route로 advertise합니다. DB 노드는 tailnet에 없습니다.
+
+## 릴리스 흐름
+
+```mermaid
+flowchart LR
+    Work["feature or fix branch"] --> Checks["status and tests"]
+    Checks --> Dev["dev branch"]
+    Dev --> DevDeploy["deploy-dev.yml"]
+    Dev --> PR["PR from dev to main"]
+    PR --> Main["main branch"]
+    Main --> ProdDeploy["deploy-prod.yml"]
+    Main --> Tag["annotated tag v0.0.1"]
+    ProdDeploy --> ProdApp["prod App GCE"]
+
+    classDef branch fill:#e7f5ff,stroke:#1971c2,color:#0b3558
+    classDef action fill:#e5dbff,stroke:#5f3dc4,color:#2b165c
+    classDef env fill:#d3f9d8,stroke:#2f9e44,color:#103b1a
+    classDef release fill:#ffe8cc,stroke:#d9480f,color:#5c2500
+    class Work,Dev,Main branch
+    class Checks,PR,DevDeploy,ProdDeploy action
+    class ProdApp env
+    class Tag release
+```
+
+v0.0.1은 `dev`에서 PR을 열어 `main`에 머지한 뒤 `main`에서 annotated tag로 생성합니다.
+
+머지 전 확인:
+
+```bash
+git status --short
+./gradlew test
+```
+
+문서만 바뀐 PR은 `./gradlew test`를 명시적으로 생략할 수 있습니다. 삭제된 legacy 문서, root 배포 문서, harness 경로를 가리키는 링크가 남지 않았는지도 확인합니다.
+
+태그 생성:
+
+```bash
+git checkout main
+git pull --ff-only
+git tag -a v0.0.1 -m "v0.0.1"
+git push origin v0.0.1
+```
+
+prod 배포 후 SSH health check:
+
+```bash
+gcloud compute ssh "$APP_INSTANCE_NAME" \
+  --project "$PROJECT_ID" \
+  --zone "$ZONE" \
+  --command "sudo systemctl is-active --quiet gjlearn-app && curl -fsS http://localhost:9090/actuator/health"
+```
 
 ## 스크립트 구조
 
@@ -25,7 +103,7 @@ scripts/gcp/
 │   └── 00_render-server-env.sh       # app/db 서버용 .env 템플릿 렌더링
 ├── 04_db/
 │   ├── 00_startup-db-manual.sh       # DB VM startup bootstrap
-│   └── 01_install-db-service.sh      # PostgreSQL/exporter/Tailscale 설치
+│   └── 01_install-db-service.sh      # PostgreSQL/exporter 설치
 ├── 05_app/
 │   ├── 00_startup-app-manual.sh      # App VM startup bootstrap
 │   └── 01_install-app-service.sh     # jar systemd/Ops Agent/node-exporter 설치
@@ -72,7 +150,7 @@ API_DOMAIN=dev.geumjeongschool.com
 FRONTEND_ORIGIN=https://dev.geumjeongschool.com
 FRONTEND_REDIRECT_URI=https://dev.geumjeongschool.com/auth/google/callback
 APP_TAILSCALE_TAGS=tag:gjlearn
-DB_TAILSCALE_TAGS=tag:gjlearn
+APP_TAILSCALE_ROUTES=10.146.0.0/20
 ```
 
 ## 1. 인프라 생성/보정
@@ -340,16 +418,6 @@ gcloud compute ssh "$DB_INSTANCE_NAME" \
   --command "sudo -u postgres psql -d geumjeongyahak -tAc 'select current_database(), current_user;' && curl -fsS http://localhost:9100/metrics >/dev/null && curl -fsS http://localhost:9187/metrics >/dev/null && echo db-ok"
 ```
 
-Tailscale 인증이 필요하면:
-
-```bash
-gcloud compute ssh "$DB_INSTANCE_NAME" \
-  --project "$PROJECT_ID" \
-  --zone "$ZONE" \
-  --tunnel-through-iap \
-  --command "sudo tailscale up --advertise-tags=${DB_TAILSCALE_TAGS:-tag:gjlearn} --accept-dns=false"
-```
-
 ## 5. App VM 설치
 
 jar 빌드:
@@ -396,8 +464,10 @@ Tailscale 인증이 필요하면:
 gcloud compute ssh "$APP_INSTANCE_NAME" \
   --project "$PROJECT_ID" \
   --zone "$ZONE" \
-  --command "sudo tailscale up --advertise-tags=${APP_TAILSCALE_TAGS:-tag:gjlearn} --accept-dns=false"
+  --command "sudo tailscale up --advertise-tags=${APP_TAILSCALE_TAGS:-tag:gjlearn} --advertise-routes=${APP_TAILSCALE_ROUTES:-10.146.0.0/20} --accept-dns=false"
 ```
+
+`--advertise-routes`는 Tailscale admin console에서 승인해야 홈서버가 DB private IP의 exporter와 PostgreSQL 포트에 접근할 수 있습니다.
 
 ## 6. Cloud Logging WARN/ERROR 알림
 
@@ -427,14 +497,14 @@ gcloud logging read \
 
 ## 7. 홈서버 Prometheus 확인
 
-Prometheus scrape target은 Tailscale IP 또는 MagicDNS hostname을 사용합니다.
+Prometheus scrape target은 App VM은 Tailscale IP 또는 MagicDNS hostname을, DB VM은 App subnet route 뒤의 DB private IP를 사용합니다.
 
 - App actuator: `gjlearn-prod-app.<tailnet>.ts.net:9090/actuator/prometheus`
 - App node exporter: `gjlearn-prod-app.<tailnet>.ts.net:9100`
-- DB node exporter: `gjlearn-prod-db.<tailnet>.ts.net:9100`
-- DB postgres exporter: `gjlearn-prod-db.<tailnet>.ts.net:9187`
+- DB node exporter: `<DB_PRIVATE_IP>:9100`
+- DB postgres exporter: `<DB_PRIVATE_IP>:9187`
 
-prod target은 실제 prod tailnet 노드가 생긴 뒤 `infra/monitoring/prometheus/targets/gjlearn/prod/`에 추가하고 홈서버 운영 경로로 동기화합니다.
+prod target은 App subnet route가 승인된 뒤 `infra/monitoring/prometheus/targets/gjlearn/prod/`에 추가하고 홈서버 운영 경로로 동기화합니다.
 
 ```bash
 make sync-monitoring-diff
@@ -473,7 +543,7 @@ gcloud compute routers delete gjlearn-dev-temp-nat-router \
   --project geumgeong-yahack
 ```
 
-삭제 전 App/DB 설치와 Tailscale 인증이 끝났는지 확인하세요.
+삭제 전 App 설치, DB 설치, App Tailscale subnet route 승인이 끝났는지 확인하세요.
 
 ## 10. GitHub Actions 배포
 
@@ -507,7 +577,7 @@ gh secret set PROD_GCE_USER --body '<prod-ssh-user>'
 gh secret set PROD_GCE_SSH_KEY < path/to/prod-deploy-key
 ```
 
-deploy key가 아직 없으면 환경별로 별도 key pair를 만들고, private key는 GitHub Secret에 넣고 public key만 서버에 등록합니다.
+deploy key가 아직 없으면 환경별로 별도 key pair를 만들고, passphrase는 비워둡니다. private key는 GitHub Secret에만 넣고 public key만 서버에 등록합니다. `GHCR_TOKEN`, `APP_IMAGE`는 현재 jar/systemd 배포에서 사용하지 않습니다.
 
 ```bash
 ssh-keygen -t ed25519 -C 'gjlearn-dev-github-actions' -f ~/.ssh/gjlearn-dev-deploy -N ''
@@ -526,6 +596,15 @@ gcloud compute ssh "$APP_INSTANCE_NAME" \
   --command "install -m 700 -d ~/.ssh && printf '%s\n' '<paste-dev-or-prod-public-key>' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 ```
 
-private key는 GitHub Secret에만 넣고 repository 파일이나 `scripts/gcp/00_env/`에 저장하지 않습니다. dev/prod key는 서로 분리하고, prod workflow는 의도치 않은 dev host 배포를 막기 위해 prod SSH/host secret에 fallback을 두지 않습니다.
+GCE metadata로 등록할 때는 SSH 사용자와 public key를 같은 줄에 넣습니다.
+
+```bash
+gcloud compute instances add-metadata "$APP_INSTANCE_NAME" \
+  --project "$PROJECT_ID" \
+  --zone "$ZONE" \
+  --metadata-from-file ssh-keys=<(printf '%s:%s\n' "$DEPLOY_OS_USER" "$(cat ~/.ssh/gjlearn-prod-deploy.pub)")
+```
+
+private key는 repository 파일이나 `scripts/gcp/00_env/`에 저장하지 않습니다. dev/prod key는 서로 분리하고, prod workflow는 의도치 않은 dev host 배포를 막기 위해 prod SSH/host secret에 fallback을 두지 않습니다.
 
 prod App VM의 `~/app-dev/.env`는 workflow가 덮어쓰지 않으므로, 최초 수동 배포 단계에서 prod runtime env를 먼저 배치해야 합니다.

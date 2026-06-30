@@ -2,34 +2,34 @@
 
 Terraform 없이 `gcloud`와 쉘 스크립트로 dev/prod 인프라를 만드는 절차다. 이 방식은 상태 파일을 두지 않으므로, 생성된 리소스 이름과 IP를 문서화하고 동일 스크립트를 반복 실행해도 크게 깨지지 않게 구성한다.
 
+전체 배포 순서와 릴리스 흐름은 [deploy runbook](./deploy.md)을 기준으로 한다.
+
 ## 구성 목표
 
-```text
-App GCE
-- e2-small
-- 10GB boot disk
-- static external IP
-- Java 21 runtime
-- Spring Boot jar + systemd
-- node-exporter systemd service
+```mermaid
+flowchart TB
+    subgraph gcp["GCP project"]
+        App["App GCE e2-small<br/>Spring Boot jar<br/>systemd<br/>node-exporter"]
+        DB["DB GCE e2-micro<br/>PostgreSQL apt<br/>systemd<br/>node-exporter<br/>postgres-exporter"]
+        GCS[("GCS bucket per env<br/>objectAdmin for app service account")]
+        Firewall["Firewall<br/>API HTTP or HTTPS<br/>App Tailscale udp 41641<br/>DB private only"]
+    end
 
-DB GCE
-- e2-micro
-- 10GB boot disk
-- static internal IP
-- apt PostgreSQL + systemd
-- node-exporter systemd service
-- postgres-exporter systemd service
+    Home["Home server<br/>Prometheus<br/>Alertmanager<br/>Grafana"] -. Tailscale .-> App
+    Home -. DB private IP via App route .-> DB
+    App -->|private 5432| DB
+    App -->|file upload| GCS
+    Firewall -. controls .-> App
+    Firewall -. controls .-> DB
 
-GCS
-- one bucket per environment
-- app service account has objectAdmin
-- optional public read
-
-Home server
-- Prometheus / Alertmanager / Grafana
-- Tailscale VPN으로 App/DB exporter를 scrape
-- GCE firewall은 Tailscale `41641/udp`만 public 허용
+    classDef compute fill:#e7f5ff,stroke:#1971c2,color:#0b3558
+    classDef data fill:#fff4e6,stroke:#e67700,color:#5f3200
+    classDef ops fill:#e5dbff,stroke:#5f3dc4,color:#2b165c
+    classDef security fill:#ffe3e3,stroke:#c92a2a,color:#5c1111
+    class App,DB compute
+    class GCS data
+    class Home ops
+    class Firewall security
 ```
 
 ## 비용 최소화 원칙
@@ -42,9 +42,9 @@ Home server
 - 앱 로그는 VM 디스크에 `application.yyyy-MM-dd.log` 일자별 파일로 저장하고, Logback이 30일 이후 파일을 삭제한다. 파일에는 `WARN`/`ERROR` 이상만 남기므로 Cloud Ops Agent는 JSON 파싱 없이 파일을 Cloud Logging으로 전달한다.
 - Cloud Logging 로그 기반 metric/alert는 Google Cloud Monitoring으로 구성한다. 홈서버는 Prometheus/Grafana 중심으로 시스템/API metric을 본다.
 - 시스템 메트릭은 `node-exporter`, DB 메트릭은 `postgres-exporter`만 사용하고, Prometheus/Alertmanager/Grafana는 홈서버에서 돌린다.
-- Cloud VPN은 사용하지 않고 Tailscale로 홈서버, App VM, DB VM을 같은 tailnet에 붙인다.
-- monitoring endpoint는 public exporter 포트가 아니라 Tailscale IP 또는 MagicDNS hostname으로만 접근한다.
-- GCE firewall/security group에는 Tailscale direct path용 `41641/udp`만 public 허용한다.
+- Cloud VPN은 사용하지 않고 App VM만 tailnet에 붙인다. DB VM은 App VM이 advertise한 GCP subnet route 뒤의 private VM으로 둔다.
+- App monitoring endpoint는 App Tailscale IP 또는 MagicDNS hostname으로 접근한다. DB monitoring endpoint는 App subnet route를 통해 DB private IP로 접근한다.
+- GCE firewall/security group에는 App VM Tailscale direct path용 `41641/udp`만 public 허용한다.
 - boot disk는 기본 `10GB pd-standard`로 시작한다. jar와 PostgreSQL 데이터 디렉터리가 커지면 DB부터 증설한다.
 - static external IP는 앱 VM에만 둔다. 단, 고정 IP가 VM에 붙어 있지 않으면 비용이 발생할 수 있으니 방치하지 않는다.
 - dev 비용을 더 줄이고 싶으면 `SKIP_DB_INSTANCE=true`로 DB VM을 만들지 않고 앱 VM 하나에서 수동 PostgreSQL 구성을 테스트한다.
@@ -194,8 +194,8 @@ scripts/gcp/01_infra/01_provision-gcp.sh scripts/gcp/00_env/prod.env
 - app/db GCE 인스턴스
 - firewall
   - app HTTP/HTTPS/8080
-  - Tailscale UDP 41641 for app/db
-  - metrics ports are reached through Tailscale, not public firewall
+  - Tailscale UDP 41641 for app
+  - metrics ports are reached through App Tailscale subnet route, not public firewall
   - app to db PostgreSQL
   - SSH / IAP SSH
 - Java/PostgreSQL client/node-exporter 설치 startup script
@@ -326,44 +326,40 @@ gcloud logging read \
 
 ### 7.1 기본 구조
 
-```text
-Home server
-- Prometheus
-- Alertmanager
-- Grafana
-- optional Loki, 로그 대시보드가 필요해진 뒤 추가
+```mermaid
+flowchart TB
+    Home["Home server<br/>Prometheus<br/>Alertmanager<br/>Grafana"]
+    App["App GCE<br/>app jar :8080<br/>actuator :9090<br/>node-exporter :9100<br/>tailscaled subnet router"]
+    DB["DB GCE<br/>PostgreSQL :5432<br/>node-exporter :9100<br/>postgres-exporter :9187<br/>no tailscaled"]
+    CloudLogging["Cloud Logging<br/>WARN and ERROR alerts"]
 
-  ↕ Tailscale 100.64.0.0/10 또는 MagicDNS
+    Home -. Tailscale .-> App
+    App -. advertised GCP subnet .-> Home
+    Home -. private DB IP via App route .-> DB
+    App -->|private 5432| DB
+    App --> CloudLogging
 
-App GCE
-- app jar :8080
-- actuator :9090
-- node-exporter :9100
-- google-cloud-ops-agent, app WARN/ERROR logs -> Cloud Logging
-- tailscaled
-
-DB GCE
-- PostgreSQL :5432, App VM에서만 접근
-- node-exporter :9100
-- postgres-exporter :9187
-- tailscaled
+    classDef appStyle fill:#e7f5ff,stroke:#1971c2,color:#0b3558
+    classDef dbStyle fill:#fff4e6,stroke:#e67700,color:#5f3200
+    classDef opsStyle fill:#e5dbff,stroke:#5f3dc4,color:#2b165c
+    class App appStyle
+    class DB dbStyle
+    class Home,CloudLogging opsStyle
 ```
 
-`8080`, `9100`, `9187`, `5432`는 public internet에 직접 열지 않는다. GCE firewall에는 Tailscale direct path용 `41641/udp`만 public 허용한다. SSH는 최초 구성/비상 접근용으로 관리자 IP 또는 IAP만 허용한다.
+`8080`, `9100`, `9187`, `5432`는 public internet에 직접 열지 않는다. GCE firewall에는 App VM Tailscale direct path용 `41641/udp`만 public 허용한다. SSH는 최초 구성/비상 접근용으로 관리자 IP 또는 IAP만 허용한다.
 
-금정야학 기본 운영은 단순 Tailscale 노드 모드다. App/DB/Home server가 각각 tailnet에 직접 붙으므로 GCE VM의 IP forwarding, Linux sysctl forwarding, Tailscale `--advertise-routes`는 사용하지 않는다.
+금정야학 기본 운영은 App VM subnet-router 모드다. App/Home server만 tailnet에 직접 붙고, DB는 GCP private IP만 가진다. App VM은 GCE IP forwarding과 Linux `net.ipv4.ip_forward=1`을 켠 뒤 GCP subnet CIDR을 `--advertise-routes`로 advertise하고 Tailscale admin console에서 승인한다.
 
-Tailscale 인증은 각 VM에서 최초 1회 수행한다.
+Tailscale 인증은 App VM에서 최초 1회 수행한다.
 
 ```bash
 # App VM 예시
+printf 'net.ipv4.ip_forward = 1\n' | sudo tee /etc/sysctl.d/99-gjlearn-tailscale-router.conf
+sudo sysctl --system
 sudo tailscale up \
   --advertise-tags=tag:gjlearn-prod-app,tag:gjlearn-app,tag:prod \
-  --accept-dns=false
-
-# DB VM 예시
-sudo tailscale up \
-  --advertise-tags=tag:gjlearn-prod-db,tag:gjlearn-db,tag:prod \
+  --advertise-routes=10.146.0.0/20 \
   --accept-dns=false
 
 tailscale ip -4
@@ -374,7 +370,7 @@ MagicDNS를 켜면 IP 대신 `gjlearn-app.<tailnet>.ts.net` 같은 hostname을 P
 
 ### 7.2 홈서버 Prometheus target 파일
 
-Backend repo의 `infra/monitoring`은 편집/독립 실행용 mirror이고, 홈서버 운영 경로는 `/home/min/Infra/monitoring`이다. dev target은 아래 파일에 있고, prod는 실제 prod tailnet 노드가 생긴 뒤 같은 형식으로 `infra/monitoring/prometheus/targets/gjlearn/prod/`에 추가한 뒤 동기화한다.
+Backend repo의 `infra/monitoring`은 편집/독립 실행용 mirror이고, 홈서버 운영 경로는 `/home/min/Infra/monitoring`이다. dev target은 아래 파일에 있고, prod는 App subnet route 승인 뒤 같은 형식으로 `infra/monitoring/prometheus/targets/gjlearn/prod/`에 추가한 뒤 동기화한다.
 
 ```text
 infra/monitoring/prometheus/targets/gjlearn/dev/app-actuator.yml
@@ -382,7 +378,7 @@ infra/monitoring/prometheus/targets/gjlearn/dev/node-exporter.yml
 infra/monitoring/prometheus/targets/gjlearn/dev/postgres-exporter.yml
 ```
 
-IP로 관리하려면 target에 `tailscale ip -4` 결과인 `100.x.x.x:port`를 넣는다.
+IP로 관리하려면 App target은 `tailscale ip -4` 결과인 App `100.x.x.x:port`, DB target은 DB private IP `10.x.x.x:port`를 넣는다.
 
 자세한 절차는 `docs/deployment/tailscale-observability-deploy.md`를 따른다.
 
@@ -547,8 +543,8 @@ scripts/gcp/01_infra/02_print-outputs.sh scripts/gcp/00_env/prod.env
 - dev는 필요할 때만 켜고, 사용하지 않을 때는 VM을 중지한다. 중지해도 boot disk와 static IP 비용은 남는다.
 - DB GCE는 외부 IP 없이 두고 IAP SSH를 사용한다.
 - DB `5432`는 앱 network tag에서만 허용한다.
-- `8080`, `9100`, `9187`, `5432`는 public에 직접 열지 않는다. 홈서버와 GitHub Actions는 Tailscale IP/MagicDNS로 접근한다.
-- MagicDNS를 켜면 재시작 후 Tailscale IP가 바뀌어도 Prometheus와 Actions 설정을 hostname 기준으로 유지할 수 있다.
+- `8080`, `9100`, `9187`, `5432`는 public에 직접 열지 않는다. 홈서버는 App Tailscale IP/MagicDNS와 App subnet route 뒤의 DB private IP로 접근한다.
+- MagicDNS를 켜면 재시작 후 App Tailscale IP가 바뀌어도 Prometheus와 Actions 설정을 hostname 기준으로 유지할 수 있다.
 - prod에서는 `FLYWAY_BASELINE_ON_MIGRATE=false`가 기본이다.
 - 기존 수동 DB를 Flyway로 편입할 때만 `FLYWAY_BASELINE_ON_MIGRATE=true`를 일회성으로 켠다.
 - 앱 service account를 VM에 붙였으므로 가능하면 `GCP_ENCODED_CREDENTIALS` 없이 metadata credentials를 사용한다. 현재 앱 설정이 encoded key를 요구하면, 추후 optional 처리로 바꾸는 것이 좋다.

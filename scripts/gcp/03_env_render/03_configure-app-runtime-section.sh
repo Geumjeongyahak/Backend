@@ -281,6 +281,7 @@ def tailscale():
     title("App Tailscale")
     ask('TAILSCALE_TAGS','App Tailscale tags', get('TAILSCALE_TAGS', infra.get('APP_TAILSCALE_TAGS','')))
     ask('TAILSCALE_ACCEPT_DNS','App Tailscale accept DNS?', get('TAILSCALE_ACCEPT_DNS', infra.get('APP_TAILSCALE_ACCEPT_DNS','false')), ['true','false'])
+    ask('TAILSCALE_ADVERTISE_ROUTES','App subnet routes to advertise', get('TAILSCALE_ADVERTISE_ROUTES', infra.get('APP_TAILSCALE_ROUTES','')))
     ask_secret('TAILSCALE_AUTHKEY','Optional App Tailscale auth key')
 
 sections={

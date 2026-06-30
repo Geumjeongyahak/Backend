@@ -186,11 +186,6 @@ ensure_firewall "gjlearn-${ENVIRONMENT}-allow-tailscale-app" \
   --target-tags="${APP_NETWORK_TAG}"
 
 if [[ "${SKIP_DB_INSTANCE:-false}" != "true" ]]; then
-  ensure_firewall "gjlearn-${ENVIRONMENT}-allow-tailscale-db" \
-    --allow=udp:41641 \
-    --source-ranges="0.0.0.0/0" \
-    --target-tags="${DB_NETWORK_TAG}"
-
   ensure_firewall "gjlearn-${ENVIRONMENT}-allow-app-to-postgres" \
     --allow=tcp:5432 \
     --source-tags="${APP_NETWORK_TAG}" \
@@ -247,6 +242,11 @@ fi
 
 echo "[7/8] Ensure GCE instances"
 if ! exists_instance "${APP_INSTANCE_NAME}"; then
+  APP_FORWARDING_ARGS=()
+  if [[ -n "${APP_TAILSCALE_ROUTES:-}" ]]; then
+    APP_FORWARDING_ARGS+=(--can-ip-forward)
+  fi
+
   gcloud compute instances create "${APP_INSTANCE_NAME}" \
     --project="${PROJECT_ID}" \
     --zone="${ZONE}" \
@@ -260,6 +260,7 @@ if ! exists_instance "${APP_INSTANCE_NAME}"; then
     --service-account="${APP_SERVICE_ACCOUNT_EMAIL}" \
     --scopes=https://www.googleapis.com/auth/cloud-platform \
     --tags="${APP_NETWORK_TAG}" \
+    "${APP_FORWARDING_ARGS[@]}" \
     --metadata-from-file=startup-script="${STARTUP_APP_RENDERED}"
 else
   echo "instance exists: ${APP_INSTANCE_NAME}"

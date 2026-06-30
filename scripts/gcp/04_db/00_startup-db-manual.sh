@@ -21,10 +21,6 @@ apt-get install -y \
   prometheus-node-exporter \
   prometheus-postgres-exporter
 
-if ! command -v tailscale >/dev/null 2>&1; then
-  curl -fsSL https://tailscale.com/install.sh | sh
-fi
-
 systemctl enable --now prometheus-node-exporter
 
 mkdir -p "${DB_DIR}" /opt/gjlearn

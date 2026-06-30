@@ -11,8 +11,7 @@ LOCAL_SERVICES := app db
 	up-local down-local ps-local logs-local build-local \
 	up-monitoring up-monitoring-alerts down-monitoring ps-monitoring logs-monitoring \
 	apply-monitoring-alert-env apply-monitoring-alert-env-central apply-monitoring-alert-env-all \
-	sync-monitoring-diff sync-monitoring-pull sync-monitoring-push \
-	harness-verify harness-dry-run harness-diff-summary harness-github-context harness-prepare-feature
+	sync-monitoring-diff sync-monitoring-pull sync-monitoring-push
 
 up-local:
 	$(COMPOSE) $(LOCAL_FILES) up --build --remove-orphans $(LOCAL_SERVICES)
@@ -61,19 +60,3 @@ sync-monitoring-pull:
 
 sync-monitoring-push:
 	scripts/monitoring/sync-monitoring.sh push
-
-harness-verify:
-	scripts/harness/verify.sh
-
-harness-dry-run:
-	scripts/harness/run-task.sh --dry-run harness/tasks/monitoring-sync-docs-task.template.md
-
-harness-diff-summary:
-	scripts/harness/summarize-diff.sh
-
-harness-github-context:
-	scripts/harness/collect-github-context.sh
-
-harness-prepare-feature:
-	@test -n "$(ISSUE)" || (echo "usage: make harness-prepare-feature ISSUE=<number>" >&2; exit 2)
-	scripts/harness/prepare-feature-task.sh --issue $(ISSUE)
