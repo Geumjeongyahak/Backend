@@ -1,0 +1,276 @@
+package geumjeongyahak.e2e.auth;
+
+import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
+import geumjeongyahak.domain.auth.v1.dto.response.TokenResponse;
+import geumjeongyahak.domain.users.repository.UserRepository;
+
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.*;
+
+@DisplayName("E2E: 로그인 테스트")
+class AuthLoginTest extends AuthBaseTest {
+
+    private static final String APPS_SCRIPT_BOT_EMAIL = "geumjeongyahak-apps-script-bot@gmail.com";
+    private static final String APPS_SCRIPT_BOT_PASSWORD = "apps-script-bot123!";
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Test
+    @DisplayName("올바른 아이디와 비밀번호로 로그인 성공(200 OK)")
+    void login_Success() {
+        LocalLoginRequest req = new LocalLoginRequest(
+                TEST_ADMIN_EMAIL,
+                TEST_ADMIN_PASSWORD
+        );
+
+        var response = given()
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(200)
+            .body("accessToken", notNullValue())
+            .body("refreshToken", notNullValue())
+            .body("tokenType", equalTo("Bearer"))
+            .body("accessTokenExpiresAt", notNullValue())
+            .body("refreshTokenExpiresAt", notNullValue())
+            .log().all()
+            .extract()
+            .as(TokenResponse.class);
+
+        // 토큰이 실제로 작동하는지 확인 (basePath 임시 초기화)
+        String originalBasePath = RestAssured.basePath;
+        RestAssured.basePath = "";
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(response.accessToken()))
+        .when()
+            .get("/api/v1/users/me")
+        .then()
+            .statusCode(200);
+
+        RestAssured.basePath = originalBasePath;
+    }
+
+    @Test
+    @DisplayName("Apps Script Bot 계정으로 로그인하면 수업일지 관리 권한을 가진다")
+    void login_AppsScriptBot_Success() {
+        LocalLoginRequest req = new LocalLoginRequest(
+            APPS_SCRIPT_BOT_EMAIL,
+            APPS_SCRIPT_BOT_PASSWORD
+        );
+
+        var response = given()
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(200)
+            .body("accessToken", notNullValue())
+            .body("refreshToken", notNullValue())
+            .body("tokenType", equalTo("Bearer"))
+            .log().all()
+            .extract()
+            .as(TokenResponse.class);
+
+        String originalBasePath = RestAssured.basePath;
+        RestAssured.basePath = "";
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(response.accessToken()))
+        .when()
+            .get("/api/v1/users/me")
+        .then()
+            .statusCode(200)
+            .body("email", equalTo(APPS_SCRIPT_BOT_EMAIL))
+            .body("permissions.find { it.code == 'daily-schedule:manage:*' }.source", equalTo("MANUAL"))
+            .body("permissions.find { it.code == 'user:read:*' }.source", equalTo("MANUAL"))
+            .body("permissions.find { it.code == 'purchase-request:read:*' }.source", equalTo("MANUAL"))
+            .body("permissions.find { it.code == 'purchase-request:manage:*' }.source", equalTo("MANUAL"))
+            .body("permissions.find { it.code == 'vendor:read:*' }.source", equalTo("MANUAL"));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(response.accessToken()))
+            .queryParam("size", 20)
+        .when()
+            .get("/api/v1/users")
+        .then()
+            .statusCode(200)
+            .body("content.find { it.email == 'teacher02@test.com' }.name", equalTo("김철수"));
+
+        RestAssured.basePath = originalBasePath;
+    }
+
+    @Test
+    @DisplayName("잘못된 비밀번호로 로그인 실패(401 Unauthorized)")
+    void login_WrongPassword() {
+        LocalLoginRequest req = new LocalLoginRequest(
+                TEST_ADMIN_EMAIL,
+                "wrongpassword123!"
+        );
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(401)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 사용자로 로그인 실패(401 Unauthorized)")
+    void login_UserNotFound() {
+        LocalLoginRequest req = new LocalLoginRequest(
+                "nonexistentuser1234@test.com",
+                "password123!"
+        );
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(401)
+            .body("code", equalTo("AUTH005"))  // INVALID_CREDENTIALS (사용자 존재 여부 노출 방지)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("비활성화된 사용자로 로그인 실패(401 Unauthorized)")
+    void login_DeactivatedUser() {
+        String email = "deactivated-login@test.com";
+        String password = "password123!";
+        var user = userTestHelper.createTestUser(email, "비활성 로그인 사용자", password, RoleType.GUEST);
+        user.softDelete();
+        userRepository.saveAndFlush(user);
+
+        LocalLoginRequest req = new LocalLoginRequest(
+            email,
+            password
+        );
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(401)
+            .body("code", equalTo("AUTH005"))
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("아이디 누락 시 로그인 실패(400 Bad Request)")
+    void login_MissingUsername() {
+        String invalidReq = """
+            {
+                "password": "password123!"
+            }
+            """;
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(invalidReq)
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(400)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("비밀번호 누락 시 로그인 실패(400 Bad Request)")
+    void login_MissingPassword() {
+        String invalidReq = """
+            {
+                "email": "admin@test.com"
+            }
+            """;
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(invalidReq)
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(400)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("유효하지 않은 이메일 형식으로 로그인 실패(400 Bad Request)")
+    void login_ShortUsername() {
+        LocalLoginRequest req = new LocalLoginRequest(
+                "short",
+                "password123!"
+        );
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(400)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("짧은 비밀번호로 로그인 시 인증 실패(401 Unauthorized)")
+    void login_ShortPassword() {
+        LocalLoginRequest req = new LocalLoginRequest(
+                TEST_ADMIN_EMAIL,
+                "short"  // 8자 미만
+        );
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(req)
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(401)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("빈 JSON으로 로그인 시도 시 실패(400 Bad Request)")
+    void login_EmptyBody() {
+        given()
+            .contentType(ContentType.JSON)
+            .body("{}")
+        .when()
+            .post("/login")
+        .then()
+            .statusCode(400)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("GET으로 로그인 엔드포인트 호출 시 405 Method Not Allowed와 표준 에러 응답 반환")
+    void login_GetMethodNotAllowed() {
+        given()
+        .when()
+            .get("/login")
+        .then()
+            .statusCode(405)
+            .body("code", equalTo("VAL007"))
+            .body("detail", equalTo("지원하지 않는 HTTP 메서드입니다."))
+            .body("method", equalTo("GET"))
+            .body("supportedMethods", hasItem("POST"))
+            .log().all();
+    }
+}

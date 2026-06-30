@@ -1,0 +1,300 @@
+package geumjeongyahak.domain.daily_schedule.v1.controller;
+
+import geumjeongyahak.common.security.service.CustomUserDetails;
+import geumjeongyahak.domain.base.dto.response.PaginationResponse;
+import geumjeongyahak.domain.daily_schedule.service.DailyScheduleService;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.CreateDailyScheduleJournalRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailySchedulePaginationRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleVolunteerHoursRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendancesRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyTeacherAttendanceRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleVolunteerHoursResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import java.time.LocalDate;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/daily-schedules")
+@RequiredArgsConstructor
+@Tag(name = "DailySchedule", description = "하루 일정 및 수업 일지 API")
+public class DailyScheduleController {
+
+    private static final String DAILY_SCHEDULE_READ_ACCESS =
+        "hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN')";
+    private static final String DAILY_SCHEDULE_WRITE_ACCESS =
+        "hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN') or hasAuthority('daily-schedule:manage:*')";
+
+    private final DailyScheduleService dailyScheduleService;
+
+    @PreAuthorize(DAILY_SCHEDULE_READ_ACCESS)
+    @Operation(
+        summary = "수업 일지 목록 조회",
+        description = """
+            작성된 수업 일지를 페이지로 조회합니다.
+            keyword로 분반명, 담당 교사명, 과목명, 수업 일지 내용을 검색하고,
+            mine=true이면 로그인 사용자가 담당자인 수업 일지만 조회합니다.
+
+            시간표 표시 정보:
+            - isExchanged: 교환형 또는 대체형 제안 수락으로 담당 교사가 변경된 일정인지 여부
+            - isAbsent: 결석 요청 승인으로 결강 처리된 일정인지 여부
+            - exchangedLessonDate: 교환형 일정의 상대 수업 날짜
+
+            대체형 일정과 일반 일정은 exchangedLessonDate가 null입니다.
+            """
+    )
+    @GetMapping
+    public ResponseEntity<PaginationResponse<DailyScheduleSummaryResponse>> getDailySchedules(
+        @ParameterObject @Valid @ModelAttribute DailySchedulePaginationRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug(
+            "GET /api/v1/daily-schedules - 수업 일지 목록 조회 요청 (keyword={}, mine={}, page={}, size={})",
+            request.getKeyword(),
+            request.getMine(),
+            request.getPage(),
+            request.getSize()
+        );
+        return ResponseEntity.ok(dailyScheduleService.getJournalDailySchedules(request, userDetails.getUserId()));
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_READ_ACCESS)
+    @Operation(
+        summary = "날짜/분반 기준 하루 일정 상세 조회",
+        description = """
+            수업 날짜와 분반 ID 기준으로 하루 일정의 수업, 교사 출석,
+            학생 출석부, 수업 일지 내용을 조회합니다.
+
+            isExchanged와 isAbsent로 교환·결강 여부를 확인할 수 있습니다.
+            교환형 일정은 exchangedLessonDate에 상대 수업 날짜가 반환되며,
+            대체형 또는 일반 일정은 null이 반환됩니다.
+            """
+    )
+    @GetMapping("/detail")
+    public ResponseEntity<DailyScheduleDetailResponse> getDailyScheduleByClassroomAndDate(
+        @Parameter(description = "분반 ID", example = "1")
+        @RequestParam Long classroomId,
+        @Parameter(description = "수업 날짜", example = "2026-06-10")
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate lessonDate,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug(
+            "GET /api/v1/daily-schedules/detail - 날짜/분반 기준 하루 일정 상세 조회 요청 (classroomId={}, lessonDate={})",
+            classroomId,
+            lessonDate
+        );
+        return ResponseEntity.ok(dailyScheduleService.getDailyScheduleByClassroomAndDate(
+            classroomId,
+            lessonDate,
+            userDetails.getUserId(),
+            canViewSensitiveInfo(userDetails)
+        ));
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_READ_ACCESS)
+    @Operation(
+        summary = "하루 일정 상세 조회",
+        description = """
+            dailyScheduleId로 하루 일정의 수업, 교사 출석, 학생 출석부,
+            수업 일지 내용을 조회합니다.
+
+            응답의 isExchanged와 isAbsent로 교환·결강 여부를 확인할 수 있습니다.
+            exchangedLessonDate는 교환형 일정에서만 상대 수업 날짜를 반환하며,
+            대체형 또는 일반 일정에서는 null입니다.
+            """
+    )
+    @GetMapping("/{dailyScheduleId}")
+    public ResponseEntity<DailyScheduleDetailResponse> getDailySchedule(
+        @PathVariable Long dailyScheduleId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("GET /api/v1/daily-schedules/{} - 하루 일정 상세 조회 요청", dailyScheduleId);
+        return ResponseEntity.ok(dailyScheduleService.getDailySchedule(
+            dailyScheduleId,
+            userDetails.getUserId(),
+            canViewSensitiveInfo(userDetails)
+        ));
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_READ_ACCESS)
+    @Operation(
+        summary = "봉사 시간 조회",
+        description = "완료된 하루 일정과 교사 출석을 기준으로 봉사 인정 시간을 조회합니다. 날짜를 입력하지 않으면 전체 누적 봉사시간을 조회합니다."
+    )
+    @GetMapping("/volunteer-hours")
+    public ResponseEntity<DailyScheduleVolunteerHoursResponse> getVolunteerHours(
+        @ParameterObject @Valid @ModelAttribute DailyScheduleVolunteerHoursRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug(
+            "GET /api/v1/daily-schedules/volunteer-hours - 봉사 시간 조회 요청 (teacherId={}, from={}, to={})",
+            request.teacherId(),
+            request.from(),
+            request.to()
+        );
+        return ResponseEntity.ok(dailyScheduleService.getVolunteerHours(
+            userDetails.getUserId(),
+            canViewSensitiveInfo(userDetails),
+            request
+        ));
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
+    @Operation(
+        summary = "수업 일지 최초 작성",
+        description = "수업 날짜와 분반 ID 기준으로 하루 일정을 찾아 교시별 수업 일지를 최초 작성합니다. 이미 작성된 수업 일지가 있으면 409 Conflict를 반환합니다."
+    )
+    @PostMapping("/journal")
+    public ResponseEntity<DailyScheduleDetailResponse> createJournal(
+        @Valid @RequestBody CreateDailyScheduleJournalRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug(
+            "POST /api/v1/daily-schedules/journal - 수업 일지 생성 요청 (classroomId={}, lessonDate={}, lessonJournalCount={})",
+            request.classroomId(),
+            request.lessonDate(),
+            request.lessonJournals().size()
+        );
+        return ResponseEntity.ok(dailyScheduleService.createJournal(
+            userDetails.getUserId(),
+            canManageAnyDailySchedule(userDetails),
+            request
+        ));
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
+    @Operation(summary = "수업 일지 수정", description = "dailyScheduleId 기준으로 교시별 수업 일지 내용과 개인정보 입력값을 수정합니다.")
+    @PatchMapping("/{dailyScheduleId}/journal")
+    public ResponseEntity<DailyScheduleDetailResponse> updateJournal(
+        @PathVariable Long dailyScheduleId,
+        @Valid @RequestBody UpdateDailyScheduleJournalRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug(
+            "PATCH /api/v1/daily-schedules/{}/journal - 수업 일지 수정 요청 (lessonJournalCount={})",
+            dailyScheduleId,
+            request.lessonJournals().size()
+        );
+        return ResponseEntity.ok(dailyScheduleService.updateJournal(
+            dailyScheduleId,
+            userDetails.getUserId(),
+            canManageAnyDailySchedule(userDetails),
+            request
+        ));
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
+    @Operation(summary = "수업 일지 삭제", description = "DailySchedule 자체와 출석 정보는 유지하고, 연결된 교시별 수업 일지 내용과 개인정보 입력값만 초기화합니다.")
+    @DeleteMapping("/{dailyScheduleId}/journal")
+    public ResponseEntity<Void> deleteJournal(
+        @PathVariable Long dailyScheduleId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("DELETE /api/v1/daily-schedules/{}/journal - 수업 일지 삭제 요청", dailyScheduleId);
+        dailyScheduleService.deleteJournal(
+            dailyScheduleId,
+            userDetails.getUserId(),
+            canManageAnyDailySchedule(userDetails)
+        );
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
+    @Operation(summary = "하루 일정 학생 출석 처리", description = "하루 일정에 연결된 학생들의 출석 상태를 처리합니다.")
+    @PatchMapping("/{dailyScheduleId}/student-attendances")
+    public ResponseEntity<DailyScheduleDetailResponse> updateStudentAttendances(
+        @PathVariable Long dailyScheduleId,
+        @Valid @RequestBody UpdateDailyStudentAttendancesRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug(
+            "PATCH /api/v1/daily-schedules/{}/student-attendances - 학생 출석 처리 요청 (attendanceCount={})",
+            dailyScheduleId,
+            request.attendances().size()
+        );
+        return ResponseEntity.ok(dailyScheduleService.updateStudentAttendances(
+            dailyScheduleId,
+            userDetails.getUserId(),
+            canManageAnyDailySchedule(userDetails),
+            canViewSensitiveInfo(userDetails),
+            request
+        ));
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
+    @Operation(summary = "하루 일정 교사 출석 처리", description = "하루 일정의 교사 출석 상태를 처리합니다.")
+    @PatchMapping("/{dailyScheduleId}/teacher-attendance")
+    public ResponseEntity<DailyScheduleDetailResponse> updateTeacherAttendance(
+        @PathVariable Long dailyScheduleId,
+        @Valid @RequestBody UpdateDailyTeacherAttendanceRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug(
+            "PATCH /api/v1/daily-schedules/{}/teacher-attendance - 교사 출석 처리 요청 (status={})",
+            dailyScheduleId,
+            request.status()
+        );
+        return ResponseEntity.ok(dailyScheduleService.updateTeacherAttendance(
+            dailyScheduleId,
+            userDetails.getUserId(),
+            canManageAnyDailySchedule(userDetails),
+            canViewSensitiveInfo(userDetails),
+            request
+        ));
+    }
+
+    @PreAuthorize(DAILY_SCHEDULE_WRITE_ACCESS)
+    @Operation(summary = "하루 일정 교사 퇴근 처리", description = "수업 일지 작성과 교사 출근 처리가 완료된 하루 일정의 교사 퇴근 시간을 기록합니다.")
+    @PatchMapping("/{dailyScheduleId}/teacher-attendance/check-out")
+    public ResponseEntity<DailyScheduleDetailResponse> checkOutTeacherAttendance(
+        @PathVariable Long dailyScheduleId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PATCH /api/v1/daily-schedules/{}/teacher-attendance/check-out - 교사 퇴근 처리 요청", dailyScheduleId);
+        return ResponseEntity.ok(dailyScheduleService.checkOutTeacherAttendance(
+            dailyScheduleId,
+            userDetails.getUserId(),
+            canManageAnyDailySchedule(userDetails),
+            canViewSensitiveInfo(userDetails)
+        ));
+    }
+
+    private boolean canManageAnyDailySchedule(CustomUserDetails userDetails) {
+        return userDetails.isAdmin()
+            || userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("daily-schedule:manage:*"::equals);
+    }
+
+    private boolean canViewSensitiveInfo(CustomUserDetails userDetails) {
+        return userDetails.isAdmin()
+            || userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> "daily-schedule:read:*".equals(authority)
+                    || "daily-schedule:manage:*".equals(authority));
+    }
+}

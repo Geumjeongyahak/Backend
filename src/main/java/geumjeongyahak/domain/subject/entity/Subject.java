@@ -1,0 +1,178 @@
+package geumjeongyahak.domain.subject.entity;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+
+import geumjeongyahak.domain.base.entity.BaseEntity;
+import geumjeongyahak.domain.classroom.entity.Classroom;
+import geumjeongyahak.domain.users.entity.User;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Getter
+@Table(name = "subjects")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Subject extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_id", nullable = false)
+    private Classroom classroom;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "teacher_id")
+    private User teacher;
+
+    @Column(nullable = false, length = 50)
+    private String name;
+
+    @Column(nullable = false)
+    private LocalDate startAt;
+
+    @Column(nullable = false)
+    private LocalDate endAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private DayOfWeek dayOfWeek;
+
+    @Column(nullable = false)
+    private LocalTime startTime;
+
+    @Column(nullable = false)
+    private LocalTime endTime;
+
+    @Column(nullable = false)
+    private Integer period;
+
+    private LocalDateTime teacherAssignedAt;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
+    public Subject(
+            Classroom classroom,
+            User teacher,
+            String name,
+            LocalDate startAt,
+            LocalDate endAt,
+            DayOfWeek dayOfWeek,
+            LocalTime startTime,
+            LocalTime endTime,
+            Integer period,
+            LocalDateTime teacherAssignedAt,
+            String description) {
+        this.classroom = classroom;
+        this.teacher = teacher;
+        this.name = name;
+        this.startAt = startAt;
+        this.endAt = endAt;
+        this.dayOfWeek = dayOfWeek;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.period = period;
+        this.teacherAssignedAt = teacherAssignedAt;
+        this.description = description;
+    }
+
+    public void update(
+        Classroom classroom,
+        User teacher,
+        String name,
+        LocalDate startAt,
+        LocalDate endAt,
+        DayOfWeek dayOfWeek,
+        LocalTime startTime,
+        LocalTime endTime,
+        Integer period,
+        LocalDateTime teacherAssignedAt,
+        String description
+    ) {
+        this.classroom = classroom;
+        this.teacher = teacher;
+        this.name = name;
+        this.startAt = startAt;
+        this.endAt = endAt;
+        this.dayOfWeek = dayOfWeek;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.period = period;
+        this.teacherAssignedAt = teacherAssignedAt;
+        this.description = description;
+    }
+
+    public void updateBasic(String name, String description) {
+        if (name != null) {
+            this.name = name;
+        }
+        if (description != null) {
+            this.description = description;
+        }
+    }
+
+    public void deactivate() {
+        this.isActive = false;
+    }
+
+    public void activate() {
+        this.isActive = true;
+    }
+
+    public void changeTeacher(User teacher) {
+        this.teacher = teacher;
+        this.teacherAssignedAt = teacher != null ? LocalDateTime.now() : null;
+    }
+
+    public void assignTeacher(User teacher, LocalDateTime teacherAssignedAt) {
+        this.teacher = teacher;
+        this.teacherAssignedAt = teacherAssignedAt;
+    }
+
+    public void updateSchedule(
+        LocalDate startAt,
+        LocalDate endAt,
+        DayOfWeek dayOfWeek,
+        LocalTime startTime,
+        LocalTime endTime,
+        Integer period
+    ) {
+        this.startAt = startAt;
+        this.endAt = endAt;
+        this.dayOfWeek = dayOfWeek;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.period = period;
+    }
+
+    public Integer getTimes() {
+        if (startAt == null || endAt == null || dayOfWeek == null || startAt.isAfter(endAt)) {
+            return 0;
+        }
+        return Math.toIntExact(startAt.datesUntil(endAt.plusDays(1))
+            .filter(date -> date.getDayOfWeek() == dayOfWeek)
+            .count());
+    }
+}
+

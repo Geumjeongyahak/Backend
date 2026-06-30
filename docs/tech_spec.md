@@ -1,16 +1,18 @@
-# 손모음 플랫폼 기술 명세서
+# 금정야학 플랫폼 기술 명세서
 
 ## 1. 개요
 
 ### 1.1 목적
 
-손모음 플랫폼 백엔드 시스템의 기술적 설계와 구현 방향을 정의합니다.
+금정야학 플랫폼 백엔드 시스템의 기술적 설계와 구현 방향을 정의합니다.
 
 ### 1.2 참조 문서
 
 - [PRD (Product Requirements Document)](./prd.md)
-- [API 명세서](./api_spec.md)
+- [API 흐름 문서](./api-spec/api_spec.md)
+- [도메인별 API 문서](./api/README.md)
 - [데이터 모델](./data_model.md)
+- [에러 코드 문서](./error_codes.md)
 
 ---
 
@@ -30,7 +32,8 @@
 | 구분 | 기술 | 용도 |
 |------|------|------|
 | Authentication | Spring Security | 인증/인가 |
-| OAuth2 | Spring OAuth2 Client | 소셜 로그인 (Google) |
+| JWT | JJWT | Access/Refresh Token 관리 |
+| Password | BCrypt | 비밀번호 암호화 |
 
 ### 2.3 Database
 
@@ -86,83 +89,106 @@
 ### 3.3 패키지 구조
 
 ```
-src/main/java/org/geumjeong/learning/sonmoum_api/
-├── common/                          # 공통 모듈 (구 global)
+src/main/java/geumjeongyahak/
+├── common/                          # 공통 모듈
+│   ├── advice/                      # 전역 예외 처리
+│   │   └── GlobalExceptionHandler.java
 │   ├── config/                      # 설정 클래스
 │   │   └── SwaggerConfig.java
-│   ├── property/                    # 설정 프로퍼티
+│   ├── event/                       # 이벤트 정의
+│   ├── exception/                   # 공통 예외
 │   ├── security/                    # Security 관련
 │   │   ├── config/
+│   │   │   ├── SecurityProperties.java
 │   │   │   └── WebSecurityConfig.java
 │   │   ├── filter/                  # Security Filter
+│   │   │   └── JwtAuthenticationFilter.java
 │   │   ├── handler/                 # Success/Failure Handler
-│   │   └── property/                # Security Property
+│   │   ├── jwt/                     # JWT 토큰 처리
+│   │   │   └── JwtTokenProvider.java
+│   │   └── service/                 # UserDetails
+│   │       └── CustomUserDetails.java
 │   └── validation/                  # 커스텀 Validation
 │       ├── annotation/              # @ValidEmail 등
 │       └── validator/               # Validator 구현체
 │
-├── api/                             # API 레이어 (Controller + DTO)
-│   └── v1/                          # API v1
-│       ├── auth/                    # 인증 API
-│       │   └── dto/
-│       │       ├── request/
-│       │       └── response/
-│       ├── common/                  # 공통 API DTO
-│       │   └── dto/
-│       │       ├── request/         # BasePageRequest
-│       │       └── response/        # BasePageResponse
-│       ├── departments/             # 부서 API
-│       │   └── dto/
-│       │       ├── request/
-│       │       └── response/
-│       └── users/                   # 사용자 API
-│           └── dto/
-│               ├── request/
-│               └── response/
-│
-├── domain/                          # 도메인 레이어
-│   ├── base/                        # 공통 엔티티
-│   │   └── entity/
-│   │       └── BaseEntity.java      # created_at, updated_at
-│   │
-│   ├── auth/                        # 인증/권한 도메인
-│   │   ├── entity/
-│   │   │   ├── Permission.java
-│   │   │   ├── UserPermission.java
-│   │   │   └── DepartmentPermission.java
-│   │   ├── enums/
-│   │   │   ├── RoleType.java        # VOLUNTEER, ADMIN
-│   │   │   ├── PermissionType.java  # SUPER_ADMIN, MANAGE_USERS, ...
-│   │   │   └── ProviderType.java    # EMAIL, GOOGLE
-│   │   ├── repository/
-│   │   └── service/
-│   │       └── EmailAuthService.java
-│   │
-│   ├── department/                  # 부서 도메인
-│   │   ├── entity/
-│   │   │   ├── Department.java
-│   │   │   └── UserDepartment.java
-│   │   ├── repository/
-│   │   │   └── DepartmentRepository.java
-│   │   └── service/
-│   │       └── DepartmentCrudService.java
-│   │
-│   ├── users/                       # 사용자 도메인
-│   │   ├── entity/
-│   │   │   └── User.java
-│   │   ├── repository/
-│   │   │   └── UserRepository.java
-│   │   └── service/
-│   │       ├── UserCrudService.java
-│   │       └── UserPermissionService.java
-│   │
-│   ├── classroom/                   # 분반 도메인 (예정)
-│   ├── student/                     # 학생 도메인 (예정)
-│   ├── subject/                     # 과목 도메인 (예정)
-│   ├── lesson/                      # 수업 도메인 (예정)
-│   └── request/                     # 요청 도메인 (예정)
-│
-└── SonmoumApiApplication.java
+└── domain/                          # 도메인 레이어
+    ├── base/                        # 공통 Base 클래스
+    │   ├── dto/                     # BasePageRequest, BasePageResponse
+    │   └── entity/
+    │       └── BaseEntity.java      # created_at, updated_at
+    │
+    ├── auth/                        # 인증/권한 도메인
+    │   ├── entity/
+    │   │   ├── Role.java
+    │   │   └── RefreshToken.java
+    │   ├── enums/
+    │   │   └── RoleType.java        # ADMIN, MANAGER, VOLUNTEER 등
+    │   ├── repository/
+    │   │   └── RefreshTokenRepository.java
+    │   ├── service/
+    │   │   ├── LocalLoginService.java
+    │   │   ├── PasswordService.java
+    │   │   ├── DuplicateCheckService.java
+    │   │   ├── AuthService.java
+    │   │   └── RefreshTokenService.java
+    │   └── v1/                      # API v1
+    │       ├── controller/
+    │       │   ├── AuthController.java
+    │       │   ├── PasswordController.java
+    │       │   ├── DuplicateCheckController.java
+    │       │   └── MeController.java
+    │       └── dto/
+    │           ├── request/         # LocalLoginRequest, LocalSignupRequest 등
+    │           └── response/        # LoginResponse, TokenResponse 등
+    │
+    ├── users/                       # 사용자 도메인
+    │   ├── entity/
+    │   │   ├── User.java
+    │   │   └── UserRole.java
+    │   ├── exception/
+    │   │   ├── UserNotFoundException.java
+    │   │   └── DuplicateUsernameException.java
+    │   ├── repository/
+    │   │   ├── UserRepository.java
+    │   │   └── UserRoleRepository.java
+    │   ├── service/
+    │   │   ├── UserAdminService.java
+    │   │   ├── UserRoleService.java
+    │   │   └── UserProxyService.java
+    │   └── v1/                      # API v1
+    │       ├── controller/
+    │       │   ├── UserController.java
+    │       │   └── UserRoleController.java
+    │       └── dto/
+    │           ├── request/         # CreateUserRequest, UpdateUserRequest 등
+    │           └── response/        # UserResponse
+    │
+    ├── classroom/                   # 분반 도메인
+    │   ├── entity/
+    │   ├── repository/
+    │   └── v1/
+    │
+    ├── student/                     # 학생 도메인
+    │   ├── entity/
+    │   ├── repository/
+    │   └── v1/
+    │
+    ├── subject/                     # 과목 도메인
+    │   ├── entity/
+    │   ├── repository/
+    │   ├── event/                   # SubjectCreatedEvent
+    │   └── v1/
+    │
+    ├── lesson/                      # 수업 도메인
+    │   ├── entity/
+    │   ├── repository/
+    │   └── v1/
+    │
+    └── request/                     # 요청 도메인
+        ├── entity/
+        ├── repository/
+        └── v1/
 ```
 
 ### 3.4 이벤트 기반 도메인 통신
@@ -198,8 +224,7 @@ public record SubjectCreatedEvent(
     LocalDate endAt,
     DayOfWeek dayOfWeek,
     LocalTime startTime,
-    LocalTime endTime,
-    int times
+    LocalTime endTime
 ) {}
 
 // 이벤트 발행 (Subject Service)
@@ -220,8 +245,7 @@ public class SubjectService {
             subject.getEndAt(),
             subject.getDayOfWeek(),
             subject.getStartTime(),
-            subject.getEndTime(),
-            subject.getTimes()
+            subject.getEndTime()
         ));
 
         return subject;
@@ -247,11 +271,7 @@ public class LessonEventHandler {
 | 이벤트 | 발행 도메인 | 수신 도메인 | 설명 |
 |--------|-------------|-------------|------|
 | SubjectCreatedEvent | Subject | Lesson | 과목 생성 시 수업 자동 생성 |
-| LessonCreatedEvent | Lesson | Student (Attendance) | 수업 생성 시 출석 레코드 생성 |
-| AbsenceApprovedEvent | Request | Lesson | 결석 승인 시 출석 상태 변경 |
 | ExchangeApprovedEvent | Request | Lesson/Subject | 교환 승인 시 담당자 변경 |
-| DepartmentPermissionsGrantedEvent | Department | User | 부서 권한 추가 시 소속원들에게 권한 부여 (SYSTEM 타입) |
-| DepartmentPermissionsRevokedEvent | Department | User | 부서 권한 삭제 시 소속원들에게 권한 회수 (SYSTEM 타입) |
 
 ---
 
@@ -259,39 +279,71 @@ public class LessonEventHandler {
 
 ### 4.1 인증 방식
 
-- **세션 기반 인증** (Spring Security `SessionCreationPolicy.IF_REQUIRED`)
-- `CustomUserDetails`를 통해 `userId`, `email`, `authorities` 제공
-- OAuth2 소셜 로그인 지원 (Google)
+- **JWT 기반 인증** (Spring Security `SessionCreationPolicy.STATELESS`)
+- **Access Token + Refresh Token** 구조
+  - Access Token: 짧은 만료 시간 (기본 1시간), API 요청 시 사용
+  - Refresh Token: 긴 만료 시간 (기본 14일), Access Token 재발급용
+- `CustomUserDetails`를 통해 `userId`, `username`, `authorities` 제공
+- Refresh Token Rotation 적용 (재발급 시 기존 토큰 무효화)
 
-### 4.2 권한 체계 & Granter Tracking
+### 4.2 역할 기반 권한 체계
 
-**문제 해결**: 시스템(부서)에 의해 부여된 권한삭제 시, 관리자가 수동으로 부여한 권한까지 삭제되는 것을 방지하기 위해 **PermissionGranterType**을 도입했습니다.
-
-- `PermissionGranterType.USER`: 관리자가 수동으로 부여한 권한
-- `PermissionGranterType.SYSTEM`: 부서 변경 등 시스템 이벤트로 부여된 권한
-
-> 사용자 권한은 `(userId, permissionId)` 쌍으로 유일성이 보장되지만, `granterType` 메타데이터를 통해 이 권한의 출처를 추적합니다. (현재 구현은 단순화를 위해 중복 저장은 하지 않고 메타데이터만 관리)
-
-### 4.2 권한 체계
+**RoleType Enum**을 통한 역할 관리:
 
 ```java
-public enum Role {
-    VOLUNTEER,  // 봉사자
-    ADMIN       // 관리자
+public enum RoleType {
+    ADMIN,      // 관리자 - 시스템 전체 관리
+    MANAGER,    // 매니저 - 운영 관리
+    VOLUNTEER,  // 봉사자 - 수업 진행
+    GUEST;      // 게스트 - 제한적 접근
+
+    public String getAuthority() {
+        return "ROLE_" + this.name();
+    }
 }
 ```
+
+**특징:**
+- 사용자는 하나의 기본 역할을 가짐
+- 역할별 권한은 Spring Security의 `hasRole()`로 검증
+- 모든 역할은 `ROLE_` prefix가 붙은 권한으로 매핑됨
 
 ### 4.3 권한 검증
 
 ```java
+// ADMIN 역할만 접근 가능
 @PreAuthorize("hasRole('ADMIN')")
-@GetMapping("/admin/users")
+@GetMapping("/api/v1/users")
 public List<UserResponse> getAllUsers() { ... }
 
-@PreAuthorize("hasRole('VOLUNTEER') or hasRole('ADMIN')")
-@GetMapping("/lessons/my")
+// VOLUNTEER, MANAGER, ADMIN 역할 접근 가능
+@PreAuthorize("hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN')")
+@GetMapping("/api/v1/lessons/my")
 public List<LessonResponse> getMyLessons() { ... }
+
+// MANAGER 이상 역할 접근 가능
+@PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
+@PostMapping("/api/v1/lessons")
+public LessonResponse createLesson() { ... }
 ```
+
+### 4.4 Refresh Token 관리
+
+- Repository 기반 저장 (PostgreSQL/H2)
+- 사용자당 하나의 Refresh Token만 유지 (새 토큰 발급 시 기존 토큰 삭제)
+- 만료된 토큰 자동 정리 기능 제공
+- 로그아웃 시 해당 사용자의 Refresh Token 무효화
+- 사용자 계정 비활성화 시 해당 사용자의 모든 Refresh Token 즉시 폐기
+- 비활성 사용자는 Access Token 인증, 로컬/관리자/Google 로그인 및 토큰 재발급 차단
+
+### 4.5 사용자 계정 비활성화
+
+- 사용자는 물리 삭제하지 않고 `users.is_deleted`, `users.deleted_at`으로 비활성 상태를 관리합니다.
+- 운영용 사용자 조회는 `is_deleted=false` 조건을 명시적으로 적용합니다.
+- 전역 엔티티 필터로 삭제 사용자를 숨기지 않습니다. 게시글, 댓글, 요청, 수업 등 과거 이력의 연관관계에서는 비활성 사용자도 조회할 수 있어야 합니다.
+- 사용자 자격 증명과 직접 권한은 보존하며, 이메일 재사용은 허용하지 않습니다.
+- 본인 계정, 마지막 활성 관리자, 활성 과목 담당자, 처리 대기 중인 신청·요청 보유자는 비활성화할 수 없습니다.
+- 비활성화 시 사용자 도메인 이벤트를 발행하고 인증 도메인이 Refresh Token을 폐기하며 알림 도메인이 활성 Push 구독을 해제합니다.
 
 ---
 
@@ -400,7 +452,7 @@ src/test/java/org/geumjeong/learning/
 
 ```properties
 # .env
-DATABASE_URL=jdbc:postgresql://localhost:5432/sonmoum
+DATABASE_URL=jdbc:postgresql://localhost:5432/gjlearn
 DATABASE_USERNAME=postgres
 DATABASE_PASSWORD=password
 GOOGLE_CLIENT_ID=xxx

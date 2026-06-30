@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('교학 회의록 수정')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>교학 회의록 수정</h1>
+                <p>회의 후 논의 사항과 건의/제안 사항을 추가하고 상태를 전환할 수 있습니다.</p>
+            </div>
+        </div>
+
+        <form class="panel form-grid" th:action="@{/admin/meeting-records/{recordId}(recordId=${record.id})}" th:object="${form}" method="post">
+            <label>상태
+                <select th:field="*{status}">
+                    <option th:each="status : ${statuses}" th:value="${status.name()}" th:text="${status.name()}">BEFORE_MEETING</option>
+                </select>
+            </label>
+            <label>제목 <input th:field="*{title}" required></label>
+            <label>안건 <textarea th:field="*{agenda}" required></textarea></label>
+            <label>논의 사항 <textarea th:field="*{discussion}" placeholder="회의 후 논의 사항을 입력하세요."></textarea></label>
+            <label>건의/제안 사항 <textarea th:field="*{suggestion}" placeholder="회의 후 건의/제안 사항을 입력하세요."></textarea></label>
+            <button class="button" type="submit">저장</button>
+        </form>
+
+        <section class="panel table-panel">
+            <div class="inline-form" style="justify-content: space-between;">
+                <h2>첨부파일</h2>
+                <form class="inline-form" th:action="@{/admin/meeting-records/{recordId}/attachments(recordId=${record.id})}" method="post" enctype="multipart/form-data">
+                    <input name="file" type="file" required>
+                    <button class="button secondary" type="submit">추가</button>
+                </form>
+            </div>
+            <div class="table-scroll" th:if="${!#lists.isEmpty(record.attachments)}">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>파일명</th>
+                        <th>형식</th>
+                        <th>크기</th>
+                        <th>순서</th>
+                        <th>관리</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="attachment : ${record.attachments}">
+                        <td><a class="link" th:href="${attachment.downloadUrl}" target="_blank" th:text="${attachment.originalName}">file.pdf</a></td>
+                        <td th:text="${attachment.ext}">pdf</td>
+                        <td th:text="${attachment.fileSize ?: '-'}">1024</td>
+                        <td th:text="${attachment.sortOrder}">0</td>
+                        <td>
+                            <form th:action="@{/admin/meeting-records/{recordId}/attachments/{fileId}/delete(recordId=${record.id},fileId=${attachment.fileId})}" method="post" onsubmit="return confirm('이 첨부파일을 삭제하시겠습니까?');">
+                                <button class="button danger" type="submit">삭제</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="empty" th:if="${#lists.isEmpty(record.attachments)}">첨부파일이 없습니다.</div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,9 @@
+- targets:
+    - 100.82.86.118:9090
+  labels:
+    project: gjlearn
+    env: prod
+    service: api
+    role: app-actuator
+    instance_name: gjlearn-prod-app
+    domain: api.geumjeongschool.com

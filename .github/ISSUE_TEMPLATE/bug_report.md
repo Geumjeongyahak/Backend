@@ -1,7 +1,7 @@
 ---
-name: Bug report
-about: Create a report to help us improve
-title: "[BUG] "
+name: Fix Request
+about: 수정이 필요한 문제를 제보합니다
+title: "[FIX] "
 labels: bug
 assignees: ''
 

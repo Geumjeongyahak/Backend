@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('교원 신청 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>교원 신청</h1>
+                <p>교원 지원서를 상태와 검색어 기준으로 조회합니다.</p>
+            </div>
+        </div>
+
+        <div class="flash" style="background: #fff0ed; color: var(--danger);" th:if="${error}" th:text="${error}">
+            입력값이 올바르지 않습니다.
+        </div>
+
+        <form class="panel filter-grid" th:action="@{/admin/request/teacher-applications}" method="get">
+            <label>검색어
+                <input name="keyword" th:value="${pageModel.filter.keyword}" placeholder="이름, 이메일, 연락처, 과목">
+            </label>
+            <label>상태
+                <select name="status">
+                    <option value="">전체</option>
+                    <option th:each="option : ${pageModel.statusOptions}"
+                            th:value="${option.status.name()}"
+                            th:text="${option.label}"
+                            th:selected="${pageModel.filter.status == option.status}">승인 대기</option>
+                </select>
+            </label>
+            <label>페이지 크기
+                <select name="size">
+                    <option value="10" th:selected="${pageModel.applications.size == 10}">10</option>
+                    <option value="20" th:selected="${pageModel.applications.size == 20}">20</option>
+                    <option value="50" th:selected="${pageModel.applications.size == 50}">50</option>
+                    <option value="100" th:selected="${pageModel.applications.size == 100}">100</option>
+                </select>
+            </label>
+            <button class="button" type="submit">조회</button>
+            <a class="reset-link" th:href="@{/admin/request/teacher-applications}">초기화</a>
+        </form>
+
+        <section class="panel table-panel">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>신청자</th>
+                        <th>연락처</th>
+                        <th>이메일</th>
+                        <th>선호 과목</th>
+                        <th>선호 분반</th>
+                        <th>상태</th>
+                        <th>신청일</th>
+                        <th>처리일</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="row : ${pageModel.applications.content}">
+                        <td th:text="${row.application.id}">1</td>
+                        <td>
+                            <a class="link"
+                               th:href="@{/admin/request/teacher-applications/{applicationId}(applicationId=${row.application.id})}"
+                               th:text="${row.application.applicantName}">홍길동</a>
+                        </td>
+                        <td th:text="${row.application.applicantPhoneNumber}">010-0000-0000</td>
+                        <td th:text="${row.application.applicantEmail}">hong@example.com</td>
+                        <td th:text="${row.application.preferredSubjectName}">국어</td>
+                        <td th:text="${row.application.preferredClassroomName}">국화반</td>
+                        <td>
+                            <span class="pill"
+                                  th:classappend="'status-' + ${row.application.status.name()}"
+                                  th:text="${row.statusLabel}">승인 대기</span>
+                        </td>
+                        <td th:text="${#temporals.format(row.application.createdAt, 'yyyy.MM.dd HH:mm')}">2026.05.24 10:00</td>
+                        <td th:text="${row.application.reviewedAt != null ? #temporals.format(row.application.reviewedAt, 'yyyy.MM.dd HH:mm') : '-'}">-</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(pageModel.applications.content)}">
+                        <td colspan="9" class="empty">교원 신청이 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pager">
+                <span th:text="|총 ${pageModel.applications.totalElements}건 · ${pageModel.applications.page + 1}/${pageModel.applications.totalPages == 0 ? 1 : pageModel.applications.totalPages} 페이지|">총 0건</span>
+                <div>
+                    <a class="reset-link"
+                       th:classappend="${!pageModel.applications.hasPrevious()} ? 'disabled'"
+                       th:href="@{/admin/request/teacher-applications(status=${pageModel.filter.status},keyword=${pageModel.filter.keyword},size=${pageModel.applications.size},page=${pageModel.applications.previousPage()})}">이전</a>
+                    <a class="reset-link"
+                       th:classappend="${!pageModel.applications.hasNext()} ? 'disabled'"
+                       th:href="@{/admin/request/teacher-applications(status=${pageModel.filter.status},keyword=${pageModel.filter.keyword},size=${pageModel.applications.size},page=${pageModel.applications.nextPage()})}">다음</a>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

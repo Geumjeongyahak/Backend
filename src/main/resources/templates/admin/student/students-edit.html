@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('학생 수정')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>학생 수정</h1>
+                <p th:text="${student.name}">학생</p>
+            </div>
+        </div>
+        <form class="panel form-grid" th:action="@{/admin/student/students/{studentId}(studentId=${student.id})}" method="post">
+            <label>이름 <input name="name" th:value="${student.name}" maxlength="50" required></label>
+            <label>연락처 <input name="phoneNumber" th:value="${student.phoneNumber}" placeholder="010-1234-5678"></label>
+            <label>상태
+                <select name="status" required>
+                    <option th:each="status : ${studentStatuses}" th:value="${status.name()}" th:text="${status.name()}" th:selected="${student.status == status.name()}">ENROLLED</option>
+                </select>
+            </label>
+            <label>분반
+                <select name="classroomIds" multiple required size="6">
+                    <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}" th:selected="${student.classroomIds().contains(classroom.id)}">분반</option>
+                </select>
+            </label>
+            <label>설명 <textarea name="description" th:text="${student.description}"></textarea></label>
+            <button class="button" type="submit">수정</button>
+        </form>
+    </main>
+</div>
+</body>
+</html>

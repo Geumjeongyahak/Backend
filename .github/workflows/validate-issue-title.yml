@@ -1,0 +1,24 @@
+name: Validate Issue Title
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  issues: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check issue title prefix
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "${ISSUE_TITLE}" =~ ^\[(FEAT|FIX)\]\ .+ ]]; then
+            echo "::error title=Invalid issue title::Issue title must start with '[FEAT] ' or '[FIX] '."
+            echo "Current title: ${ISSUE_TITLE}"
+            exit 1
+          fi

@@ -38,5 +38,29 @@ out/
 
 ## 기본 환경 설정 관련
 .env
+.env.*
+scripts/gcp/00_env/*.env
+scripts/gcp/secrets/
+*-sa-key.json
 .devdbrc
 .claude/settings.local.json
+.secret
+.secret/*
+logs/
+scripts/local/
+infra/monitoring/secrets/*
+!infra/monitoring/secrets/.gitignore
+infra/monitoring/monitoring.env
+infra/monitoring/grafana/data/
+infra/monitoring/grafana/admin-login.txt
+infra/monitoring/caddy/*auth*
+
+# Local LLM harness run artifacts
+harness/runs/
+harness/tasks/issue-*-feature-task.md
+
+docs/issue/*
+docs/pr/*
+src/test/resources/images/*
+
+.codex

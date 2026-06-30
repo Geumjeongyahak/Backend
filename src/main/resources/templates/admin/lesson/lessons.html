@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('수업 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>수업</h1>
+                <p>날짜와 수업 상태 기준으로 수업 정보를 조회합니다.</p>
+            </div>
+        </div>
+
+        <form class="panel filter-grid" th:action="@{/admin/lesson/lessons}" method="get">
+            <label>시작일
+                <input name="startDate" type="date" th:value="${filter.startDate}">
+            </label>
+            <label>종료일
+                <input name="endDate" type="date" th:value="${filter.endDate}">
+            </label>
+            <label>수업 상태
+                <select name="status">
+                    <option value="">전체</option>
+                    <option th:each="status : ${lessonStatuses}" th:value="${status.name()}" th:text="${status.displayName}" th:selected="${filter.status == status}">예정</option>
+                </select>
+            </label>
+            <label>페이지 크기
+                <select name="size">
+                    <option value="10" th:selected="${lessonsPage.size == 10}">10</option>
+                    <option value="20" th:selected="${lessonsPage.size == 20}">20</option>
+                    <option value="50" th:selected="${lessonsPage.size == 50}">50</option>
+                    <option value="100" th:selected="${lessonsPage.size == 100}">100</option>
+                </select>
+            </label>
+            <label>정렬
+                <select name="sort">
+                    <option value="date,ASC;period,ASC" th:selected="${filter.sort == null || filter.sort == 'date,ASC;period,ASC'}">날짜 오름차순</option>
+                    <option value="date,DESC;period,ASC" th:selected="${filter.sort == 'date,DESC;period,ASC'}">날짜 내림차순</option>
+                    <option value="teacherName,ASC" th:selected="${filter.sort == 'teacherName,ASC'}">교사 오름차순</option>
+                    <option value="subjectName,ASC" th:selected="${filter.sort == 'subjectName,ASC'}">과목 오름차순</option>
+                    <option value="status,ASC" th:selected="${filter.sort == 'status,ASC'}">수업 상태 오름차순</option>
+                </select>
+            </label>
+            <button class="button" type="submit">조회</button>
+            <a class="reset-link" th:href="@{/admin/lesson/lessons}">초기화</a>
+        </form>
+
+        <section class="panel table-panel">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>날짜</th>
+                        <th>교시</th>
+                        <th>시간</th>
+                        <th>교사</th>
+                        <th>과목</th>
+                        <th>수업 상태</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="lesson : ${lessonsPage.content}">
+                        <td th:text="${lesson.id}">1</td>
+                        <td th:text="${lesson.date}">2026-05-11</td>
+                        <td th:text="${lesson.period}">1</td>
+                        <td th:text="|${lesson.startTime} - ${lesson.endTime}|">19:20 - 20:00</td>
+                        <td th:text="${lesson.teacherName}">홍길동</td>
+                        <td th:text="${lesson.subjectName}">국어</td>
+                        <td><span class="pill" th:text="${lesson.statusLabel}">예정</span></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(lessonsPage.content)}">
+                        <td colspan="7" class="empty">조회된 수업이 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pager">
+                <span th:text="|총 ${lessonsPage.totalElements}건 · ${lessonsPage.page + 1}/${lessonsPage.totalPages == 0 ? 1 : lessonsPage.totalPages} 페이지|">총 0건</span>
+                <div>
+                    <a class="reset-link" th:classappend="${!lessonsPage.hasPrevious()} ? 'disabled'" th:href="@{/admin/lesson/lessons(startDate=${filter.startDate},endDate=${filter.endDate},status=${filter.status},size=${lessonsPage.size},sort=${filter.sort},page=${lessonsPage.previousPage()})}">이전</a>
+                    <a class="reset-link" th:classappend="${!lessonsPage.hasNext()} ? 'disabled'" th:href="@{/admin/lesson/lessons(startDate=${filter.startDate},endDate=${filter.endDate},status=${filter.status},size=${lessonsPage.size},sort=${filter.sort},page=${lessonsPage.nextPage()})}">다음</a>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

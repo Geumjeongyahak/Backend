@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('수업 교환 요청 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>수업 교환 요청</h1>
+                <p>수업 교환 요청과 제안의 처리 현황을 확인합니다.</p>
+            </div>
+        </div>
+
+        <section class="metric-grid dashboard-swipe swipe-grid">
+            <div class="metric">
+                <span>승인 대기 요청</span>
+                <strong th:text="${dashboard.pendingRequestCount}">0</strong>
+            </div>
+            <div class="metric">
+                <span>진행 중 제안</span>
+                <strong th:text="${dashboard.activeProposalCount}">0</strong>
+            </div>
+        </section>
+
+        <div class="dashboard-grid">
+            <section class="panel">
+                <h2>요청 상태</h2>
+                <div class="detail-grid">
+                    <div class="detail-item" th:each="statusCount : ${dashboard.requestStatusCounts}">
+                        <span th:text="${statusCount.label}">승인 대기</span>
+                        <strong th:text="|${statusCount.count}건|">0건</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel">
+                <h2>제안 상태</h2>
+                <div class="detail-grid">
+                    <div class="detail-item" th:each="statusCount : ${dashboard.proposalStatusCounts}">
+                        <span th:text="${statusCount.label}">진행 중</span>
+                        <strong th:text="|${statusCount.count}건|">0건</strong>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section class="panel table-panel">
+            <div style="padding: 22px 22px 4px;">
+                <h2>검토 필요 요청</h2>
+                <p>오래된 승인 대기 요청부터 최대 10건을 표시합니다.</p>
+            </div>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>제목</th>
+                        <th>분반</th>
+                        <th>요청자</th>
+                        <th>수업일</th>
+                        <th>만료 시각</th>
+                        <th>제안</th>
+                        <th>상태</th>
+                        <th>생성일</th>
+                        <th>처리</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="request : ${dashboard.reviewRequiredRequests}">
+                        <td th:text="${request.id}">1</td>
+                        <td th:text="${request.title}">수업 교환 요청</td>
+                        <td th:text="${request.classroomName}">벚꽃반</td>
+                        <td th:text="${request.requestedByName}">홍길동</td>
+                        <td th:text="${request.lessonDate}">2026-06-10</td>
+                        <td th:text="${#temporals.format(request.expiresAt, 'yyyy.MM.dd HH:mm')}">2026.06.07 23:59</td>
+                        <td th:text="|전체 ${request.proposalCount}건 / 진행 ${request.activeProposalCount}건|">전체 0건 / 진행 0건</td>
+                        <td><span class="pill status-PENDING" th:text="${request.statusLabel}">승인 대기</span></td>
+                        <td th:text="${#temporals.format(request.createdAt, 'yyyy.MM.dd')}">2026.05.20</td>
+                        <td>
+                            <form class="inline-form" th:action="@{/admin/request/lesson-exchange/{requestId}/approve(requestId=${request.id})}" method="post">
+                                <button class="button" type="submit">승인</button>
+                            </form>
+                            <form class="inline-form" th:action="@{/admin/request/lesson-exchange/{requestId}/reject(requestId=${request.id})}" method="post">
+                                <input name="note" placeholder="반려 사유" required>
+                                <button class="button danger" type="submit">반려</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(dashboard.reviewRequiredRequests)}">
+                        <td colspan="10" class="empty">검토가 필요한 수업 교환 요청이 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,21 @@
+[Unit]
+Description=Grafana
+After=prometheus.service loki.service tempo.service
+
+[Container]
+Image=docker.io/grafana/grafana:latest
+ContainerName=grafana
+Network=monitoring.network
+PublishPort=3000:3000
+Environment=GF_SECURITY_ADMIN_USER=admin
+Environment=GF_SECURITY_ADMIN_PASSWORD=CHANGE_ME
+Environment=GF_SERVER_DOMAIN=dashboard.leeswallow.click
+Environment=GF_SERVER_ROOT_URL=https://dashboard.leeswallow.click/
+Volume=%h/Infra/monitoring/grafana/data:/var/lib/grafana:Z
+Volume=%h/Infra/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro,Z
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

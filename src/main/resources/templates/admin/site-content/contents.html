@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('사이트 콘텐츠 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>사이트 콘텐츠</h1>
+                <p>기관 소개 페이지의 교장, 부서, 반 소개 문구를 관리합니다.</p>
+            </div>
+            <a class="button" th:href="@{/admin/site-content/contents/new}">콘텐츠 등록</a>
+        </div>
+        <section class="panel table-panel">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>유형</th>
+                        <th>제목</th>
+                        <th>이름</th>
+                        <th>그룹</th>
+                        <th>연결 ID</th>
+                        <th>정렬</th>
+                        <th>관리</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="content : ${contents}">
+                        <td th:text="${content.id}">1</td>
+                        <td><span class="pill" th:text="${content.contentType}">DEPARTMENT</span></td>
+                        <td th:text="${content.title}">교무기획부</td>
+                        <td th:text="${content.name ?: '-'}">-</td>
+                        <td th:text="${content.group ?: '-'}">-</td>
+                        <td th:text="${content.refId ?: '-'}">-</td>
+                        <td th:text="${content.sortOrder}">1</td>
+                        <td>
+                            <a class="button secondary" th:href="@{/admin/site-content/contents/{contentId}/edit(contentId=${content.id})}">수정</a>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(contents)}">
+                        <td colspan="8" class="empty">등록된 사이트 콘텐츠가 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

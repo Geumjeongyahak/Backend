@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('연혁 수정')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title"><div><h1>연혁 수정</h1><p th:text="|#${history.id} ${history.title}|">연혁</p></div></div>
+        <form class="panel form-grid" th:action="@{/admin/site-content/history/{historyId}(historyId=${history.id})}" method="post" enctype="multipart/form-data">
+            <label>제목 <input name="title" required maxlength="120" th:value="${history.title}"></label>
+            <label>날짜 <input type="date" name="historyDate" required th:value="${history.historyDate}"></label>
+            <label>정렬 <input type="number" name="sortOrder" th:value="${history.sortOrder}"></label>
+            <label style="grid-column: 1 / -1;">상세 <textarea name="detail" rows="4" th:text="${history.detail}"></textarea></label>
+            <label style="grid-column: 1 / -1;">링크
+                <textarea name="linksText" rows="4" th:text="${history.linksText}" placeholder="한 줄에 label|href 형식으로 입력"></textarea>
+            </label>
+            <label style="grid-column: 1 / -1;">사진
+                <textarea name="photosText" rows="5" th:text="${history.photosText}"></textarea>
+            </label>
+            <label>사진 추가 업로드 <input type="file" name="photoFile" accept="image/*"></label>
+            <label>업로드 사진 설명 <input name="photoAlt" maxlength="255"></label>
+            <button class="button" type="submit">저장</button>
+            <a class="reset-link" th:href="@{/admin/site-content/history}">취소</a>
+        </form>
+        <form class="panel" th:action="@{/admin/site-content/history/{historyId}/delete(historyId=${history.id})}" method="post">
+            <button class="button danger" type="submit">삭제</button>
+        </form>
+    </main>
+</div>
+</body>
+</html>

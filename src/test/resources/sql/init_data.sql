@@ -1,0 +1,182 @@
+-- 1. Departments
+INSERT INTO departments (id, name, description) VALUES
+    (1, '교무기획부', '기관의 교육 운영 계획 수립, 교무 일정 조정, 학사 운영 정책 기획을 담당하는 부서'),
+    (2, '교육연구부', '교육 프로그램 연구, 수업 품질 개선, 커리큘럼 개발과 자료 분석을 담당하는 부서'),
+    (3, '생활안전부', '학생 생활지도, 안전 관리, 생활 지원 체계 운영을 담당하는 부서'),
+    (4, '총무부', '기관의 행정 운영, 문서 관리, 내부 지원과 총무 업무를 담당하는 부서'),
+    (5, '홍보부', '기관 홍보, 대외 소통, 행사 안내와 홍보 콘텐츠 운영을 담당하는 부서'),
+    (6, '편집부', '소식지, 게시글, 각종 문서와 콘텐츠의 편집 및 제작을 담당하는 부서');
+ALTER TABLE departments ALTER COLUMN id RESTART WITH 7;
+
+-- 2. Users
+-- admin1234 / admin1234
+INSERT INTO users (id, name, primary_email, role, department_id, teacher_start_at, teacher_end_at) VALUES
+    (1, '관리자', 'admin@test.com', 'ADMIN', 4, NULL, NULL);
+
+-- teacher01 / teacher01
+INSERT INTO users (id, name, primary_email, role, department_id, teacher_start_at, teacher_end_at) VALUES
+    (2, '홍길동', 'teacher01@test.com', 'VOLUNTEER', 2, '2026-02-01', NULL);
+
+-- teacher02 / teacher02
+INSERT INTO users (id, name, primary_email, role, department_id, teacher_start_at, teacher_end_at) VALUES
+    (3, '김철수', 'teacher02@test.com', 'VOLUNTEER', 2, '2026-02-01', NULL);
+
+-- guest01 / guest01
+INSERT INTO users (id, name, primary_email, role, department_id, teacher_start_at, teacher_end_at) VALUES
+    (4, '이영희', 'guest01@test.com', 'GUEST', NULL, NULL, NULL);
+
+INSERT INTO users (id, name, primary_email, role, department_id, teacher_start_at, teacher_end_at) VALUES
+    (5, 'Apps Script Bot', 'geumjeongyahak-apps-script-bot@gmail.com', 'VOLUNTEER', NULL, NULL, NULL);
+
+ALTER TABLE users ALTER COLUMN id RESTART WITH 6;
+
+-- 3. User Credentials
+INSERT INTO user_credentials (id, user_id, provider, credential_email, password_hash, email_verified) VALUES
+    (1, 1, 'LOCAL', 'admin@test.com', '$2a$10$A0Av/dPBUz5uoDmp0Z/2S.dsMzOWFL5gLK7CrXmQp6Rw2vqWulapi', TRUE),
+    (2, 2, 'LOCAL', 'teacher01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
+    (3, 3, 'LOCAL', 'teacher02@test.com', '$2a$12$jNEpPdWPB8WX6kOR/t9cru3Lz7WwZRw3KHfgoRJBg0ddWUFnymr/O', TRUE),
+    (4, 4, 'LOCAL', 'guest01@test.com', '$2a$12$nsaiXXxEBMV9vNwh23WInekm2WisaINtbtLsP1JXlgHnt9eDqnaRu', TRUE),
+    (5, 5, 'LOCAL', 'geumjeongyahak-apps-script-bot@gmail.com', '$2a$10$6w/cCD2l06.TF3GK7FuCv.uMBX7gqIvgMdwkuSe3D3F6WYbgctibW', TRUE);
+ALTER TABLE user_credentials ALTER COLUMN id RESTART WITH 6;
+
+-- 4. User Permissions
+INSERT INTO user_permissions (user_id, permission_code) VALUES
+    (2, 'channel:write:1'),
+    (5, 'daily-schedule:manage:*'),
+    (5, 'user:read:*'),
+    (5, 'purchase-request:read:*'),
+    (5, 'purchase-request:manage:*'),
+    (5, 'vendor:read:*');
+
+-- 5. Department Permissions
+INSERT INTO department_permissions (department_id, role_type, permission_code) VALUES
+    (1, 'MEMBER', 'subject:read:*'),
+    (1, 'MEMBER', 'lesson:read:*'),
+    (1, 'MEMBER', 'channel:write:7'),
+    (1, 'MANAGER', 'subject:write:*'),
+    (1, 'MANAGER', 'subject:manage:*'),
+    (1, 'MANAGER', 'lesson:write:*'),
+    (1, 'MANAGER', 'lesson:manage:*'),
+    (1, 'MANAGER', 'event:manage:*'),
+    (1, 'MANAGER', 'lesson-exchange-request:manage:*'),
+    (1, 'MANAGER', 'channel:manage:7'),
+
+    (2, 'MEMBER', 'teacher-application:read:*'),
+    (2, 'MEMBER', 'daily-schedule:read:*'),
+    (2, 'MEMBER', 'absence-request:read:*'),
+    (2, 'MEMBER', 'channel:write:8'),
+    (2, 'MANAGER', 'student:write:*'),
+    (2, 'MANAGER', 'student:manage:*'),
+    (2, 'MANAGER', 'teacher-application:manage:*'),
+    (2, 'MANAGER', 'daily-schedule:manage:*'),
+    (2, 'MANAGER', 'absence-request:manage:*'),
+    (2, 'MANAGER', 'channel:manage:8'),
+
+    (3, 'MEMBER', 'purchase-request:read:*'),
+    (3, 'MEMBER', 'channel:write:9'),
+    (3, 'MANAGER', 'purchase-request:review:*'),
+    (3, 'MANAGER', 'channel:manage:9'),
+
+    (4, 'MEMBER', 'purchase-request:read:*'),
+    (4, 'MEMBER', 'vendor:read:*'),
+    (4, 'MEMBER', 'channel:write:10'),
+    (4, 'MANAGER', 'purchase-request:review:*'),
+    (4, 'MANAGER', 'purchase-request:manage:*'),
+    (4, 'MANAGER', 'vendor:manage:*'),
+    (4, 'MANAGER', 'channel:manage:10'),
+
+    (5, 'MEMBER', 'teacher-application:read:*'),
+    (5, 'MEMBER', 'channel:write:11'),
+    (5, 'MANAGER', 'channel:manage:11');
+
+-- 6. Classrooms
+INSERT INTO classrooms (id, name, type, description)
+VALUES
+    (1, '벚꽃반', 'WEEKDAY', '평일 기초 학습반'),
+    (2, '장미반', 'WEEKDAY', '평일 초급 학습반'),
+    (3, '스마트폰반', 'WEEKEND', '스마트폰 기능/앱 사용');
+ALTER TABLE classrooms ALTER COLUMN id RESTART WITH 4;
+
+-- 6-1. Site Contents
+INSERT INTO site_contents (id, content_type, ref_id, title, name, content_group, sort_order)
+VALUES
+    (1, 'PRINCIPAL', NULL, '교장', '정해웅', NULL, 1),
+    (2, 'DEPARTMENT', 1, '교무기획부', NULL, NULL, 2),
+    (3, 'DEPARTMENT', 2, '교육연구부', NULL, NULL, 3),
+    (4, 'CLASSROOM', 1, '벚꽃반', NULL, 'WEEKDAY', 1),
+    (5, 'CLASSROOM', NULL, '주말 오전반', NULL, 'WEEKEND_MORNING', 1),
+    (6, 'CLASSROOM', NULL, '주말 오후반', NULL, 'WEEKEND_AFTERNOON', 1);
+ALTER TABLE site_contents ALTER COLUMN id RESTART WITH 7;
+
+INSERT INTO site_content_items (id, site_content_id, content, sort_order)
+VALUES
+    (1, 1, '금정열린배움터의 전반적인 운영을 총괄', 1),
+    (2, 2, '야학 행사 계획 및 교무 선생님 보조', 1),
+    (3, 3, '신입 선생님 면접', 1),
+    (4, 3, '생일 및 참관, 연구 수업 관리', 2),
+    (5, 3, '각종 일지 관리', 3),
+    (6, 4, '평일 기초 학습반', 1),
+    (7, 5, '주말 오전 시간대에 운영되는 반', 1),
+    (8, 6, '주말 오후 시간대에 운영되는 반', 1);
+ALTER TABLE site_content_items ALTER COLUMN id RESTART WITH 9;
+
+INSERT INTO site_histories (id, title, detail, history_date, sort_order)
+VALUES
+    (1, '1997년', '금정열린배움터 설립', DATE '1997-01-01', 1);
+ALTER TABLE site_histories ALTER COLUMN id RESTART WITH 2;
+
+-- 7. Channels
+INSERT INTO channels (id, name, description, channel_type, binding_type, ref_id, access_level, allow_guest_read, is_default, is_active)
+VALUES
+    (1, '공지사항', '기관 전체 공지사항 채널', 'NOTICE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE, TRUE),
+    (2, '행사안내', '주요 행사 및 일정 안내', 'EVENT', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE, TRUE),
+    (3, '자료실', '기관 공용 자료실 채널', 'RESOURCE', 'STANDALONE', NULL, 'READ_ONLY', FALSE, TRUE, TRUE),
+    (4, '벚꽃반', '벚꽃반 게시판', 'CLASSROOM', 'DOMAIN_LINKED', 1, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (5, '장미반', '장미반 게시판', 'CLASSROOM', 'DOMAIN_LINKED', 2, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (6, '스마트폰반', '스마트폰반 게시판', 'CLASSROOM', 'DOMAIN_LINKED', 3, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (7, '교무기획부', '교무기획부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 1, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (8, '교육연구부', '교육연구부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 2, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (9, '생활안전부', '생활안전부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 3, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (10, '총무부', '총무부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 4, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (11, '홍보부', '홍보부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 5, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (12, '편집부', '편집부 게시판', 'DEPARTMENT', 'DOMAIN_LINKED', 6, 'READ_WRITE', FALSE, TRUE, TRUE),
+    (13, '교칙', '교칙 안내문을 게시하는 기본 안내 채널', 'GUIDE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE, TRUE),
+    (14, '교사 신청 안내', '교사 신청 안내문을 게시하는 기본 안내 채널', 'GUIDE', 'STANDALONE', NULL, 'READ_ONLY', TRUE, TRUE, TRUE);
+ALTER TABLE channels ALTER COLUMN id RESTART WITH 15;
+
+-- 8. Subjects
+INSERT INTO subjects (id, class_id, teacher_id, name, start_at, end_at, day_of_week, start_time, end_time, period, teacher_assigned_at, description)
+VALUES
+    (1, 1, 2, '한글 기초', '2026-02-01', '2026-06-30', 'WEDNESDAY',  '19:20:00', '20:00:00', 1, '2026-02-01 00:00:00', '기초 한글 수업'),
+    (2, 2, 3, '수학 기초', '2026-02-01', '2026-06-30', 'WEDNESDAY',  '19:20:00', '20:00:00', 1, '2026-02-01 00:00:00', '기초 수학 수업'),
+    (3, 3, 2, '스마트폰 활용', '2026-02-01', '2026-06-30', 'SATURDAY','19:20:00', '20:00:00', 1, '2026-02-01 00:00:00', '스마트폰 사용법'),
+    (4, 1, 2, '한글 읽기', '2026-02-01', '2026-06-30', 'WEDNESDAY', '20:10:00', '20:50:00', 2, '2026-02-01 00:00:00', '벚꽃반 2교시 읽기 수업'),
+    (5, 1, 2, '생활 문해', '2026-02-01', '2026-06-30', 'WEDNESDAY', '21:00:00', '21:40:00', 3, '2026-02-01 00:00:00', '벚꽃반 3교시 생활 문해 수업'),
+    (6, 2, 3, '생활 수학', '2026-02-01', '2026-06-30', 'WEDNESDAY', '20:10:00', '20:50:00', 2, '2026-02-01 00:00:00', '장미반 2교시 생활 수학 수업'),
+    (7, 2, 3, '수학 응용', '2026-02-01', '2026-06-30', 'WEDNESDAY', '21:00:00', '21:40:00', 3, '2026-02-01 00:00:00', '장미반 3교시 수학 응용 수업');
+ALTER TABLE subjects ALTER COLUMN id RESTART WITH 8;
+
+-- 9. Lessons
+INSERT INTO lessons (id, subject_id, teacher_id, period, date, start_time, end_time, status)
+VALUES
+    (1, 1, 2, 1, '2026-06-10', '19:20:00', '20:00:00', 'SCHEDULED'),
+    (2, 4, 2, 2, '2026-06-10', '20:10:00', '20:50:00', 'SCHEDULED'),
+    (3, 5, 2, 3, '2026-06-10', '21:00:00', '21:40:00', 'SCHEDULED'),
+    (4, 2, 3, 1, '2026-06-17', '19:20:00', '20:00:00', 'SCHEDULED'),
+    (5, 6, 3, 2, '2026-06-17', '20:10:00', '20:50:00', 'SCHEDULED'),
+    (6, 7, 3, 3, '2026-06-17', '21:00:00', '21:40:00', 'SCHEDULED');
+ALTER TABLE lessons ALTER COLUMN id RESTART WITH 7;
+
+-- 10. Students
+INSERT INTO students (id, name, phone_number, description, status)
+VALUES
+    (1, '이영희', '010-3333-3333', '기초반', 'ENROLLED'),
+    (2, '박민수', '010-4444-4444', '기초반', 'ENROLLED');
+ALTER TABLE students ALTER COLUMN id RESTART WITH 3;
+
+-- 10. Student Classrooms
+INSERT INTO student_classrooms (id, student_id, classroom_id)
+VALUES
+    (1, 1, 1),
+    (2, 2, 1);
+ALTER TABLE student_classrooms ALTER COLUMN id RESTART WITH 3;

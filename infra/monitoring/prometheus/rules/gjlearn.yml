@@ -1,0 +1,66 @@
+groups:
+  - name: gjlearn-basic
+    rules:
+      - alert: GJLearnApiActuatorDown
+        expr: up{project="gjlearn", role="app-actuator"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "GJLearn API actuator is down"
+
+      - alert: GJLearnAppNodeDown
+        expr: up{project="gjlearn", role="node-exporter", service="app"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "GJLearn App VM node-exporter is down"
+
+      - alert: GJLearnDbNodeDown
+        expr: up{project="gjlearn", role="node-exporter", service="db"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "GJLearn DB VM node-exporter is down"
+
+      - alert: GJLearnPostgresDown
+        expr: pg_up{project="gjlearn", role="postgres-exporter"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "GJLearn PostgreSQL is down"
+
+      - alert: GJLearnApiHigh5xxRatio
+        expr: sum by (env, service) (rate(http_server_requests_seconds_count{project="gjlearn", role="app-actuator", status=~"5.."}[5m])) / clamp_min(sum by (env, service) (rate(http_server_requests_seconds_count{project="gjlearn", role="app-actuator"}[5m])), 0.001) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GJLearn API 5xx ratio is above 5%"
+
+      - alert: GJLearnApiHighP95Latency
+        expr: histogram_quantile(0.95, sum by (env, service, le) (rate(http_server_requests_seconds_bucket{project="gjlearn", role="app-actuator"}[5m]))) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GJLearn API p95 latency is above 1s"
+
+      - alert: GJLearnDiskHigh
+        expr: 100 * (1 - node_filesystem_avail_bytes{project="gjlearn", role="node-exporter", fstype!~"tmpfs|overlay", mountpoint!~"/run.*|/var/lib/.+"} / node_filesystem_size_bytes{project="gjlearn", role="node-exporter", fstype!~"tmpfs|overlay", mountpoint!~"/run.*|/var/lib/.+"}) > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GJLearn VM disk usage is above 85%"
+
+      - alert: GJLearnDbConnectionUsageHigh
+        expr: sum by (env, service, instance) (pg_stat_database_numbackends{project="gjlearn", role="postgres-exporter"}) / max by (env, service, instance) (pg_settings_max_connections{project="gjlearn", role="postgres-exporter"}) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GJLearn PostgreSQL connection usage is above 80%"

@@ -1,0 +1,7 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('분반 수정')}"></head>
+<body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+<main class="stack"><div class="page-title"><div><h1>분반 수정</h1><p th:text="${classroom.name}">분반</p></div></div>
+<form class="panel form-grid" th:action="@{/admin/classroom/classrooms/{classroomId}(classroomId=${classroom.id})}" method="post"><label>분반명 <input name="name" th:value="${classroom.name}" required></label><label>유형 <select name="type"><option th:each="type : ${classroomTypes}" th:value="${type.name()}" th:text="${type.name()}" th:selected="${classroom.type == type.name()}">WEEKDAY</option></select></label><label>설명 <textarea name="description" th:text="${classroom.description}"></textarea></label><button class="button" type="submit">수정</button></form>
+</main></div></body></html>

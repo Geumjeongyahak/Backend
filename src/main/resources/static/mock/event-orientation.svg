@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-label="신입 교원 오리엔테이션 mock image">
+  <rect width="960" height="540" fill="#f4f7fb"/>
+  <rect x="72" y="72" width="816" height="396" rx="18" fill="#ffffff" stroke="#d7e0ea" stroke-width="3"/>
+  <rect x="112" y="116" width="360" height="42" rx="8" fill="#2f6f8f"/>
+  <rect x="112" y="180" width="736" height="18" rx="9" fill="#c8d8e3"/>
+  <rect x="112" y="216" width="620" height="18" rx="9" fill="#dbe6ee"/>
+  <circle cx="208" cy="344" r="54" fill="#f2b84b"/>
+  <circle cx="328" cy="344" r="54" fill="#4f8fb8"/>
+  <circle cx="448" cy="344" r="54" fill="#82a85b"/>
+  <rect x="560" y="304" width="248" height="84" rx="16" fill="#edf3f7"/>
+  <text x="112" y="148" fill="#ffffff" font-family="Arial, sans-serif" font-size="26" font-weight="700">Orientation</text>
+  <text x="560" y="356" fill="#31465a" font-family="Arial, sans-serif" font-size="28" font-weight="700">금정열린배움터</text>
+</svg>

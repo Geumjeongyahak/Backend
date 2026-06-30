@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('채널 상세')}"></head>
+<body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+<main class="stack">
+    <div class="page-title">
+        <div><h1 th:text="${channel.name}">채널</h1><p th:text="${channel.description ?: '채널 상세 정보'}">설명</p></div>
+        <a class="button" th:href="@{/admin/channel/{channelId}/posts(channelId=${channel.id})}">게시글</a>
+    </div>
+    <section class="panel detail-grid">
+        <div class="detail-item"><span>ID</span><strong th:text="${channel.id}">1</strong></div>
+        <div class="detail-item"><span>유형</span><strong th:text="${channel.channelType}">CUSTOM</strong></div>
+        <div class="detail-item"><span>연동</span><strong th:text="${channel.bindingType}">STANDALONE</strong></div>
+        <div class="detail-item"><span>접근 수준</span><strong th:text="${channel.accessLevel}">READ_WRITE</strong></div>
+        <div class="detail-item"><span>방문자 읽기</span><strong th:text="${channel.allowGuestRead ? '허용' : '차단'}">차단</strong></div>
+        <div class="detail-item"><span>상태</span><strong th:text="${channel.isActive ? '활성' : '숨김'}">활성</strong></div>
+        <div class="detail-item"><span>최근 게시</span><strong th:text="${channel.lastPostedAt != null ? #temporals.format(channel.lastPostedAt, 'yyyy.MM.dd HH:mm') : '-'}">-</strong></div>
+    </section>
+    <section class="panel" th:if="${channel.bindingType == 'STANDALONE'}">
+        <form th:action="@{/admin/channel/channels/{channelId}/delete(channelId=${channel.id})}" method="post">
+            <button class="button danger" type="submit">채널 삭제</button>
+        </form>
+    </section>
+</main>
+</div></body></html>

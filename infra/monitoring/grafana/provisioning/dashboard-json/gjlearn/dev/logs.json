@@ -1,0 +1,257 @@
+{
+  "uid": "gjlearn-dev-logs",
+  "title": "GJLearn 개발 Logs",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "project",
+        "type": "constant",
+        "label": "Project",
+        "query": "gjlearn",
+        "current": {
+          "text": "gjlearn",
+          "value": "gjlearn"
+        }
+      },
+      {
+        "name": "env",
+        "type": "constant",
+        "label": "Environment",
+        "query": "dev",
+        "current": {
+          "text": "dev",
+          "value": "dev"
+        }
+      },
+      {
+        "name": "service",
+        "type": "custom",
+        "label": "Service",
+        "query": "api,app,db,postgres",
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "ERROR Logs 5m",
+      "type": "stat",
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({project=\"$project\", env=\"$env\", service=~\"$service\", level=\"ERROR\"}[5m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 2,
+      "title": "WARN Logs 5m",
+      "type": "stat",
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({project=\"$project\", env=\"$env\", service=~\"$service\", level=\"WARN\"}[5m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 3,
+      "title": "Auth / OAuth Logs 15m",
+      "type": "stat",
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({project=\"$project\", env=\"$env\", service=~\"$service\"} |~ \"(?i)(auth|oauth|login|token)\" [15m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 4,
+      "title": "Services With Logs",
+      "type": "stat",
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(sum by (service) (count_over_time({project=\"$project\", env=\"$env\", service=~\"$service\"}[5m])))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 5,
+      "title": "WARN / ERROR Rate",
+      "type": "timeseries",
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (service, level) (rate({project=\"$project\", env=\"$env\", service=~\"$service\", level=~\"WARN|ERROR\"}[5m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 6,
+      "title": "Auth / OAuth Rate",
+      "type": "timeseries",
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (service) (rate({project=\"$project\", env=\"$env\", service=~\"$service\"} |~ \"(?i)(auth|oauth|login|token)\" [5m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 7,
+      "title": "Recent ERROR Logs",
+      "type": "logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{project=\"$project\", env=\"$env\", service=~\"$service\", level=\"ERROR\"}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 8,
+      "title": "Recent Logs",
+      "type": "logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{project=\"$project\", env=\"$env\", service=~\"$service\"}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('사용자 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main>
+        <div class="page-title">
+            <div>
+                <h1>사용자</h1>
+                <p>계정, 역할, 소속 부서, 직접 권한을 필터링해 조회합니다.</p>
+            </div>
+            <a class="button" th:href="@{/admin/user/users/new}">사용자 등록</a>
+        </div>
+
+        <form class="panel filter-grid" th:action="@{/admin/user/users}" method="get">
+            <label>검색어
+            </label>
+            <label>역할
+                <select name="role">
+                    <option value="">전체</option>
+                    <option value="ADMIN" th:selected="${filter.role == 'ADMIN'}">ADMIN</option>
+                    <option value="MANAGER" th:selected="${filter.role == 'MANAGER'}">MANAGER</option>
+                    <option value="VOLUNTEER" th:selected="${filter.role == 'VOLUNTEER'}">VOLUNTEER</option>
+                    <option value="GUEST" th:selected="${filter.role == 'GUEST'}">GUEST</option>
+                </select>
+            </label>
+            <label>부서
+                <select name="departmentId">
+                    <option value="">전체</option>
+                    <option th:each="department : ${departments}" th:value="${department.id}" th:text="${department.name}" th:selected="${filter.departmentId == department.id}">부서</option>
+                </select>
+            </label>
+            <label>분반
+                <select name="classroomId">
+                    <option value="">전체</option>
+                    <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}" th:selected="${filter.classroomId == classroom.id}">분반</option>
+                </select>
+            </label>
+            <label>권한 코드
+                <input name="permissionCode" th:value="${filter.permissionCode}" placeholder="user:manage">
+            </label>
+            <label>페이지 크기
+                <select name="size">
+                    <option value="10" th:selected="${usersPage.size == 10}">10</option>
+                    <option value="20" th:selected="${usersPage.size == 20}">20</option>
+                    <option value="50" th:selected="${usersPage.size == 50}">50</option>
+                    <option value="100" th:selected="${usersPage.size == 100}">100</option>
+                </select>
+            </label>
+            <label>정렬
+                <select name="sort">
+                    <option value="createdAt,DESC" th:selected="${filter.sort == null || filter.sort == 'createdAt,DESC'}">생성일 최신순</option>
+                    <option value="createdAt,ASC" th:selected="${filter.sort == 'createdAt,ASC'}">생성일 오래된순</option>
+                    <option value="name,ASC" th:selected="${filter.sort == 'name,ASC'}">이름 오름차순</option>
+                    <option value="role,ASC" th:selected="${filter.sort == 'role,ASC'}">역할 오름차순</option>
+                    <option value="departmentName,ASC" th:selected="${filter.sort == 'departmentName,ASC'}">부서 오름차순</option>
+                </select>
+            </label>
+            <button class="button" type="submit">조회</button>
+            <a class="reset-link" th:href="@{/admin/user/users}">초기화</a>
+        </form>
+
+        <section class="panel table-panel">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>이름</th>
+                        <th>이메일</th>
+                        <th>연락처</th>
+                        <th>역할</th>
+                        <th>부서</th>
+                        <th>분반</th>
+                        <th>직접 권한</th>
+                        <th>운영</th>
+                        <th>생성일</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="user : ${usersPage.content}">
+                        <td th:text="${user.id}">1</td>
+                        <td><a class="link" th:href="@{/admin/user/users/{userId}(userId=${user.id})}" th:text="${user.name}">홍길동</a></td>
+                        <td th:text="${user.email ?: '-'}">user@example.com</td>
+                        <td th:text="${user.phoneNumber ?: '-'}">010</td>
+                        <td><span class="pill" th:text="${user.role}">ADMIN</span></td>
+                        <td>
+                            <a class="link" th:if="${user.departmentId != null}" th:href="@{/admin/department/departments/{departmentId}(departmentId=${user.departmentId})}" th:text="${user.departmentName}">학사</a>
+                            <span th:if="${user.departmentId == null}">-</span>
+                        </td>
+                        <td>
+                            <a class="link" th:if="${user.classroomId != null}" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${user.classroomId})}" th:text="${user.classroomName}">벚꽃반</a>
+                            <span th:if="${user.classroomId == null}">-</span>
+                        </td>
+                        <td>
+                            <span th:if="${#lists.isEmpty(user.permissions)}">-</span>
+                            <span class="tag" th:each="permission : ${user.permissions}" th:text="${permission}">user:read:*</span>
+                        </td>
+                        <td>
+                            <a class="button secondary" th:href="@{/admin/user/users/{userId}(userId=${user.id})}">상세</a>
+                        </td>
+                        <td th:text="${#temporals.format(user.createdAt, 'yyyy.MM.dd')}">2026.01.01</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(usersPage.content)}">
+                        <td colspan="10" class="empty">등록된 사용자가 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pager">
+                <span th:text="|총 ${usersPage.totalElements}명 · ${usersPage.page + 1}/${usersPage.totalPages == 0 ? 1 : usersPage.totalPages} 페이지|">총 0명</span>
+                <div>
+                    <a class="reset-link" th:classappend="${!usersPage.hasPrevious()} ? 'disabled'" th:href="@{/admin/user/users(keyword=${filter.keyword},role=${filter.role},departmentId=${filter.departmentId},classroomId=${filter.classroomId},permissionCode=${filter.permissionCode},size=${usersPage.size},sort=${filter.sort},page=${usersPage.previousPage()})}">이전</a>
+                    <a class="reset-link" th:classappend="${!usersPage.hasNext()} ? 'disabled'" th:href="@{/admin/user/users(keyword=${filter.keyword},role=${filter.role},departmentId=${filter.departmentId},classroomId=${filter.classroomId},permissionCode=${filter.permissionCode},size=${usersPage.size},sort=${filter.sort},page=${usersPage.nextPage()})}">다음</a>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

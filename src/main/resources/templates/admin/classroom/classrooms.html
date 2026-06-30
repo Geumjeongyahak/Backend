@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('분반 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>분반</h1>
+                <p>분반명, 설명, 유형 기준으로 운영 중인 분반을 조회합니다.</p>
+            </div>
+            <a class="button" th:href="@{/admin/classroom/classrooms/new}">분반 등록</a>
+        </div>
+
+        <form class="panel filter-grid" th:action="@{/admin/classroom/classrooms}" method="get">
+            <label>검색어
+                <input name="name" th:value="${filter.name}" placeholder="분반명 또는 설명">
+            </label>
+            <label>유형
+                <select name="type">
+                    <option value="">전체</option>
+                    <option th:each="type : ${classroomTypes}" th:value="${type.name()}" th:text="${type.name()}" th:selected="${filter.type == type}">WEEKDAY</option>
+                </select>
+            </label>
+            <label>정렬
+                <select name="sort">
+                    <option value="name,ASC" th:selected="${filter.sort == null || filter.sort == 'name,ASC'}">이름 오름차순</option>
+                    <option value="name,DESC" th:selected="${filter.sort == 'name,DESC'}">이름 내림차순</option>
+                    <option value="createdAt,DESC" th:selected="${filter.sort == 'createdAt,DESC'}">생성일 최신순</option>
+                    <option value="createdAt,ASC" th:selected="${filter.sort == 'createdAt,ASC'}">생성일 오래된순</option>
+                </select>
+            </label>
+            <span></span>
+            <button class="button" type="submit">조회</button>
+            <a class="reset-link" th:href="@{/admin/classroom/classrooms}">초기화</a>
+        </form>
+
+        <section class="panel table-panel">
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>분반명</th>
+                            <th>유형</th>
+                            <th>설명</th>
+                            <th>생성일</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="classroom : ${classrooms}">
+                            <td th:text="${classroom.id}">1</td>
+                            <td><a class="link" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${classroom.id})}" th:text="${classroom.name}">벚꽃반</a></td>
+                            <td><span class="pill" th:text="${classroom.type}">WEEKDAY</span></td>
+                            <td th:text="${classroom.description ?: '-'}">설명</td>
+                            <td th:text="${#temporals.format(classroom.createdAt, 'yyyy.MM.dd')}">2026.01.01</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(classrooms)}">
+                            <td colspan="5" class="empty">등록된 분반이 없습니다.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

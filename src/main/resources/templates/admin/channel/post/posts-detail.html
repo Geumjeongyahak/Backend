@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('게시글 상세')}"></head>
+<body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+<main class="stack">
+    <div class="page-title">
+        <div><h1 th:text="${post.title}">게시글</h1><p th:text="${post.channelName}">채널</p></div>
+        <div class="inline-form">
+            <a class="button secondary" th:href="@{/admin/channel/{channelId}/posts/{postId}/edit(channelId=${post.channelId},postId=${post.id})}">수정</a>
+            <form th:action="@{/admin/channel/{channelId}/posts/{postId}/delete(channelId=${post.channelId},postId=${post.id})}" method="post">
+                <button class="button danger" type="submit">삭제</button>
+            </form>
+        </div>
+    </div>
+    <section class="panel detail-grid">
+        <div class="detail-item"><span>ID</span><strong th:text="${post.id}">1</strong></div>
+        <div class="detail-item"><span>상태</span><strong th:text="${post.status}">PUBLISHED</strong></div>
+        <div class="detail-item"><span>작성자</span><strong th:text="${post.authorName}">관리자</strong></div>
+        <div class="detail-item"><span>댓글</span><strong th:text="${post.allowComment ? '허용' : '닫힘'}">허용</strong></div>
+        <div class="detail-item"><span>조회수</span><strong th:text="${post.viewCount}">0</strong></div>
+        <div class="detail-item"><span>작성일</span><strong th:text="${#temporals.format(post.createdAt, 'yyyy.MM.dd HH:mm')}">2026.01.01</strong></div>
+    </section>
+    <section class="panel post-body" th:utext="${post.contentHtml}">
+        <p>본문</p>
+    </section>
+    <section class="panel stack" th:if="${!#lists.isEmpty(post.attachments)}">
+        <h2>첨부파일</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <a th:each="attachment : ${post.attachments}" 
+               th:href="${attachment.downloadUrl}" 
+               class="tag pill" 
+               target="_blank"
+               style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; transition: background 0.2s;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span th:text="${attachment.originalName}">file.pdf</span>
+                <small th:text="${attachment.ext}" style="opacity: 0.6; font-size: 10px; text-transform: uppercase;"></small>
+            </a>
+        </div>
+    </section>
+    <section class="panel stack">
+        <h2>댓글</h2>
+        <form class="form-grid" th:action="@{/admin/channel/{channelId}/posts/{postId}/comments(channelId=${post.channelId},postId=${post.id})}" method="post">
+            <textarea name="content" placeholder="댓글을 입력하세요." required maxlength="2000"></textarea>
+            <button class="button" type="submit">댓글 등록</button>
+        </form>
+        <div class="comment" th:each="comment : ${comments}" th:classappend="${comment.parentCommentId != null} ? 'reply'">
+            <div class="comment-meta">
+                <span th:text="|#${comment.id} ${comment.authorName}|">작성자</span>
+                <span th:text="${#temporals.format(comment.createdAt, 'yyyy.MM.dd HH:mm')}">2026.01.01</span>
+            </div>
+            <p th:text="${comment.content}">댓글</p>
+            <form class="inline-form" th:if="${comment.authorId == currentUserId}" th:action="@{/admin/channel/{channelId}/posts/{postId}/comments/{commentId}(channelId=${post.channelId},postId=${post.id},commentId=${comment.id})}" method="post">
+                <input name="content" th:value="${comment.content}" required maxlength="2000">
+                <button class="button secondary" type="submit">수정</button>
+            </form>
+            <div class="inline-form">
+                <form th:action="@{/admin/channel/{channelId}/posts/{postId}/comments(channelId=${post.channelId},postId=${post.id})}" method="post">
+                    <input name="parentCommentId" type="hidden" th:value="${comment.id}">
+                    <input name="content" placeholder="답글" required maxlength="2000">
+                    <button class="button secondary" type="submit">답글</button>
+                </form>
+                <form th:action="@{/admin/channel/{channelId}/posts/{postId}/comments/{commentId}/delete(channelId=${post.channelId},postId=${post.id},commentId=${comment.id})}" method="post">
+                    <button class="button danger" type="submit">삭제</button>
+                </form>
+            </div>
+        </div>
+        <div class="empty" th:if="${#lists.isEmpty(comments)}">댓글이 없습니다.</div>
+    </section>
+</main>
+</div></body></html>

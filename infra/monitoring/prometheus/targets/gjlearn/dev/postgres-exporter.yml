@@ -1,0 +1,9 @@
+- targets:
+    - gjlearn-dev-db.tail523ef0.ts.net:9187
+  labels:
+    project: gjlearn
+    env: dev
+    service: postgres
+    role: postgres-exporter
+    instance_name: gjlearn-dev-db
+    domain: dev.geumjeongschool.com

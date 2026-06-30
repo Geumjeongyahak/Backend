@@ -1,29 +1,94 @@
 spring:
   application:
-    name: sonmoum-api-test
+    name: gjlearn-api-test
+  autoconfigure:
+    exclude:
+      - com.google.cloud.spring.autoconfigure.storage.GcpStorageAutoConfiguration
+      - com.google.cloud.spring.autoconfigure.core.GcpContextAutoConfiguration
+      - com.google.cloud.spring.autoconfigure.firestore.GcpFirestoreAutoConfiguration
+
   datasource:
     driver-class-name: org.h2.Driver
-    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     username: sa
     password:
+
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
-        format_sql: true
-        show_sql: false
-  session:
-    jdbc:
-      initialize-schema: always
   sql:
     init:
-      mode: never
+      mode: always
+      schema-locations: classpath:sql/init_scheme.sql
+      data-locations: classpath:sql/init_data.sql
+  flyway:
+    enabled: false
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  mail:
+    host: localhost
+    port: 2525
 
+  cloud:
+    gcp:
+      project-id: ${GCP_PROJECT_ID:}
+      credentials:
+        location:
+        encoded-key:
+      storage:
+        bucket: ${GCP_DEV_BUCKET_NAME:}
 server:
   port: 0  # Random port
 
 logging:
-  level:
-    org.geumjeong.learning.sonmoum_api: DEBUG
+    level:
+      root: INFO
+      geumjeongyahak: DEBUG
+
+springdoc:
+    api-docs:
+        enabled: false
+    swagger-ui:
+        enabled: false
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+  jwt:
+    secret: ${JWT_SECRET:1mvd5sX+y8zbGg1nOK08et6KoWnanipf0DKrygENcd0UVF6IvIYfVTJ7UliwCvhb}
+    access-exp-seconds: ${JWT_ACCESS_EXP_SECONDS:1800}
+    oauth2-temp-exp-seconds: ${JWT_OAUTH2_TEMP_EXP_SECONDS:300}
+    refresh-exp-seconds: ${JWT_REFRESH_EXP_SECONDS:1209600}
+  file:
+    image:
+      max-size: 10MB
+      allowed-mime-types:
+        - image/jpeg
+        - image/png
+        - image/gif
+        - image/webp
+    document:
+      max-size: 30MB
+      allowed-mime-types:
+        - application/pdf
+        - application/vnd.ms-excel
+        - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+        - application/msword
+        - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+        - text/plain
+        - application/vnd.ms-powerpoint
+        - application/vnd.openxmlformats-officedocument.presentationml.presentation
+    drive:
+      shared-drive-id: test-shared-drive
+      make-link-public: true
+      folder-ids:
+        handover: test-handover-folder
+        exam-materials: test-exam-materials-folder
+        document-forms: test-document-forms-folder
+        meeting-records: test-meeting-records-folder
+        board: test-board-folder

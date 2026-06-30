@@ -1,0 +1,355 @@
+{
+  "uid": "gjlearn-prod-api",
+  "title": "GJLearn 프로덕션 API",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "project",
+        "type": "constant",
+        "label": "Project",
+        "query": "gjlearn",
+        "current": {
+          "text": "gjlearn",
+          "value": "gjlearn"
+        }
+      },
+      {
+        "name": "env",
+        "type": "constant",
+        "label": "Environment",
+        "query": "prod",
+        "current": {
+          "text": "prod",
+          "value": "prod"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "API Up",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{project=\"$project\", env=\"$env\", service=\"api\", role=\"app-actuator\"}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 2,
+      "title": "RPS",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 4,
+        "y": 0,
+        "w": 5,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_server_requests_seconds_count{project=\"$project\", env=\"$env\", service=\"api\", role=\"app-actuator\"}[5m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 3,
+      "title": "5xx Ratio",
+      "type": "gauge",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 9,
+        "y": 0,
+        "w": 5,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * sum(rate(http_server_requests_seconds_count{project=\"$project\", env=\"$env\", service=\"api\", role=\"app-actuator\", status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{project=\"$project\", env=\"$env\", service=\"api\", role=\"app-actuator\"}[5m])), 0.001)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 4,
+      "title": "p95 Latency",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 14,
+        "y": 0,
+        "w": 5,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{project=\"$project\", env=\"$env\", service=\"api\", role=\"app-actuator\"}[5m])))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 5,
+      "title": "Hikari Connections",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 19,
+        "y": 0,
+        "w": 5,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "hikaricp_connections{project=\"$project\", env=\"$env\", service=\"api\", role=\"app-actuator\"}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 6,
+      "title": "Request Rate by Status",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{project=\"$project\", env=\"$env\", service=\"api\", role=\"app-actuator\"}[5m]))",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 7,
+      "title": "Latency p95 / p99",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{project=\"$project\", env=\"$env\", service=\"api\", role=\"app-actuator\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{project=\"$project\", env=\"$env\", service=\"api\", role=\"app-actuator\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 8,
+      "title": "Top Endpoints by RPS",
+      "type": "bargauge",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (uri, method) (rate(http_server_requests_seconds_count{project=\"$project\", env=\"$env\", service=\"api\", role=\"app-actuator\", uri!=\"UNKNOWN\"}[5m])))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 9,
+      "title": "Endpoint Errors",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (uri, status) (rate(http_server_requests_seconds_count{project=\"$project\", env=\"$env\", service=\"api\", role=\"app-actuator\", status=~\"4..|5..\", uri!=\"UNKNOWN\"}[5m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 10,
+      "title": "JVM Memory by Area",
+      "type": "piechart",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (area) (jvm_memory_used_bytes{project=\"$project\", env=\"$env\", service=\"api\", role=\"app-actuator\"})"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 11,
+      "title": "JVM Threads",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 8,
+        "y": 20,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "jvm_threads_live_threads{project=\"$project\", env=\"$env\", service=\"api\", role=\"app-actuator\"}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 12,
+      "title": "Hikari Active / Idle",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 16,
+        "y": 20,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "hikaricp_connections{project=\"$project\", env=\"$env\", service=\"api\", role=\"app-actuator\"}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    }
+  ]
+}

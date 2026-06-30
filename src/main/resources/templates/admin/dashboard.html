@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('관리자 대시보드')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>대시보드</h1>
+                <p>운영자가 처리해야 할 핵심 데이터를 모아봅니다.</p>
+            </div>
+        </div>
+
+        <section class="metric-grid dashboard-swipe swipe-grid">
+            <a class="metric" th:href="@{/admin/user/users}">
+                <span>사용자</span>
+                <strong th:text="${summary.userCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/student/students}">
+                <span>학생</span>
+                <strong th:text="${summary.studentCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/department/departments}">
+                <span>부서</span>
+                <strong th:text="${summary.departmentCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/classroom/classrooms}">
+                <span>분반</span>
+                <strong th:text="${summary.classroomCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/subject/subjects(active=true)}">
+                <span>활성 과목</span>
+                <strong th:text="${summary.subjectCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/request/purchase/purchase-requests(status='PENDING')}">
+                <span>대기 중 구매 요청</span>
+                <strong th:text="${summary.pendingPurchaseRequestCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/request/absence/absence-requests(status='PENDING')}">
+                <span>대기 중 결석 요청</span>
+                <strong th:text="${summary.pendingAbsenceRequestCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/request/teacher-applications(status='PENDING')}">
+                <span>대기 중 교원 신청</span>
+                <strong th:text="${summary.pendingTeacherApplicationCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/lesson/lessons}">
+                <span>전체 수업</span>
+                <strong th:text="${summary.lessonCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/lesson/lessons(startDate=${summary.today},endDate=${summary.today})}">
+                <span>오늘 수업</span>
+                <strong th:text="${summary.todayLessonCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/lesson/lessons(startDate=${summary.weekStart},endDate=${summary.weekEnd},status='SCHEDULED')}">
+                <span>이번 주 예정 수업</span>
+                <strong th:text="${summary.weeklyScheduledLessonCount}">0</strong>
+            </a>
+            <a class="metric" th:href="@{/admin/event/events(startDate=${summary.today})}">
+                <span>예정된 행사</span>
+                <strong th:text="${summary.upcomingEventCount}">0</strong>
+            </a>
+        </section>
+
+        <div class="dashboard-grid">
+            <section class="panel">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">사용자 및 권한 관리</h2>
+                </div>
+                <div class="dashboard-card-grid">
+                    <a class="metric" th:href="@{/admin/user/users}">
+                        <span>사용자 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">전체 사용자 및 권한 조회/수정</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/student/students}">
+                        <span>학생 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">학생 정보와 소속 분반 관리</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/department/departments}">
+                        <span>부서 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">기관 산하 부서 조직 구성</p>
+                    </a>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">게시판 및 교육 운영</h2>
+                </div>
+                <div class="dashboard-card-grid">
+                    <a class="metric" th:href="@{/admin/channel/channels}">
+                        <span>채널 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">소통 채널 및 게시판 설정</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/post/posts}">
+                        <span>게시글 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">모든 채널의 게시물 모니터링</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/classroom/classrooms}">
+                        <span>분반 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">분반 및 교육 과정 운영</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/subject/subjects}">
+                        <span>과목 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">정기 수업 편성과 담당 교사 관리</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/lesson/lessons}">
+                        <span>수업 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">수업 일정과 운영 상태 조회</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/event/events}">
+                        <span>행사 일정 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">캘린더 행사 일정 등록/수정</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/daily-schedule/daily-schedules}">
+                        <span>하루 일정 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">출석 현황과 수업 일지 관리</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/site-content/contents}">
+                        <span>사이트 콘텐츠</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">교장, 부서, 반 소개 문구 관리</p>
+                    </a>
+                    <a class="metric" th:href="@{/admin/site-content/history}">
+                        <span>연혁 관리</span>
+                        <p style="font-size: 13px; margin: 4px 0 0;">공개 연혁 항목과 사진 URL 관리</p>
+                    </a>
+                </div>
+            </section>
+        </div>
+
+        <section class="panel">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+                <h2 style="margin: 0;">결재 및 행정 지원</h2>
+            </div>
+            <div class="metric-grid dashboard-swipe swipe-grid">
+                <a class="metric" th:href="@{/admin/request/purchase/purchase-requests}">
+                    <span>전체 구매 요청</span>
+                    <p style="font-size: 13px; margin: 4px 0 0;">물품 구매 요청 이력 확인</p>
+                </a>
+                <a class="metric" th:href="@{/admin/request/purchase/purchase-requests(status='PENDING')}">
+                    <span style="color: var(--warning);">승인 대기 중</span>
+                    <p style="font-size: 13px; margin: 4px 0 0;">검토가 필요한 신규 구매 요청</p>
+                </a>
+                <a class="metric" th:href="@{/admin/request/purchase/vendors}">
+                    <span>거래처 관리</span>
+                    <p style="font-size: 13px; margin: 4px 0 0;">선결제 거래처와 잔액 관리</p>
+                </a>
+                <a class="metric" th:href="@{/admin/request/lesson-exchange}">
+                    <span>수업 교환 요청</span>
+                    <p style="font-size: 13px; margin: 4px 0 0;">교환 요청과 제안 처리 현황 확인</p>
+                </a>
+                <a class="metric" th:href="@{/admin/request/absence/absence-requests}">
+                    <span>결석 요청</span>
+                    <p style="font-size: 13px; margin: 4px 0 0;">교사 결석 요청 처리 현황 확인</p>
+                </a>
+                <a class="metric" th:href="@{/admin/request/teacher-applications}">
+                    <span>교원 신청</span>
+                    <p style="font-size: 13px; margin: 4px 0 0;">신규 교원 지원서 검토와 승인 처리</p>
+                </a>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('게시글 수정')}"></head>
+<body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+<main class="stack">
+    <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
+    <div class="page-title">
+        <div><h1 th:text="${post.status == 'DRAFT' ? '게시글 작성' : '게시글 수정'}">게시글 수정</h1><p th:text="${post.channelName}">채널</p></div>
+        <a class="button secondary" th:href="@{/admin/channel/{channelId}/posts/{postId}(channelId=${post.channelId},postId=${post.id})}">상세</a>
+    </div>
+    <form id="postForm" class="panel form-grid" th:action="@{/admin/channel/{channelId}/posts/{postId}(channelId=${post.channelId},postId=${post.id})}" method="post">
+        <label>제목 <input name="title" th:value="${post.title}" th:required="${post.status != 'DRAFT'}" minlength="2" maxlength="255" placeholder="발행 시 필수"></label>
+        <input id="statusInput" name="status" type="hidden" th:value="${post.status}">
+        <label>썸네일 URL <input name="thumbnailUrl" th:value="${post.thumbnailUrl}"></label>
+        <div style="padding: 10px 0;">
+            <label class="check-label">
+                <input name="allowComment" type="checkbox" value="true" th:checked="${post.allowComment}">
+                댓글 허용
+            </label>
+        </div>
+        <input id="contentHtml" name="contentHtml" type="hidden">
+        <textarea id="initialContent" hidden th:text="${post.contentHtml}"></textarea>
+        <div id="editor" class="editor-shell"></div>
+        
+        <div class="panel stack" style="margin-top: 10px; padding: 15px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <h3 style="margin: 0; font-size: 15px;">첨부파일 관리</h3>
+                <div class="inline-form" style="margin-bottom: 0;">
+                    <input id="attachmentFile" type="file" style="width: auto; min-height: 32px;">
+                    <button id="attachmentButton" class="button secondary" type="button" style="min-height: 32px;">파일 추가</button>
+                </div>
+            </div>
+            <div id="attachmentList" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                <!-- 업로드된 파일이 여기에 pill 형태로 표시됩니다 -->
+                <div th:each="attachment : ${post.attachments}" class="tag pill" 
+                     th:data-file-id="${attachment.fileId}"
+                     style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span th:text="${attachment.originalName}">file.pdf</span>
+                    <button type="button" class="remove-attachment" style="background:none; border:none; padding:0 0 0 4px; cursor:pointer; color:var(--danger); font-weight:bold; font-size:14px;">&times;</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="inline-form">
+            <button class="button secondary" type="submit" th:if="${post.status == 'DRAFT'}">임시 저장</button>
+            <button id="publishButton" class="button" type="button" th:if="${post.status == 'DRAFT'}">발행</button>
+            <button class="button" type="submit" th:if="${post.status != 'DRAFT'}">수정</button>
+        </div>
+    </form>
+    <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+    <script th:inline="javascript">
+        const imageUploadUrl = /*[[@{/admin/channel/{channelId}/posts/{postId}/images(channelId=${post.channelId},postId=${post.id})}]]*/ '';
+        const attachmentUploadUrl = /*[[@{/admin/channel/{channelId}/posts/{postId}/attachments(channelId=${post.channelId},postId=${post.id})}]]*/ '';
+        const attachmentDeleteUrlBase = /*[[@{/admin/channel/{channelId}/posts/{postId}/attachments(channelId=${post.channelId},postId=${post.id})}]]*/ '';
+        
+        const editor = new toastui.Editor({
+            el: document.querySelector('#editor'),
+            height: '520px',
+            initialEditType: 'wysiwyg',
+            previewStyle: 'vertical',
+            initialValue: '',
+            hooks: {
+                addImageBlobHook: async (blob, callback) => {
+                    const formData = new FormData();
+                    formData.append('file', blob);
+                    const response = await fetch(imageUploadUrl, { method: 'POST', body: formData });
+                    const uploaded = await response.json();
+                    callback(uploaded.url, uploaded.originalName);
+                }
+            }
+        });
+        editor.setHTML(document.querySelector('#initialContent').value || '');
+
+        const attachmentList = document.querySelector('#attachmentList');
+        
+        // 첨부파일 UI 생성 함수
+        function createAttachmentPill(fileId, originalName) {
+            const div = document.createElement('div');
+            div.className = 'tag pill';
+            div.dataset.fileId = fileId;
+            div.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;';
+            div.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>${originalName}</span>
+                <button type="button" class="remove-attachment" style="background:none; border:none; padding:0 0 0 4px; cursor:pointer; color:var(--danger); font-weight:bold; font-size:14px;">&times;</button>
+            `;
+            return div;
+        }
+
+        // 삭제 이벤트 위임
+        attachmentList.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('remove-attachment')) {
+                const pill = e.target.closest('.tag');
+                const fileId = pill.dataset.fileId;
+                
+                if (confirm('이 첨부파일을 삭제하시겠습니까?')) {
+                    try {
+                        const response = await fetch(`${attachmentDeleteUrlBase}/${fileId}`, { method: 'DELETE' });
+                        if (response.ok) {
+                            pill.remove();
+                        } else {
+                            alert('파일 삭제에 실패했습니다.');
+                        }
+                    } catch (error) {
+                        console.error('Delete error:', error);
+                        alert('오류가 발생했습니다.');
+                    }
+                }
+            }
+        });
+
+        document.querySelector('#attachmentButton').addEventListener('click', async () => {
+            const fileInput = document.querySelector('#attachmentFile');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(attachmentUploadUrl, { method: 'POST', body: formData });
+                if (!response.ok) {
+                    const error = await response.json();
+                    alert(error.detail || '업로드에 실패했습니다.');
+                    return;
+                }
+                const uploaded = await response.json();
+                
+                // 에디터 삽입 대신 목록에 추가
+                attachmentList.appendChild(createAttachmentPill(uploaded.fileId, uploaded.originalName));
+                fileInput.value = ''; // 입력창 초기화
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('업로드 중 오류가 발생했습니다.');
+            }
+        });
+
+        document.querySelector('#postForm').addEventListener('submit', () => {
+            document.querySelector('#contentHtml').value = editor.getHTML();
+        });
+        const publishButton = document.querySelector('#publishButton');
+        if (publishButton) {
+            publishButton.addEventListener('click', () => {
+                const form = document.querySelector('#postForm');
+                const title = form.querySelector('input[name="title"]');
+                if (!title.value || title.value.trim().length < 2) {
+                    title.focus();
+                    return;
+                }
+                document.querySelector('#contentHtml').value = editor.getHTML();
+                form.action = /*[[@{/admin/channel/{channelId}/posts/{postId}/publish(channelId=${post.channelId},postId=${post.id})}]]*/ '';
+                form.submit();
+            });
+        }
+    </script>
+</main>
+</div></body></html>

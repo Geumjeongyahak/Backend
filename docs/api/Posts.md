@@ -1,0 +1,126 @@
+# Post API
+
+게시글은 특정 채널에 귀속됩니다.  
+이 문서는 게시글 초안(`DRAFT`), 발행(`PUBLISHED`), 이미지/첨부 연동 및 컨트롤러 분리 구조를 반영한 최신 API 문서입니다.
+
+## 1. 역할과 범위
+
+- **PostQueryController**: 게시글 목록 및 상세 조회
+- **PostDraftController**: 초안 생명주기 관리 (생성/임시저장/파일연동)
+- **PostPublishController**: 초안 발행
+- **PostWriteController**: 게시글 직접 생성/수정/삭제 및 상단 고정(Pin)
+
+## 2. 핵심 규칙
+
+### 2.1 게시글 상태 (`PostStatus`)
+
+| 값 | 의미 |
+|---|---|
+| `DRAFT` | 작성 중인 초안 상태. 목록에 노출되지 않으며 만료 시각(`expiresAt`)이 존재함. |
+| `PUBLISHED` | 공개된 게시글 상태. 목록 및 상세 조회 대상. |
+| `ARCHIVED` | 보관 상태. 일반 목록에서 제외됨. |
+
+### 2.2 초안 및 발행 흐름
+
+1. `POST /drafts`: 빈 초안 생성 (ID 발급)
+2. `PUT /{postId}/draft`: 제목, 본문 등 임시 저장
+3. `POST /{postId}/draft/images`: 이미지 업로드 및 연동
+4. `POST /{postId}/draft/attachments`: 첨부파일 업로드 및 연동
+5. `PUT /{postId}/publish`: 최종 발행 (상태가 `PUBLISHED`로 변경됨)
+
+### 2.3 썸네일 자동 설정 정책
+
+- 발행 시 `thumbnailUrl`을 명시하지 않으면, 연동된 이미지(`post_files`) 중 순서가 가장 빠른 이미지의 URL이 자동으로 설정됩니다.
+
+### 2.4 상단 고정 (`isPinned`)
+
+- 채널 관리 권한(`manage`)이 있는 사용자만 설정 가능하며, 별도의 `/pin` 엔드포인트로 관리됩니다.
+
+## 3. 권한 정책
+
+| API | 권한 | 설명 |
+|---|---|---|
+| 조회 (Query) | `channel.can('read')` | 채널 읽기 권한 필요. `allowGuestRead=true` 채널은 비로그인 조회 가능 |
+| 초안/발행 (Draft/Publish) | `channel.can('write')` + 소유권 | 작성 권한 및 본인 글 확인 |
+| 수정/삭제 (Write) | `channel.can('manage')` or 소유권 | 관리자 또는 본인 |
+| 고정 (Pin) | `channel.can('manage')` | 관리자 전용 |
+
+목록 조회 정책:
+
+- 비관리자는 `PUBLISHED` 게시글만 조회합니다. `DRAFT`, `ARCHIVED`는 관리자 목록에서만 노출됩니다.
+- 비로그인 사용자는 `allowGuestRead=true`이고 활성 상태인 채널의 발행글만 통합 게시판에 조회합니다.
+- 로그인 사용자는 공개 읽기 가능한 활성 채널과 본인에게 명시적 읽기 권한이 있는 채널의 발행글을 조회합니다.
+- 닫힌 채널은 통합 게시판에서도 명시적 읽기 권한이 없으면 제외됩니다.
+
+## 4. 엔드포인트
+
+### 4.1 초안 관리 (`PostDraftController`)
+
+#### 4.1.1 초안 생성
+- **URL**: `POST /api/v1/channels/{channelId}/posts/drafts`
+- **응답**: `201 Created` (PostDetailResponse)
+
+#### 4.1.2 초안 임시 저장
+- **URL**: `PUT /api/v1/channels/{channelId}/posts/{postId}/draft`
+- **Body**: `SaveDraftRequest`
+  ```json
+  {
+    "title": "임시 제목",
+    "contentHtml": "<p>임시 본문</p>",
+    "allowComment": true,
+    "thumbnailUrl": null
+  }
+  ```
+
+#### 4.1.3 초안 이미지/첨부 연동
+- **이미지**: `POST /api/v1/channels/{channelId}/posts/{postId}/draft/images` (Multipart)
+- **첨부**: `POST /api/v1/channels/{channelId}/posts/{postId}/draft/attachments` (Multipart)
+- **등록 파일 첨부**: `POST /api/v1/channels/{channelId}/posts/{postId}/attachments` (`{ "fileId": "...", "sortOrder": 0 }`)
+  - `POST /api/v1/files/attachments`로 GCS 업로드한 파일과 `POST /api/v1/files/drive`로 등록한 Drive 파일을 동일하게 연결할 수 있습니다.
+
+### 4.2 발행 (`PostPublishController`)
+
+#### 4.2.1 초안 발행
+- **URL**: `PUT /api/v1/channels/{channelId}/posts/{postId}/publish`
+- **Body**: `PublishPostRequest`
+  ```json
+  {
+    "title": "최종 제목 (필수)",
+    "contentHtml": "<p>최종 본문 (필수)</p>",
+    "allowComment": true,
+    "thumbnailUrl": null
+  }
+  ```
+
+### 4.3 게시글 관리 (`PostWriteController`)
+
+#### 4.3.1 게시글 직접 생성 (초안 미사용 시)
+- **URL**: `POST /api/v1/channels/{channelId}/posts`
+- **Body**: `CreatePostRequest`
+
+#### 4.3.2 게시글 수정
+- **URL**: `PUT /api/v1/channels/{channelId}/posts/{postId}`
+- **Body**: `UpdatePostRequest`
+
+#### 4.3.3 상단 고정 설정
+- **URL**: `PUT /api/v1/channels/{channelId}/posts/{postId}/pin`
+- **Body**: `PinPostRequest` (`{ "isPinned": true }`)
+
+#### 4.3.4 게시글 삭제
+- **URL**: `DELETE /api/v1/channels/{channelId}/posts/{postId}`
+
+### 4.4 조회 (`PostQueryController`, `PostBoardController`)
+
+#### 4.4.1 채널 내 목록 조회
+- **URL**: `GET /api/v1/channels/{channelId}/posts`
+- **권한**: 해당 채널 `read` 권한 필요. 비로그인 사용자는 게스트 읽기가 허용된 채널만 조회할 수 있습니다.
+- **상태 필터**: 비관리자는 `PUBLISHED`만 반환합니다.
+
+#### 4.4.2 게시글 상세 조회
+- **URL**: `GET /api/v1/channels/{channelId}/posts/{postId}`
+- `allowGuestRead=true` 채널의 발행 게시글은 비로그인 사용자도 조회할 수 있습니다.
+
+#### 4.4.3 통합 게시판 조회
+- **URL**: `GET /api/v1/posts`
+- **상태 필터**: 비관리자는 `PUBLISHED`만 반환합니다.
+- **채널 필터**: 비로그인은 게스트 읽기 허용 채널만, 로그인 사용자는 공개 읽기 채널과 명시적 읽기 권한 채널만 포함합니다.

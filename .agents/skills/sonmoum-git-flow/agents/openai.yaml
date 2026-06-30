@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sonmoum Git Flow"
+  short_description: "Branch and commit workflow for Sonmoum API"
+  default_prompt: "Use $sonmoum-git-flow to choose the branch name, validate the commit flow, and draft the final commit message for this Sonmoum API change."

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('교학 회의록 관리')}"></head>
+<body>
+<div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+    <main class="stack">
+        <div class="page-title">
+            <div>
+                <h1>교학 회의록</h1>
+                <p>기관 전체 교학 회의록과 불참 사유서를 관리합니다.</p>
+            </div>
+            <div>
+                <a class="button" th:href="@{/admin/meeting-records/new}">회의록 등록</a>
+            </div>
+        </div>
+
+        <form class="panel filter-grid" th:action="@{/admin/meeting-records}" method="get">
+            <label>검색어
+                <input name="keyword" th:value="${filter.keyword}" placeholder="제목">
+            </label>
+            <label>상태
+                <select name="status">
+                    <option value="">전체</option>
+                    <option th:each="status : ${statuses}" th:value="${status.name()}" th:text="${status.name()}" th:selected="${selectedStatus == status}">BEFORE_MEETING</option>
+                </select>
+            </label>
+            <label>페이지 크기
+                <select name="size">
+                    <option value="10" th:selected="${meetingRecordsPage.size == 10}">10</option>
+                    <option value="20" th:selected="${meetingRecordsPage.size == 20}">20</option>
+                    <option value="50" th:selected="${meetingRecordsPage.size == 50}">50</option>
+                    <option value="100" th:selected="${meetingRecordsPage.size == 100}">100</option>
+                </select>
+            </label>
+            <button class="button" type="submit">조회</button>
+            <a class="reset-link" th:href="@{/admin/meeting-records}">초기화</a>
+        </form>
+
+        <section class="panel table-panel">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>제목</th>
+                        <th>작성자</th>
+                        <th>상태</th>
+                        <th>조회수</th>
+                        <th>생성일</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="record : ${meetingRecordsPage.content}">
+                        <td th:text="${record.id}">1</td>
+                        <td><a class="link" th:href="@{/admin/meeting-records/{recordId}(recordId=${record.id})}" th:text="${record.title}">교학 회의록</a></td>
+                        <td th:text="${record.author}">홍길동</td>
+                        <td><span class="pill" th:classappend="'status-' + ${record.status.name()}" th:text="${record.status.name()}">BEFORE_MEETING</span></td>
+                        <td th:text="${record.viewCount}">0</td>
+                        <td th:text="${#temporals.format(record.createdAt, 'yyyy.MM.dd')}">2026.01.01</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(meetingRecordsPage.content)}">
+                        <td colspan="6" class="empty">교학 회의록이 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pager">
+                <span th:text="|총 ${meetingRecordsPage.totalElements}건 · ${meetingRecordsPage.page + 1}/${meetingRecordsPage.totalPages == 0 ? 1 : meetingRecordsPage.totalPages} 페이지|">총 0건</span>
+                <div>
+                    <a class="reset-link" th:classappend="${!meetingRecordsPage.hasPrevious()} ? 'disabled'" th:href="@{/admin/meeting-records(status=${filter.status},keyword=${filter.keyword},size=${meetingRecordsPage.size},page=${meetingRecordsPage.previousPage()})}">이전</a>
+                    <a class="reset-link" th:classappend="${!meetingRecordsPage.hasNext()} ? 'disabled'" th:href="@{/admin/meeting-records(status=${filter.status},keyword=${filter.keyword},size=${meetingRecordsPage.size},page=${meetingRecordsPage.nextPage()})}">다음</a>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

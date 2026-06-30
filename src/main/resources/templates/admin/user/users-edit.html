@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/layout :: head('사용자 수정')}"></head>
+<body><div th:replace="~{admin/fragments/layout :: shell(~{::main})}">
+<main class="stack">
+    <div class="page-title"><div><h1>사용자 수정</h1><p th:text="${user.name}">사용자</p></div></div>
+    <form class="panel form-grid" th:action="@{/admin/user/users/{userId}(userId=${user.id})}" method="post">
+        <label>이메일 <input name="email" type="email" th:value="${user.email}" required></label>
+        <label>이름 <input name="name" th:value="${user.name}" required></label>
+        <label>연락처 <input name="phoneNumber" th:value="${user.phoneNumber}"></label>
+        <label>생년월일 <input name="birthDate" type="date" th:value="${user.birthDate}"></label>
+        <label>역할
+            <select name="role">
+                <option value="ADMIN" th:selected="${user.role == 'ADMIN'}">ADMIN</option>
+                <option value="MANAGER" th:selected="${user.role == 'MANAGER'}">MANAGER</option>
+                <option value="VOLUNTEER" th:selected="${user.role == 'VOLUNTEER'}">VOLUNTEER</option>
+                <option value="GUEST" th:selected="${user.role == 'GUEST'}">GUEST</option>
+            </select>
+        </label>
+        <label>부서
+            <select name="departmentId">
+                <option value="">없음</option>
+                <option th:each="department : ${departments}" th:value="${department.id}" th:text="${department.name}" th:selected="${user.departmentId == department.id}">부서</option>
+            </select>
+        </label>
+        <label>분반
+            <select name="classroomId">
+                <option value="">없음</option>
+                <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}" th:selected="${user.classroomId == classroom.id}">분반</option>
+            </select>
+        </label>
+        <button class="button" type="submit">수정</button>
+    </form>
+</main>
+</div></body></html>
