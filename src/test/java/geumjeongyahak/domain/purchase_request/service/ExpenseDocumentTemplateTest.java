@@ -19,6 +19,7 @@ import com.deepoove.poi.plugin.table.LoopRowTableRenderPolicy;
 class ExpenseDocumentTemplateTest {
 
     private static final Configure RENDER_CONFIG = Configure.builder()
+        .bind("budgetRows", new LoopRowTableRenderPolicy(true))
         .bind("itemRows", new LoopRowTableRenderPolicy(true))
         .bind("transactionRows", new LoopRowTableRenderPolicy(true))
         .build();
@@ -26,6 +27,12 @@ class ExpenseDocumentTemplateTest {
     @Test
     void rendersDynamicItemAndTransactionRows() throws IOException {
         Map<String, Object> data = Map.of(
+            "budgetRows",
+            List.of(
+                budgetRow("1", "예산품목1"),
+                budgetRow("2", "예산품목2"),
+                budgetRow("3", "예산품목3")
+            ),
             "itemRows",
             List.of(
                 itemRow("1", "품목1"),
@@ -46,6 +53,11 @@ class ExpenseDocumentTemplateTest {
         byte[] rendered = render(data);
 
         try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(rendered))) {
+            assertThat(document.getTables().get(2).getRow(0).getTableCells())
+                .extracting(cell -> cell.getText().replace("\n", ""))
+                .containsExactly("순번", "내용", "규격", "예상단가", "수량", "예상금액");
+            assertThat(document.getTables().get(1).getRows()).hasSize(5);
+
             String text = document.getTables()
                 .stream()
                 .flatMap(table -> table.getRows().stream())
@@ -54,8 +66,15 @@ class ExpenseDocumentTemplateTest {
                 .reduce("", String::concat);
 
             assertThat(text)
-                .contains("품목1", "품목5", "거래1", "거래4")
-                .doesNotContain("{{itemRows}}", "{{transactionRows}}", "[description]", "[detail]");
+                .contains("예산품목1", "예산품목3", "품목1", "품목5", "거래1", "거래4")
+                .doesNotContain(
+                    "{{budgetRows}}",
+                    "{{itemRows}}",
+                    "{{transactionRows}}",
+                    "[project]",
+                    "[description]",
+                    "[detail]"
+                );
         }
     }
 
@@ -78,6 +97,17 @@ class ExpenseDocumentTemplateTest {
             "quantity", "1",
             "unitPrice", "",
             "amount", ""
+        );
+    }
+
+    private static Map<String, Object> budgetRow(String no, String detail) {
+        return Map.of(
+            "no", no,
+            "project", "세부사업",
+            "item", "세부항목",
+            "detail", detail,
+            "amount", "1,000원",
+            "balance", ""
         );
     }
 

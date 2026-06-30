@@ -3,13 +3,20 @@ package geumjeongyahak.e2e.request.purchase;
 import static io.restassured.RestAssured.given;
 import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.junit.jupiter.api.AfterEach;
@@ -116,10 +123,98 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
                 .reduce("", String::concat);
 
             assertThat(documentText)
-                .contains("지출증빙서류 E2E", "품목1", "품목4", "규격4", "4,000원", "10,000원", "거래품목4")
-                .doesNotContain("{{itemRows}}", "{{transactionRows}}", "[description]", "[detail]");
+                .contains(
+                    "지출증빙서류 E2E",
+                    "품목1",
+                    "품목4",
+                    "규격4",
+                    "4,000원",
+                    "10,000원",
+                    "거래품목4",
+                    "카드결제",
+                    "견적서 및 거래명세서(별첨)"
+                )
+                .doesNotContain("{{itemRows}}", "{{transactionRows}}", "[description]", "[detail]", "담당자", "연락처");
+            assertThat(document.getTables().get(2).getRow(0).getTableCells())
+                .extracting(cell -> cell.getText().replace("\n", ""))
+                .containsExactly("순번", "내용", "규격", "예상단가", "수량", "예상금액");
+            assertThat(document.getTables().get(1).getRows()).hasSize(6);
+            assertThat(document.getTables().get(2).getRows()).hasSize(6);
+            assertThat(document.getTables().get(5).getRows()).hasSize(5);
+            assertThat(document.getTables().get(5).getText()).doesNotContain("첨부서류", "비고");
+            assertThat(document.getTables().get(7).getText()).contains("견적서 및 거래명세서(별첨)");
+            assertThat(fullDocumentText(document)).contains("2026년 06월 30일");
             assertThat(document.getAllPictures()).hasSize(1);
         }
+        assertThat(documentXml(docx)).contains("■");
+    }
+
+    @Test
+    @DisplayName("품의 금액은 품목 예상금액 합계, 결의 금액은 실제 거래금액 합계로 생성한다")
+    void generateExpenseDocument_withDifferentDraftAndResolutionAmounts_returnsDocx() throws Exception {
+        createdVendorId = createVendor();
+        createdRequestId = createPrepaidPurchaseRequest();
+        approvePurchaseRequest(createdRequestId);
+        reportPurchase(createdRequestId, List.of(transaction(createdVendorId, 10000L, List.of("거래품목"), null)));
+
+        byte[] docx = requestExpenseDocument(createdRequestId, expenseDocumentBodyWithItems(List.of(
+            expenseDocumentItem("예상규격1", 4000L, 4000L),
+            expenseDocumentItem("예상규격2", 5000L, 5000L),
+            expenseDocumentItem("예상규격3", 6000L, 6000L)
+        )))
+            .then()
+            .statusCode(200)
+            .contentType(DOCX_CONTENT_TYPE)
+            .extract()
+            .asByteArray();
+
+        try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(docx))) {
+            assertThat(documentText(document))
+                .contains("15,000원", "10,000원", "카드결제");
+        }
+    }
+
+    @Test
+    @DisplayName("수동 확인용 지출증빙서류 샘플 DOCX를 생성한다")
+    void generateExpenseDocumentSample() throws Exception {
+        assumeTrue(
+            isExpenseDocumentSampleGenerationEnabled(),
+            "수동 샘플 생성이 필요할 때 GENERATE_EXPENSE_DOCUMENT_SAMPLE=true 환경변수로 실행합니다."
+        );
+        createdVendorId = createVendor();
+        createdRequestId = createPurchaseRequest("PREPAID", List.of(
+            "교재 제본",
+            "수업용 문구 세트",
+            "학생 배부용 파일",
+            "화이트보드 마커",
+            "출석부 바인더",
+            "수업 안내 인쇄물"
+        ));
+        approvePurchaseRequest(createdRequestId);
+        UUID receiptFileId1 = UUID.fromString(uploadPurchaseReceipt(PNG_BYTES));
+        UUID receiptFileId2 = UUID.fromString(uploadPurchaseReceipt(PNG_BYTES_WITH_TRAILING_BYTE));
+        reportPurchase(createdRequestId, List.of(
+            transaction(createdVendorId, 12000L, List.of("교재 제본", "수업용 문구 세트"), receiptFileId1.toString()),
+            transaction(
+                createdVendorId,
+                9000L,
+                List.of("학생 배부용 파일", "화이트보드 마커", "출석부 바인더", "수업 안내 인쇄물"),
+                receiptFileId2.toString()
+            )
+        ));
+
+        byte[] docx = requestExpenseDocument(createdRequestId, expenseDocumentSampleBody())
+            .then()
+            .statusCode(200)
+            .contentType(DOCX_CONTENT_TYPE)
+            .extract()
+            .asByteArray();
+
+        Path samplePath = Path.of("build", "generated-samples", "expense-document-sample.docx");
+        Files.createDirectories(samplePath.getParent());
+        Files.write(samplePath, docx);
+
+        assertThat(Files.size(samplePath)).isGreaterThan(0);
     }
 
     @Test
@@ -396,6 +491,10 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     }
 
     private Long createPurchaseRequest(String paymentType) {
+        return createPurchaseRequest(paymentType, List.of("품목1", "품목2", "품목3", "품목4"));
+    }
+
+    private Long createPurchaseRequest(String paymentType, List<String> itemNames) {
         return given()
             .basePath("/api/v1/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
@@ -404,12 +503,9 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
                 entry("title", "지출증빙서류 E2E"),
                 entry("content", "지출증빙서류 생성 API 테스트입니다."),
                 entry("classroomId", CLASSROOM_ID),
-                entry("items", List.of(
-                    purchaseItem("품목1", paymentType),
-                    purchaseItem("품목2", paymentType),
-                    purchaseItem("품목3", paymentType),
-                    purchaseItem("품목4", paymentType)
-                ))
+                entry("items", itemNames.stream()
+                    .map(itemName -> purchaseItem(itemName, paymentType))
+                    .toList())
             ))
             .post()
             .then()
@@ -608,12 +704,35 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
             entry("initiationDate", "2026. 06. 30."),
             entry("resolutionDate", "2026. 06. 30."),
             entry("paymentDate", "2026. 06. 30."),
-            entry("manager", "홍길동"),
-            entry("contact", "010-0000-0000"),
             entry("items", items),
             entry("draftApprovals", draftApprovals),
             entry("draftCooperations", draftCooperations),
             entry("resolutionApprovals", resolutionApprovals)
+        );
+    }
+
+    private Map<String, Object> expenseDocumentSampleBody() {
+        return expenseDocumentBodyWithItemsAndApprovalLines(
+            List.of(
+                expenseDocumentItem("A4 / 흑백", 3000L, 3000L),
+                expenseDocumentItem("혼합 구성", 9000L, 9000L),
+                expenseDocumentItem("A4 / 컬러", 2500L, 2500L),
+                expenseDocumentItem("검정 / 파랑", 2000L, 2000L),
+                expenseDocumentItem("A4 40매", 2500L, 2500L),
+                expenseDocumentItem("A4 / 60부", 2000L, 2000L)
+            ),
+            "TRANSFER",
+            List.of(
+                approvalLine("재정", "김재정"),
+                approvalLine("대표", "오대표")
+            ),
+            List.of(
+                approvalLine("교육", "이교육")
+            ),
+            List.of(
+                approvalLine("담당", "박담당"),
+                approvalLine("회계", "최회계")
+            )
         );
     }
 
@@ -624,6 +743,26 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
             .flatMap(row -> row.getTableCells().stream())
             .map(cell -> cell.getText())
             .reduce("", String::concat);
+    }
+
+    private String fullDocumentText(XWPFDocument document) {
+        String paragraphText = document.getParagraphs()
+            .stream()
+            .map(paragraph -> paragraph.getText())
+            .reduce("", String::concat);
+        return paragraphText + documentText(document);
+    }
+
+    private String documentXml(byte[] docx) throws IOException {
+        try (ZipInputStream zipInputStream = new ZipInputStream(new ByteArrayInputStream(docx))) {
+            ZipEntry entry;
+            while ((entry = zipInputStream.getNextEntry()) != null) {
+                if ("word/document.xml".equals(entry.getName())) {
+                    return new String(zipInputStream.readAllBytes(), StandardCharsets.UTF_8);
+                }
+            }
+        }
+        throw new IOException("word/document.xml not found");
     }
 
     private Map<String, Object> expenseDocumentItem(String spec, Long unitPrice, Long amount) {
@@ -639,6 +778,11 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
             "position", position,
             "name", name
         );
+    }
+
+    private boolean isExpenseDocumentSampleGenerationEnabled() {
+        return Boolean.getBoolean("generateExpenseDocumentSample")
+            || Boolean.parseBoolean(System.getenv("GENERATE_EXPENSE_DOCUMENT_SAMPLE"));
     }
 
     private static byte[] appendTrailingByte(byte[] source) {

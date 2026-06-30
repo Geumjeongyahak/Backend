@@ -58,12 +58,6 @@ public record GenerateExpenseDocumentRequest(
     @Schema(description = "예금주", example = "금정열린배움터")
     String accountHolder,
 
-    @Schema(description = "담당자", example = "홍길동")
-    String manager,
-
-    @Schema(description = "연락처", example = "010-0000-0000")
-    String contact,
-
     @Schema(description = "비고")
     String note,
 
