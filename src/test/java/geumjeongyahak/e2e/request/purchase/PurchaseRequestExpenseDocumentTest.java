@@ -86,7 +86,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("관리자가 선결제 구매 요청 지출증빙서류 DOCX를 생성할 수 있다")
+    @DisplayName("관리자가 결제 확인 완료된 선결제 구매 요청 지출증빙서류 DOCX를 생성할 수 있다")
     void generateExpenseDocument_withPrepaidPurchaseAndReceipt_returnsDocx() throws Exception {
         createdVendorId = createVendor();
         createdRequestId = createPrepaidPurchaseRequest();
@@ -98,6 +98,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
             transaction(createdVendorId, 3000L, List.of("거래품목3"), null),
             transaction(createdVendorId, 4000L, List.of("거래품목4"), null)
         ));
+        confirmPurchaseRequest(createdRequestId);
 
         Response response = given()
             .basePath("/api/v1/admin/purchase-requests")
@@ -133,6 +134,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
                     "지출증빙서류 E2E",
                     "품목1",
                     "품목4",
+                    "시중교재",
                     "규격4",
                     "4,000원",
                     "10,000원",
@@ -144,7 +146,10 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
             assertThat(document.getTables().get(2).getRow(0).getTableCells())
                 .extracting(cell -> cell.getText().replace("\n", ""))
                 .containsExactly("순번", "내용", "규격", "예상단가", "수량", "예상금액");
-            assertThat(document.getTables().get(1).getRows()).hasSize(6);
+            assertThat(document.getTables().get(1).getRows()).hasSize(3);
+            assertThat(document.getTables().get(1).getRow(0).getTableCells())
+                .extracting(cell -> cell.getText().replace("\n", ""))
+                .containsExactly("순번", "세부사업", "세부항목", "산출내역", "품의금액", "예산잔액", "사업잔액");
             assertThat(document.getTables().get(2).getRows()).hasSize(6);
             assertThat(document.getTables().get(5).getRows()).hasSize(5);
             assertThat(document.getTables().get(5).getText()).doesNotContain("첨부서류", "비고");
@@ -156,28 +161,22 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("품의 금액은 품목 예상금액 합계, 결의 금액은 실제 거래금액 합계로 생성한다")
-    void generateExpenseDocument_withDifferentDraftAndResolutionAmounts_returnsDocx() throws Exception {
+    @DisplayName("품목 단가 계산 합계가 구매 완료 보고 금액과 다르면 지출증빙서류 생성에 실패한다")
+    void generateExpenseDocument_withMismatchedItemAmountTotal_returns409() {
         createdVendorId = createVendor();
         createdRequestId = createPrepaidPurchaseRequest();
         approvePurchaseRequest(createdRequestId);
         reportPurchase(createdRequestId, List.of(transaction(createdVendorId, 10000L, List.of("거래품목"), null)));
+        confirmPurchaseRequest(createdRequestId);
 
-        byte[] docx = requestExpenseDocument(createdRequestId, expenseDocumentBodyWithItems(List.of(
-            expenseDocumentItem("예상규격1", 4000L, 4000L),
-            expenseDocumentItem("예상규격2", 5000L, 5000L),
-            expenseDocumentItem("예상규격3", 6000L, 6000L)
+        requestExpenseDocument(createdRequestId, expenseDocumentBodyWithItems(List.of(
+            expenseDocumentItem("예상규격1", 4000L),
+            expenseDocumentItem("예상규격2", 5000L),
+            expenseDocumentItem("예상규격3", 6000L),
+            expenseDocumentItem("예상규격4", 7000L)
         )))
             .then()
-            .statusCode(200)
-            .contentType(DOCX_CONTENT_TYPE)
-            .extract()
-            .asByteArray();
-
-        try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(docx))) {
-            assertThat(documentText(document))
-                .contains("15,000원", "10,000원", "카드결제");
-        }
+            .statusCode(409);
     }
 
     @Test
@@ -188,26 +187,16 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
             "수동 샘플 생성이 필요할 때 GENERATE_EXPENSE_DOCUMENT_SAMPLE=true 환경변수로 실행합니다."
         );
         createdVendorId = createVendor();
-        createdRequestId = createPurchaseRequest("PREPAID", List.of(
-            "교재 제본",
-            "수업용 문구 세트",
-            "학생 배부용 파일",
-            "화이트보드 마커",
-            "출석부 바인더",
-            "수업 안내 인쇄물"
+        createdRequestId = createPurchaseRequestWithItems("PREPAID", List.of(
+            purchaseItem("문해 교재 1단계", "PREPAID", 10),
+            purchaseItem("문해 교재 2단계", "PREPAID", 10),
+            purchaseItem("수업용 문제집", "PREPAID", 10)
         ));
         approvePurchaseRequest(createdRequestId);
-        UUID receiptFileId1 = UUID.fromString(uploadPurchaseReceipt(PNG_BYTES));
-        UUID receiptFileId2 = UUID.fromString(uploadPurchaseReceipt(PNG_BYTES_WITH_TRAILING_BYTE));
         reportPurchase(createdRequestId, List.of(
-            transaction(createdVendorId, 12000L, List.of("교재 제본", "수업용 문구 세트"), receiptFileId1.toString()),
-            transaction(
-                createdVendorId,
-                9000L,
-                List.of("학생 배부용 파일", "화이트보드 마커", "출석부 바인더", "수업 안내 인쇄물"),
-                receiptFileId2.toString()
-            )
+            transaction(createdVendorId, 100000L, List.of("문해 교재 1단계", "문해 교재 2단계", "수업용 문제집"), null)
         ));
+        confirmPurchaseRequest(createdRequestId);
 
         byte[] docx = requestExpenseDocument(createdRequestId, expenseDocumentSampleBody())
             .then()
@@ -224,11 +213,10 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("CONFIRMED 상태의 선결제 구매 요청도 지출증빙서류 DOCX를 생성할 수 있다")
+    @DisplayName("CONFIRMED 상태의 선결제 구매 요청은 지출증빙서류 DOCX를 생성할 수 있다")
     void generateExpenseDocument_withConfirmedPurchase_returnsDocx() {
         createdVendorId = createVendor();
-        createdRequestId = createPurchasedPrepaidRequest();
-        confirmPurchaseRequest(createdRequestId);
+        createdRequestId = createConfirmedPrepaidRequest();
 
         requestExpenseDocument(createdRequestId, expenseDocumentBody())
             .then()
@@ -260,7 +248,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     @DisplayName("매니저 권한 사용자는 지출증빙서류를 생성할 수 없다")
     void generateExpenseDocument_withManagerPermission_returns403() {
         createdVendorId = createVendor();
-        createdRequestId = createPurchasedPrepaidRequest();
+        createdRequestId = createConfirmedPrepaidRequest();
 
         requestExpenseDocument(createdRequestId, expenseDocumentBody(), managerToken)
             .then()
@@ -271,7 +259,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     @DisplayName("최소 요청 바디로도 지출증빙서류 DOCX를 생성할 수 있다")
     void generateExpenseDocument_withEmptyBody_returnsDocx() {
         createdVendorId = createVendor();
-        createdRequestId = createPurchasedPrepaidRequest();
+        createdRequestId = createConfirmedPrepaidRequest();
 
         requestExpenseDocument(createdRequestId, Map.of())
             .then()
@@ -291,6 +279,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
             transaction(createdVendorId, 5000L, List.of("거래품목1"), receiptFileId1.toString()),
             transaction(createdVendorId, 5000L, List.of("거래품목2"), receiptFileId2.toString())
         ));
+        confirmPurchaseRequest(createdRequestId);
 
         byte[] docx = requestExpenseDocument(createdRequestId, expenseDocumentBody())
             .then()
@@ -314,6 +303,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
         reportPurchase(createdRequestId, List.of(
             transaction(createdVendorId, 10000L, List.of("거래품목"), receiptFileId.toString())
         ));
+        confirmPurchaseRequest(createdRequestId);
 
         requestExpenseDocument(createdRequestId, expenseDocumentBody())
             .then()
@@ -325,7 +315,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     @DisplayName("모든 지급구분 값으로 지출증빙서류 DOCX를 생성할 수 있다")
     void generateExpenseDocument_withEveryPaymentMethod_returnsDocx(String paymentMethod) throws Exception {
         createdVendorId = createVendor();
-        createdRequestId = createPurchasedPrepaidRequest();
+        createdRequestId = createConfirmedPrepaidRequest();
 
         byte[] docx = requestExpenseDocument(createdRequestId, expenseDocumentBody(paymentMethod))
             .then()
@@ -343,16 +333,16 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     @DisplayName("결재라인과 품목 보완값이 기준보다 많아도 초과 입력을 무시하고 생성한다")
     void generateExpenseDocument_withExcessApprovalLinesAndItemInputs_returnsDocx() throws Exception {
         createdVendorId = createVendor();
-        createdRequestId = createPurchasedPrepaidRequest();
+        createdRequestId = createConfirmedPrepaidRequest();
 
         byte[] docx = requestExpenseDocument(createdRequestId, expenseDocumentBodyWithItemsAndApprovalLines(
             List.of(
-                expenseDocumentItem("초과규격1", 1000L, 1000L),
-                expenseDocumentItem("초과규격2", 2000L, 2000L),
-                expenseDocumentItem("초과규격3", 3000L, 3000L),
-                expenseDocumentItem("초과규격4", 4000L, 4000L),
-                expenseDocumentItem("무시규격5", 5000L, 5000L),
-                expenseDocumentItem("무시규격6", 6000L, 6000L)
+                expenseDocumentItem("초과규격1", 1000L),
+                expenseDocumentItem("초과규격2", 2000L),
+                expenseDocumentItem("초과규격3", 3000L),
+                expenseDocumentItem("초과규격4", 4000L),
+                expenseDocumentItem("무시규격5", 5000L),
+                expenseDocumentItem("무시규격6", 6000L)
             ),
             List.of(
                 approvalLine("직위1", "이름1"),
@@ -383,6 +373,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
         createdRequestId = createPurchaseRequest("ACTUAL");
         approvePurchaseRequest(createdRequestId);
         reportPurchase(createdRequestId, List.of(transaction(createdVendorId, 10000L, List.of("거래품목"), null)));
+        confirmPurchaseRequest(createdRequestId);
 
         requestExpenseDocument(createdRequestId, expenseDocumentBody())
             .then()
@@ -390,8 +381,8 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("PENDING 또는 APPROVED 상태에서는 지출증빙서류를 생성할 수 없다")
-    void generateExpenseDocument_withUnpurchasedStatus_returns409() {
+    @DisplayName("CONFIRMED가 아닌 상태에서는 지출증빙서류를 생성할 수 없다")
+    void generateExpenseDocument_withoutConfirmedStatus_returns409() {
         createdRequestId = createPrepaidPurchaseRequest();
 
         requestExpenseDocument(createdRequestId, expenseDocumentBody())
@@ -399,6 +390,13 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
             .statusCode(409);
 
         approvePurchaseRequest(createdRequestId);
+
+        requestExpenseDocument(createdRequestId, expenseDocumentBody())
+            .then()
+            .statusCode(409);
+
+        createdVendorId = createVendor();
+        reportPurchase(createdRequestId, List.of(transaction(createdVendorId, 10000L, List.of("거래품목"), null)));
 
         requestExpenseDocument(createdRequestId, expenseDocumentBody())
             .then()
@@ -412,6 +410,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
         createdRequestId = createPrepaidPurchaseRequest();
         approvePurchaseRequest(createdRequestId);
         reportPurchase(createdRequestId, List.of(transaction(createdVendorId, 10000L, List.of("거래품목"), null)));
+        confirmPurchaseRequest(createdRequestId);
 
         byte[] docx = requestExpenseDocument(createdRequestId, expenseDocumentBody())
             .then()
@@ -435,6 +434,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
         reportPurchase(createdRequestId, List.of(
             transaction(createdVendorId, 10000L, List.of("거래품목"), registeredReceiptFileId.toString())
         ));
+        confirmPurchaseRequest(createdRequestId);
 
         requestExpenseDocument(createdRequestId, expenseDocumentBody())
             .then()
@@ -442,29 +442,20 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("품목 보완 입력값이 일부만 있어도 지출증빙서류를 생성할 수 있다")
-    void generateExpenseDocument_withPartialItemInputs_returnsDocx() throws Exception {
+    @DisplayName("품목 단가 보완 입력값이 일부만 있으면 지출증빙서류 생성에 실패한다")
+    void generateExpenseDocument_withPartialItemInputs_returns409() {
         createdVendorId = createVendor();
         createdRequestId = createPrepaidPurchaseRequest();
         approvePurchaseRequest(createdRequestId);
         reportPurchase(createdRequestId, List.of(transaction(createdVendorId, 10000L, List.of("거래품목"), null)));
+        confirmPurchaseRequest(createdRequestId);
 
-        byte[] docx = requestExpenseDocument(createdRequestId, expenseDocumentBodyWithItems(List.of(
-            expenseDocumentItem("부분규격1", 1000L, 1000L),
-            expenseDocumentItem("부분규격2", 2000L, 2000L)
+        requestExpenseDocument(createdRequestId, expenseDocumentBodyWithItems(List.of(
+            expenseDocumentItem("부분규격1", 1000L),
+            expenseDocumentItem("부분규격2", 2000L)
         )))
             .then()
-            .statusCode(200)
-            .contentType(DOCX_CONTENT_TYPE)
-            .extract()
-            .asByteArray();
-
-        try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(docx))) {
-            String documentText = documentText(document);
-            assertThat(documentText)
-                .contains("품목1", "부분규격1", "품목4")
-                .doesNotContain("규격4", "[spec]");
-        }
+            .statusCode(409);
     }
 
     @Test
@@ -474,6 +465,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
         createdRequestId = createPrepaidPurchaseRequest();
         approvePurchaseRequest(createdRequestId);
         reportPurchase(createdRequestId, List.of(transaction(createdVendorId, 10000L, List.of("거래품목"), null)));
+        confirmPurchaseRequest(createdRequestId);
 
         given()
             .basePath("/api/v1/admin/purchase-requests")
@@ -492,6 +484,12 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
         return requestId;
     }
 
+    private Long createConfirmedPrepaidRequest() {
+        Long requestId = createPurchasedPrepaidRequest();
+        confirmPurchaseRequest(requestId);
+        return requestId;
+    }
+
     private Long createPrepaidPurchaseRequest() {
         return createPurchaseRequest("PREPAID");
     }
@@ -501,6 +499,15 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     }
 
     private Long createPurchaseRequest(String paymentType, List<String> itemNames) {
+        return createPurchaseRequestWithItems(
+            paymentType,
+            itemNames.stream()
+                .map(itemName -> purchaseItem(itemName, paymentType))
+                .toList()
+        );
+    }
+
+    private Long createPurchaseRequestWithItems(String paymentType, List<Map<String, Object>> items) {
         return given()
             .basePath("/api/v1/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
@@ -509,9 +516,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
                 entry("title", "지출증빙서류 E2E"),
                 entry("content", "지출증빙서류 생성 API 테스트입니다."),
                 entry("classroomId", CLASSROOM_ID),
-                entry("items", itemNames.stream()
-                    .map(itemName -> purchaseItem(itemName, paymentType))
-                    .toList())
+                entry("items", items)
             ))
             .post()
             .then()
@@ -522,10 +527,14 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     }
 
     private Map<String, Object> purchaseItem(String name, String paymentType) {
+        return purchaseItem(name, paymentType, 1);
+    }
+
+    private Map<String, Object> purchaseItem(String name, String paymentType, int quantity) {
         return Map.ofEntries(
             entry("name", name),
             entry("reason", "문서 생성 테스트"),
-            entry("quantity", 1),
+            entry("quantity", quantity),
             entry("paymentType", paymentType)
         );
     }
@@ -654,10 +663,10 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
 
     private Map<String, Object> expenseDocumentBody(String paymentMethod) {
         return expenseDocumentBodyWithItems(List.of(
-            expenseDocumentItem("규격1", 1000L, 1000L),
-            expenseDocumentItem("규격2", 2000L, 2000L),
-            expenseDocumentItem("규격3", 3000L, 3000L),
-            expenseDocumentItem("규격4", 4000L, 4000L)
+            expenseDocumentItem("규격1", 1000L),
+            expenseDocumentItem("규격2", 2000L),
+            expenseDocumentItem("규격3", 3000L),
+            expenseDocumentItem("규격4", 4000L)
         ), paymentMethod);
     }
 
@@ -702,6 +711,9 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
             entry("policyProject", "테스트 정책사업"),
             entry("unitProject", "테스트 단위사업"),
             entry("detailProject", "테스트 세부사업"),
+            entry("budgetDetail", "시중교재"),
+            entry("budgetBalance", 100000L),
+            entry("projectBalance", 500000L),
             entry("requestDepartment", "교육연구부"),
             entry("draftDate", "2026. 06. 30."),
             entry("completionDate", "2026. 06. 30."),
@@ -720,12 +732,9 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     private Map<String, Object> expenseDocumentSampleBody() {
         return expenseDocumentBodyWithItemsAndApprovalLines(
             List.of(
-                expenseDocumentItem("A4 / 흑백", 3000L, 3000L),
-                expenseDocumentItem("혼합 구성", 9000L, 9000L),
-                expenseDocumentItem("A4 / 컬러", 2500L, 2500L),
-                expenseDocumentItem("검정 / 파랑", 2000L, 2000L),
-                expenseDocumentItem("A4 40매", 2500L, 2500L),
-                expenseDocumentItem("A4 / 60부", 2000L, 2000L)
+                expenseDocumentItem("A4", 3000L),
+                expenseDocumentItem("A4", 3000L),
+                expenseDocumentItem("A4", 4000L)
             ),
             "TRANSFER",
             List.of(
@@ -771,11 +780,10 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
         throw new IOException("word/document.xml not found");
     }
 
-    private Map<String, Object> expenseDocumentItem(String spec, Long unitPrice, Long amount) {
+    private Map<String, Object> expenseDocumentItem(String spec, Long unitPrice) {
         return Map.of(
             "spec", spec,
-            "unitPrice", unitPrice,
-            "amount", amount
+            "unitPrice", unitPrice
         );
     }
 

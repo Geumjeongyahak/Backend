@@ -76,7 +76,6 @@ public class ExpenseDocumentService {
     private static final int RECEIPT_IMAGE_MAX_WIDTH_POINT = 451;
     private static final int RECEIPT_IMAGE_MAX_HEIGHT_POINT = 650;
     private static final Configure RENDER_CONFIG = Configure.builder()
-        .bind("budgetRows", new LoopRowTableRenderPolicy(true))
         .bind("itemRows", new LoopRowTableRenderPolicy(true))
         .bind("transactionRows", new LoopRowTableRenderPolicy(true))
         .build();
@@ -137,8 +136,7 @@ public class ExpenseDocumentService {
     }
 
     private void validateGeneratable(PurchaseRequest purchaseRequest) {
-        if (purchaseRequest.getStatus() != PurchaseRequestStatus.PURCHASED
-            && purchaseRequest.getStatus() != PurchaseRequestStatus.CONFIRMED) {
+        if (purchaseRequest.getStatus() != PurchaseRequestStatus.CONFIRMED) {
             throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_UNSUPPORTED_STATUS);
         }
 
@@ -157,9 +155,8 @@ public class ExpenseDocumentService {
         Map<String, Object> data = new HashMap<>();
         fillAllKnownPlaceholders(data);
 
-        Long draftAmountValue = calculateDocumentItemAmountTotal(request.items());
         String resolutionAmount = formatMoney(purchaseRequest.getTotalPrice());
-        String draftAmount = formatMoney(Objects.requireNonNullElse(draftAmountValue, purchaseRequest.getTotalPrice()));
+        String draftAmount = formatMoney(purchaseRequest.getTotalPrice());
         String purchasedAt = formatDate(purchaseRequest.getPurchasedAt());
         String draftDate = formatKoreanDate(defaultText(request.draftDate(), formatDate(purchaseRequest.getCreatedAt())));
         String paymentDate = defaultText(request.paymentDate(), purchasedAt);
@@ -180,13 +177,21 @@ public class ExpenseDocumentService {
         data.put("draftDate", draftDate);
         data.put("detailProject", defaultText(request.detailProject(), ""));
         data.put("draftAmount", draftAmount);
+        data.put("budgetProject", defaultText(request.detailProject(), ""));
+        data.put("budgetItem", defaultText(request.unitProject(), ""));
+        data.put("budgetDetail", defaultText(request.budgetDetail(), summarizeItemNames(purchaseRequest.getItems())));
+        data.put("budgetAmount", draftAmount);
+        data.put("budgetBalance", formatNullableMoney(request.budgetBalance()));
+        data.put("projectBalance", formatNullableMoney(request.projectBalance()));
         data.put("budgetTotal", draftAmount);
+        data.put("budgetTotalBalance", formatNullableMoney(request.budgetBalance()));
+        data.put("projectTotalBalance", formatNullableMoney(request.projectBalance()));
         data.put("completionDate", formatKoreanDate(request.completionDate()));
         data.put("requesterName", purchaseRequest.getRequestedBy().getName());
         data.put("receiver", defaultText(request.receiver(), ""));
         data.put("draftNote", defaultText(request.note(), ""));
 
-        fillBudgetRows(data, purchaseRequest.getItems(), request.items(), request.detailProject(), request.unitProject());
+        validateDocumentItemAmounts(purchaseRequest.getItems(), request.items(), purchaseRequest.getTotalPrice());
         fillItemRows(data, purchaseRequest.getItems(), request.items(), draftAmount);
 
         data.put("initiationDate", initiationDate);
@@ -227,8 +232,15 @@ public class ExpenseDocumentService {
             "draftDate",
             "detailProject",
             "draftAmount",
+            "budgetProject",
+            "budgetItem",
+            "budgetDetail",
+            "budgetAmount",
+            "budgetBalance",
+            "projectBalance",
             "budgetTotal",
             "budgetTotalBalance",
+            "projectTotalBalance",
             "itemTotalQuantity",
             "itemTotalAmount",
             "completionDate",
@@ -256,7 +268,6 @@ public class ExpenseDocumentService {
             "accountHolder"
         ).forEach(key -> data.put(key, ""));
 
-        data.put("budgetRows", List.of());
         data.put("itemRows", List.of());
         data.put("transactionRows", List.of());
 
@@ -265,30 +276,6 @@ public class ExpenseDocumentService {
             data.put("draftCooperation" + i, "");
             data.put("resolutionApproval" + i, "");
         }
-    }
-
-    private void fillBudgetRows(
-        Map<String, Object> data,
-        List<PurchaseRequestItem> items,
-        List<ExpenseDocumentItem> documentItems,
-        String detailProject,
-        String unitProject
-    ) {
-        List<Map<String, Object>> budgetRows = new ArrayList<>();
-        for (int index = 0; index < items.size(); index++) {
-            PurchaseRequestItem item = items.get(index);
-            ExpenseDocumentItem documentItem = getDocumentItem(documentItems, index);
-            int row = index + TEMPLATE_PLACEHOLDER_START_INDEX;
-            budgetRows.add(Map.of(
-                "no", String.valueOf(row),
-                "project", defaultText(detailProject, ""),
-                "item", defaultText(unitProject, ""),
-                "detail", defaultText(item.getName(), ""),
-                "amount", formatNullableMoney(documentItem != null ? documentItem.amount() : null),
-                "balance", ""
-            ));
-        }
-        data.put("budgetRows", budgetRows);
     }
 
     private void fillItemRows(
@@ -303,7 +290,7 @@ public class ExpenseDocumentService {
         for (int index = 0; index < items.size(); index++) {
             PurchaseRequestItem item = items.get(index);
             ExpenseDocumentItem documentItem = getDocumentItem(documentItems, index);
-            Long itemAmount = documentItem != null ? documentItem.amount() : null;
+            Long itemAmount = calculateDocumentItemAmount(item, documentItem);
             if (itemAmount != null) {
                 documentItemAmountTotal += itemAmount;
                 hasDocumentItemAmount = true;
@@ -323,28 +310,41 @@ public class ExpenseDocumentService {
         data.put("itemTotalAmount", hasDocumentItemAmount ? formatMoney(documentItemAmountTotal) : totalAmount);
     }
 
+    private void validateDocumentItemAmounts(
+        List<PurchaseRequestItem> items,
+        List<ExpenseDocumentItem> documentItems,
+        Long totalPrice
+    ) {
+        if (documentItems == null || documentItems.isEmpty()) {
+            return;
+        }
+
+        long total = 0L;
+        for (int index = 0; index < items.size(); index++) {
+            ExpenseDocumentItem documentItem = getDocumentItem(documentItems, index);
+            if (documentItem == null || documentItem.unitPrice() == null) {
+                throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_ITEM_AMOUNT_MISMATCH);
+            }
+            total += documentItem.unitPrice() * items.get(index).getQuantity();
+        }
+
+        if (total != totalPrice) {
+            throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_ITEM_AMOUNT_MISMATCH);
+        }
+    }
+
+    private Long calculateDocumentItemAmount(PurchaseRequestItem item, ExpenseDocumentItem documentItem) {
+        if (documentItem == null || documentItem.unitPrice() == null) {
+            return null;
+        }
+        return documentItem.unitPrice() * item.getQuantity();
+    }
+
     private ExpenseDocumentItem getDocumentItem(List<ExpenseDocumentItem> documentItems, int index) {
         if (documentItems == null || index >= documentItems.size()) {
             return null;
         }
         return documentItems.get(index);
-    }
-
-    private Long calculateDocumentItemAmountTotal(List<ExpenseDocumentItem> documentItems) {
-        if (documentItems == null || documentItems.isEmpty()) {
-            return null;
-        }
-
-        long total = 0L;
-        boolean hasAmount = false;
-        for (ExpenseDocumentItem documentItem : documentItems) {
-            if (documentItem == null || documentItem.amount() == null) {
-                continue;
-            }
-            total += documentItem.amount();
-            hasAmount = true;
-        }
-        return hasAmount ? total : null;
     }
 
     private void fillTransactionRows(
@@ -507,6 +507,16 @@ public class ExpenseDocumentService {
             return Document.PICTURE_TYPE_BMP;
         }
         throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_UNSUPPORTED_RECEIPT_IMAGE);
+    }
+
+    private String summarizeItemNames(List<PurchaseRequestItem> items) {
+        if (items.isEmpty()) {
+            return "";
+        }
+        if (items.size() == 1) {
+            return items.getFirst().getName();
+        }
+        return items.getFirst().getName() + " 외 " + (items.size() - 1) + "건";
     }
 
     private String summarizeVendors(List<PurchaseRequestPaymentTransaction> transactions) {

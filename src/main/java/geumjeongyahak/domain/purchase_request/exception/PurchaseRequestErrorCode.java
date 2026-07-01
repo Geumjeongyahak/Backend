@@ -50,6 +50,11 @@ public enum PurchaseRequestErrorCode implements ErrorCode {
         HttpStatus.CONFLICT,
         "PR-014",
         "지출증빙서류에 첨부할 수 없는 영수증 이미지 형식입니다."
+    ),
+    EXPENSE_DOCUMENT_ITEM_AMOUNT_MISMATCH(
+        HttpStatus.CONFLICT,
+        "PR-015",
+        "지출증빙서류 품목 예상금액 합계가 구매 완료 보고 금액과 일치하지 않습니다."
     );
 
     private final HttpStatus status;

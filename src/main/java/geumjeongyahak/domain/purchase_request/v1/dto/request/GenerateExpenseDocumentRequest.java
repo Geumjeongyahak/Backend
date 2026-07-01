@@ -25,6 +25,15 @@ public record GenerateExpenseDocumentRequest(
     @Schema(description = "세부사업명", example = "사업추진비")
     String detailProject,
 
+    @Schema(description = "예산내역 산출내역", example = "시중교재")
+    String budgetDetail,
+
+    @Schema(description = "예산잔액", example = "100000")
+    Long budgetBalance,
+
+    @Schema(description = "사업잔액", example = "500000")
+    Long projectBalance,
+
     @Schema(description = "요구부서", example = "교육연구부")
     String requestDepartment,
 
@@ -91,10 +100,7 @@ public record GenerateExpenseDocumentRequest(
         String spec,
 
         @Schema(description = "예상단가", example = "10000")
-        Long unitPrice,
-
-        @Schema(description = "예상금액", example = "20000")
-        Long amount
+        Long unitPrice
     ) {
     }
 }

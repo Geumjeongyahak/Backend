@@ -212,7 +212,7 @@ public class PurchaseRequestAdminController {
 
     @Operation(
         summary = "지출증빙서류 DOCX 생성",
-        description = "선결제 구매 요청의 품의서/결의서 DOCX 문서를 생성해 다운로드합니다."
+        description = "결재 확인까지 완료된 선결제 구매 요청의 품의서/결의서 DOCX 문서를 생성해 다운로드합니다."
     )
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
     @PostMapping("/{requestId}/expense-document")
