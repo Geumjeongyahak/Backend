@@ -77,6 +77,16 @@ public class GcsStorageService implements StorageService {
     }
 
     @Override
+    public byte[] download(String path) {
+        try {
+            return storage.readAllBytes(bucketName, path);
+        } catch (RuntimeException exception) {
+            log.error("GCS 파일 다운로드 실패: path={}", path, exception);
+            throw new BusinessException(CommonErrorCode.FILE_DOWNLOAD_FAILED);
+        }
+    }
+
+    @Override
     public String getPublicUrl(String path) {
         return GCS_URL_PREFIX + bucketName + "/" + path;
     }

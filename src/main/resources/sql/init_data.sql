@@ -740,10 +740,62 @@ ALTER SEQUENCE events_id_seq RESTART WITH 5;
 INSERT INTO vendors (id, name, description, balance, is_active)
 VALUES
     (1, '예소디자인', '부산대 인근 거래처', 0, TRUE),
-    (2, '목민서관', '야학 부근 거래처', 0, TRUE),
+    (2, '목민서관', '야학 부근 거래처', 100000, TRUE),
     (3, '지성문구', '부산대 인근 거래처', 0, TRUE),
     (4, '마트', '야학 부근 거래처', 0, TRUE);
 ALTER SEQUENCE vendors_id_seq RESTART WITH 5;
+
+-- 14-1. Purchased Prepaid Purchase Request for Expense Document API Test
+INSERT INTO purchase_requests (
+    id, classroom_id, requested_by, title, content, total_price, status,
+    approval_at, approval_by, purchased_at, note, created_at, updated_at
+)
+VALUES
+    (
+        1,
+        1,
+        2,
+        '목민서관 선결제 지출증빙서류 API 테스트',
+        '목민서관에 교재 구입비를 선결제 충전한 뒤 구매 완료 보고까지 진행한 테스트 데이터입니다.',
+        100000,
+        'PURCHASED',
+        '2026-06-25 10:00:00',
+        1,
+        '2026-06-30 14:00:00',
+        '지출증빙서류 생성 테스트용 선결제 승인 데이터',
+        '2026-06-24 09:00:00',
+        '2026-06-30 14:00:00'
+    );
+ALTER SEQUENCE purchase_requests_id_seq RESTART WITH 2;
+
+INSERT INTO purchase_requests_items (id, purchase_request_id, name, reason, quantity, payment_type)
+VALUES
+    (1, 1, '문해 교재 1단계', '목민서관 교재 구입 선결제 산출 근거', 10, 'PREPAID'),
+    (2, 1, '문해 교재 2단계', '목민서관 교재 구입 선결제 산출 근거', 10, 'PREPAID'),
+    (3, 1, '수업용 문제집', '목민서관 교재 구입 선결제 산출 근거', 10, 'PREPAID');
+ALTER SEQUENCE purchase_requests_items_id_seq RESTART WITH 4;
+
+INSERT INTO purchase_request_payment_transactions (id, purchase_request_id, vendor_id, amount, receipt_file_id)
+VALUES
+    (1, 1, 2, 100000, NULL);
+ALTER SEQUENCE purchase_request_payment_transactions_id_seq RESTART WITH 2;
+
+INSERT INTO purchase_request_payment_transaction_item_names (transaction_id, sort_order, item_name)
+VALUES
+    (1, 0, '문해 교재 1단계'),
+    (1, 1, '문해 교재 2단계'),
+    (1, 2, '수업용 문제집');
+
+INSERT INTO vendor_balance_histories (
+    id, vendor_id, type, amount, balance_after, memo, receipt_file_id, purchase_request_id,
+    created_by, occurred_at, is_deleted, created_at, updated_at
+)
+VALUES
+    (
+        1, 2, 'CHARGE', 100000, 100000, '목민서관 선결제 테스트 충전',
+        NULL, NULL, 1, '2026-06-24 09:30:00', FALSE, '2026-06-24 09:30:00', '2026-06-24 09:30:00'
+    );
+ALTER SEQUENCE vendor_balance_histories_id_seq RESTART WITH 2;
 
 -- 15. Students
 INSERT INTO students (id, name, phone_number, description, status)

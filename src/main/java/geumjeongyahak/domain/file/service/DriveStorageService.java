@@ -14,6 +14,8 @@ public interface DriveStorageService {
 
     StoredDriveFile upload(DriveUploadTarget target, List<String> folderPath, MultipartFile file);
 
+    byte[] download(String fileId);
+
     record StoredDriveFile(
         String fileId,
         String viewUrl,
