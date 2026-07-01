@@ -12,7 +12,7 @@ import geumjeongyahak.domain.subject.entity.Subject;
 public interface SubjectRepository extends JpaRepository<Subject, Long> {
 
     // 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재하는지 확인하는 메서드
-    boolean existsByClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqual(
+    boolean existsByClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqualAndIsActiveTrue(
         Long classroomId,
         DayOfWeek dayOfWeek,
         Integer period,
@@ -21,7 +21,7 @@ public interface SubjectRepository extends JpaRepository<Subject, Long> {
     );
 
     // 해당 과목을 제외하고 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재하는지 확인하는 메서드
-    boolean existsByIdNotAndClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqual(
+    boolean existsByIdNotAndClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqualAndIsActiveTrue(
         Long subjectId,
         Long classroomId,
         DayOfWeek dayOfWeek,
@@ -36,6 +36,9 @@ public interface SubjectRepository extends JpaRepository<Subject, Long> {
 
     @EntityGraph(attributePaths = {"classroom", "teacher"})
     List<Subject> findByClassroomId(Long classroomId);
+
+    @EntityGraph(attributePaths = {"classroom", "teacher"})
+    List<Subject> findAllByClassroomIdAndIsActiveTrueOrderByStartAtAscIdAsc(Long classroomId);
 
     @EntityGraph(attributePaths = {"classroom", "teacher"})
     List<Subject> findAllByIdIn(Collection<Long> subjectIds);
@@ -62,4 +65,7 @@ public interface SubjectRepository extends JpaRepository<Subject, Long> {
     @Override
     @EntityGraph(attributePaths = {"classroom", "teacher"})
     List<Subject> findAll();
+
+    @EntityGraph(attributePaths = {"classroom", "teacher"})
+    List<Subject> findAllByIsActiveTrueOrderByStartAtAscIdAsc();
 }

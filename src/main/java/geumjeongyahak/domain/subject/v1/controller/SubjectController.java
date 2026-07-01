@@ -126,7 +126,7 @@ public class SubjectController {
             - classroomId가 있으면 해당 분반이 존재하는지 확인한 뒤, 해당 분반의 과목만 조회합니다.
 
             운영 정책:
-            - 활성/비활성 과목을 모두 반환합니다.
+            - 활성 과목만 반환합니다.
             - 교사가 아직 배정되지 않은 과목도 목록에 포함될 수 있습니다.
             - 교사가 아직 배정되지 않은 과목은 teacherId, teacherName, teacherAssignedAt이 null일 수 있습니다.
             - 과목은 특정 분반의 특정 요일/교시 정기 수업 편성 단위입니다.

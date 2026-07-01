@@ -72,7 +72,7 @@ public class SubjectService {
         }
 
         // 같은 분반에서 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재하는지 확인
-        if (subjectRepository.existsByClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqual(
+        if (subjectRepository.existsByClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqualAndIsActiveTrue(
             classroom.getId(),
             request.dayOfWeek(),
             request.period(),
@@ -142,12 +142,12 @@ public class SubjectService {
                     return new ClassroomNotFoundException(classroomId);
                 });
 
-            return subjectRepository.findByClassroomId(classroomId).stream()
+            return subjectRepository.findAllByClassroomIdAndIsActiveTrueOrderByStartAtAscIdAsc(classroomId).stream()
                 .map(SubjectDetailResponse::from)
                 .toList();
         }
 
-        return subjectRepository.findAll().stream()
+        return subjectRepository.findAllByIsActiveTrueOrderByStartAtAscIdAsc().stream()
             .map(SubjectDetailResponse::from)
             .toList();
     }
@@ -456,7 +456,7 @@ public class SubjectService {
         LocalDate startAt,
         LocalDate endAt
     ) {
-        if (subjectRepository.existsByIdNotAndClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqual(
+        if (subjectRepository.existsByIdNotAndClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqualAndIsActiveTrue(
             subjectId,
             classroomId,
             dayOfWeek,

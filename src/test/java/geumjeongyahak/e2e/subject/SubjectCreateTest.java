@@ -449,6 +449,55 @@ public class SubjectCreateTest extends SubjectBaseTest {
     }
 
     @Test
+    @DisplayName("비활성 과목과 기간/요일/교시가 겹쳐도 생성 성공(201 Created)")
+    void createSubject_Success_WhenOnlyInactiveSubjectOverlapsSameSlot() {
+        Map<String, Object> inactive = createRequest(
+            "비활성 중복 기준 과목",
+            "2026-03-02",
+            "2026-06-30",
+            "MONDAY"
+        );
+
+        Integer inactiveSubjectId = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(inactive)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .extract()
+            .path("id");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/{subjectId}", inactiveSubjectId)
+        .then()
+            .statusCode(204);
+
+        Map<String, Object> request = createRequest(
+            "활성 재생성 과목",
+            "2026-05-01",
+            "2026-07-01",
+            "MONDAY"
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .body("name", is("활성 재생성 과목"))
+            .log().all();
+    }
+
+    @Test
     @DisplayName("교사 배정 불가 사용자를 교사로 지정하면 과목 생성 실패(400 Bad Request)")
     void createSubject_BadRequest_WhenTeacherIsNotAssignable() {
         Map<String, Object> request = Map.ofEntries(
