@@ -38,7 +38,7 @@ public class TeacherAssignmentService {
         ));
 
         User teacher = userProxyService.getById(teacherId);
-        fillDefaultClassroomIfMissing(teacher, subjects.get(0));
+        userProxyService.fillDefaultClassroomIfMissing(teacher, subjects.get(0).getClassroom());
 
         List<SubjectDetailResponse> responses = subjects.stream()
             .map(subject -> subjectService.assignTeacher(
@@ -82,9 +82,4 @@ public class TeacherAssignmentService {
         teacherScheduleValidationService.validateSameSchedule(subjects);
     }
 
-    private void fillDefaultClassroomIfMissing(User teacher, Subject subject) {
-        if (teacher.getClassroom() == null) {
-            teacher.setClassroom(subject.getClassroom());
-        }
-    }
 }

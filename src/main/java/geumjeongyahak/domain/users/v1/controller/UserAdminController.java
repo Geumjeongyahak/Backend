@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.users.service.UserCrudService;
+import geumjeongyahak.domain.users.v1.dto.request.AssignUserClassroomRequest;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UpdateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UserPaginationRequest;
@@ -166,6 +167,59 @@ public class UserAdminController {
         log.debug("PATCH /api/v1/users/{} - 사용자 수정 요청", userId);
         UserDetailResponse response = userCrudService.updateUser(userId, request);
         return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:manage:*')")
+    @Operation(
+        summary = "사용자 대표 분반 지정/변경",
+        description = """
+            사용자의 대표 분반을 명시적으로 지정하거나 변경합니다.
+
+            사용 사례:
+            - 자동 매핑으로 채워진 대표 분반을 운영자가 정정
+            - 과목/수업 배정과 무관하게 사용자 기준 대표 분반 관리
+
+            동작 방식:
+            - classroomId로 활성 분반을 조회합니다.
+            - 기존 대표 분반이 있더라도 요청한 분반으로 변경합니다.
+
+            사이드 이펙트:
+            - users.classroom_id가 요청한 분반 ID로 변경됩니다.
+            """
+    )
+    @PutMapping("/{userId}/classroom")
+    public ResponseEntity<UserDetailResponse> assignClassroom(
+            @Parameter(description = "사용자 ID", example = "1")
+            @PathVariable Long userId,
+            @Valid @RequestBody AssignUserClassroomRequest request
+    ) {
+        log.debug("PUT /api/v1/users/{}/classroom - 사용자 대표 분반 지정 요청", userId);
+        UserDetailResponse response = userCrudService.assignClassroom(userId, request.classroomId());
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:manage:*')")
+    @Operation(
+        summary = "사용자 대표 분반 해제",
+        description = """
+            사용자의 대표 분반 매핑을 명시적으로 해제합니다.
+
+            사용 사례:
+            - 더 이상 대표 분반을 두지 않는 사용자 정리
+            - 잘못 지정된 대표 분반 제거
+
+            사이드 이펙트:
+            - users.classroom_id가 null로 변경됩니다.
+            """
+    )
+    @DeleteMapping("/{userId}/classroom")
+    public ResponseEntity<Void> releaseClassroom(
+            @Parameter(description = "사용자 ID", example = "1")
+            @PathVariable Long userId
+    ) {
+        log.debug("DELETE /api/v1/users/{}/classroom - 사용자 대표 분반 해제 요청", userId);
+        userCrudService.releaseClassroom(userId);
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:manage:*')")

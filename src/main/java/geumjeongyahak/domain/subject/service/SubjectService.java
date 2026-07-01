@@ -68,6 +68,7 @@ public class SubjectService {
         if (request.teacherId() != null) {
             teacher = userProxyService.getById(request.teacherId());
             validateTeacherAssignable(teacher);
+            userProxyService.fillDefaultClassroomIfMissing(teacher, classroom);
         }
 
         // 같은 분반에서 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재하는지 확인
@@ -212,6 +213,7 @@ public class SubjectService {
 
         validateFutureLessonsChangeable(subjectId, today);
         validateNoTeacherConflict(subjectId, teacher.getId(), today);
+        userProxyService.fillDefaultClassroomIfMissing(teacher, subject.getClassroom());
 
         subject.assignTeacher(teacher, LocalDateTime.now());
 
