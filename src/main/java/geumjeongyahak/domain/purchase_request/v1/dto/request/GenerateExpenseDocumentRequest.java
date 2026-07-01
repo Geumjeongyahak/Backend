@@ -10,22 +10,22 @@ public record GenerateExpenseDocumentRequest(
     @Schema(description = "회계연도", example = "2026년")
     String fiscalYear,
 
-    @Schema(description = "품의번호", example = "2026품-구비01-01")
+    @Schema(description = "품의번호", example = "2026품-목민서관-01")
     String draftDocumentNumber,
 
-    @Schema(description = "지출번호", example = "2026결-구비01-01")
+    @Schema(description = "지출번호", example = "2026결-목민서관-01")
     String resolutionDocumentNumber,
 
     @Schema(description = "정책사업명", example = "성인문해교육 지원사업")
     String policyProject,
 
-    @Schema(description = "단위사업명", example = "프로그램운영비")
+    @Schema(description = "단위사업명", example = "교재비")
     String unitProject,
 
     @Schema(description = "세부사업명", example = "사업추진비")
     String detailProject,
 
-    @Schema(description = "예산내역 산출내역", example = "시중교재")
+    @Schema(description = "예산내역 산출내역", example = "문해 교재")
     String budgetDetail,
 
     @Schema(description = "예산잔액", example = "100000")
@@ -37,25 +37,25 @@ public record GenerateExpenseDocumentRequest(
     @Schema(description = "요구부서", example = "교육연구부")
     String requestDepartment,
 
-    @Schema(description = "품의일자", example = "2026. 06. 25.")
+    @Schema(description = "품의일자", example = "2026. 06. 30.")
     String draftDate,
 
     @Schema(description = "완료 요청일", example = "2026. 06. 30.")
     String completionDate,
 
-    @Schema(description = "수신처", example = "금정열린배움터 교장")
+    @Schema(description = "수신처", example = "목민서관")
     String receiver,
 
-    @Schema(description = "지급구분", example = "CARD")
+    @Schema(description = "지급구분", example = "TRANSFER")
     ExpenseDocumentPaymentMethod paymentMethod,
 
-    @Schema(description = "발의일자", example = "2026. 06. 29.")
+    @Schema(description = "발의일자", example = "2026. 06. 30.")
     String initiationDate,
 
-    @Schema(description = "결의일자", example = "2026. 06. 29.")
+    @Schema(description = "결의일자", example = "2026. 06. 30.")
     String resolutionDate,
 
-    @Schema(description = "지급일자", example = "2026. 06. 29.")
+    @Schema(description = "지급일자", example = "2026. 06. 30.")
     String paymentDate,
 
     @Schema(description = "은행계좌", example = "국민은행 000000-00-000000")
@@ -85,10 +85,10 @@ public record GenerateExpenseDocumentRequest(
     @Schema(description = "문서 결재라인 항목")
     public record ApprovalLine(
 
-        @Schema(description = "직위", example = "총무부장")
+        @Schema(description = "직위", example = "담당")
         String position,
 
-        @Schema(description = "이름", example = "김단아")
+        @Schema(description = "이름", example = "김담당")
         String name
     ) {
     }
@@ -99,7 +99,7 @@ public record GenerateExpenseDocumentRequest(
         @Schema(description = "규격", example = "A4")
         String spec,
 
-        @Schema(description = "예상단가", example = "10000")
+        @Schema(description = "예상단가", example = "3000")
         Long unitPrice
     ) {
     }

@@ -269,23 +269,25 @@ GET /api/v1/admin/purchase-requests/{requestId}
 
 #### 요청 바디 예시
 
-`items`는 구매 요청 품목 순서와 같은 순서로 전달합니다. `description`, `quantity`, `amount`는 받지 않습니다.
+요청 바디의 값들은 문서 양식에 추가로 채워 넣기 위한 선택값입니다. 값을 보내지 않으면 해당 칸은 빈 칸으로 남고, DB에서 확인 가능한 제목, 금액, 품목명, 수량, 거래처, 거래금액 등은 그대로 문서에 반영됩니다.
+
+`items`도 선택값입니다. 다만 `items`를 보낼 경우에는 구매 요청 품목 순서와 같은 순서로 전달합니다. `description`, `quantity`, `amount`는 받지 않고, 품목명과 수량은 구매 요청 DB 값을 사용합니다.
 
 ```json
 {
   "fiscalYear": "2026년",
-  "draftDocumentNumber": "2026품-구비01-01",
-  "resolutionDocumentNumber": "2026결-구비01-01",
+  "draftDocumentNumber": "2026품-목민서관-01",
+  "resolutionDocumentNumber": "2026결-목민서관-01",
   "policyProject": "성인문해교육 지원사업",
-  "unitProject": "프로그램운영비",
+  "unitProject": "교재비",
   "detailProject": "사업추진비",
-  "budgetDetail": "시중교재",
+  "budgetDetail": "문해 교재",
   "budgetBalance": 100000,
   "projectBalance": 500000,
   "requestDepartment": "교육연구부",
   "draftDate": "2026. 06. 30.",
   "completionDate": "2026. 06. 30.",
-  "receiver": "금정열린배움터",
+  "receiver": "목민서관",
   "paymentMethod": "TRANSFER",
   "initiationDate": "2026. 06. 30.",
   "resolutionDate": "2026. 06. 30.",
@@ -320,7 +322,13 @@ GET /api/v1/admin/purchase-requests/{requestId}
 }
 ```
 
-위 예시는 구매 요청 품목 수량이 각각 `10`, `10`, `10`인 경우입니다.
+위 예시는 `init_data.sql`의 수동 테스트 데이터 기준입니다.
+
+| 구매 요청 품목 | DB 수량 | 요청 단가 | 계산 예상금액 |
+|---|---:|---:|---:|
+| 문해 교재 1단계 | 10 | 3,000원 | 30,000원 |
+| 문해 교재 2단계 | 10 | 3,000원 | 30,000원 |
+| 수업용 문제집 | 10 | 4,000원 | 40,000원 |
 
 ```text
 3,000원 * 10 = 30,000원
