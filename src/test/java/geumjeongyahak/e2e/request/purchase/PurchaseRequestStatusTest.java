@@ -684,7 +684,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
                 .header(AUTH_HEADER, getAuthHeader(adminToken))
                 .get()
                 .then().statusCode(200)
-                .extract().jsonPath().getList("id", Long.class);
+                .extract().jsonPath().getList("content.id", Long.class);
             assertThat(adminIds).contains(request1Id, request2Id);
 
             given()
@@ -693,15 +693,15 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
                 .get()
                 .then()
                 .statusCode(200)
-                .body("find { it.id == " + request1Id + " }.classroomId", equalTo((int) CLASSROOM_ID))
-                .body("find { it.id == " + request1Id + " }.requestedById", equalTo((int) TEACHER_ID));
+                .body("content.find { it.id == " + request1Id + " }.classroomId", equalTo((int) CLASSROOM_ID))
+                .body("content.find { it.id == " + request1Id + " }.requestedById", equalTo((int) TEACHER_ID));
 
             List<Long> v1AllIds = given()
                 .basePath("/api/v1/purchase-requests")
                 .header(AUTH_HEADER, getAuthHeader(volunteerToken))
                 .get()
                 .then().statusCode(200)
-                .extract().jsonPath().getList("id", Long.class);
+                .extract().jsonPath().getList("content.id", Long.class);
             assertThat(v1AllIds).contains(request1Id, request2Id);
 
             List<Long> v1MineIds = given()
@@ -710,7 +710,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
                 .queryParam("mine", true)
                 .get()
                 .then().statusCode(200)
-                .extract().jsonPath().getList("id", Long.class);
+                .extract().jsonPath().getList("content.id", Long.class);
             assertThat(v1MineIds).contains(request1Id);
             assertThat(v1MineIds).doesNotContain(request2Id);
 
