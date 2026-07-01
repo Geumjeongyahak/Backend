@@ -233,6 +233,39 @@ public class SubjectCreateTest extends SubjectBaseTest {
     }
 
     @Test
+    @DisplayName("담당 교사가 있는 과목 생성 시 교사의 기본 분반이 없으면 과목 분반으로 채운다")
+    void createSubject_FillsTeacherDefaultClassroomWhenMissing() {
+        jdbcTemplate.update("UPDATE users SET classroom_id = NULL WHERE id = ?", TEACHER_ID);
+        try {
+            Map<String, Object> request = new HashMap<>(createRequest(
+                "기본 분반 자동 매핑 과목",
+                "2026-03-03",
+                "2026-06-30",
+                "TUESDAY"
+            ));
+
+            given()
+                .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+                .contentType("application/json")
+                .body(request)
+                .when()
+                .post()
+                .then()
+                .statusCode(201)
+                .body("teacherId", is((int) TEACHER_ID));
+
+            Long userClassroomId = jdbcTemplate.queryForObject(
+                "SELECT classroom_id FROM users WHERE id = ?",
+                Long.class,
+                TEACHER_ID
+            );
+            assertThat(userClassroomId).isEqualTo(CLASSROOM_ID);
+        } finally {
+            jdbcTemplate.update("UPDATE users SET classroom_id = ? WHERE id = ?", CLASSROOM_ID, TEACHER_ID);
+        }
+    }
+
+    @Test
     @DisplayName("과목 생성 시 이미 지난 날짜의 수업은 자동 생성하지 않는다")
     void createSubject_DoesNotCreatePastLessons() {
         Map<String, Object> request = createRequest(
@@ -412,6 +445,55 @@ public class SubjectCreateTest extends SubjectBaseTest {
             .post()
             .then()
             .statusCode(409)
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("비활성 과목과 기간/요일/교시가 겹쳐도 생성 성공(201 Created)")
+    void createSubject_Success_WhenOnlyInactiveSubjectOverlapsSameSlot() {
+        Map<String, Object> inactive = createRequest(
+            "비활성 중복 기준 과목",
+            "2026-03-02",
+            "2026-06-30",
+            "MONDAY"
+        );
+
+        Integer inactiveSubjectId = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(inactive)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .extract()
+            .path("id");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/{subjectId}", inactiveSubjectId)
+        .then()
+            .statusCode(204);
+
+        Map<String, Object> request = createRequest(
+            "활성 재생성 과목",
+            "2026-05-01",
+            "2026-07-01",
+            "MONDAY"
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .body("id", notNullValue())
+            .body("name", is("활성 재생성 과목"))
             .log().all();
     }
 

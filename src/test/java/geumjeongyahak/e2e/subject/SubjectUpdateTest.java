@@ -271,6 +271,38 @@ public class SubjectUpdateTest extends SubjectBaseTest {
     }
 
     @Test
+    @DisplayName("PATCH /teacher: 기본 분반이 없는 교사를 배정하면 과목 분반으로 채운다")
+    void assignTeacher_FillsTeacherDefaultClassroomWhenMissing() {
+        jdbcTemplate.update("UPDATE users SET classroom_id = NULL WHERE id = ?", NEW_TEACHER_ID);
+        try {
+            long subjectId = createSubjectWithoutTeacher();
+
+            Map<String, Object> request = Map.ofEntries(
+                Map.entry("teacherId", NEW_TEACHER_ID)
+            );
+
+            given()
+                .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+                .contentType("application/json")
+                .body(request)
+                .when()
+                .patch("/{subjectId}/teacher", subjectId)
+                .then()
+                .statusCode(200)
+                .body("teacherId", is((int) NEW_TEACHER_ID));
+
+            Long userClassroomId = jdbcTemplate.queryForObject(
+                "SELECT classroom_id FROM users WHERE id = ?",
+                Long.class,
+                NEW_TEACHER_ID
+            );
+            assertThat(userClassroomId).isEqualTo(CLASSROOM_1);
+        } finally {
+            jdbcTemplate.update("UPDATE users SET classroom_id = NULL WHERE id = ?", NEW_TEACHER_ID);
+        }
+    }
+
+    @Test
     @DisplayName("PATCH /teacher: teacherId가 null이면 과목 담당 교사를 비우고 미래 수업을 삭제한다")
     void assignTeacher_ClearsSubjectTeacher() {
         long subjectId = createSubject(CLASSROOM_1, "국어", "MONDAY", 2);

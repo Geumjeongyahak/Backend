@@ -73,7 +73,7 @@ class RequestBindingErrorTest extends BaseE2ETest {
     }
 
     @Test
-    @DisplayName("관리자 API enum 조회 파라미터 변환 실패는 400을 반환한다")
+    @DisplayName("관리자 API enum 목록 요청 바인딩 실패는 400을 반환한다")
     void adminEnumRequestParameterTypeMismatch_returns400() {
         given()
             .header(AUTH_HEADER, getAuthHeader(adminToken))
@@ -82,8 +82,8 @@ class RequestBindingErrorTest extends BaseE2ETest {
             .get("/api/v1/admin/purchase-requests")
         .then()
             .statusCode(400)
-            .body("code", equalTo("VAL002"))
-            .body("parameter", equalTo("status"));
+            .body("code", equalTo("VAL001"))
+            .body("errors[0].field", equalTo("status"));
     }
 
     @Test

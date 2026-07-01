@@ -4,9 +4,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
@@ -23,15 +23,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import geumjeongyahak.common.security.service.CustomUserDetails;
-import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
+import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.purchase_request.service.ExpenseDocumentService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestService;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestByAdminRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.GenerateExpenseDocumentRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.PurchaseRequestListRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReviewPurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.UpdatePurchaseRequestByAdminRequest;
@@ -65,15 +65,26 @@ public class PurchaseRequestAdminController {
 
     @Operation(
         summary = "구입 요청 전체 목록 조회",
-        description = "전체 분반의 구입 요청 목록을 조회합니다. status 파라미터로 필터링할 수 있습니다."
+        description = "전체 분반의 구입 요청 목록을 페이지 단위로 조회합니다. status, keyword, classroomName, requestedByName 파라미터로 필터링할 수 있습니다."
     )
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:read:*')")
     @GetMapping
-    public ResponseEntity<List<PurchaseRequestSummaryResponse>> getAllPurchaseRequests(
-        @RequestParam(required = false) PurchaseRequestStatus status
+    public ResponseEntity<PaginationResponse<PurchaseRequestSummaryResponse>> getAllPurchaseRequests(
+        @ParameterObject @Valid PurchaseRequestListRequest request
     ) {
-        log.debug("GET /api/v1/admin/purchase-requests (status={})", status);
-        return ResponseEntity.ok(purchaseRequestService.getAllPurchaseRequests(status));
+        log.debug(
+            "GET /api/v1/admin/purchase-requests (status={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
+            request.getStatus(),
+            request.getKeyword(),
+            request.getClassroomName(),
+            request.getRequestedByName(),
+            request.getPage(),
+            request.getSize(),
+            request.getSort()
+        );
+        return ResponseEntity.ok(
+            purchaseRequestService.getPurchaseRequests(null, request, false)
+        );
     }
 
     @Operation(summary = "구입 요청 상세 조회")
