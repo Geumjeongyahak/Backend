@@ -3,9 +3,9 @@ package geumjeongyahak.domain.purchase_request.v1.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,13 +16,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import geumjeongyahak.common.security.service.CustomUserDetails;
-import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
+import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestReconfirmationService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestService;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.PurchaseRequestListRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
@@ -60,18 +60,31 @@ public class PurchaseRequestController {
     @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "구입 요청 목록 조회",
-        description = "구입 요청 목록을 조회합니다. 기본 목록은 전체 요청을 반환하며, mine=true 파라미터를 전달하면 본인이 신청한 요청만 반환합니다. "
-            + "status 파라미터로 필터링할 수 있습니다."
+        description = "구입 요청 목록을 페이지 단위로 조회합니다. 기본 목록은 전체 요청을 반환하며, mine=true 파라미터를 전달하면 본인이 신청한 요청만 반환합니다. "
+            + "status, keyword, classroomName, requestedByName 파라미터로 필터링할 수 있습니다."
     )
     @GetMapping
-    public ResponseEntity<List<PurchaseRequestSummaryResponse>> getPurchaseRequests(
-        @RequestParam(required = false) PurchaseRequestStatus status,
-        @RequestParam(defaultValue = "false") boolean mine,
+    public ResponseEntity<PaginationResponse<PurchaseRequestSummaryResponse>> getPurchaseRequests(
+        @ParameterObject @Valid PurchaseRequestListRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.debug("GET /api/v1/purchase-requests (status={}, mine={})", status, mine);
+        log.debug(
+            "GET /api/v1/purchase-requests (status={}, mine={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
+            request.getStatus(),
+            request.isMine(),
+            request.getKeyword(),
+            request.getClassroomName(),
+            request.getRequestedByName(),
+            request.getPage(),
+            request.getSize(),
+            request.getSort()
+        );
         return ResponseEntity.ok(
-            purchaseRequestService.getPurchaseRequests(userDetails.getUserId(), status, mine)
+            purchaseRequestService.getPurchaseRequests(
+                userDetails.getUserId(),
+                request,
+                request.isMine()
+            )
         );
     }
 

@@ -66,6 +66,7 @@ public class LessonService {
 
         User teacher = userProxyService.getById(request.teacherId());
         validateTeacherAssignable(teacher);
+        userProxyService.fillDefaultClassroomIfMissing(teacher, subject.getClassroom());
 
         // 같은 teacher + 같은 date 기준 겹치는 시간이 있는지 확인
         if (lessonRepository.existsByTeacherIdAndDateAndIsDeletedFalseAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
@@ -192,6 +193,7 @@ public class LessonService {
             teacher = userProxyService.getById(newTeacherId);
             validateTeacherAssignable(teacher);
         }
+        userProxyService.fillDefaultClassroomIfMissing(teacher, subject.getClassroom());
 
         // 변경 반영
         lesson.update(subject, teacher, newDate, newStart, newEnd, newPeriod);

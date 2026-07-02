@@ -95,6 +95,39 @@ public class SubjectListReadTest extends SubjectBaseTest {
     }
 
     @Test
+    @DisplayName("과목 목록 조회 시 비활성 과목은 제외한다")
+    void getSubjects_ExcludesInactiveSubjects() {
+        createSubject(CLASSROOM_1, "활성 과목", "MONDAY", 2);
+        Integer inactiveSubjectId = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(createRequest(CLASSROOM_1, "비활성 과목", "TUESDAY", 1))
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .extract()
+            .path("id");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/{subjectId}", inactiveSubjectId)
+        .then()
+            .statusCode(204);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get()
+        .then()
+            .statusCode(200)
+            .body("size()", is(1))
+            .body("[0].name", is("활성 과목"))
+            .log().all();
+    }
+
+    @Test
     @DisplayName("존재하지 않는 분반으로 필터링 조회 시 404 Not Found")
     void getSubjects_ByClassroom_NotFound() {
         given()

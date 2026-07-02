@@ -154,7 +154,84 @@ sequenceDiagram
 }
 ```
 
-### 4.2 구입 요청 승인
+### 4.2 구입 요청 목록 조회
+
+구입 요청 목록 조회 API는 페이지 응답을 반환합니다. 프론트에서는 최상위 응답 객체의 `content`를 목록 데이터로 사용합니다.
+
+#### 일반 목록 조회
+
+- **URL**: `/api/v1/purchase-requests`
+- **Method**: `GET`
+- **권한**: `VOLUNTEER`, `MANAGER`, `ADMIN`
+
+| 파라미터 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| `status` | `PurchaseRequestStatus` | N | 구입 요청 상태 필터. `PENDING`, `APPROVED`, `PURCHASED`, `CONFIRMED`, `REJECTED` |
+| `mine` | boolean | N | `true`이면 로그인 사용자가 작성한 요청만 조회합니다. 기본값은 `false`입니다. |
+| `keyword` | string | N | 제목, 분반명, 작성자명 통합 검색어 |
+| `classroomName` | string | N | 분반명 부분 검색어 |
+| `requestedByName` | string | N | 작성자명 부분 검색어 |
+| `page` | integer | N | 페이지 번호. 기본값은 `0`입니다. |
+| `size` | integer | N | 페이지 크기. 기본값은 `10`, 최대값은 `100`입니다. |
+| `sort` | string | N | 정렬 기준. 예: `createdAt,DESC`, `classroomName,ASC;createdAt,DESC` |
+
+#### 관리자 전체 목록 조회
+
+- **URL**: `/api/v1/admin/purchase-requests`
+- **Method**: `GET`
+- **권한**: `ADMIN` 또는 `purchase-request:read:*`
+
+| 파라미터 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| `status` | `PurchaseRequestStatus` | N | 구입 요청 상태 필터. `PENDING`, `APPROVED`, `PURCHASED`, `CONFIRMED`, `REJECTED` |
+| `keyword` | string | N | 제목, 분반명, 작성자명 통합 검색어 |
+| `classroomName` | string | N | 분반명 부분 검색어 |
+| `requestedByName` | string | N | 작성자명 부분 검색어 |
+| `page` | integer | N | 페이지 번호. 기본값은 `0`입니다. |
+| `size` | integer | N | 페이지 크기. 기본값은 `10`, 최대값은 `100`입니다. |
+| `sort` | string | N | 정렬 기준. 예: `createdAt,DESC`, `requestedByName,ASC;createdAt,DESC` |
+
+#### 정렬 필드
+
+| 필드 | 설명 |
+|---|---|
+| `id` | 구입 요청 ID |
+| `title` | 제목 |
+| `classroomName` | 분반명 |
+| `requestedByName` | 작성자명 |
+| `totalPrice` | 구매 완료 보고 총액 |
+| `status` | 상태 |
+| `createdAt` | 생성일시 |
+| `updatedAt` | 수정일시 |
+
+`sort`를 생략하면 `createdAt,DESC;id,DESC` 기준으로 조회합니다.
+
+#### 응답 예시
+
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "classroomId": 1,
+      "classroomName": "벚꽃반",
+      "requestedById": 2,
+      "requestedByName": "홍길동",
+      "title": "교재 구입",
+      "totalPrice": 100000,
+      "status": "PURCHASED",
+      "createdAt": "2026-06-30T10:00:00",
+      "updatedAt": "2026-06-30T10:00:00"
+    }
+  ],
+  "page": 0,
+  "size": 10,
+  "totalElements": 1,
+  "totalPages": 1
+}
+```
+
+### 4.3 구입 요청 승인
 
 - **URL**: `/api/v1/admin/purchase-requests/{requestId}/approve`
 - **Method**: `PATCH`
@@ -166,7 +243,7 @@ sequenceDiagram
 }
 ```
 
-### 4.3 구매 완료 보고
+### 4.4 구매 완료 보고
 
 - **URL**: `/api/v1/purchase-requests/{requestId}/report`
 - **Method**: `POST`
@@ -185,7 +262,7 @@ sequenceDiagram
 }
 ```
 
-### 4.4 거래처 관리
+### 4.5 거래처 관리
 
 | 기능 | URL | Method | 권한 |
 |---|---|---|---|
@@ -197,7 +274,7 @@ sequenceDiagram
 | 거래처 충전 | `/api/v1/admin/vendors/{vendorId}/charges` | `POST` | `ADMIN` 또는 `vendor:manage:*` |
 | 거래처 잔액 이력 | `/api/v1/admin/vendors/{vendorId}/histories` | `GET` | `ADMIN` 또는 `vendor:read:*` |
 
-### 4.5 지출증빙서류 DOCX 생성
+### 4.6 지출증빙서류 DOCX 생성
 
 - **URL**: `/api/v1/admin/purchase-requests/{requestId}/expense-document`
 - **Method**: `POST`

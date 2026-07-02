@@ -7,6 +7,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -15,6 +17,7 @@ import geumjeongyahak.common.exception.BadRequestException;
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
+import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
 import geumjeongyahak.domain.file.entity.File;
@@ -28,8 +31,10 @@ import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestPaymentTrans
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.exception.PurchaseRequestErrorCode;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
+import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestSpecs;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestByAdminRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.PurchaseRequestListRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
@@ -98,43 +103,48 @@ public class PurchaseRequestService {
         return createPurchaseRequest(requester, classroom, request.title(), request.content(), items);
     }
 
-    public List<PurchaseRequestSummaryResponse> getPurchaseRequests(
+    public PaginationResponse<PurchaseRequestSummaryResponse> getPurchaseRequests(
         Long requesterId,
-        PurchaseRequestStatus status,
+        PurchaseRequestListRequest request,
         boolean mine
     ) {
-        log.debug("구입 요청 목록 조회 (requesterId={}, status={}, mine={})", requesterId, status, mine);
+        log.debug(
+            "구입 요청 목록 조회 (requesterId={}, mine={}, status={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
+            requesterId,
+            mine,
+            request.getStatus(),
+            request.getKeyword(),
+            request.getClassroomName(),
+            request.getRequestedByName(),
+            request.getPage(),
+            request.getSize(),
+            request.getSort()
+        );
 
-        List<PurchaseRequest> list = mine
-            ? findPurchaseRequestsByRequester(requesterId, status)
-            : findPurchaseRequests(status);
+        Specification<PurchaseRequest> spec = buildListSpecification(
+            requesterId,
+            request,
+            mine
+        );
+        Page<PurchaseRequest> page = purchaseRequestRepository.findAll(spec, request.toRequest());
 
-        return list.stream().map(PurchaseRequestSummaryResponse::from).toList();
+        return PaginationResponse.from(page, PurchaseRequestSummaryResponse::from);
     }
 
-    public List<PurchaseRequestSummaryResponse> getAllPurchaseRequests(PurchaseRequestStatus status) {
-        log.debug("구입 요청 전체 목록 조회 (status={})", status);
-
-        List<PurchaseRequest> list = status != null
-            ? purchaseRequestRepository.findAllByStatusOrderByCreatedAtDesc(status)
-            : purchaseRequestRepository.findAllByOrderByCreatedAtDesc();
-
-        return list.stream().map(PurchaseRequestSummaryResponse::from).toList();
-    }
-
-    private List<PurchaseRequest> findPurchaseRequests(PurchaseRequestStatus status) {
-        return status != null
-            ? purchaseRequestRepository.findAllByStatusOrderByCreatedAtDesc(status)
-            : purchaseRequestRepository.findAllByOrderByCreatedAtDesc();
-    }
-
-    private List<PurchaseRequest> findPurchaseRequestsByRequester(
+    private Specification<PurchaseRequest> buildListSpecification(
         Long requesterId,
-        PurchaseRequestStatus status
+        PurchaseRequestListRequest request,
+        boolean mine
     ) {
-        return status != null
-            ? purchaseRequestRepository.findAllByStatusAndRequestedBy_IdOrderByCreatedAtDesc(status, requesterId)
-            : purchaseRequestRepository.findAllByRequestedBy_IdOrderByCreatedAtDesc(requesterId);
+        Specification<PurchaseRequest> spec = Specification.allOf(
+            PurchaseRequestSpecs.hasStatus(request.getStatus()),
+            PurchaseRequestSpecs.keywordContains(request.getKeyword()),
+            PurchaseRequestSpecs.classroomNameContains(request.getClassroomName()),
+            PurchaseRequestSpecs.requestedByNameContains(request.getRequestedByName())
+        );
+        return mine
+            ? spec.and(PurchaseRequestSpecs.requestedBy(requesterId))
+            : spec;
     }
 
     public PurchaseRequestDetailResponse getPurchaseRequest(Long requesterId, Long requestId, boolean isAdmin) {

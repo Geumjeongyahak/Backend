@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import geumjeongyahak.domain.users.v1.dto.request.AssignUserClassroomRequest;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UserPermissionRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UpdateSelfRequest;
@@ -177,6 +178,78 @@ class UserUpdateTest extends UserBaseTest {
             .statusCode(200)
             .body("classroom.id", equalTo(2))
             .body("classroom.name", equalTo("장미반"))
+            .log().all();
+    }
+
+    @Test
+    @DisplayName("관리자가 User 대표 분반을 지정, 변경, 해제 성공")
+    void assignAndReleaseUserClassroom_Success() {
+        CreateUserRequest createReq = new CreateUserRequest(
+            "classroom-admin@test.com",
+            "Classroom Admin User",
+            "pw_classroom_admin",
+            "010-1111-4444",
+            DEFAULT_BIRTH_DATE,
+            "VOLUNTEER",
+            null,
+            null
+        );
+
+        var createdUser = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(createReq)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .body("classroom", nullValue())
+            .extract()
+            .as(UserDetailResponse.class);
+
+        userTestHelper.setUser(createdUser.email());
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new AssignUserClassroomRequest(1L))
+        .when()
+            .put("/{userId}/classroom", createdUser.id())
+        .then()
+            .statusCode(200)
+            .body("id", equalTo(createdUser.id().intValue()))
+            .body("classroom.id", equalTo(1))
+            .body("classroom.name", equalTo("벚꽃반"))
+            .log().all();
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new AssignUserClassroomRequest(2L))
+        .when()
+            .put("/{userId}/classroom", createdUser.id())
+        .then()
+            .statusCode(200)
+            .body("id", equalTo(createdUser.id().intValue()))
+            .body("classroom.id", equalTo(2))
+            .body("classroom.name", equalTo("장미반"))
+            .log().all();
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/{userId}/classroom", createdUser.id())
+        .then()
+            .statusCode(204)
+            .log().all();
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/{userId}", createdUser.id())
+        .then()
+            .statusCode(200)
+            .body("classroom", nullValue())
             .log().all();
     }
 

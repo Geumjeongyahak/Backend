@@ -6,6 +6,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.exception.UserNotFoundException;
 import geumjeongyahak.domain.users.repository.UserRepository;
@@ -108,5 +109,12 @@ public class UserProxyService {
         User user = getById(userId);
         user.setProfileImageUrl(profileImageUrl);
         log.info("사용자 프로필 이미지 URL 갱신 완료 - userId={}", userId);
+    }
+
+    @Transactional
+    public void fillDefaultClassroomIfMissing(User user, Classroom classroom) {
+        if (user.getClassroom() == null) {
+            user.setClassroom(classroom);
+        }
     }
 }

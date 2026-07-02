@@ -1,16 +1,22 @@
 package geumjeongyahak.e2e.lesson;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import geumjeongyahak.domain.auth.enums.RoleType;
 
 @DisplayName("E2E: Lesson 생성 테스트")
 public class LessonCreateTest extends LessonBaseTest {
     private static final long GUEST_ID = 4L;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     @DisplayName("관리자 권한으로 수업 생성 성공(201)")
@@ -29,6 +35,26 @@ public class LessonCreateTest extends LessonBaseTest {
 
         String lessonWriteToken = createAccessTokenWithPermission("lesson-write", RoleType.VOLUNTEER, "lesson:write:*");
         createLessonAndGetId(request, lessonWriteToken);
+    }
+
+    @Test
+    @DisplayName("수업 생성 시 기본 분반이 없는 교사를 지정하면 과목 분반으로 채운다")
+    void createLesson_fillsTeacherDefaultClassroomWhenMissing() {
+        jdbcTemplate.update("UPDATE users SET classroom_id = NULL WHERE id = ?", TEACHER2_ID);
+        try {
+            Long subjectId = createTrackedSubjectAndGetId("수업 기본 분반");
+
+            createTrackedLessonAndGetId(subjectId, TEACHER2_ID, "2026-02-27", "19:20:00", "20:00:00", 1);
+
+            Long userClassroomId = jdbcTemplate.queryForObject(
+                "SELECT classroom_id FROM users WHERE id = ?",
+                Long.class,
+                TEACHER2_ID
+            );
+            assertThat(userClassroomId).isEqualTo(CLASSROOM_ID);
+        } finally {
+            jdbcTemplate.update("UPDATE users SET classroom_id = NULL WHERE id = ?", TEACHER2_ID);
+        }
     }
 
     @Test

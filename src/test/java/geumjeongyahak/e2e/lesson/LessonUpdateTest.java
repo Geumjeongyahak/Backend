@@ -1,15 +1,21 @@
 package geumjeongyahak.e2e.lesson;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import geumjeongyahak.domain.auth.enums.RoleType;
 
 @DisplayName("E2E: Lesson 부분 수정(PATCH) 테스트")
 public class LessonUpdateTest extends LessonBaseTest {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     @DisplayName("관리자: date/startTime/endTime만 부분 수정 성공(200)")
@@ -60,6 +66,37 @@ public class LessonUpdateTest extends LessonBaseTest {
             .statusCode(200)
             .body("lessonId", equalTo(lessonId.intValue()))
             .body("date", equalTo("2026-02-22"));
+    }
+
+    @Test
+    @DisplayName("수업 교사 교체 시 기본 분반이 없는 교사는 과목 분반으로 채워진다")
+    void patchLesson_fillsTeacherDefaultClassroomWhenReplacingTeacher() {
+        jdbcTemplate.update("UPDATE users SET classroom_id = NULL WHERE id = ?", TEACHER2_ID);
+        try {
+            Long subjectId = createTrackedSubjectAndGetId("수업 교사 교체");
+            Long lessonId = createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-28", "19:20:00", "20:00:00", 1);
+
+            Map<String, Object> patch = Map.of("teacherId", TEACHER2_ID);
+
+            given()
+                .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+                .contentType("application/json")
+                .body(patch)
+                .when()
+                .patch("/{lessonId}", lessonId)
+                .then()
+                .statusCode(200)
+                .body("lessonId", equalTo(lessonId.intValue()));
+
+            Long userClassroomId = jdbcTemplate.queryForObject(
+                "SELECT classroom_id FROM users WHERE id = ?",
+                Long.class,
+                TEACHER2_ID
+            );
+            assertThat(userClassroomId).isEqualTo(CLASSROOM_ID);
+        } finally {
+            jdbcTemplate.update("UPDATE users SET classroom_id = NULL WHERE id = ?", TEACHER2_ID);
+        }
     }
 
     @Test

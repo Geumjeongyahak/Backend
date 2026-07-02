@@ -184,6 +184,33 @@ public class UserCrudService {
         return toDetailResponse(user);
     }
 
+    @Transactional
+    public UserDetailResponse assignClassroom(Long userId, Long classroomId) {
+        log.debug("사용자 대표 분반 지정 요청 - userId: {}, classroomId: {}", userId, classroomId);
+        User user = userRepository.findByIdAndIsDeletedFalse(userId)
+            .orElseThrow(() -> {
+                log.debug("사용자 대표 분반 지정 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
+                return new UserNotFoundException(userId);
+            });
+
+        user.setClassroom(classroomProxyService.getActiveById(classroomId));
+        log.info("사용자 대표 분반 지정 완료 - userId: {}, classroomId: {}", userId, classroomId);
+        return toDetailResponse(user);
+    }
+
+    @Transactional
+    public void releaseClassroom(Long userId) {
+        log.debug("사용자 대표 분반 해제 요청 - userId: {}", userId);
+        User user = userRepository.findByIdAndIsDeletedFalse(userId)
+            .orElseThrow(() -> {
+                log.debug("사용자 대표 분반 해제 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
+                return new UserNotFoundException(userId);
+            });
+
+        user.setClassroom(null);
+        log.info("사용자 대표 분반 해제 완료 - userId: {}", userId);
+    }
+
     private UserDetailResponse toDetailResponse(User user) {
         return UserDetailResponse.from(
             user,
