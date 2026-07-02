@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class StudentAttendanceSheetController {
 
     private static final String DAILY_SCHEDULE_READ_ACCESS =
-        "hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN')";
+        "hasRole('ADMIN') or hasAuthority('daily-schedule:read:*')";
 
     private final DailyScheduleService dailyScheduleService;
 

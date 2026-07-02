@@ -98,6 +98,7 @@ INSERT INTO user_permissions (user_id, permission_code) VALUES
     (2, 'lesson:write:*'),
     (6, 'channel:write:6'),
     (10, 'daily-schedule:manage:*'),
+    (10, 'daily-schedule:read:*'),
     (10, 'user:read:*'),
     (10, 'purchase-request:read:*'),
     (10, 'purchase-request:manage:*'),
