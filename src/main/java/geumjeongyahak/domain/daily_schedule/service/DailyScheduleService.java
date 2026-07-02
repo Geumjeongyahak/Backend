@@ -2,6 +2,7 @@ package geumjeongyahak.domain.daily_schedule.service;
 
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
+import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
 import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.entity.DailyStudentAttendance;
 import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
@@ -29,6 +30,7 @@ import geumjeongyahak.domain.daily_schedule.v1.dto.request.CreateDailyScheduleJo
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleListRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailySchedulePaginationRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.DailyScheduleVolunteerHoursRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.StudentAttendanceSheetRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleJournalRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendanceItemRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyStudentAttendancesRequest;
@@ -37,6 +39,10 @@ import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailR
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleLessonResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleSummaryResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleVolunteerHoursResponse;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.StudentAttendanceSheetAttendanceResponse;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.StudentAttendanceSheetResponse;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.StudentAttendanceSheetScheduleResponse;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.StudentAttendanceSheetStudentResponse;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
@@ -45,10 +51,12 @@ import geumjeongyahak.domain.student.service.StudentProxyService;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
 import java.time.Clock;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -76,6 +84,7 @@ public class DailyScheduleService {
     private final DailyStudentAttendanceRepository dailyStudentAttendanceRepository;
     private final LessonProxyService lessonProxyService;
     private final StudentProxyService studentProxyService;
+    private final ClassroomProxyService classroomProxyService;
     private final UserProxyService userProxyService;
     private final Clock clock;
 
@@ -157,6 +166,68 @@ public class DailyScheduleService {
             .toList();
         log.debug("DailySchedule 목록 조회 완료 - 총 {}건", responses.size());
         return responses;
+    }
+
+    public StudentAttendanceSheetResponse getStudentAttendanceSheet(StudentAttendanceSheetRequest request) {
+        YearMonth yearMonth = YearMonth.of(request.year(), request.month());
+        LocalDate from = yearMonth.atDay(1);
+        LocalDate to = yearMonth.atEndOfMonth();
+
+        log.debug(
+            "학생 출석부 조회 요청 (year={}, month={}, classroomId={})",
+            request.year(),
+            request.month(),
+            request.classroomId()
+        );
+
+        Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
+        List<StudentAttendanceSheetStudentResponse> students = studentProxyService
+            .getActiveStudentsByClassroomId(request.classroomId())
+            .stream()
+            .sorted(Comparator.comparing(Student::getName).thenComparing(Student::getId))
+            .map(StudentAttendanceSheetStudentResponse::from)
+            .toList();
+        List<DailySchedule> dailySchedules = dailyScheduleRepository
+            .findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(from, to)
+            .stream()
+            .filter(dailySchedule -> dailySchedule.getClassroom().getId().equals(request.classroomId()))
+            .toList();
+        List<Long> dailyScheduleIds = dailySchedules.stream()
+            .map(DailySchedule::getId)
+            .toList();
+        Map<Long, List<StudentAttendanceSheetAttendanceResponse>> attendancesByScheduleId = dailyScheduleIds.isEmpty()
+            ? Map.of()
+            : dailyStudentAttendanceRepository.findAllByDailySchedule_IdInAndIsDeletedFalse(dailyScheduleIds)
+                .stream()
+                .sorted(Comparator
+                    .comparing((DailyStudentAttendance attendance) -> attendance.getStudent().getName())
+                    .thenComparing(attendance -> attendance.getStudent().getId()))
+                .collect(Collectors.groupingBy(
+                    attendance -> attendance.getDailySchedule().getId(),
+                    Collectors.mapping(StudentAttendanceSheetAttendanceResponse::from, Collectors.toList())
+                ));
+        List<StudentAttendanceSheetScheduleResponse> schedules = dailySchedules.stream()
+            .map(dailySchedule -> StudentAttendanceSheetScheduleResponse.of(
+                dailySchedule,
+                getDayOfWeekLabel(dailySchedule.getLessonDate().getDayOfWeek()),
+                attendancesByScheduleId.getOrDefault(dailySchedule.getId(), List.of())
+            ))
+            .toList();
+
+        log.debug(
+            "학생 출석부 조회 완료 (classroomId={}, studentCount={}, scheduleCount={})",
+            request.classroomId(),
+            students.size(),
+            schedules.size()
+        );
+        return StudentAttendanceSheetResponse.of(
+            request.year(),
+            request.month(),
+            classroom.getId(),
+            classroom.getName(),
+            students,
+            schedules
+        );
     }
 
     public PaginationResponse<DailyScheduleSummaryResponse> getJournalDailySchedules(
@@ -937,6 +1008,18 @@ public class DailyScheduleService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private String getDayOfWeekLabel(DayOfWeek dayOfWeek) {
+        return switch (dayOfWeek) {
+            case MONDAY -> "월";
+            case TUESDAY -> "화";
+            case WEDNESDAY -> "수";
+            case THURSDAY -> "목";
+            case FRIDAY -> "금";
+            case SATURDAY -> "토";
+            case SUNDAY -> "일";
+        };
     }
 
     private Map<DailyScheduleLessonKey, List<Lesson>> getLessonsByScheduleKey(List<DailySchedule> dailySchedules) {

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.enums.ClassroomType;
+import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
 import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.entity.DailyStudentAttendance;
 import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
@@ -57,6 +58,9 @@ class DailyScheduleServiceTest {
 
     @Mock
     private StudentProxyService studentProxyService;
+
+    @Mock
+    private ClassroomProxyService classroomProxyService;
 
     @InjectMocks
     private DailyScheduleService dailyScheduleService;
@@ -122,6 +126,7 @@ class DailyScheduleServiceTest {
             dailyStudentAttendanceRepository,
             lessonProxyService,
             studentProxyService,
+            null,
             null,
             seoulClock
         );
