@@ -26,50 +26,50 @@ ALTER SEQUENCE classrooms_id_seq RESTART WITH 10;
 
 -- 3. Users
 -- admin1234 / admin1234
-INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
-    (1, '관리자', 'admin@test.com', 'ADMIN', 4, NULL, NULL, NULL, NULL);
+INSERT INTO users (id, name, phone_number, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
+    (1, '관리자', '010-5555-0001', 'admin@test.com', 'ADMIN', 4, NULL, NULL, NULL, NULL);
 
 -- teacher01 / teacher01
-INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
-    (2, '홍길동', 'teacher01@test.com', 'VOLUNTEER', 2, 1, '800101', '2026-02-01', NULL);
+INSERT INTO users (id, name, phone_number, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
+    (2, '홍길동', '010-5555-0002', 'teacher01@test.com', 'VOLUNTEER', 2, 1, '800101', '2026-02-01', NULL);
 
 -- teacher02 / teacher02
-INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
-    (3, '김철수', 'teacher02@test.com', 'VOLUNTEER', 2, 8, '850505', '2026-02-01', NULL);
+INSERT INTO users (id, name, phone_number, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
+    (3, '김철수', '010-5555-0003', 'teacher02@test.com', 'VOLUNTEER', 2, 8, '850505', '2026-02-01', NULL);
 
 -- guest01 / guest01
-INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
-    (4, '이영희', 'guest01@test.com', 'GUEST', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO users (id, name, phone_number, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
+    (4, '이영희', '010-5555-0004', 'guest01@test.com', 'GUEST', NULL, NULL, '990101', NULL, NULL);
 
 -- applicant01 / teacher01
-INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
-    (5, '박지원', 'applicant01@test.com', 'GUEST', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO users (id, name, phone_number, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
+    (5, '박지원', '010-5555-0101', 'applicant01@test.com', 'GUEST', NULL, NULL, '980412', NULL, NULL);
 
 -- approved-teacher01 / teacher01
-INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
-    (6, '최승인', 'approved-teacher01@test.com', 'VOLUNTEER', 2, 2, '910303', '2026-09-01', '2026-12-31');
+INSERT INTO users (id, name, phone_number, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
+    (6, '최승인', '010-5555-0202', 'approved-teacher01@test.com', 'VOLUNTEER', 2, 2, '950920', '2026-09-01', '2026-12-31');
 
 -- rejected-applicant01 / teacher01
-INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
-    (7, '정반려', 'rejected-applicant01@test.com', 'GUEST', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO users (id, name, phone_number, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
+    (7, '정반려', '010-5555-0303', 'rejected-applicant01@test.com', 'GUEST', NULL, NULL, '971203', NULL, NULL);
 
 -- direct-assign-edge01 / teacher01
-INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
-    (8, '오정재', 'direct-assign-edge01@test.com', 'VOLUNTEER', 2, 6, '930707', NULL, NULL);
+INSERT INTO users (id, name, phone_number, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
+    (8, '오정재', '010-5555-0008', 'direct-assign-edge01@test.com', 'VOLUNTEER', 2, 6, '930707', NULL, NULL);
 
 -- cancelled-applicant01 / teacher01
-INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
-    (9, '한취소', 'cancelled-applicant01@test.com', 'GUEST', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO users (id, name, phone_number, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
+    (9, '한취소', '010-5555-0404', 'cancelled-applicant01@test.com', 'GUEST', NULL, NULL, '990814', NULL, NULL);
 
-INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
-    (10, 'Apps Script Bot', 'geumjeongyahak-apps-script-bot@gmail.com', 'VOLUNTEER', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO users (id, name, phone_number, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
+    (10, 'Apps Script Bot', NULL, 'geumjeongyahak-apps-script-bot@gmail.com', 'VOLUNTEER', NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO users (id, name, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
-    (11, '노제훈', 'seed-teacher01@test.com', 'VOLUNTEER', 2, 3, '900201', '2026-07-01', NULL),
-    (12, '김단아', 'seed-teacher02@test.com', 'VOLUNTEER', 2, 4, '920315', '2026-07-01', NULL),
-    (13, '박진우', 'seed-teacher03@test.com', 'VOLUNTEER', 2, 5, '880917', '2026-07-01', NULL),
-    (14, '김수연', 'seed-teacher04@test.com', 'VOLUNTEER', 2, 7, '940422', '2026-07-01', NULL),
-    (15, '손혜주', 'seed-teacher05@test.com', 'VOLUNTEER', 2, 9, '960811', '2026-07-01', NULL);
+INSERT INTO users (id, name, phone_number, primary_email, role, department_id, classroom_id, resident_registration_number_prefix, teacher_start_at, teacher_end_at) VALUES
+    (11, '노제훈', '010-5555-0511', 'seed-teacher01@test.com', 'VOLUNTEER', 2, 3, '900201', '2026-07-01', NULL),
+    (12, '김단아', '010-5555-0512', 'seed-teacher02@test.com', 'VOLUNTEER', 2, 4, '920315', '2026-07-01', NULL),
+    (13, '박진우', '010-5555-0513', 'seed-teacher03@test.com', 'VOLUNTEER', 2, 5, '880917', '2026-07-01', NULL),
+    (14, '김수연', '010-5555-0514', 'seed-teacher04@test.com', 'VOLUNTEER', 2, 7, '940422', '2026-07-01', NULL),
+    (15, '손혜주', '010-5555-0515', 'seed-teacher05@test.com', 'VOLUNTEER', 2, 9, '960811', '2026-07-01', NULL);
 
 ALTER SEQUENCE users_id_seq RESTART WITH 16;
 
