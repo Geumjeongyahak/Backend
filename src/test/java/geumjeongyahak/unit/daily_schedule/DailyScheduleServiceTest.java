@@ -3,6 +3,7 @@ package geumjeongyahak.unit.daily_schedule;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import geumjeongyahak.domain.auth.enums.RoleType;
@@ -12,12 +13,15 @@ import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
 import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.entity.DailyStudentAttendance;
 import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
+import geumjeongyahak.domain.daily_schedule.enums.DailyStudentAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyStudentAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyTeacherAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleService;
+import geumjeongyahak.domain.daily_schedule.v1.dto.request.StudentAttendanceSheetRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyTeacherAttendanceRequest;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.StudentAttendanceSheetResponse;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import geumjeongyahak.domain.student.entity.Student;
@@ -64,6 +68,85 @@ class DailyScheduleServiceTest {
 
     @InjectMocks
     private DailyScheduleService dailyScheduleService;
+
+    @Test
+    void getStudentAttendanceSheet_aggregatesMonthlySchedulesAndStudentAttendances() {
+        Classroom classroom = classroom(1L, "해바라기반");
+        User teacher = teacher(2L, "홍길동");
+        Student firstStudent = student(10L, "김민수", classroom);
+        Student secondStudent = student(11L, "박영희", classroom);
+        DailySchedule firstSchedule = dailySchedule(100L, classroom, teacher, LocalDate.of(2026, 2, 7));
+        DailySchedule secondSchedule = dailySchedule(101L, classroom, teacher, LocalDate.of(2026, 2, 14));
+        DailyStudentAttendance firstAttendance = studentAttendance(
+            1000L,
+            firstSchedule,
+            firstStudent,
+            DailyStudentAttendanceStatus.PRESENT
+        );
+        DailyStudentAttendance secondAttendance = studentAttendance(
+            1001L,
+            firstSchedule,
+            secondStudent,
+            DailyStudentAttendanceStatus.ABSENT
+        );
+
+        given(classroomProxyService.getActiveById(classroom.getId())).willReturn(classroom);
+        given(studentProxyService.getActiveStudentsByClassroomId(classroom.getId()))
+            .willReturn(List.of(secondStudent, firstStudent));
+        given(dailyScheduleRepository.findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(
+            LocalDate.of(2026, 2, 1),
+            LocalDate.of(2026, 2, 28)
+        )).willReturn(List.of(firstSchedule, secondSchedule));
+        given(dailyStudentAttendanceRepository.findAllByDailySchedule_IdInAndIsDeletedFalse(List.of(100L, 101L)))
+            .willReturn(List.of(secondAttendance, firstAttendance));
+
+        StudentAttendanceSheetResponse response = dailyScheduleService.getStudentAttendanceSheet(
+            new StudentAttendanceSheetRequest(2026, 2, classroom.getId())
+        );
+
+        assertThat(response.year()).isEqualTo(2026);
+        assertThat(response.month()).isEqualTo(2);
+        assertThat(response.classroomId()).isEqualTo(classroom.getId());
+        assertThat(response.classroomName()).isEqualTo("해바라기반");
+        assertThat(response.students())
+            .extracting("studentId", "studentName")
+            .containsExactly(
+                org.assertj.core.groups.Tuple.tuple(10L, "김민수"),
+                org.assertj.core.groups.Tuple.tuple(11L, "박영희")
+            );
+        assertThat(response.schedules()).hasSize(2);
+        assertThat(response.schedules().get(0).dailyScheduleId()).isEqualTo(100L);
+        assertThat(response.schedules().get(0).day()).isEqualTo(7);
+        assertThat(response.schedules().get(0).dayOfWeek()).isEqualTo("토");
+        assertThat(response.schedules().get(0).studentAttendances())
+            .extracting("attendanceId", "studentId", "status")
+            .containsExactly(
+                org.assertj.core.groups.Tuple.tuple(1000L, 10L, DailyStudentAttendanceStatus.PRESENT),
+                org.assertj.core.groups.Tuple.tuple(1001L, 11L, DailyStudentAttendanceStatus.ABSENT)
+            );
+        assertThat(response.schedules().get(1).dailyScheduleId()).isEqualTo(101L);
+        assertThat(response.schedules().get(1).studentAttendances()).isEmpty();
+    }
+
+    @Test
+    void getStudentAttendanceSheet_skipsAttendanceQueryWhenMonthlyScheduleIsEmpty() {
+        Classroom classroom = classroom(1L, "해바라기반");
+
+        given(classroomProxyService.getActiveById(classroom.getId())).willReturn(classroom);
+        given(studentProxyService.getActiveStudentsByClassroomId(classroom.getId())).willReturn(List.of());
+        given(dailyScheduleRepository.findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(
+            LocalDate.of(2026, 2, 1),
+            LocalDate.of(2026, 2, 28)
+        )).willReturn(List.of());
+
+        StudentAttendanceSheetResponse response = dailyScheduleService.getStudentAttendanceSheet(
+            new StudentAttendanceSheetRequest(2026, 2, classroom.getId())
+        );
+
+        assertThat(response.students()).isEmpty();
+        assertThat(response.schedules()).isEmpty();
+        verify(dailyStudentAttendanceRepository, never()).findAllByDailySchedule_IdInAndIsDeletedFalse(any());
+    }
 
     @Test
     void synchronizeByClassroomAndDate_createsScheduleAndInitialAttendances() {
@@ -170,8 +253,12 @@ class DailyScheduleServiceTest {
     }
 
     private Classroom classroom(Long id) {
+        return classroom(id, "장미반");
+    }
+
+    private Classroom classroom(Long id, String name) {
         Classroom classroom = Classroom.builder()
-            .name("장미반")
+            .name(name)
             .type(ClassroomType.WEEKDAY)
             .build();
         ReflectionTestUtils.setField(classroom, "id", id);
@@ -231,8 +318,24 @@ class DailyScheduleServiceTest {
     }
 
     private Student student(Long id, Classroom classroom) {
-        Student student = new Student("최양지", null, null, classroom);
+        return student(id, "최양지", classroom);
+    }
+
+    private Student student(Long id, String name, Classroom classroom) {
+        Student student = new Student(name, null, null, classroom);
         ReflectionTestUtils.setField(student, "id", id);
         return student;
+    }
+
+    private DailyStudentAttendance studentAttendance(
+        Long id,
+        DailySchedule dailySchedule,
+        Student student,
+        DailyStudentAttendanceStatus status
+    ) {
+        DailyStudentAttendance attendance = new DailyStudentAttendance(dailySchedule, student);
+        ReflectionTestUtils.setField(attendance, "id", id);
+        attendance.updateStatus(status);
+        return attendance;
     }
 }
