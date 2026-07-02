@@ -43,6 +43,7 @@ ALTER TABLE user_credentials ALTER COLUMN id RESTART WITH 6;
 INSERT INTO user_permissions (user_id, permission_code) VALUES
     (2, 'channel:write:1'),
     (5, 'daily-schedule:manage:*'),
+    (5, 'daily-schedule:read:*'),
     (5, 'user:read:*'),
     (5, 'purchase-request:read:*'),
     (5, 'purchase-request:manage:*'),
