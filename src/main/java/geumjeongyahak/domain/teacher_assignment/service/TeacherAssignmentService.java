@@ -4,8 +4,6 @@ import geumjeongyahak.domain.subject.entity.Subject;
 import geumjeongyahak.domain.subject.service.SubjectService;
 import geumjeongyahak.domain.subject.v1.dto.request.AssignSubjectTeacherRequest;
 import geumjeongyahak.domain.subject.v1.dto.response.SubjectDetailResponse;
-import geumjeongyahak.domain.users.entity.User;
-import geumjeongyahak.domain.users.service.UserProxyService;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class TeacherAssignmentService {
 
     private final SubjectService subjectService;
-    private final UserProxyService userProxyService;
     private final TeacherScheduleValidationService teacherScheduleValidationService;
     private final TeacherAssignmentPermissionService teacherAssignmentPermissionService;
 
@@ -37,9 +34,6 @@ public class TeacherAssignmentService {
             confirmTeacherReplacement
         ));
 
-        User teacher = userProxyService.getById(teacherId);
-        userProxyService.fillDefaultClassroomIfMissing(teacher, subjects.get(0).getClassroom());
-
         List<SubjectDetailResponse> responses = subjects.stream()
             .map(subject -> subjectService.assignTeacher(
                 subject.getId(),
@@ -47,7 +41,7 @@ public class TeacherAssignmentService {
             ))
             .toList();
         teacherAssignmentPermissionService.addClassroomChannelWritePermission(
-            teacher.getId(),
+            teacherId,
             subjects.get(0).getClassroom().getId()
         );
         return responses;

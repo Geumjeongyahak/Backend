@@ -57,6 +57,13 @@ public class SubjectDeleteTest extends SubjectBaseTest {
     void deleteSubject_Success() {
         long subjectId = createSubject();
 
+        Long classroomIdBeforeDelete = jdbcTemplate.queryForObject(
+            "SELECT classroom_id FROM users WHERE id = ?",
+            Long.class,
+            TEACHER_ID
+        );
+        assertThat(classroomIdBeforeDelete).isEqualTo(CLASSROOM_1);
+
         Integer activeLessonCountBeforeDelete = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM lessons WHERE subject_id = ? AND is_deleted = FALSE",
             Integer.class,
@@ -94,6 +101,13 @@ public class SubjectDeleteTest extends SubjectBaseTest {
             subjectId
         );
         assertThat(deletedLessonCountAfterDelete).isEqualTo(activeLessonCountBeforeDelete);
+
+        Long classroomIdAfterDelete = jdbcTemplate.queryForObject(
+            "SELECT classroom_id FROM users WHERE id = ?",
+            Long.class,
+            TEACHER_ID
+        );
+        assertThat(classroomIdAfterDelete).isNull();
     }
 
     @Test

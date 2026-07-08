@@ -57,7 +57,7 @@ class TeacherAssignmentAdminTest extends BaseE2ETest {
             "2100-06-30"
         );
         testTeacherId = userTestHelper.createTestUser("teacher-assignment-target", RoleType.VOLUNTEER).getId();
-        insertSubject(CONFLICT_SUBJECT_ID, 2L, testTeacherId, "충돌 기준 과목");
+        insertSubject(CONFLICT_SUBJECT_ID, 2L, null, "충돌 기준 과목");
         insertSubject(PERMISSION_CLEANUP_SUBJECT_ID, 1L, 3L, "권한 정리 과목", "TUESDAY", "19:20:00", "20:00:00");
         insertSubject(REJECTED_ABSENCE_SUBJECT_ID, 2L, 3L, "반려 결강 요청 과목");
         adminToken = userTestHelper.generateAccessTokenByUserKey(TEST_ADMIN_USERNAME);
@@ -174,6 +174,7 @@ class TeacherAssignmentAdminTest extends BaseE2ETest {
     @Test
     @DisplayName("같은 날짜/시간대 기존 Lesson이 있으면 담당 교사 교체 실패 및 롤백")
     void assignTeacher_timeConflict_returns409AndRollsBack() {
+        jdbcTemplate.update("UPDATE subjects SET teacher_id = ? WHERE id = ?", testTeacherId, CONFLICT_SUBJECT_ID);
         insertLesson(REPLACEMENT_SUBJECT_ID, 3L, 1800L, "2099-03-02", "19:20:00", "20:00:00");
         insertLesson(CONFLICT_SUBJECT_ID, testTeacherId, 1801L, "2099-03-02", "19:20:00", "20:00:00");
 
@@ -310,7 +311,16 @@ class TeacherAssignmentAdminTest extends BaseE2ETest {
         given()
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .contentType("application/json")
-            .body(Map.of("subjectIds", java.util.List.of(REPLACEMENT_SUBJECT_ID)))
+            .body(assignRequest(testTeacherId, UNASSIGNED_SUBJECT_ID))
+        .when()
+            .patch()
+        .then()
+            .statusCode(200);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType("application/json")
+            .body(Map.of("subjectIds", java.util.List.of(UNASSIGNED_SUBJECT_ID)))
         .when()
             .delete()
         .then()
@@ -320,9 +330,16 @@ class TeacherAssignmentAdminTest extends BaseE2ETest {
         Integer subjectTeacherCount = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM subjects WHERE id = ? AND teacher_id IS NULL AND teacher_assigned_at IS NULL",
             Integer.class,
-            REPLACEMENT_SUBJECT_ID
+            UNASSIGNED_SUBJECT_ID
         );
         assertThat(subjectTeacherCount).isEqualTo(1);
+
+        Long userClassroomId = jdbcTemplate.queryForObject(
+            "SELECT classroom_id FROM users WHERE id = ?",
+            Long.class,
+            testTeacherId
+        );
+        assertThat(userClassroomId).isNull();
     }
 
     @Test
