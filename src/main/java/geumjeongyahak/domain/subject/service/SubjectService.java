@@ -210,6 +210,7 @@ public class SubjectService {
 
         User teacher = userProxyService.getById(request.teacherId());
         validateTeacherAssignable(teacher);
+        validateTeacherScheduleAssignable(teacher.getId(), subject);
 
         validateFutureLessonsChangeable(subjectId, today);
         validateNoTeacherConflict(subjectId, teacher.getId(), today);
@@ -481,6 +482,18 @@ public class SubjectService {
             && teacher.getRole() != RoleType.MANAGER
             && teacher.getRole() != RoleType.ADMIN) {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT, "봉사자, 매니저 또는 관리자 사용자만 교사로 배정할 수 있습니다.");
+        }
+    }
+
+    private void validateTeacherScheduleAssignable(Long teacherId, Subject subject) {
+        if (subjectRepository.existsOverlappingDifferentScheduleByTeacherId(
+            teacherId,
+            subject.getClassroom().getId(),
+            subject.getDayOfWeek(),
+            subject.getStartAt(),
+            subject.getEndAt()
+        )) {
+            throw new SubjectTeacherAssignmentConflictException("이미 다른 하루치 일정의 활성 과목을 담당 중인 교사입니다.");
         }
     }
 }
