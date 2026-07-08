@@ -24,6 +24,7 @@ import geumjeongyahak.domain.subject.exception.SubjectNotFoundException;
 import geumjeongyahak.domain.subject.exception.SubjectOperationPeriodExceededException;
 import geumjeongyahak.domain.subject.exception.SubjectTeacherAssignmentConflictException;
 import geumjeongyahak.domain.subject.event.SubjectCreatedEvent;
+import geumjeongyahak.domain.subject.event.SubjectDeletedEvent;
 import geumjeongyahak.domain.subject.event.SubjectScheduleRecreatedEvent;
 import geumjeongyahak.domain.subject.event.SubjectScheduleUpdatedEvent;
 import geumjeongyahak.domain.subject.event.SubjectTeacherAssignedEvent;
@@ -348,8 +349,11 @@ public class SubjectService {
             return;
         }
 
+        LocalDate today = LocalDate.now();
+        validateFutureLessonsChangeable(subjectId, today);
         subject.deactivate();
         subjectRepository.save(subject);
+        eventPublisher.publish(new SubjectDeletedEvent(subject.getId(), today));
 
         log.debug("과목 삭제(비활성화) 완료 (id={})", subjectId);
     }
