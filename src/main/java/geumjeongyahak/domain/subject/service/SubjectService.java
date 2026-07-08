@@ -101,6 +101,12 @@ public class SubjectService {
         log.debug("과목 등록 완료 (id={})", savedSubject.getId());
 
         if (savedSubject.getTeacher() != null) {
+            eventPublisher.publish(new SubjectTeacherAssignedEvent(
+                savedSubject.getId(),
+                savedSubject.getClassroom().getId(),
+                savedSubject.getTeacher().getId(),
+                LocalDate.now()
+            ));
             LocalDate lessonStartAt = max(LocalDate.now(), savedSubject.getStartAt());
             if (!lessonStartAt.isAfter(savedSubject.getEndAt())) {
                 eventPublisher.publish(new SubjectCreatedEvent(
