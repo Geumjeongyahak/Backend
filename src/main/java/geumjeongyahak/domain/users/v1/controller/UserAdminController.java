@@ -224,6 +224,30 @@ public class UserAdminController {
 
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:manage:*')")
     @Operation(
+        summary = "사용자 부서 해제",
+        description = """
+            사용자의 소속 부서 매핑을 명시적으로 해제합니다.
+
+            사용 사례:
+            - 더 이상 특정 부서에 소속되지 않는 사용자 정리
+            - 잘못 지정된 부서 제거
+
+            사이드 이펙트:
+            - users.department_id가 null로 변경됩니다.
+            """
+    )
+    @DeleteMapping("/{userId}/department")
+    public ResponseEntity<Void> releaseDepartment(
+            @Parameter(description = "사용자 ID", example = "1")
+            @PathVariable Long userId
+    ) {
+        log.debug("DELETE /api/v1/users/{}/department - 사용자 부서 해제 요청", userId);
+        userCrudService.releaseDepartment(userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:manage:*')")
+    @Operation(
         summary = "사용자 계정 비활성화",
         description = """
             사용자를 물리적으로 삭제하지 않고 계정을 비활성화합니다.
