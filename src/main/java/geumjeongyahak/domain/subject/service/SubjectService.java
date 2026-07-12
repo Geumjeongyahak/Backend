@@ -1,8 +1,11 @@
 package geumjeongyahak.domain.subject.service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -71,17 +74,15 @@ public class SubjectService {
             validateTeacherAssignable(teacher);
         }
 
-        // 같은 분반에서 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재하는지 확인
-        if (subjectRepository.existsByClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqualAndIsActiveTrue(
+        validateSubjectDuplicate(
+            null,
             classroom.getId(),
             request.dayOfWeek(),
-            request.period(),
+            request.startAt(),
             request.endAt(),
-            request.startAt()
-        )) {
-            log.info("과목 등록 실패 - 같은 분반에서 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재합니다.");
-            throw new SubjectDuplicateException("같은 분반에서 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재합니다.");
-        }
+            request.startTime(),
+            request.endTime()
+        );
 
         Subject subject = new Subject(
             classroom,
@@ -281,9 +282,10 @@ public class SubjectService {
             subject.getId(),
             subject.getClassroom().getId(),
             newDayOfWeek,
-            newPeriod,
             newStartAt,
-            newEndAt
+            newEndAt,
+            newStartTime,
+            newEndTime
         );
 
         boolean recreateLessons = isChanged(subject.getStartAt(), newStartAt)
@@ -472,21 +474,51 @@ public class SubjectService {
     private void validateSubjectDuplicate(
         Long subjectId,
         Long classroomId,
-        java.time.DayOfWeek dayOfWeek,
-        Integer period,
+        DayOfWeek dayOfWeek,
         LocalDate startAt,
-        LocalDate endAt
+        LocalDate endAt,
+        LocalTime startTime,
+        LocalTime endTime
     ) {
-        if (subjectRepository.existsByIdNotAndClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqualAndIsActiveTrue(
-            subjectId,
-            classroomId,
-            dayOfWeek,
-            period,
-            endAt,
-            startAt
-        )) {
-            throw new SubjectDuplicateException("같은 분반에서 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재합니다.");
+        boolean duplicated = subjectRepository
+            .findAllByClassroomIdAndDayOfWeekAndStartAtLessThanEqualAndEndAtGreaterThanEqualAndIsActiveTrue(
+                classroomId,
+                dayOfWeek,
+                endAt,
+                startAt
+            )
+            .stream()
+            .filter(candidate -> subjectId == null || !candidate.getId().equals(subjectId))
+            .anyMatch(candidate -> hasActualScheduleConflict(
+                candidate,
+                dayOfWeek,
+                startAt,
+                endAt,
+                startTime,
+                endTime
+            ));
+
+        if (duplicated) {
+            throw new SubjectDuplicateException("같은 분반에 실제 수업 날짜와 시간이 겹치는 과목이 존재합니다.");
         }
+    }
+
+    private boolean hasActualScheduleConflict(
+        Subject candidate,
+        DayOfWeek dayOfWeek,
+        LocalDate startAt,
+        LocalDate endAt,
+        LocalTime startTime,
+        LocalTime endTime
+    ) {
+        LocalDate overlapStart = max(candidate.getStartAt(), startAt);
+        LocalDate overlapEnd = min(candidate.getEndAt(), endAt);
+        LocalDate firstLessonDate = overlapStart.with(TemporalAdjusters.nextOrSame(dayOfWeek));
+
+        boolean hasCommonLessonDate = !firstLessonDate.isAfter(overlapEnd);
+        boolean timeOverlaps = candidate.getStartTime().isBefore(endTime)
+            && candidate.getEndTime().isAfter(startTime);
+        return hasCommonLessonDate && timeOverlaps;
     }
 
     private boolean isChanged(Object before, Object after) {
@@ -495,6 +527,10 @@ public class SubjectService {
 
     private LocalDate max(LocalDate left, LocalDate right) {
         return left.isAfter(right) ? left : right;
+    }
+
+    private LocalDate min(LocalDate left, LocalDate right) {
+        return left.isBefore(right) ? left : right;
     }
 
     private void validateTeacherAssignable(User teacher) {

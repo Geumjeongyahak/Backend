@@ -274,11 +274,17 @@ public class UserCrudService {
     }
 
     private void updateRole(User user, RoleType roleType) {
+        if (user.getRole() == roleType) {
+            return;
+        }
         if (roleType == RoleType.GUEST) {
             user.releaseTeacherProfile(LocalDate.now());
             userPermissionService.removeAllPermissions(user.getId());
             user.clearPermissions();
             return;
+        }
+        if (user.getRole() == RoleType.GUEST) {
+            user.approveTeacherProfile(LocalDate.now(), null);
         }
         user.setRole(roleType);
     }
