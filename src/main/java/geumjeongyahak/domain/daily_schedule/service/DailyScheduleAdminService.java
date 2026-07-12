@@ -3,6 +3,7 @@ package geumjeongyahak.domain.daily_schedule.service;
 import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
 import geumjeongyahak.domain.daily_schedule.enums.DailyScheduleStatus;
+import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleJournalSheetLinkNotConfiguredException;
 import geumjeongyahak.domain.daily_schedule.exception.DailyTeacherAttendanceRequiredException;
 import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleNotFoundException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleAttendanceStateException;
@@ -12,12 +13,15 @@ import geumjeongyahak.domain.daily_schedule.repository.DailyTeacherAttendanceRep
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleStatusRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyTeacherAttendanceCorrectionRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleJournalSheetLinkResponse;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
@@ -25,10 +29,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class DailyScheduleAdminService {
 
+    @Value("${DAILY_SCHEDULE_JOURNAL_SHEET_URL:}")
+    private String journalSheetUrl;
+
     private final DailyScheduleRepository dailyScheduleRepository;
     private final DailyTeacherAttendanceRepository dailyTeacherAttendanceRepository;
     private final DailyScheduleService dailyScheduleService;
     private final LessonProxyService lessonProxyService;
+
+    public DailyScheduleJournalSheetLinkResponse getJournalSheetLink() {
+        if (!StringUtils.hasText(journalSheetUrl)) {
+            throw new DailyScheduleJournalSheetLinkNotConfiguredException();
+        }
+        return new DailyScheduleJournalSheetLinkResponse(journalSheetUrl.trim());
+    }
 
     @Transactional
     public DailyScheduleDetailResponse updateStatus(

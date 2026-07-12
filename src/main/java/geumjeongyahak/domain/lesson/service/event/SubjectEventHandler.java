@@ -7,6 +7,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import geumjeongyahak.domain.lesson.service.LessonService;
 import geumjeongyahak.domain.subject.event.SubjectCreatedEvent;
+import geumjeongyahak.domain.subject.event.SubjectDeletedEvent;
 import geumjeongyahak.domain.subject.event.SubjectScheduleRecreatedEvent;
 import geumjeongyahak.domain.subject.event.SubjectScheduleUpdatedEvent;
 import geumjeongyahak.domain.subject.event.SubjectTeacherAssignedEvent;
@@ -52,6 +53,18 @@ public class SubjectEventHandler {
     public void handleSubjectTeacherUnassigned(SubjectTeacherUnassignedEvent event) {
         log.info(
             "과목 담당 교사 해제 이벤트 처리 - 수업 삭제 (subjectId={})",
+            event.getSubjectId()
+        );
+        lessonService.deleteFutureSubjectScheduledLessons(
+            event.getSubjectId(),
+            event.getEffectiveFrom()
+        );
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void handleSubjectDeleted(SubjectDeletedEvent event) {
+        log.info(
+            "과목 삭제 이벤트 처리 - 수업 삭제 (subjectId={})",
             event.getSubjectId()
         );
         lessonService.deleteFutureSubjectScheduledLessons(

@@ -5,8 +5,10 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import geumjeongyahak.domain.subject.entity.Subject;
 
 public interface SubjectRepository extends JpaRepository<Subject, Long> {
@@ -57,6 +59,28 @@ public interface SubjectRepository extends JpaRepository<Subject, Long> {
     boolean existsByClassroomIdAndTeacherId(Long classroomId, Long teacherId);
 
     boolean existsByClassroomIdAndTeacherIdAndIsActiveTrue(Long classroomId, Long teacherId);
+
+    @Query("""
+        select count(s) > 0
+        from Subject s
+        where s.teacher.id = :teacherId
+          and s.isActive = true
+          and s.startAt <= :endAt
+          and s.endAt >= :startAt
+          and (
+              s.classroom.id <> :classroomId
+              or s.dayOfWeek <> :dayOfWeek
+              or s.startAt <> :startAt
+              or s.endAt <> :endAt
+          )
+        """)
+    boolean existsOverlappingDifferentScheduleByTeacherId(
+        @Param("teacherId") Long teacherId,
+        @Param("classroomId") Long classroomId,
+        @Param("dayOfWeek") DayOfWeek dayOfWeek,
+        @Param("startAt") LocalDate startAt,
+        @Param("endAt") LocalDate endAt
+    );
 
     boolean existsByClassroomIdAndIsActiveTrue(Long classroomId);
 

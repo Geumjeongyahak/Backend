@@ -13,6 +13,7 @@ import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
 import geumjeongyahak.domain.daily_schedule.enums.DailyScheduleStatus;
 import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
+import geumjeongyahak.domain.daily_schedule.exception.DailyScheduleJournalSheetLinkNotConfiguredException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyScheduleAttendanceStateException;
 import geumjeongyahak.domain.daily_schedule.exception.InvalidDailyTeacherCheckOutTimeException;
 import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleRepository;
@@ -87,6 +88,28 @@ class DailyScheduleAdminServiceTest {
             dailyScheduleService,
             lessonProxyService
         );
+    }
+
+    @Test
+    void getJournalSheetLink_returnsConfiguredUrl() {
+        ReflectionTestUtils.setField(
+            dailyScheduleAdminService,
+            "journalSheetUrl",
+            " https://docs.google.com/spreadsheets/d/sheet-id/edit "
+        );
+
+        var response = dailyScheduleAdminService.getJournalSheetLink();
+
+        assertThat(response.url()).isEqualTo("https://docs.google.com/spreadsheets/d/sheet-id/edit");
+    }
+
+    @Test
+    void getJournalSheetLink_throwsWhenUrlIsBlank() {
+        ReflectionTestUtils.setField(dailyScheduleAdminService, "journalSheetUrl", "");
+
+        assertThatThrownBy(dailyScheduleAdminService::getJournalSheetLink)
+            .isInstanceOf(DailyScheduleJournalSheetLinkNotConfiguredException.class)
+            .hasMessage("수업일지 관리 시트 링크가 설정되어 있지 않습니다.");
     }
 
     @Test

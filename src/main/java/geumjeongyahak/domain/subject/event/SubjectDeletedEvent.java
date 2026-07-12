@@ -7,14 +7,14 @@ import java.util.Map;
 import lombok.Getter;
 
 @Getter
-public class SubjectTeacherUnassignedEvent extends BaseEventDto {
+public class SubjectDeletedEvent extends BaseEventDto {
 
     private final Long subjectId;
     private final Long classroomId;
     private final Long teacherId;
     private final LocalDate effectiveFrom;
 
-    public SubjectTeacherUnassignedEvent(
+    public SubjectDeletedEvent(
         Long subjectId,
         Long classroomId,
         Long teacherId,

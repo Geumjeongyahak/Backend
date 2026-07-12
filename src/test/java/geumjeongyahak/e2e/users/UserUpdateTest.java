@@ -126,14 +126,23 @@ class UserUpdateTest extends UserBaseTest {
             .body("department.id", equalTo(1))
             .log().all();
 
-        // 3. 부서 해제 (null)
-        UpdateUserRequest clearReq = new UpdateUserRequest(
-                null, null, null, null, null, null, null
-        );
+        // 3. 부서 해제
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/{userId}/department", createdUser.id())
+        .then()
+            .statusCode(204)
+            .log().all();
 
-        // Note: UpdateUserRequest에서 null 전달 시 유지가 될지 해제가 될지는 UserCrudService 구현에 따라 다름.
-        // 현재 UserCrudService는 Optional.ifPresent로 처리하므로 null 전달 시 "유지"될 가능성이 높음.
-        // 부서 해제 기능이 필요하다면 별도의 로직이 필요할 수 있으나, 일단 변경 확인에 집중함.
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/{userId}", createdUser.id())
+        .then()
+            .statusCode(200)
+            .body("department", nullValue())
+            .log().all();
     }
 
     @Test

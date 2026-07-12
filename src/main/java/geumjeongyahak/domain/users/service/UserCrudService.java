@@ -211,6 +211,19 @@ public class UserCrudService {
         log.info("사용자 대표 분반 해제 완료 - userId: {}", userId);
     }
 
+    @Transactional
+    public void releaseDepartment(Long userId) {
+        log.debug("사용자 부서 해제 요청 - userId: {}", userId);
+        User user = userRepository.findByIdAndIsDeletedFalse(userId)
+            .orElseThrow(() -> {
+                log.debug("사용자 부서 해제 실패 - 사용자를 찾을 수 없습니다. ID: {}", userId);
+                return new UserNotFoundException(userId);
+            });
+
+        user.setDepartment(null);
+        log.info("사용자 부서 해제 완료 - userId: {}", userId);
+    }
+
     private UserDetailResponse toDetailResponse(User user) {
         return UserDetailResponse.from(
             user,

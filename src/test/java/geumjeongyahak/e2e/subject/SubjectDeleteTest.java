@@ -1,6 +1,7 @@
 package geumjeongyahak.e2e.subject;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -8,12 +9,17 @@ import io.restassured.path.json.JsonPath;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @DisplayName("E2E: 과목 삭제(비활성화) 테스트")
 public class SubjectDeleteTest extends SubjectBaseTest {
 
     private static final long CLASSROOM_1 = 1L;
     private static final long TEACHER_ID = 2L;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private Map<String, Object> createRequest() {
         return Map.ofEntries(
@@ -51,6 +57,20 @@ public class SubjectDeleteTest extends SubjectBaseTest {
     void deleteSubject_Success() {
         long subjectId = createSubject();
 
+        Long classroomIdBeforeDelete = jdbcTemplate.queryForObject(
+            "SELECT classroom_id FROM users WHERE id = ?",
+            Long.class,
+            TEACHER_ID
+        );
+        assertThat(classroomIdBeforeDelete).isEqualTo(CLASSROOM_1);
+
+        Integer activeLessonCountBeforeDelete = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM lessons WHERE subject_id = ? AND is_deleted = FALSE",
+            Integer.class,
+            subjectId
+        );
+        assertThat(activeLessonCountBeforeDelete).isPositive();
+
         given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
             .when()
@@ -67,6 +87,27 @@ public class SubjectDeleteTest extends SubjectBaseTest {
             .statusCode(200)
             .body("isActive", is(false))
             .log().all();
+
+        Integer activeLessonCountAfterDelete = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM lessons WHERE subject_id = ? AND is_deleted = FALSE",
+            Integer.class,
+            subjectId
+        );
+        assertThat(activeLessonCountAfterDelete).isZero();
+
+        Integer deletedLessonCountAfterDelete = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM lessons WHERE subject_id = ? AND is_deleted = TRUE",
+            Integer.class,
+            subjectId
+        );
+        assertThat(deletedLessonCountAfterDelete).isEqualTo(activeLessonCountBeforeDelete);
+
+        Long classroomIdAfterDelete = jdbcTemplate.queryForObject(
+            "SELECT classroom_id FROM users WHERE id = ?",
+            Long.class,
+            TEACHER_ID
+        );
+        assertThat(classroomIdAfterDelete).isNull();
     }
 
     @Test

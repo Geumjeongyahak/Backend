@@ -24,6 +24,7 @@ import geumjeongyahak.domain.subject.exception.SubjectNotFoundException;
 import geumjeongyahak.domain.subject.exception.SubjectOperationPeriodExceededException;
 import geumjeongyahak.domain.subject.exception.SubjectTeacherAssignmentConflictException;
 import geumjeongyahak.domain.subject.event.SubjectCreatedEvent;
+import geumjeongyahak.domain.subject.event.SubjectDeletedEvent;
 import geumjeongyahak.domain.subject.event.SubjectScheduleRecreatedEvent;
 import geumjeongyahak.domain.subject.event.SubjectScheduleUpdatedEvent;
 import geumjeongyahak.domain.subject.event.SubjectTeacherAssignedEvent;
@@ -68,7 +69,6 @@ public class SubjectService {
         if (request.teacherId() != null) {
             teacher = userProxyService.getById(request.teacherId());
             validateTeacherAssignable(teacher);
-            userProxyService.fillDefaultClassroomIfMissing(teacher, classroom);
         }
 
         // 같은 분반에서 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재하는지 확인
@@ -101,10 +101,17 @@ public class SubjectService {
         log.debug("과목 등록 완료 (id={})", savedSubject.getId());
 
         if (savedSubject.getTeacher() != null) {
+            eventPublisher.publish(new SubjectTeacherAssignedEvent(
+                savedSubject.getId(),
+                savedSubject.getClassroom().getId(),
+                savedSubject.getTeacher().getId(),
+                LocalDate.now()
+            ));
             LocalDate lessonStartAt = max(LocalDate.now(), savedSubject.getStartAt());
             if (!lessonStartAt.isAfter(savedSubject.getEndAt())) {
                 eventPublisher.publish(new SubjectCreatedEvent(
                     savedSubject.getId(),
+                    savedSubject.getClassroom().getId(),
                     savedSubject.getTeacher().getId(),
                     lessonStartAt,
                     savedSubject.getEndAt(),
@@ -202,24 +209,32 @@ public class SubjectService {
         LocalDate today = LocalDate.now();
         if (request.teacherId() == null) {
             validateFutureLessonsChangeable(subjectId, today);
+            Long classroomId = subject.getClassroom().getId();
+            Long previousTeacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
             subject.assignTeacher(null, null);
-            eventPublisher.publish(new SubjectTeacherUnassignedEvent(subject.getId(), today));
+            eventPublisher.publish(new SubjectTeacherUnassignedEvent(
+                subject.getId(),
+                classroomId,
+                previousTeacherId,
+                today
+            ));
             log.debug("과목 담당 교사 해제 완료 (subjectId={})", subject.getId());
             return SubjectDetailResponse.from(subject);
         }
 
         User teacher = userProxyService.getById(request.teacherId());
         validateTeacherAssignable(teacher);
+        validateTeacherScheduleAssignable(teacher.getId(), subject);
 
         validateFutureLessonsChangeable(subjectId, today);
         validateNoTeacherConflict(subjectId, teacher.getId(), today);
-        userProxyService.fillDefaultClassroomIfMissing(teacher, subject.getClassroom());
 
         subject.assignTeacher(teacher, LocalDateTime.now());
 
         if (lessonProxyService.existsFutureActiveLessonBySubjectId(subjectId, today)) {
             eventPublisher.publish(new SubjectTeacherAssignedEvent(
                 subject.getId(),
+                subject.getClassroom().getId(),
                 teacher.getId(),
                 today
             ));
@@ -228,6 +243,7 @@ public class SubjectService {
             if (!lessonStartAt.isAfter(subject.getEndAt())) {
                 eventPublisher.publish(new SubjectCreatedEvent(
                     subject.getId(),
+                    subject.getClassroom().getId(),
                     teacher.getId(),
                     lessonStartAt,
                     subject.getEndAt(),
@@ -347,8 +363,13 @@ public class SubjectService {
             return;
         }
 
+        LocalDate today = LocalDate.now();
+        validateFutureLessonsChangeable(subjectId, today);
+        Long classroomId = subject.getClassroom().getId();
+        Long teacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
         subject.deactivate();
         subjectRepository.save(subject);
+        eventPublisher.publish(new SubjectDeletedEvent(subject.getId(), classroomId, teacherId, today));
 
         log.debug("과목 삭제(비활성화) 완료 (id={})", subjectId);
     }
@@ -481,6 +502,18 @@ public class SubjectService {
             && teacher.getRole() != RoleType.MANAGER
             && teacher.getRole() != RoleType.ADMIN) {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT, "봉사자, 매니저 또는 관리자 사용자만 교사로 배정할 수 있습니다.");
+        }
+    }
+
+    private void validateTeacherScheduleAssignable(Long teacherId, Subject subject) {
+        if (subjectRepository.existsOverlappingDifferentScheduleByTeacherId(
+            teacherId,
+            subject.getClassroom().getId(),
+            subject.getDayOfWeek(),
+            subject.getStartAt(),
+            subject.getEndAt()
+        )) {
+            throw new SubjectTeacherAssignmentConflictException("이미 다른 하루치 일정의 활성 과목을 담당 중인 교사입니다.");
         }
     }
 }

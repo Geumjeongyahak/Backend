@@ -21,7 +21,12 @@ public enum DailyScheduleErrorCode implements ErrorCode {
     DAILY_TEACHER_CHECK_OUT_ALREADY_EXISTS(HttpStatus.CONFLICT, "BIZ-11-002", "이미 퇴근 처리된 교사 출석입니다."),
     DAILY_TEACHER_ATTENDANCE_REQUIRED(HttpStatus.BAD_REQUEST, "VAL-11-008", "출근 처리 이후에만 퇴근 처리할 수 있습니다."),
     DAILY_SCHEDULE_JOURNAL_REQUIRED(HttpStatus.BAD_REQUEST, "VAL-11-009", "수업 일지 작성 이후에만 퇴근 처리할 수 있습니다."),
-    INVALID_DAILY_TEACHER_CHECK_OUT_TIME(HttpStatus.BAD_REQUEST, "VAL-11-010", "퇴근 시간이 출근 시간보다 빠를 수 없습니다.");
+    INVALID_DAILY_TEACHER_CHECK_OUT_TIME(HttpStatus.BAD_REQUEST, "VAL-11-010", "퇴근 시간이 출근 시간보다 빠를 수 없습니다."),
+    DAILY_SCHEDULE_JOURNAL_SHEET_LINK_NOT_CONFIGURED(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        "SYS-11-001",
+        "수업일지 관리 시트 링크가 설정되어 있지 않습니다."
+    );
 
     private final HttpStatus status;
     private final String code;

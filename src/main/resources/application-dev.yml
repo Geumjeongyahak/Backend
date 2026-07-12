@@ -13,7 +13,7 @@ spring:
     show-sql: false
   sql:
     init:
-      mode: always
+      mode: ${SQL_INIT_MODE:never}
       schema-locations: classpath:/sql/init_scheme.sql
       data-locations: classpath:/sql/init_data.sql
       continue-on-error: false

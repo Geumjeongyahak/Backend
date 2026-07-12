@@ -12,6 +12,7 @@ import geumjeongyahak.common.event.dto.BaseEventDto;
 public class SubjectCreatedEvent extends BaseEventDto {
 
     private final Long subjectId;
+    private final Long classroomId;
     private final Long teacherId;
     private final LocalDate startAt;
     private final LocalDate endAt;
@@ -22,6 +23,7 @@ public class SubjectCreatedEvent extends BaseEventDto {
 
     public SubjectCreatedEvent(
         Long subjectId,
+        Long classroomId,
         Long teacherId,
         LocalDate startAt,
         LocalDate endAt,
@@ -31,6 +33,7 @@ public class SubjectCreatedEvent extends BaseEventDto {
         Integer period
     ) {
         this.subjectId = subjectId;
+        this.classroomId = classroomId;
         this.teacherId = teacherId;
         this.startAt = startAt;
         this.endAt = endAt;
@@ -44,6 +47,7 @@ public class SubjectCreatedEvent extends BaseEventDto {
     public Map<String, Object> getEventData() {
         Map<String, Object> data = new HashMap<>();
         data.put("subjectId", subjectId);
+        data.put("classroomId", classroomId);
         data.put("teacherId", teacherId);
         data.put("startAt", startAt);
         data.put("endAt", endAt);
