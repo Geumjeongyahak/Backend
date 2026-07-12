@@ -449,6 +449,198 @@ public class SubjectCreateTest extends SubjectBaseTest {
     }
 
     @Test
+    @DisplayName("기간 교집합에 실제 수업 요일이 없으면 생성 성공(201 Created)")
+    void createSubject_Success_WhenOverlapHasNoActualLessonDay() {
+        Map<String, Object> first = createRequest(
+            "상반기 토요일 과목",
+            "2026-02-01",
+            "2026-06-30",
+            "SATURDAY"
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(first)
+        .when()
+            .post()
+        .then()
+            .statusCode(201);
+
+        Map<String, Object> second = createRequest(
+            "하반기 토요일 과목",
+            "2026-06-29",
+            "2026-09-30",
+            "SATURDAY"
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(second)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .body("name", is("하반기 토요일 과목"));
+    }
+
+    @Test
+    @DisplayName("같은 교시라도 수업 시간이 경계에서 맞닿으면 생성 성공(201 Created)")
+    void createSubject_Success_WhenSamePeriodTimesOnlyTouch() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(createRequest("앞 수업", "2026-03-02", "2026-06-30", "MONDAY"))
+        .when()
+            .post()
+        .then()
+            .statusCode(201);
+
+        Map<String, Object> touching = new HashMap<>(
+            createRequest("뒤 수업", "2026-03-02", "2026-06-30", "MONDAY")
+        );
+        touching.put("startTime", "20:50:00");
+        touching.put("endTime", "21:30:00");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(touching)
+        .when()
+            .post()
+        .then()
+            .statusCode(201);
+    }
+
+    @Test
+    @DisplayName("교시가 달라도 실제 수업 시간이 겹치면 생성 실패(409 Conflict)")
+    void createSubject_Conflict_WhenDifferentPeriodsActuallyOverlap() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(createRequest("기준 수업", "2026-03-02", "2026-06-30", "MONDAY"))
+        .when()
+            .post()
+        .then()
+            .statusCode(201);
+
+        Map<String, Object> overlapping = new HashMap<>(
+            createRequest("겹치는 수업", "2026-03-02", "2026-06-30", "MONDAY")
+        );
+        overlapping.put("startTime", "20:30:00");
+        overlapping.put("endTime", "21:10:00");
+        overlapping.put("period", 3);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(overlapping)
+        .when()
+            .post()
+        .then()
+            .statusCode(409)
+            .body("code", is("BIZ-05-001"));
+    }
+
+    @Test
+    @DisplayName("하루짜리 과목의 실제 수업 날짜와 시간이 겹치면 생성 실패(409 Conflict)")
+    void createSubject_Conflict_WhenSingleDayScheduleOverlaps() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(createRequest("하루 기준 과목", "2026-07-04", "2026-07-04", "SATURDAY"))
+        .when()
+            .post()
+        .then()
+            .statusCode(201);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(createRequest("하루 중복 과목", "2026-07-04", "2026-07-04", "SATURDAY"))
+        .when()
+            .post()
+        .then()
+            .statusCode(409)
+            .body("code", is("BIZ-05-001"));
+    }
+
+    @Test
+    @DisplayName("기간 교집합 마지막 날이 실제 수업 요일이면 생성 실패(409 Conflict)")
+    void createSubject_Conflict_WhenOverlapEndIsActualLessonDay() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(createRequest("상반기 마지막 토요일", "2026-06-01", "2026-07-04", "SATURDAY"))
+        .when()
+            .post()
+        .then()
+            .statusCode(201);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(createRequest("하반기 첫 토요일", "2026-07-04", "2026-09-30", "SATURDAY"))
+        .when()
+            .post()
+        .then()
+            .statusCode(409)
+            .body("code", is("BIZ-05-001"));
+    }
+
+    @Test
+    @DisplayName("같은 분반과 시간이라도 수업 요일이 다르면 생성 성공(201 Created)")
+    void createSubject_Success_WhenDayOfWeekDiffers() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(createRequest("월요일 과목", "2026-03-02", "2026-06-30", "MONDAY"))
+        .when()
+            .post()
+        .then()
+            .statusCode(201);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(createRequest("화요일 과목", "2026-03-02", "2026-06-30", "TUESDAY"))
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .body("name", is("화요일 과목"));
+    }
+
+    @Test
+    @DisplayName("같은 날짜와 시간이라도 분반이 다르면 생성 성공(201 Created)")
+    void createSubject_Success_WhenClassroomDiffers() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(createRequest("벚꽃반 과목", "2026-03-02", "2026-06-30", "MONDAY"))
+        .when()
+            .post()
+        .then()
+            .statusCode(201);
+
+        Map<String, Object> otherClassroom = new HashMap<>(
+            createRequest("개나리반 과목", "2026-03-02", "2026-06-30", "MONDAY")
+        );
+        otherClassroom.put("classroomId", 2L);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(otherClassroom)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .body("classroomId", is(2));
+    }
+
+    @Test
     @DisplayName("비활성 과목과 기간/요일/교시가 겹쳐도 생성 성공(201 Created)")
     void createSubject_Success_WhenOnlyInactiveSubjectOverlapsSameSlot() {
         Map<String, Object> inactive = createRequest(

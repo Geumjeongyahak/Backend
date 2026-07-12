@@ -561,6 +561,125 @@ public class SubjectUpdateTest extends SubjectBaseTest {
     }
 
     @Test
+    @DisplayName("PATCH /schedule: 기간 교집합에 실제 수업 요일이 없으면 수정할 수 있다")
+    void updateSchedule_Success_WhenOverlapHasNoActualLessonDay() {
+        Map<String, Object> targetRequest = new HashMap<>(
+            createRequest(CLASSROOM_1, "상반기 토요일 과목", "SATURDAY", 1)
+        );
+        targetRequest.remove("teacherId");
+        targetRequest.put("startAt", "2026-02-01");
+        targetRequest.put("endAt", "2026-06-30");
+        targetRequest.put("startTime", "10:00:00");
+        targetRequest.put("endTime", "10:40:00");
+
+        long subjectId = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(targetRequest)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
+
+        jdbcTemplate.update(
+            """
+            INSERT INTO subjects (
+                class_id, name, start_at, end_at, day_of_week,
+                start_time, end_time, period, description, is_active
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            CLASSROOM_1,
+            "하반기 토요일 과목",
+            "2026-06-29",
+            "2026-09-30",
+            "SATURDAY",
+            "10:00:00",
+            "10:40:00",
+            1,
+            "실제 수업일 검증용",
+            true
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(Map.of("endTime", "10:50:00"))
+        .when()
+            .patch("/{subjectId}/schedule", subjectId)
+        .then()
+            .statusCode(200)
+            .body("endTime", is("10:50:00"));
+    }
+
+    @Test
+    @DisplayName("PATCH /schedule: 다른 교시라도 실제 수업 시간이 겹치면 409 Conflict")
+    void updateSchedule_Conflict_WhenDifferentPeriodsActuallyOverlap() {
+        createSubject(CLASSROOM_1, "기준 과목", "MONDAY", 2);
+
+        Map<String, Object> targetRequest = new HashMap<>(
+            createRequest(CLASSROOM_1, "수정 대상 과목", "MONDAY", 3)
+        );
+        targetRequest.remove("teacherId");
+        targetRequest.put("startTime", "20:00:00");
+        targetRequest.put("endTime", "20:40:00");
+
+        long targetSubjectId = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(targetRequest)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(Map.of(
+                "startTime", "19:50:00",
+                "endTime", "20:30:00",
+                "period", 3
+            ))
+        .when()
+            .patch("/{subjectId}/schedule", targetSubjectId)
+        .then()
+            .statusCode(409)
+            .body("code", is("BIZ-05-001"));
+    }
+
+    @Test
+    @DisplayName("PATCH /schedule: 동일한 일정으로 수정해도 자기 자신과 충돌하지 않는다")
+    void updateSchedule_Success_WhenOnlyCandidateIsItself() {
+        long subjectId = createSubjectWithoutTeacher();
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(Map.of(
+                "startAt", "2099-03-02",
+                "endAt", "2099-06-30",
+                "dayOfWeek", "MONDAY",
+                "startTime", "19:20:00",
+                "endTime", "20:00:00",
+                "period", 2
+            ))
+        .when()
+            .patch("/{subjectId}/schedule", subjectId)
+        .then()
+            .statusCode(200)
+            .body("id", is((int) subjectId))
+            .body("startTime", is("19:20:00"))
+            .body("endTime", is("20:00:00"));
+    }
+
+    @Test
     @DisplayName("PATCH /schedule: 운영 기록이 있는 미래 수업은 자동 변경할 수 없다")
     void updateSchedule_Conflict_WhenFutureLessonHasNote() {
         long subjectId = createSubject(CLASSROOM_1, "국어", "MONDAY", 2);

@@ -13,21 +13,10 @@ import geumjeongyahak.domain.subject.entity.Subject;
 
 public interface SubjectRepository extends JpaRepository<Subject, Long> {
 
-    // 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재하는지 확인하는 메서드
-    boolean existsByClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqualAndIsActiveTrue(
+    // 같은 분반/요일에서 운영 기간이 겹치는 활성 과목을 실제 일정 충돌 검증 후보로 조회한다.
+    List<Subject> findAllByClassroomIdAndDayOfWeekAndStartAtLessThanEqualAndEndAtGreaterThanEqualAndIsActiveTrue(
         Long classroomId,
         DayOfWeek dayOfWeek,
-        Integer period,
-        LocalDate newEndAt,
-        LocalDate newStartAt
-    );
-
-    // 해당 과목을 제외하고 기간이 겹치는 과목 중 요일과 교시가 일치하는 과목이 존재하는지 확인하는 메서드
-    boolean existsByIdNotAndClassroomIdAndDayOfWeekAndPeriodAndStartAtLessThanEqualAndEndAtGreaterThanEqualAndIsActiveTrue(
-        Long subjectId,
-        Long classroomId,
-        DayOfWeek dayOfWeek,
-        Integer period,
         LocalDate newEndAt,
         LocalDate newStartAt
     );
