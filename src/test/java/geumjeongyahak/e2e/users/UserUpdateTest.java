@@ -330,6 +330,52 @@ class UserUpdateTest extends UserBaseTest {
     }
 
     @Test
+    @DisplayName("관리자가 GUEST를 교원 역할로 변경하면 활동 시작일을 오늘로 설정한다")
+    void updateUser_FromGuestToTeacherRole_SetsTeacherStartAt() {
+        CreateUserRequest createReq = new CreateUserRequest(
+            "promote-teacher@test.com",
+            "Promote Teacher User",
+            "password123!",
+            "010-7777-8888",
+            DEFAULT_BIRTH_DATE,
+            "GUEST",
+            null,
+            null
+        );
+
+        var createdUser = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(createReq)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .body("role", equalTo("GUEST"))
+            .body("teacherStartAt", nullValue())
+            .extract()
+            .as(UserDetailResponse.class);
+
+        userTestHelper.setUser(createdUser.email());
+
+        UpdateUserRequest updateReq = new UpdateUserRequest(
+            null, null, null, null, null, "MANAGER", null, null
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(updateReq)
+        .when()
+            .patch("/{userId}", createdUser.id())
+        .then()
+            .statusCode(200)
+            .body("role", equalTo("MANAGER"))
+            .body("teacherStartAt", equalTo(LocalDate.now().toString()))
+            .body("teacherEndAt", nullValue());
+    }
+
+    @Test
     @DisplayName("담당 중인 활성 과목이 있는 User는 교사 배정 불가 역할로 변경 실패(409 Conflict)")
     void updateUser_withActiveTeacherAssignmentsToGuest_returns409() {
         UpdateUserRequest updateReq = new UpdateUserRequest(

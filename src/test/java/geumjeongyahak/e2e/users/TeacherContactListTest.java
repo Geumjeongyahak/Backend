@@ -15,7 +15,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import java.time.LocalDate;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
@@ -51,8 +50,8 @@ class TeacherContactListTest extends UserBaseTest {
     }
 
     @Test
-    @DisplayName("인증 사용자는 현재 활동 중인 교사 연락망을 조회할 수 있다")
-    void getTeacherContactList_Success() {
+    @DisplayName("교원 역할과 대표 분반이 있는 사용자는 활동 기간과 관계없이 연락망에 포함된다")
+    void getTeacherContactList_UsesRoleAndClassroom() {
         LocalDate today = LocalDate.now();
 
         createTeacherContact(
@@ -93,22 +92,57 @@ class TeacherContactListTest extends UserBaseTest {
         deactivatedTeacher.softDelete();
         userRepository.save(deactivatedTeacher);
 
+        createTeacherContact(
+            "contact-no-period@test.com",
+            "No Period Teacher",
+            "010-1010-2020",
+            null,
+            null
+        );
+
+        User noClassroomTeacher = createTeacherContact(
+            "contact-no-classroom@test.com",
+            "No Classroom Teacher",
+            "010-3030-4040",
+            null,
+            null
+        );
+        noClassroomTeacher.setClassroom(null);
+        userRepository.save(noClassroomTeacher);
+
+        User guestWithClassroom = userTestHelper.createTestUser(
+            "contact-guest-with-classroom@test.com",
+            "Guest With Classroom",
+            "pw_guest_classroom",
+            RoleType.GUEST
+        );
+        guestWithClassroom.setPhoneNumber("010-5050-6060");
+        guestWithClassroom.setClassroom(classroomRepository.findById(1L).orElseThrow());
+        userRepository.save(guestWithClassroom);
+
         given()
             .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
         .when()
             .get("/api/v1/teachers/contact-list")
         .then()
             .statusCode(200)
-            .body("name", hasItems("Current Teacher", "Open Ended Teacher"))
-            .body("name", not(hasItems("Future Teacher", "Expired Teacher")))
+            .body("name", hasItems(
+                "Current Teacher",
+                "Open Ended Teacher",
+                "Future Teacher",
+                "Expired Teacher",
+                "No Period Teacher"
+            ))
             .body("name", not(hasItem("Deactivated Teacher")))
+            .body("name", not(hasItem("No Classroom Teacher")))
+            .body("name", not(hasItem("Guest With Classroom")))
             .body("classroomName", hasItems("벚꽃반"))
-            .body("phoneNumber", hasItems("010-1111-2222", "010-3333-4444"));
+            .body("phoneNumber", hasItems("010-1111-2222", "010-3333-4444", "010-1010-2020"));
     }
 
     @Test
-    @DisplayName("교사 연락망은 담당 과목의 분반명을 반환한다")
-    void getTeacherContactList_UsesAssignedSubjectClassroom() {
+    @DisplayName("대표 분반이 없으면 활성 과목이 있어도 연락망에서 제외된다")
+    void getTeacherContactList_ExcludesTeacherWithoutRepresentativeClassroom() {
         User teacher = createTeacherContact(
             "contact-assigned-subject@test.com",
             "Assigned Subject Teacher",
@@ -126,7 +160,7 @@ class TeacherContactListTest extends UserBaseTest {
             .get("/api/v1/teachers/contact-list")
         .then()
             .statusCode(200)
-            .body("find { it.name == 'Assigned Subject Teacher' }.classroomName", equalTo("장미반"));
+            .body("name", not(hasItem("Assigned Subject Teacher")));
     }
 
     @Test

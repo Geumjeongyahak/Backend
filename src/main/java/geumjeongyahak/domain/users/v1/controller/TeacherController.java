@@ -33,11 +33,12 @@ public class TeacherController {
     @Operation(
         summary = "교사 연락망 조회",
         description = """
-            현재 활동 중인 교사 목록을 연락망 화면용으로 조회합니다.
+            대표 분반이 지정된 교사 목록을 연락망 화면용으로 조회합니다.
 
             조회 기준:
-            - teacherStartAt이 오늘 이전 또는 오늘인 사용자
-            - teacherEndAt이 없거나 오늘 이후 또는 오늘인 사용자
+            - 역할이 VOLUNTEER, MANAGER, ADMIN 중 하나인 사용자
+            - 대표 분반이 지정된 사용자
+            - 삭제되지 않은 사용자
 
             응답 정보:
             - 교사 이름

@@ -24,6 +24,8 @@ import geumjeongyahak.domain.users.repository.UserRepository;
 import geumjeongyahak.domain.users.service.UserCrudService;
 import geumjeongyahak.domain.users.service.UserPermissionService;
 import geumjeongyahak.domain.users.service.UserProxyService;
+import geumjeongyahak.domain.users.v1.dto.request.UpdateUserRequest;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -154,6 +156,32 @@ class UserCrudServiceDeactivationTest {
             ArgumentCaptor.forClass(UserDeactivatedEvent.class);
         verify(eventPublisher).publish(eventCaptor.capture());
         assertThat(eventCaptor.getValue().userId()).isEqualTo(TARGET_USER_ID);
+    }
+
+    @Test
+    void updateUser_doesNothingWhenRoleIsUnchangedGuest() {
+        User user = user(RoleType.GUEST);
+        given(userRepository.findByIdAndIsDeletedFalse(TARGET_USER_ID))
+            .willReturn(Optional.of(user));
+        given(departmentPermissionProxyService.getEffectivePermissions(user))
+            .willReturn(List.of());
+        given(subjectProxyService.getActiveSubjectsByTeacherId(TARGET_USER_ID))
+            .willReturn(List.of());
+
+        userCrudService.updateUser(TARGET_USER_ID, new UpdateUserRequest(
+            null,
+            null,
+            null,
+            null,
+            null,
+            RoleType.GUEST.name(),
+            null,
+            null
+        ));
+
+        assertThat(user.getRole()).isEqualTo(RoleType.GUEST);
+        assertThat(user.getTeacherEndAt()).isNull();
+        verify(userPermissionService, never()).removeAllPermissions(TARGET_USER_ID);
     }
 
     private void assertPendingRequestConflict(User user) {
