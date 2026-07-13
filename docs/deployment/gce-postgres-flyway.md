@@ -6,21 +6,21 @@
 Client
   |
   v
-Home server / GitHub Actions
+Operator / GitHub Actions
   |
   | Tailscale 100.64.0.0/10 or MagicDNS
   v
 App GCE e2-small
   - Spring Boot executable jar (`~/app-dev/app.jar`)
   - systemd: gjlearn-app.service
-  - systemd: prometheus-node-exporter.service
+  - systemd: google-cloud-ops-agent.service
   - tailscaled
   |
   | Tailscale or private IP:5432
   v
 DB GCE e2-micro
   - systemd: postgresql.service
-  - systemd: prometheus-node-exporter.service
+  - systemd: google-cloud-ops-agent.service
   - systemd: prometheus-postgres-exporter.service
   - tailscaled
 ```
@@ -64,8 +64,8 @@ DB 서버 `~/db-dev/.env`의 필수 실행 변수:
 ## 배포 절차
 
 1. GCE `e2-small` 앱 인스턴스와 `e2-micro` DB 인스턴스를 같은 VPC/리전에 생성한다.
-2. `scripts/gcp/01_infra/01_provision-gcp.sh`가 startup script로 Java, PostgreSQL client, node-exporter 기본 패키지와 `~/app-dev`, `~/db-dev` 디렉터리를 준비한다.
-3. 각 서버에서 `sudo tailscale up`으로 홈서버와 같은 tailnet에 붙이고 Tailscale IP/MagicDNS hostname을 확인한다.
+2. `scripts/gcp/01_infra/01_provision-gcp.sh`가 startup script로 Java, PostgreSQL client와 `~/app-dev`, `~/db-dev` 디렉터리를 준비한다.
+3. 각 서버에서 `sudo tailscale up`으로 운영자 접근용 tailnet에 붙인다.
 4. `scripts/gcp/03_env_render/00_render-server-env.sh <env> app > scripts/gcp/00_env/<env>.app.env`, `scripts/gcp/03_env_render/00_render-server-env.sh <env> db > scripts/gcp/00_env/<env>.db.env`를 생성하고 비밀번호/secret 값을 채운다.
 5. DB 인스턴스에 `scripts/gcp/00_env/<env>.db.env`와 `scripts/gcp/04_db/01_install-db-service.sh`를 복사하고 실행한다.
 6. 앱 서버 `~/app-dev/.env`의 `POSTGRES_HOST`를 DB VPC private IP 또는 DB Tailscale MagicDNS hostname/IP로 설정한다. 렌더 스크립트 기본값은 DB VPC private IP이므로 `<env>.db.env`의 `APP_DB_CIDR`도 App VM VPC private IP `/32`인지 확인한다.
@@ -119,17 +119,16 @@ gcloud compute ssh "$APP_INSTANCE_NAME" \
 sudo systemctl status gjlearn-app --no-pager
 sudo journalctl -u gjlearn-app -n 200 --no-pager
 curl -fsS http://127.0.0.1:9090/actuator/prometheus >/dev/null
-curl -fsS http://127.0.0.1:9100/metrics >/dev/null
+sudo systemctl status google-cloud-ops-agent --no-pager
 ```
 
 DB 서버:
 
 ```bash
 sudo systemctl status postgresql --no-pager
-sudo systemctl status prometheus-node-exporter --no-pager
+sudo systemctl status google-cloud-ops-agent --no-pager
 sudo systemctl status prometheus-postgres-exporter --no-pager
 sudo -u postgres psql -d "$POSTGRES_DB" -c 'select 1;'
-curl -fsS http://127.0.0.1:9100/metrics >/dev/null
 curl -fsS http://127.0.0.1:9187/metrics >/dev/null
 ```
 
@@ -138,7 +137,7 @@ curl -fsS http://127.0.0.1:9187/metrics >/dev/null
 - 외부 공개: 앱 서버의 HTTP/HTTPS 또는 앱 포트만 허용한다.
 - Tailscale: `udp:41641`은 App/DB VM에 public 허용한다.
 - DB 포트: `tcp:5432`는 public internet에 열지 않는다. App VM Tailscale IP 또는 VPC private IP에서만 접근시킨다.
-- 모니터링 포트: `8080`, `9100`, `9187`은 public internet에 직접 열지 않는다. 홈서버 Prometheus가 Tailscale로 scrape한다.
+- 모니터링 포트: `9090`, `9187`, `3000`은 localhost에만 bind한다.
 - SSH: 최초 설정/비상 접근은 운영자 IP 또는 IAP로 제한하고, CI/CD는 SSH key 기반 SCP/SSH를 사용한다.
 
 DB 방화벽 예시:

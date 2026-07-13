@@ -58,10 +58,11 @@ GitHub Actions는 `.env`를 생성하거나 덮어쓰지 않는다. 애플리케
 앱 서버 예시:
 
 ```env
+ENVIRONMENT=prod
 SPRING_PROFILES_ACTIVE=prod
 APP_PORT=8080
 MANAGEMENT_PORT=9090
-NODE_EXPORTER_PORT=9100
+MANAGEMENT_ADDRESS=127.0.0.1
 LOG_LEVEL_ROOT=WARN
 LOG_LEVEL_APP=WARN
 APP_LOG_DIR=./logs/app
@@ -96,6 +97,8 @@ GCP_PROJECT_ID=your-project-id
 GCP_PROD_BUCKET_NAME=your-bucket
 GCP_DEV_BUCKET_NAME=your-bucket
 GCP_ENCODED_CREDENTIALS=
+INTERNAL_GRAFANA_ENABLED=false
+INTERNAL_GRAFANA_ADMIN_PASSWORD=
 ```
 
 `ADMIN_PASSWORD`는 최초 관리자 계정 생성 후 제거해도 된다.
@@ -103,10 +106,10 @@ GCP_ENCODED_CREDENTIALS=
 DB 서버 예시:
 
 ```env
+ENVIRONMENT=prod
 DB_PORT=5432
 DB_LISTEN_ADDRESS=*
 APP_DB_CIDR=APP_SERVER_PRIVATE_IP/32
-NODE_EXPORTER_PORT=9100
 POSTGRES_EXPORTER_PORT=9187
 
 POSTGRES_DB=geumjeongyahak
@@ -196,25 +199,23 @@ curl -fsS "http://<APP_EXTERNAL_IP>:8080/"
 
 ## 7. 모니터링
 
-비용 최소 구성을 유지하기 위해 Prometheus, Alertmanager, Grafana는 GCE가 아니라 홈서버에서 운영한다.
+Ops Agent가 localhost 지표를 Cloud Monitoring으로 전송한다. 홈서버 scrape는 사용하지 않으며 Grafana는 App VM에서 선택적으로 실행한다.
 
 | 포트 | 대상 | 설명 |
 | :--- | :--- | :--- |
-| `9090` | App GCE Spring Actuator | `/actuator/prometheus` |
-| `9100` | App GCE / DB GCE node-exporter | CPU, memory, disk, network metrics |
-| `9187` | DB GCE postgres-exporter | PostgreSQL metrics |
+| `9090` | App localhost | Ops Agent Actuator 수집 |
+| `9187` | DB localhost | Ops Agent PostgreSQL 수집 |
+| `3000` | App localhost | 선택형 Grafana, IAP 터널 전용 |
 
 권장 구조:
 
 ```text
-Home Prometheus
-  -> gjlearn-app.<tailnet>.ts.net:9090/actuator/prometheus
-  -> gjlearn-app.<tailnet>.ts.net:9100/metrics
-  -> gjlearn-db.<tailnet>.ts.net:9100/metrics
-  -> gjlearn-db.<tailnet>.ts.net:9187/metrics
+App/DB Ops Agent
+  -> Cloud Monitoring
+  -> Cloud Logging
 ```
 
-`8080`, `9100`, `9187`, `5432`는 public internet에 직접 열지 않는다. Tailscale direct path용 `41641/udp`만 public 허용한다.
+`8080`, `9090`, `9187`, `3000`, `5432`는 public internet에 직접 열지 않는다. Tailscale direct path용 `41641/udp`만 public 허용한다.
 
 ## 8. 문제 해결
 

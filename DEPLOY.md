@@ -28,9 +28,9 @@ scripts/gcp/
 │   └── 01_install-db-service.sh      # PostgreSQL/exporter/Tailscale 설치
 ├── 05_app/
 │   ├── 00_startup-app-manual.sh      # App VM startup bootstrap
-│   └── 01_install-app-service.sh     # jar systemd/Ops Agent/node-exporter 설치
+│   └── 01_install-app-service.sh     # jar systemd/Ops Agent/선택형 Grafana 설치
 ├── 06_observability/
-│   └── 00_configure-cloud-alerts.sh  # Cloud Logging WARN/ERROR metric/alert 생성
+│   └── 00_configure-cloud-monitoring.sh # Cloud dashboard/alert 생성
 └── 07_deploy/
     └── 00_deploy-env.sh              # infra→env→DB→App 순차 자동화 wrapper
 ```
@@ -337,7 +337,7 @@ gcloud compute ssh "$DB_INSTANCE_NAME" \
   --project "$PROJECT_ID" \
   --zone "$ZONE" \
   --tunnel-through-iap \
-  --command "sudo -u postgres psql -d geumjeongyahak -tAc 'select current_database(), current_user;' && curl -fsS http://localhost:9100/metrics >/dev/null && curl -fsS http://localhost:9187/metrics >/dev/null && echo db-ok"
+  --command "sudo -u postgres psql -d geumjeongyahak -tAc 'select current_database(), current_user;' && curl -fsS http://localhost:9187/metrics >/dev/null && sudo systemctl is-active --quiet google-cloud-ops-agent && echo db-ok"
 ```
 
 Tailscale 인증이 필요하면:
@@ -399,14 +399,14 @@ gcloud compute ssh "$APP_INSTANCE_NAME" \
   --command "sudo tailscale up --advertise-tags=${APP_TAILSCALE_TAGS:-tag:gjlearn} --accept-dns=false"
 ```
 
-## 6. Cloud Logging WARN/ERROR 알림
+## 6. Cloud Monitoring과 Cloud Logging
 
-App VM은 `~/app-dev/logs/app/application.yyyy-MM-dd.log` 형식으로 일자별 파일 로그를 남깁니다. Logback 파일 appender는 `LOG_FILE_LEVEL` 이상을 기록하고 `LOG_FILE_MAX_HISTORY=30` 기준으로 30일 이후 파일을 삭제합니다. Cloud Ops Agent는 JSON 파싱 없이 `LOG_UPLOAD_PATH`에 매칭되는 파일을 Cloud Logging으로 전달합니다.
+App/DB Ops Agent는 localhost에서 핵심 지표만 60초마다 수집합니다. App 로그는 Cloud Logging `_Default` bucket에 30일 보관합니다. 홈서버 Prometheus scrape와 OTLP 전송은 사용하지 않습니다.
 
 알림 정책 생성/갱신:
 
 ```bash
-scripts/gcp/06_observability/00_configure-cloud-alerts.sh scripts/gcp/00_env/prod.env
+scripts/gcp/06_observability/00_configure-cloud-monitoring.sh scripts/gcp/00_env/prod.env
 ```
 
 알림을 실제로 받으려면 Cloud Monitoring notification channel을 만든 뒤 `scripts/gcp/00_env/prod.env`에 넣고 다시 실행합니다.
@@ -425,22 +425,24 @@ gcloud logging read \
   --format json
 ```
 
-## 7. 홈서버 Prometheus 확인
+## 7. 선택형 내부 Grafana
 
-Prometheus scrape target은 Tailscale IP 또는 MagicDNS hostname을 사용합니다.
+기본값은 OFF입니다. App VM `.env`를 수정하고 설치 스크립트를 다시 실행하면 localhost에서만 시작합니다.
 
-- App actuator: `gjlearn-prod-app.<tailnet>.ts.net:9090/actuator/prometheus`
-- App node exporter: `gjlearn-prod-app.<tailnet>.ts.net:9100`
-- DB node exporter: `gjlearn-prod-db.<tailnet>.ts.net:9100`
-- DB postgres exporter: `gjlearn-prod-db.<tailnet>.ts.net:9187`
-
-prod target은 실제 prod tailnet 노드가 생긴 뒤 `infra/monitoring/prometheus/targets/gjlearn/prod/`에 추가하고 홈서버 운영 경로로 동기화합니다.
+```env
+INTERNAL_GRAFANA_ENABLED=true
+INTERNAL_GRAFANA_ADMIN_PASSWORD=<16자 이상 비밀번호>
+```
 
 ```bash
-make sync-monitoring-diff
-make sync-monitoring-push
-/home/min/Infra/monitoring/scripts/restart.sh
+gcloud compute ssh "$APP_INSTANCE_NAME" \
+  --project "$PROJECT_ID" \
+  --zone "$ZONE" \
+  --tunnel-through-iap \
+  -- -L 3000:127.0.0.1:3000
 ```
+
+브라우저에서 `http://127.0.0.1:3000`으로 접속합니다. OFF로 되돌리고 설치 스크립트를 재실행하면 서비스만 중지되고 설정은 남습니다.
 
 ## 8. DNS/HTTPS 확인
 
