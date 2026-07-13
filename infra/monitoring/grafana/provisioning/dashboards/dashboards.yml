@@ -1,24 +1,6 @@
 apiVersion: 1
 
 providers:
-  - name: gjlearn-dev
-    orgId: 1
-    folder: "금정야학 개발"
-    type: file
-    updateIntervalSeconds: 30
-    allowUiUpdates: true
-    options:
-      path: /etc/grafana/provisioning/dashboard-json/gjlearn/dev
-
-  - name: gjlearn-prod
-    orgId: 1
-    folder: "금정야학 프로덕션"
-    type: file
-    updateIntervalSeconds: 30
-    allowUiUpdates: true
-    options:
-      path: /etc/grafana/provisioning/dashboard-json/gjlearn/prod
-
   - name: portfolio
     orgId: 1
     folder: "portfolio"

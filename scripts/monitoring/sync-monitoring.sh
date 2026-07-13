@@ -24,7 +24,6 @@ case "$mode" in
     ;;
   push)
     rsync -a --delete "${exclude[@]}" "${repo_monitoring}/" "${central_monitoring}/"
-    "${repo_root}/scripts/monitoring/apply-alert-env.sh" central
     ;;
   *)
     echo "usage: scripts/monitoring/sync-monitoring.sh diff|pull|push" >&2
