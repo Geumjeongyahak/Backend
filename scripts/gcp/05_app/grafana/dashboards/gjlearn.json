@@ -1,0 +1,46 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {"type": "stackdriver", "uid": "gcp-monitoring"},
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 4,
+      "targets": [{"datasource": {"type": "stackdriver", "uid": "gcp-monitoring"}, "queryType": "metrics", "refId": "A", "metricQuery": {"projectName": "__PROJECT_ID__", "editorMode": "visual", "metricType": "prometheus.googleapis.com/http_server_requests_seconds_count/counter", "metricKind": "CUMULATIVE", "valueType": "DOUBLE", "alignmentPeriod": "cloud-monitoring-auto", "perSeriesAligner": "ALIGN_RATE", "crossSeriesReducer": "REDUCE_SUM", "groupBys": ["metric.label.status"], "filters": ["metric.label.env", "=", "__ENVIRONMENT__"]}}],
+      "title": "API Requests by Status",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "stackdriver", "uid": "gcp-monitoring"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 5,
+      "targets": [{"datasource": {"type": "stackdriver", "uid": "gcp-monitoring"}, "queryType": "metrics", "refId": "A", "metricQuery": {"projectName": "__PROJECT_ID__", "editorMode": "visual", "metricType": "prometheus.googleapis.com/hikaricp_connections/gauge", "metricKind": "GAUGE", "valueType": "DOUBLE", "alignmentPeriod": "cloud-monitoring-auto", "perSeriesAligner": "ALIGN_MEAN", "crossSeriesReducer": "REDUCE_SUM", "groupBys": [], "filters": ["metric.label.env", "=", "__ENVIRONMENT__"]}}],
+      "title": "Hikari Connections",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "stackdriver", "uid": "gcp-monitoring"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+      "id": 6,
+      "targets": [{"datasource": {"type": "stackdriver", "uid": "gcp-monitoring"}, "queryType": "metrics", "refId": "A", "metricQuery": {"projectName": "__PROJECT_ID__", "editorMode": "visual", "metricType": "prometheus.googleapis.com/pg_stat_database_numbackends/gauge", "metricKind": "GAUGE", "valueType": "DOUBLE", "alignmentPeriod": "cloud-monitoring-auto", "perSeriesAligner": "ALIGN_MEAN", "crossSeriesReducer": "REDUCE_SUM", "groupBys": ["metric.label.datname"], "filters": ["metric.label.env", "=", "__ENVIRONMENT__"]}}],
+      "title": "PostgreSQL Connections",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 41,
+  "tags": ["gjlearn", "cloud-monitoring"],
+  "templating": {"list": []},
+  "time": {"from": "now-30d", "to": "now"},
+  "timezone": "browser",
+  "title": "GJLearn Cloud Monitoring",
+  "uid": "gjlearn-cloud-monitoring",
+  "version": 1
+}

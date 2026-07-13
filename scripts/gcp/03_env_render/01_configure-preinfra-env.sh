@@ -175,7 +175,6 @@ ask("DB_TAILSCALE_ACCEPT_DNS", "DB Tailscale accept DNS?", get("DB_TAILSCALE_ACC
 section("7. Observability 이름 - 서버 생성 전/후 모두 수정 가능")
 ask("CLOUD_LOGGING_LOG_ID", "Cloud Logging log id", get("CLOUD_LOGGING_LOG_ID") or f"gjlearn-{env}-app")
 ask("CLOUD_LOGGING_WARN_ERROR_METRIC_NAME", "WARN/ERROR metric name", get("CLOUD_LOGGING_WARN_ERROR_METRIC_NAME") or f"gjlearn_{env}_app_warn_error_count")
-ask("CLOUD_LOGGING_WARN_ERROR_POLICY_NAME", "WARN/ERROR alert policy name", get("CLOUD_LOGGING_WARN_ERROR_POLICY_NAME") or f"GJLearn-{env}-app-WARN-ERROR-logs")
 ask("ALERT_NOTIFICATION_CHANNELS", "Optional comma-separated Monitoring notification channel resource names", get("ALERT_NOTIFICATION_CHANNELS"))
 
 # Keep MailerSend defaults in the provisioning file so app env rendering inherits them.

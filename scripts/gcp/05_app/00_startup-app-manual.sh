@@ -17,14 +17,11 @@ apt-get install -y \
   gnupg \
   lsb-release \
   openjdk-21-jre-headless \
-  postgresql-client \
-  prometheus-node-exporter
+  postgresql-client
 
 if ! command -v tailscale >/dev/null 2>&1; then
   curl -fsSL https://tailscale.com/install.sh | sh
 fi
-
-systemctl enable --now prometheus-node-exporter
 
 mkdir -p "${APP_DIR}/logs/app" /opt/gjlearn
 

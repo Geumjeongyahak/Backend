@@ -1,0 +1,11 @@
+apiVersion: 1
+
+datasources:
+  - name: Google Cloud Monitoring
+    uid: gcp-monitoring
+    type: stackdriver
+    access: proxy
+    isDefault: true
+    jsonData:
+      authenticationType: gce
+      universeDomain: googleapis.com

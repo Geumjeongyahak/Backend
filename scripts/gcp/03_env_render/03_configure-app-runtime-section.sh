@@ -267,15 +267,19 @@ def google_drive():
     ask('GOOGLE_DRIVE_FOLDER_ID_BOARD','Drive folder id for board', get('GOOGLE_DRIVE_FOLDER_ID_BOARD', infra.get('GOOGLE_DRIVE_FOLDER_ID_BOARD','')))
 
 def logging():
-    title("Logging")
+    title("Observability")
+    ask('ENVIRONMENT','Runtime environment', get('ENVIRONMENT', infra.get('ENVIRONMENT','prod')), ['dev','prod'])
+    ask('MANAGEMENT_PORT','Management/actuator port', get('MANAGEMENT_PORT','9090'))
+    ask('MANAGEMENT_ADDRESS','Management bind address', get('MANAGEMENT_ADDRESS','127.0.0.1'))
     ask('APP_LOG_DIR','App log dir', get('APP_LOG_DIR','./logs/app'))
     ask('LOG_FILE_PATTERN','Logback rolling file pattern', get('LOG_FILE_PATTERN','./logs/app/application.%d{yyyy-MM-dd}.log'))
     ask('LOG_UPLOAD_PATH','Cloud Ops Agent log upload glob', get('LOG_UPLOAD_PATH','./logs/app/application.*.log'))
-    ask('LOG_FILE_LEVEL','Logback file appender threshold', get('LOG_FILE_LEVEL','INFO' if infra.get('ENVIRONMENT','') == 'dev' else 'WARN'), ['DEBUG','INFO','WARN','ERROR'])
+    ask('LOG_FILE_LEVEL','Logback file appender threshold', get('LOG_FILE_LEVEL','WARN'), ['DEBUG','INFO','WARN','ERROR'])
     ask('LOG_FILE_MAX_HISTORY','Log max history days', get('LOG_FILE_MAX_HISTORY','30'))
     ask('LOG_FILE_TOTAL_SIZE_CAP','Log total size cap', get('LOG_FILE_TOTAL_SIZE_CAP','1GB'))
-    ask('CLOUD_LOGGING_ENABLED','Cloud logging enabled', get('CLOUD_LOGGING_ENABLED','true'), ['true','false'])
     ask('CLOUD_LOGGING_LOG_ID','Cloud Logging log id', get('CLOUD_LOGGING_LOG_ID', infra.get('CLOUD_LOGGING_LOG_ID', f"gjlearn-{infra.get('ENVIRONMENT','app')}-app")))
+    ask('INTERNAL_GRAFANA_ENABLED','Internal Grafana enabled', get('INTERNAL_GRAFANA_ENABLED','false'), ['true','false'])
+    ask_secret('INTERNAL_GRAFANA_ADMIN_PASSWORD','Grafana admin password; required only when enabled')
 
 def tailscale():
     title("App Tailscale")
