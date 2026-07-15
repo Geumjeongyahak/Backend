@@ -51,6 +51,8 @@ jobs:
           ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" "mkdir -p ~/app-dev"
           scp -i ~/.ssh/deploy_key "${APP_JAR}" scripts/gcp/05_app/01_install-app-service.sh \
             "${SSH_USER}@${SSH_HOST}:~/app-dev/"
+          scp -r -i ~/.ssh/deploy_key scripts/gcp/05_app/grafana \
+            "${SSH_USER}@${SSH_HOST}:~/app-dev/"
           ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" \
             "cd ~/app-dev && test -f .env && mv \"$(basename "${APP_JAR}")\" app.jar && chmod +x 01_install-app-service.sh && ./01_install-app-service.sh"
 
@@ -64,4 +66,4 @@ jobs:
           printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" \
-            "curl -fsS http://127.0.0.1:8080/actuator/health >/dev/null && sudo systemctl is-active --quiet gjlearn-app"
+            "curl -fsS http://127.0.0.1:9090/actuator/health >/dev/null && sudo systemctl is-active --quiet gjlearn-app"

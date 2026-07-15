@@ -14,6 +14,9 @@ while IFS= read -r script; do
   printf 'ok %s\n' "${script}"
 done < <(find scripts -type f -name '*.sh' | sort)
 
+printf '\n==> observability configuration contract\n'
+scripts/gcp/tests/observability-config-test.sh
+
 printf '\n==> harness JSON schema parse\n'
 python3 - <<'PY'
 import json

@@ -110,6 +110,12 @@ gcloud services enable \
   cloudresourcemanager.googleapis.com \
   --project="${PROJECT_ID}"
 
+# DB VM은 외부 IP 없이도 Ops Agent와 Google API에 접근해야 한다.
+gcloud compute networks subnets update "${SUBNET}" \
+  --project="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --enable-private-ip-google-access >/dev/null
+
 APP_SERVICE_ACCOUNT_EMAIL="${APP_SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
 echo "[2/8] Ensure app service account"
@@ -141,6 +147,14 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${APP_SERVICE_ACCOUNT_EMAIL}" \
   --role="roles/logging.logWriter" >/dev/null
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${APP_SERVICE_ACCOUNT_EMAIL}" \
+  --role="roles/monitoring.metricWriter" >/dev/null
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${APP_SERVICE_ACCOUNT_EMAIL}" \
+  --role="roles/monitoring.viewer" >/dev/null
 
 if [[ "${STORAGE_PUBLIC_READ:-false}" == "true" ]]; then
   gcloud storage buckets add-iam-policy-binding "gs://${STORAGE_BUCKET_NAME}" \

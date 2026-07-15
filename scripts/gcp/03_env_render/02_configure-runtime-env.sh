@@ -185,10 +185,10 @@ def maybe_api_default():
     return (api_base + "/api/v1/auth/google/callback") if api_base else app.get("GOOGLE_REDIRECT_URI", "")
 
 section("1. DB VM runtime - 서버 생성 후 DB install 전에 적용")
+ask(db, db_order, "ENVIRONMENT", "Runtime environment", get(db, "ENVIRONMENT", env), choices=["dev", "prod"])
 ask(db, db_order, "DB_PORT", "PostgreSQL port", get(db, "DB_PORT", "5432"))
 ask(db, db_order, "DB_LISTEN_ADDRESS", "PostgreSQL listen_addresses", get(db, "DB_LISTEN_ADDRESS", "*"))
 ask(db, db_order, "APP_DB_CIDR", "App VM CIDR allowed in pg_hba.conf", get(db, "APP_DB_CIDR", "100.64.0.0/10"))
-ask(db, db_order, "NODE_EXPORTER_PORT", "DB node exporter port", get(db, "NODE_EXPORTER_PORT", "9100"))
 ask(db, db_order, "POSTGRES_EXPORTER_PORT", "postgres exporter port", get(db, "POSTGRES_EXPORTER_PORT", "9187"))
 ask(db, db_order, "POSTGRES_DB", "Database name", get(db, "POSTGRES_DB", "geumjeongyahak"))
 ask(db, db_order, "POSTGRES_USER", "Database user", get(db, "POSTGRES_USER", "postgres"))
@@ -198,9 +198,11 @@ ask(db, db_order, "TAILSCALE_ACCEPT_DNS", "DB Tailscale accept DNS?", get(db, "T
 ask_secret(db, db_order, "TAILSCALE_AUTHKEY", "Optional DB Tailscale auth key")
 
 section("2. App DB 연결 - DB runtime 값과 일치해야 함")
+ask(app, app_order, "ENVIRONMENT", "Runtime environment", get(app, "ENVIRONMENT", env), choices=["dev", "prod"])
 ask(app, app_order, "SPRING_PROFILES_ACTIVE", "Spring profile", get(app, "SPRING_PROFILES_ACTIVE", env), choices=["dev", "prod"])
 ask(app, app_order, "APP_PORT", "App HTTP port", get(app, "APP_PORT", "8080"))
 ask(app, app_order, "MANAGEMENT_PORT", "Management/actuator port", get(app, "MANAGEMENT_PORT", "9090"))
+ask(app, app_order, "MANAGEMENT_ADDRESS", "Management bind address", get(app, "MANAGEMENT_ADDRESS", "127.0.0.1"))
 ask(app, app_order, "POSTGRES_HOST", "DB host/IP from App VM", get(app, "POSTGRES_HOST", ""))
 ask(app, app_order, "POSTGRES_PORT", "DB port from App VM", get(app, "POSTGRES_PORT", get(db, "DB_PORT", "5432")))
 ask(app, app_order, "POSTGRES_DB", "DB name", get(app, "POSTGRES_DB", get(db, "POSTGRES_DB", "geumjeongyahak")))
@@ -284,11 +286,12 @@ ask_secret(app, app_order, "TAILSCALE_AUTHKEY", "Optional App Tailscale auth key
 ask(app, app_order, "APP_LOG_DIR", "App log dir", get(app, "APP_LOG_DIR", "./logs/app"))
 ask(app, app_order, "LOG_FILE_PATTERN", "Logback rolling file pattern", get(app, "LOG_FILE_PATTERN", "./logs/app/application.%d{yyyy-MM-dd}.log"))
 ask(app, app_order, "LOG_UPLOAD_PATH", "Cloud Ops Agent log upload glob", get(app, "LOG_UPLOAD_PATH", "./logs/app/application.*.log"))
-ask(app, app_order, "LOG_FILE_LEVEL", "Logback file appender threshold", get(app, "LOG_FILE_LEVEL", "INFO" if env == "dev" else "WARN"), choices=["DEBUG", "INFO", "WARN", "ERROR"])
+ask(app, app_order, "LOG_FILE_LEVEL", "Logback file appender threshold", get(app, "LOG_FILE_LEVEL", "WARN"), choices=["DEBUG", "INFO", "WARN", "ERROR"])
 ask(app, app_order, "LOG_FILE_MAX_HISTORY", "Log max history days", get(app, "LOG_FILE_MAX_HISTORY", "30"))
 ask(app, app_order, "LOG_FILE_TOTAL_SIZE_CAP", "Log total size cap", get(app, "LOG_FILE_TOTAL_SIZE_CAP", "1GB"))
-ask(app, app_order, "CLOUD_LOGGING_ENABLED", "Cloud logging enabled", get(app, "CLOUD_LOGGING_ENABLED", "true"), choices=["true", "false"])
 ask(app, app_order, "CLOUD_LOGGING_LOG_ID", "Cloud Logging log id", get(app, "CLOUD_LOGGING_LOG_ID", infra.get("CLOUD_LOGGING_LOG_ID", f"gjlearn-{env}-app")))
+ask(app, app_order, "INTERNAL_GRAFANA_ENABLED", "Internal Grafana enabled", get(app, "INTERNAL_GRAFANA_ENABLED", "false"), choices=["true", "false"])
+ask_secret(app, app_order, "INTERNAL_GRAFANA_ADMIN_PASSWORD", "Grafana admin password; required only when enabled")
 
 def write_env(path, original_lines, values, order):
     out=[]

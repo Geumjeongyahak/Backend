@@ -21,7 +21,7 @@ RENDER_ENVS="${RENDER_ENVS:-true}"
 INSTALL_DB="${INSTALL_DB:-true}"
 INSTALL_APP="${INSTALL_APP:-true}"
 BUILD_JAR="${BUILD_JAR:-true}"
-CONFIGURE_ALERTS="${CONFIGURE_ALERTS:-false}"
+CONFIGURE_MONITORING="${CONFIGURE_MONITORING:-false}"
 USE_IAP_FOR_DB="${USE_IAP_FOR_DB:-true}"
 USE_IAP_FOR_APP="${USE_IAP_FOR_APP:-false}"
 
@@ -162,7 +162,7 @@ if [[ "${INSTALL_DB}" == "true" && "${SKIP_DB_INSTANCE:-false}" != "true" ]]; th
   run_ssh "${DB_INSTANCE_NAME}" "${USE_IAP_FOR_DB}" \
     "cd ~/db-dev && mv $(basename "${DB_ENV_FILE}") .env && chmod +x 01_install-db-service.sh && ./01_install-db-service.sh"
   run_ssh "${DB_INSTANCE_NAME}" "${USE_IAP_FOR_DB}" \
-    "sudo -u postgres psql -d '${POSTGRES_DB:-geumjeongyahak}' -tAc 'select current_database();' && curl -fsS http://127.0.0.1:9100/metrics >/dev/null && curl -fsS http://127.0.0.1:9187/metrics >/dev/null && echo db-ok"
+    "sudo -u postgres psql -d '${POSTGRES_DB:-geumjeongyahak}' -tAc 'select current_database();' && curl -fsS http://127.0.0.1:9187/metrics >/dev/null && sudo systemctl is-active --quiet google-cloud-ops-agent && echo db-ok"
 fi
 
 if [[ "${BUILD_JAR}" == "true" ]]; then
@@ -180,14 +180,17 @@ if [[ "${INSTALL_APP}" == "true" ]]; then
     "${ROOT_DIR}/scripts/gcp/05_app/01_install-app-service.sh" \
     "${APP_ENV_FILE}" \
     "${APP_INSTANCE_NAME}:~/app-dev/"
+  run_scp "${USE_IAP_FOR_APP}" --recurse \
+    "${ROOT_DIR}/scripts/gcp/05_app/grafana" \
+    "${APP_INSTANCE_NAME}:~/app-dev/"
   run_ssh "${APP_INSTANCE_NAME}" "${USE_IAP_FOR_APP}" \
     "cd ~/app-dev && mv $(basename "${APP_ENV_FILE}") .env && mv $(basename "${APP_JAR}") app.jar && chmod +x 01_install-app-service.sh && ./01_install-app-service.sh"
   run_ssh "${APP_INSTANCE_NAME}" "${USE_IAP_FOR_APP}" \
     "cd ~/app-dev && set -a && . ./.env && set +a && curl -fsS http://127.0.0.1:\${MANAGEMENT_PORT:-9090}/actuator/health >/dev/null && sudo systemctl is-active --quiet gjlearn-app && echo app-ok"
 fi
 
-if [[ "${CONFIGURE_ALERTS}" == "true" ]]; then
-  "${ROOT_DIR}/scripts/gcp/06_observability/00_configure-cloud-alerts.sh" "${ENV_FILE}"
+if [[ "${CONFIGURE_MONITORING}" == "true" ]]; then
+  "${ROOT_DIR}/scripts/gcp/06_observability/00_configure-cloud-monitoring.sh" "${ENV_FILE}"
 fi
 
 "${ROOT_DIR}/scripts/gcp/01_infra/02_print-outputs.sh" "${ENV_FILE}"

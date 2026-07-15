@@ -78,19 +78,10 @@ This simple-node setup intentionally does not advertise subnet routes; set TAILS
 EOF
 }
 
-configure_cloud_logging() {
-  local enabled="${CLOUD_LOGGING_ENABLED:-}"
+configure_ops_agent() {
   local log_upload_path="${LOG_UPLOAD_PATH:-}"
   local log_id="${CLOUD_LOGGING_LOG_ID:-}"
-
-  if [[ -z "${enabled}" ]]; then
-    enabled="$(read_env_value CLOUD_LOGGING_ENABLED)"
-  fi
-  enabled="${enabled:-true}"
-  if [[ "${enabled}" != "true" ]]; then
-    echo "cloud logging disabled by CLOUD_LOGGING_ENABLED=${enabled}"
-    return 0
-  fi
+  local environment="${ENVIRONMENT:-}"
 
   if [[ -z "${log_upload_path}" ]]; then
     log_upload_path="$(read_env_value LOG_UPLOAD_PATH)"
@@ -104,6 +95,10 @@ configure_cloud_logging() {
     log_id="$(read_env_value CLOUD_LOGGING_LOG_ID)"
   fi
   log_id="${log_id:-gjlearn-app}"
+  if [[ -z "${environment}" ]]; then
+    environment="$(read_env_value ENVIRONMENT)"
+  fi
+  environment="${environment:-prod}"
 
   if ! dpkg -s google-cloud-ops-agent >/dev/null 2>&1; then
     curl -fsSLo /tmp/add-google-cloud-ops-agent-repo.sh \
@@ -122,43 +117,129 @@ logging:
       record_log_file_path: true
   service:
     pipelines:
+      default_pipeline:
+        receivers: []
       ${log_id}:
         receivers:
           - ${log_id}
+metrics:
+  receivers:
+    hostmetrics:
+      type: hostmetrics
+      collection_interval: 60s
+    gjlearn_app:
+      type: prometheus
+      config:
+        scrape_configs:
+          - job_name: gjlearn-app
+            scrape_interval: 60s
+            metrics_path: /actuator/prometheus
+            static_configs:
+              - targets: ['127.0.0.1:9090']
+                labels:
+                  project: gjlearn
+                  env: ${environment}
+                  service: api
+                  role: app-actuator
+            metric_relabel_configs:
+              - source_labels: [__name__]
+                regex: 'up|http_server_requests_seconds_(count|bucket)|hikaricp_connections|jvm_memory_used_bytes|jvm_threads_live_threads'
+                action: keep
+  processors:
+    metrics_filter:
+      type: exclude_metrics
+      metrics_pattern:
+        - agent.googleapis.com/interface/*
+        - agent.googleapis.com/network/*
+        - agent.googleapis.com/processes/*
+        - agent.googleapis.com/swap/*
+  service:
+    pipelines:
+      gjlearn_app:
+        receivers:
+          - gjlearn_app
+global:
+  default_self_log_file_collection: false
 EOF
 
   sudo systemctl enable --now google-cloud-ops-agent
   sudo systemctl restart google-cloud-ops-agent
 }
 
-configure_opentelemetry_javaagent() {
-  local enabled="${OTEL_JAVAAGENT_ENABLED:-}"
-  local agent_path="${OTEL_JAVAAGENT_PATH:-}"
-  local agent_url="${OTEL_JAVAAGENT_URL:-}"
-
-  if [[ -z "${enabled}" ]]; then
-    enabled="$(read_env_value OTEL_JAVAAGENT_ENABLED)"
-  fi
+configure_internal_grafana() {
+  local enabled password project_id environment
+  enabled="$(read_env_value INTERNAL_GRAFANA_ENABLED)"
   enabled="${enabled:-false}"
+
   if [[ "${enabled}" != "true" ]]; then
-    echo "OpenTelemetry Java agent disabled by OTEL_JAVAAGENT_ENABLED=${enabled}"
+    if systemctl list-unit-files grafana-server.service >/dev/null 2>&1; then
+      sudo systemctl disable --now grafana-server
+    fi
+    echo "internal Grafana disabled"
     return 0
   fi
 
-  if [[ -z "${agent_path}" ]]; then
-    agent_path="$(read_env_value OTEL_JAVAAGENT_PATH)"
+  password="$(read_env_value INTERNAL_GRAFANA_ADMIN_PASSWORD)"
+  if [[ ${#password} -lt 16 || "${password}" == *$'\n'* ]]; then
+    echo "INTERNAL_GRAFANA_ADMIN_PASSWORD must be at least 16 characters" >&2
+    exit 1
   fi
-  agent_path="${agent_path:-/opt/opentelemetry-javaagent.jar}"
+  project_id="$(read_env_value GCP_PROJECT_ID)"
+  : "${project_id:?missing GCP_PROJECT_ID}"
+  environment="$(read_env_value ENVIRONMENT)"
+  : "${environment:?missing ENVIRONMENT}"
 
-  if [[ -z "${agent_url}" ]]; then
-    agent_url="$(read_env_value OTEL_JAVAAGENT_URL)"
+  if ! dpkg -s grafana >/dev/null 2>&1; then
+    sudo mkdir -p /etc/apt/keyrings
+    sudo rm -f /etc/apt/keyrings/grafana.gpg
+    curl -fsSL https://apt.grafana.com/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/grafana.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" \
+      | sudo tee /etc/apt/sources.list.d/grafana.list >/dev/null
+    sudo apt-get update
+    sudo apt-get install -y grafana
   fi
-  agent_url="${agent_url:-https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar}"
 
-  if [[ ! -s "${agent_path}" ]]; then
-    curl -fsSLo /tmp/opentelemetry-javaagent.jar "${agent_url}"
-    sudo install -o root -g root -m 0644 /tmp/opentelemetry-javaagent.jar "${agent_path}"
+  test -f "${APP_DIR}/grafana/provisioning/datasources/gcp.yml"
+  test -f "${APP_DIR}/grafana/provisioning/dashboards/dashboards.yml"
+  test -f "${APP_DIR}/grafana/dashboards/gjlearn.json"
+  sudo install -d -o root -g grafana -m 0750 \
+    /etc/grafana/provisioning/datasources /etc/grafana/provisioning/dashboards /var/lib/grafana/dashboards
+  sudo install -o root -g grafana -m 0640 "${APP_DIR}/grafana/provisioning/datasources/gcp.yml" \
+    /etc/grafana/provisioning/datasources/gcp.yml
+  sudo install -o root -g grafana -m 0640 "${APP_DIR}/grafana/provisioning/dashboards/dashboards.yml" \
+    /etc/grafana/provisioning/dashboards/gjlearn.yml
+  sed -e "s/__PROJECT_ID__/${project_id}/g" -e "s/__ENVIRONMENT__/${environment}/g" \
+    "${APP_DIR}/grafana/dashboards/gjlearn.json" \
+    | sudo tee /var/lib/grafana/dashboards/gjlearn.json >/dev/null
+  sudo chown root:grafana /var/lib/grafana/dashboards/gjlearn.json
+  sudo chmod 0640 /var/lib/grafana/dashboards/gjlearn.json
+
+  sudo tee /etc/grafana/grafana.ini >/dev/null <<EOF
+[server]
+http_addr = 127.0.0.1
+http_port = 3000
+[security]
+admin_user = admin
+admin_password = ${password}
+[users]
+allow_sign_up = false
+[auth.anonymous]
+enabled = false
+EOF
+  sudo chown root:grafana /etc/grafana/grafana.ini
+  sudo chmod 0640 /etc/grafana/grafana.ini
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now grafana-server
+  if command -v grafana >/dev/null 2>&1; then
+    sudo -u grafana grafana cli --homepath /usr/share/grafana --config /etc/grafana/grafana.ini \
+      --configOverrides cfg:default.paths.data=/var/lib/grafana \
+      admin reset-admin-password "${password}"
+  else
+    sudo -u grafana grafana-cli --homepath /usr/share/grafana --config /etc/grafana/grafana.ini \
+      --configOverrides cfg:default.paths.data=/var/lib/grafana \
+      admin reset-admin-password "${password}"
   fi
+  sudo systemctl restart grafana-server
 }
 
 configure_caddy() {
@@ -223,18 +304,21 @@ if [[ ! -f "${ENV_PATH}" ]]; then
 fi
 
 sudo apt-get update
-sudo apt-get install -y ca-certificates curl gnupg openjdk-21-jre-headless prometheus-node-exporter
+sudo apt-get install -y ca-certificates curl gnupg openjdk-21-jre-headless
 if ! command -v tailscale >/dev/null 2>&1; then
   curl -fsSL https://tailscale.com/install.sh | sh
 fi
 configure_tailscale
-sudo systemctl enable --now prometheus-node-exporter
-configure_opentelemetry_javaagent
+if systemctl list-unit-files prometheus-node-exporter.service >/dev/null 2>&1; then
+  sudo systemctl disable --now prometheus-node-exporter
+  sudo apt-get remove -y prometheus-node-exporter
+fi
 
 mkdir -p "${APP_DIR}/logs/app"
 sudo chown -R "${APP_USER}:${APP_GROUP}" "${APP_DIR}"
 chmod 600 "${ENV_PATH}"
-configure_cloud_logging
+configure_ops_agent
+configure_internal_grafana
 configure_caddy
 
 sudo tee "/etc/systemd/system/${SERVICE_NAME}.service" >/dev/null <<EOF
@@ -249,7 +333,7 @@ User=${APP_USER}
 Group=${APP_GROUP}
 WorkingDirectory=${APP_DIR}
 EnvironmentFile=${ENV_PATH}
-ExecStart=/bin/sh -c 'agent=""; if [ "\${OTEL_JAVAAGENT_ENABLED:-false}" = "true" ]; then agent="-javaagent:\${OTEL_JAVAAGENT_PATH:-/opt/opentelemetry-javaagent.jar}"; fi; exec /usr/bin/java \$agent -Dserver.port="\${APP_PORT}" -jar ${JAR_PATH}'
+ExecStart=/usr/bin/java -Dserver.port=\${APP_PORT} -jar ${JAR_PATH}
 SuccessExitStatus=143
 Restart=always
 RestartSec=10

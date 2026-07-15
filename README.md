@@ -121,20 +121,19 @@ gcloud compute ssh "$DB_INSTANCE_NAME" --project "$PROJECT_ID" --zone "$ZONE" --
 
 ### 배포 구성
 
-현재 dev/prod 배포는 두 개의 GCE 인스턴스와 홈서버 Tailscale 연동을 전제로 합니다. EC2라는 표현을 쓰더라도 여기서는 같은 역할의 App VM을 의미합니다.
+현재 dev/prod 배포는 두 개의 GCE 인스턴스를 사용합니다. Tailscale은 운영자 접근에만 사용하고 관측성 데이터를 홈서버로 보내지 않습니다.
 
 ```text
-Home server (Prometheus/Grafana)
-  ↕ Tailscale 100.64.0.0/10 또는 MagicDNS
 App GCE e2-small
 - Spring Boot jar systemd service
-- node-exporter systemd service
+- Google Cloud Ops Agent
+- optional internal Grafana
 - tailscaled
 
 DB GCE e2-micro
 - PostgreSQL systemd service
-- node-exporter systemd service
 - postgres-exporter systemd service
+- Google Cloud Ops Agent
 - tailscaled
 ```
 
@@ -143,10 +142,11 @@ DB GCE e2-micro
 앱 서버 필수 환경 변수 예시:
 
 ```env
+ENVIRONMENT=prod
 SPRING_PROFILES_ACTIVE=prod
 APP_PORT=8080
 MANAGEMENT_PORT=9090
-NODE_EXPORTER_PORT=9100
+MANAGEMENT_ADDRESS=127.0.0.1
 LOG_LEVEL_ROOT=WARN
 LOG_LEVEL_APP=WARN
 APP_LOG_DIR=./logs/app
@@ -155,8 +155,9 @@ LOG_FILE_PATTERN=./logs/app/application.%d{yyyy-MM-dd}.log
 LOG_UPLOAD_PATH=./logs/app/application.*.log
 LOG_FILE_MAX_HISTORY=30
 LOG_FILE_TOTAL_SIZE_CAP=1GB
-CLOUD_LOGGING_ENABLED=true
 CLOUD_LOGGING_LOG_ID=gjlearn-prod-app
+INTERNAL_GRAFANA_ENABLED=false
+INTERNAL_GRAFANA_ADMIN_PASSWORD=
 
 POSTGRES_DB=geumjeongyahak
 POSTGRES_USER=postgres
@@ -177,10 +178,10 @@ ADMIN_NAME=관리자
 DB 서버 필수 환경 변수 예시:
 
 ```env
+ENVIRONMENT=prod
 DB_PORT=5432
 DB_LISTEN_ADDRESS=*
 APP_DB_CIDR=APP_SERVER_PRIVATE_IP/32
-NODE_EXPORTER_PORT=9100
 POSTGRES_EXPORTER_PORT=9187
 
 POSTGRES_DB=geumjeongyahak
@@ -192,43 +193,37 @@ POSTGRES_PASSWORD=change-me
 
 ### 관측성
 
-앱은 Spring Actuator 메트릭 endpoint를 노출하고, 앱/DB 서버는 Node Exporter로 시스템 메트릭을 노출합니다. DB 서버는 PostgreSQL Exporter도 함께 실행합니다. 홈서버 Prometheus는 public IP가 아니라 Tailscale IP 또는 MagicDNS hostname으로 scrape합니다. 앱 파일 로그는 `application.yyyy-MM-dd.log` 형식으로 일자별 저장하고 Logback이 30일 이후 파일을 정리합니다. 파일에는 `WARN`/`ERROR` 이상만 기록하므로 Cloud Ops Agent는 JSON 파싱 없이 해당 파일을 Cloud Logging으로 전달합니다.
+각 VM의 Ops Agent가 CPU/memory/disk와 localhost의 Actuator/PostgreSQL exporter 핵심 지표를 60초마다 Cloud Monitoring으로 전송합니다. 홈서버 scrape와 OTLP 전송은 사용하지 않습니다. 기본 syslog와 agent self-log 수집은 끄고 앱의 WARN/ERROR 파일 로그만 Cloud Logging `_Default` bucket에 30일 보관합니다.
 
 | 포트 | 대상 | 설명 |
 |------|------|------|
-| `9090` | App GCE Spring Actuator | `/actuator/prometheus` |
-| `9100` | App GCE / DB GCE node-exporter | CPU, memory, disk, network metrics |
-| `9187` | DB GCE postgres-exporter | PostgreSQL metrics |
+| `9090` | App GCE localhost | Ops Agent가 `/actuator/prometheus` 수집 |
+| `9187` | DB GCE localhost | Ops Agent가 PostgreSQL 지표 수집 |
+| `3000` | App GCE localhost | 선택형 Grafana, IAP 터널로만 접근 |
 
-관측성 설정은 Backend repo의 `infra/monitoring`에서 수정하고, 홈서버 운영 경로인 `/home/min/Infra/monitoring`로 동기화합니다. 금정야학 dev target은 아래 파일에서 관리합니다.
-
-```text
-infra/monitoring/prometheus/targets/gjlearn/dev/app-actuator.yml
-infra/monitoring/prometheus/targets/gjlearn/dev/node-exporter.yml
-infra/monitoring/prometheus/targets/gjlearn/dev/postgres-exporter.yml
-```
-
-prod는 실제 prod App/DB tailnet 노드가 생긴 뒤 `infra/monitoring/prometheus/targets/gjlearn/prod/`에 같은 형식으로 추가합니다. `9090`, `9100`, `9187`, `5432`는 public internet에 직접 열지 않습니다. GCP firewall/security group에는 Tailscale용 `41641/udp`만 public 허용하면 됩니다.
-
-repo 안에서 독립 실행:
+Cloud 대시보드와 알림은 다음 명령으로 idempotent하게 생성하거나 갱신합니다.
 
 ```bash
-make up-monitoring
-make down-monitoring
+scripts/gcp/06_observability/00_configure-cloud-monitoring.sh scripts/gcp/00_env/prod.env
 ```
 
-홈서버 운영 경로에 반영:
+내부 Grafana를 켜려면 App `.env`에 16자 이상 비밀번호를 설정하고 설치 스크립트를 다시 실행합니다.
+
+```env
+INTERNAL_GRAFANA_ENABLED=true
+INTERNAL_GRAFANA_ADMIN_PASSWORD=change-this-strong-password
+```
 
 ```bash
-make sync-monitoring-diff
-make sync-monitoring-push
-/home/min/Infra/monitoring/scripts/restart.sh
+gcloud compute ssh "$APP_INSTANCE_NAME" \
+  --project "$PROJECT_ID" \
+  --zone "$ZONE" \
+  --tunnel-through-iap \
+  -- -L 3000:127.0.0.1:3000
 ```
 
-- Grafana: `http://localhost:3000`
-- Prometheus: `http://localhost:9090`
-- Alertmanager: `http://localhost:9093`
-- Discord webhook은 `infra/monitoring/secrets/alertmanager/...` 또는 `/home/min/Infra/monitoring/secrets/alertmanager/...`에 둡니다. 개인용 실행 스크립트는 `scripts/local/`에 두면 git에 올라가지 않습니다.
+브라우저에서 `http://127.0.0.1:3000`으로 접속합니다. 다시 끄면 Grafana 설정은 보존되고 서비스만 중지됩니다.
+
 
 ## 아키텍처
 

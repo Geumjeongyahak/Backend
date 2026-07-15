@@ -10,7 +10,6 @@ LOCAL_SERVICES := app db
 .PHONY: \
 	up-local down-local ps-local logs-local build-local \
 	up-monitoring up-monitoring-alerts down-monitoring ps-monitoring logs-monitoring \
-	apply-monitoring-alert-env apply-monitoring-alert-env-central apply-monitoring-alert-env-all \
 	sync-monitoring-diff sync-monitoring-pull sync-monitoring-push \
 	harness-verify harness-dry-run harness-diff-summary harness-github-context harness-prepare-feature
 
@@ -43,15 +42,6 @@ ps-monitoring:
 
 logs-monitoring:
 	$(COMPOSE) $(MONITORING_FILES) --profile alerts logs -f
-
-apply-monitoring-alert-env:
-	scripts/monitoring/apply-alert-env.sh repo
-
-apply-monitoring-alert-env-central:
-	scripts/monitoring/apply-alert-env.sh central
-
-apply-monitoring-alert-env-all:
-	scripts/monitoring/apply-alert-env.sh both
 
 sync-monitoring-diff:
 	scripts/monitoring/sync-monitoring.sh diff

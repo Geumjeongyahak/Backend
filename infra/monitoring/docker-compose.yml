@@ -24,7 +24,7 @@ services:
     ports:
       - "${ALERTMANAGER_PORT:-9093}:9093"
     volumes:
-      - ./alertmanager/projects/gjlearn/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - ./secrets:/run/secrets:ro
       - alertmanager-data:/alertmanager
 
