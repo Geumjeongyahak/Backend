@@ -175,7 +175,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             getAuthHeader(adminToken),
             createdSubjectId,
             TEACHER_ID,
-            LocalDate.now().toString(),
+            LocalDate.now().minusDays(1).toString(),
             "09:00:00",
             "10:00:00",
             1
