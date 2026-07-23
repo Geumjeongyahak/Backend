@@ -36,6 +36,21 @@ public enum RequestErrorCode implements ErrorCode {
         "REQ-07-022",
         "해당 수업에는 이미 진행 중인 결석 요청이 존재합니다."
     ),
+    ABSENCE_REQUEST_LESSON_ALREADY_STARTED(
+        HttpStatus.BAD_REQUEST,
+        "REQ-07-023",
+        "이미 시작한 수업에는 결석 요청을 생성하거나 수정할 수 없습니다."
+    ),
+    ABSENCE_REQUEST_EXPIRED(
+        HttpStatus.CONFLICT,
+        "REQ-07-024",
+        "만료된 결석 요청은 처리할 수 없습니다."
+    ),
+    ABSENCE_REQUEST_LESSON_START_TIME_NOT_FOUND(
+        HttpStatus.CONFLICT,
+        "REQ-07-025",
+        "대상 수업의 시작 시각을 확인할 수 없습니다."
+    ),
     INVALID_REQUEST_LESSON_POLICY(
         HttpStatus.BAD_REQUEST,
         "REQ-07-008",

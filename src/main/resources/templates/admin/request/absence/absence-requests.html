@@ -67,7 +67,7 @@
                                   th:classappend="'status-' + ${request.status.name()}"
                                   th:text="${absenceRequestAdminViewService.getStatusLabel(request.status)}">승인 대기</span>
                         </td>
-                        <td th:text="${#temporals.format(request.expiresAt, 'yyyy.MM.dd HH:mm')}">2026.05.20 00:00</td>
+                        <td th:text="${#temporals.format(request.expiresAt, 'yyyy.MM.dd HH:mm')}">2026.05.20 09:00</td>
                         <td th:text="${#temporals.format(request.createdAt, 'yyyy.MM.dd')}">2026.05.18</td>
                         <td th:text="${request.approvalAt != null ? #temporals.format(request.approvalAt, 'yyyy.MM.dd HH:mm') : '-'}">-</td>
                         <td>

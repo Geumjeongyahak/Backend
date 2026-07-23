@@ -75,7 +75,7 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .body("reason", equalTo("개인 사정"))
             .body("expiresAt", equalTo(lessonHelper.getLessonDate(
                 getAuthHeader(adminToken), createdLessonId
-            ) + "T00:00:00"))
+            ) + "T09:00:00"))
             .body("status", equalTo("PENDING"))
             .body("requestedByName", equalTo("홍길동"))
             .extract()
@@ -188,7 +188,8 @@ class AbsenceRequestCreateTest extends RequestBaseTest {
             .body(absenceRequestBody(createdLessonId, "만료된 결석", "만료된 결석 요청"))
             .post()
             .then()
-            .statusCode(400);
+            .statusCode(400)
+            .body("code", equalTo("REQ-07-023"));
     }
 
     @Test

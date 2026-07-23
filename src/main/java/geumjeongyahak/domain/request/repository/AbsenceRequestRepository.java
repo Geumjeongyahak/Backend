@@ -58,7 +58,7 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
         @Param("statuses") List<RequestStatus> statuses
     );
 
-    List<AbsenceRequest> findAllByStatusInAndExpiresAtBefore(
+    List<AbsenceRequest> findAllByStatusInAndExpiresAtLessThanEqual(
         Collection<RequestStatus> statuses,
         LocalDateTime expiresAt
     );
