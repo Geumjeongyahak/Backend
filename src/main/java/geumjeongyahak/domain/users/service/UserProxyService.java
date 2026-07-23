@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.users.exception.DepartmentManagerConflictException;
 import geumjeongyahak.domain.users.exception.UserNotFoundException;
 import geumjeongyahak.domain.users.repository.UserRepository;
 
@@ -84,6 +85,19 @@ public class UserProxyService {
     @Transactional(readOnly = true)
     public List<User> getAllByDepartmentId(Long departmentId) {
         return userRepository.findAllByDepartmentIdAndIsDeletedFalse(departmentId);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<User> findActiveManagerByDepartmentId(Long departmentId) {
+        List<User> managers =
+            userRepository.findAllByDepartmentIdAndRoleAndIsDeletedFalseOrderByIdAsc(
+                departmentId,
+                RoleType.MANAGER
+            );
+        if (managers.size() > 1) {
+            throw DepartmentManagerConflictException.multipleManagers(departmentId);
+        }
+        return managers.stream().findFirst();
     }
 
     @Transactional(readOnly = true)

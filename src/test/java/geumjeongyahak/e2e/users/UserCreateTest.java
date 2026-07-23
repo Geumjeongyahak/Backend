@@ -14,6 +14,50 @@ import static org.hamcrest.Matchers.*;
 class UserCreateTest extends UserBaseTest {
 
     @Test
+    @DisplayName("같은 부서에 활성 MANAGER를 두 명 생성할 수 없다(409 Conflict)")
+    void createUser_DuplicateDepartmentManager_Conflict() {
+        String firstEmail = "department-manager-first@test.com";
+        CreateUserRequest firstRequest = new CreateUserRequest(
+            firstEmail,
+            "첫 번째 부서장",
+            "password123!",
+            "010-1111-0001",
+            DEFAULT_BIRTH_DATE,
+            "MANAGER",
+            3L
+        );
+        CreateUserRequest secondRequest = new CreateUserRequest(
+            "department-manager-second@test.com",
+            "두 번째 부서장",
+            "password123!",
+            "010-1111-0002",
+            DEFAULT_BIRTH_DATE,
+            "MANAGER",
+            3L
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(firstRequest)
+        .when()
+            .post()
+        .then()
+            .statusCode(201);
+        userTestHelper.setUser(firstEmail);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(secondRequest)
+        .when()
+            .post()
+        .then()
+            .statusCode(409)
+            .body("code", equalTo("BIZ-01-010"));
+    }
+
+    @Test
     @DisplayName("관리자 권한으로 User 생성 성공 - MANAGER 역할(201 Created)")
     void createUser_Success_Manager() {
         String uniqueUsername = "manager" + System.currentTimeMillis();
