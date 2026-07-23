@@ -53,7 +53,7 @@ public interface LessonExchangeRequestRepository extends JpaRepository<LessonExc
         Collection<LessonExchangeRequestStatus> statuses
     );
 
-    List<LessonExchangeRequest> findAllByStatusInAndExpiresAtBefore(
+    List<LessonExchangeRequest> findAllByStatusInAndExpiresAtLessThanEqual(
         Collection<LessonExchangeRequestStatus> statuses,
         LocalDateTime expiresAt
     );

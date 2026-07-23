@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.startsWith;
 
 @Tag("lesson-exchange-request")
 @DisplayName("E2E: 수업 교환 요청 생성 테스트")
@@ -59,7 +60,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "하루 단위 교환 요청",
                 "content", "해당 날짜 수업 교환을 요청합니다.",
-                "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
+                "expiresDate", lessonDate.minusDays(3).toString()
             ))
             .post()
             .then()
@@ -93,7 +94,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "제목",
                 "content", "내용",
-                "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
+                "expiresDate", lessonDate.minusDays(3).toString()
             ))
             .post()
             .then()
@@ -113,7 +114,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "게스트 요청",
                 "content", "게스트는 요청을 생성할 수 없습니다.",
-                "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
+                "expiresDate", lessonDate.minusDays(3).toString()
             ))
             .post()
             .then()
@@ -135,7 +136,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "타인 수업 요청",
                 "content", "내 수업이 아닌 일정으로 요청",
-                "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
+                "expiresDate", lessonDate.minusDays(3).toString()
             ))
             .post()
             .then()
@@ -166,7 +167,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "두 번째 요청",
                 "content", "중복 생성 시도",
-                "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
+                "expiresDate", lessonDate.minusDays(3).toString()
             ))
             .post()
             .then()
@@ -186,7 +187,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "",
                 "content", "내용",
-                "expiresAt", lessonDate.minusDays(3).atTime(23, 0).toString()
+                "expiresDate", lessonDate.minusDays(3).toString()
             ))
             .post()
             .then()
@@ -194,13 +195,13 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("만료 시각이 정책 허용 범위를 넘으면 -> 400")
-    void createRequest_expiresAtAfterPolicy_returns400() {
+    @DisplayName("수업일 이전 만료일은 기존 3일 제한과 관계없이 허용 -> 201")
+    void createRequest_expiresDateBeforeLessonDate_returns201() {
         LocalDate lessonDate = LocalDate.now().plusDays(8);
         Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
         registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "10:00:00", 1);
 
-        given()
+        Long requestId = given()
             .basePath("/api/v1/lesson-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
@@ -208,16 +209,21 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "만료 정책 위반",
                 "content", "너무 늦은 만료 시각",
-                "expiresAt", lessonDate.minusDays(2).atTime(12, 0).toString()
+                "expiresDate", lessonDate.minusDays(2).toString()
             ))
             .post()
             .then()
-            .statusCode(400);
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
+
+        requestIds.add(requestId);
     }
 
     @Test
-    @DisplayName("요청 가능 시작일(today+4일)인 수업은 요청 가능 -> 201")
-    void createRequest_atEarliestRequestableDate_returns201() {
+    @DisplayName("수업 시작 전이면 4일 제한과 관계없이 요청 가능 -> 201")
+    void createRequest_beforeLessonStart_returns201() {
         LocalDate lessonDate = LocalDate.now().plusDays(4);
         Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
         registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "10:00:00", 1);
@@ -230,7 +236,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "경계 날짜 요청",
                 "content", "요청 가능 시작일 경계 테스트",
-                "expiresAt", lessonDate.minusDays(3).atTime(23, 59, 59).toString()
+                "expiresDate", lessonDate.minusDays(3).toString()
             ))
             .post()
             .then()
@@ -243,13 +249,13 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("요청 가능 시작일보다 하루 이른 수업은 요청 불가 -> 400")
-    void createRequest_beforeEarliestRequestableDate_returns400() {
+    @DisplayName("수업 시작 전이면 3일 뒤 수업도 요청 가능 -> 201")
+    void createRequest_threeDaysBeforeLesson_returns201() {
         LocalDate lessonDate = LocalDate.now().plusDays(3);
         Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
         registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "10:00:00", 1);
 
-        given()
+        Long requestId = given()
             .basePath("/api/v1/lesson-exchange-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
@@ -257,16 +263,21 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "정책 이전 날짜 요청",
                 "content", "요청 가능 시작일보다 이른 날짜",
-                "expiresAt", lessonDate.minusDays(2).atTime(23, 59, 59).toString()
+                "expiresDate", lessonDate.minusDays(2).toString()
             ))
             .post()
             .then()
-            .statusCode(400);
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
+
+        requestIds.add(requestId);
     }
 
     @Test
-    @DisplayName("만료 시각이 정책 상한과 정확히 같으면 허용 -> 201")
-    void createRequest_expiresAtAtPolicyBoundary_returns201() {
+    @DisplayName("만료일이 수업일과 같으면 수업 시작 시각으로 설정 -> 201")
+    void createRequest_expiresDateAtLessonDate_usesLessonStart() {
         LocalDate lessonDate = LocalDate.now().plusDays(8);
         Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
         registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "10:00:00", 1);
@@ -278,12 +289,13 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .body(Map.of(
                 "lessonDate", lessonDate.toString(),
                 "title", "만료 경계 허용",
-                "content", "정책 상한 시각과 같은 만료 시각",
-                "expiresAt", lessonDate.minusDays(3).atTime(23, 59, 59).toString()
+                "content", "수업일과 같은 만료일",
+                "expiresDate", lessonDate.toString()
             ))
             .post()
             .then()
             .statusCode(201)
+            .body("expiresAt", startsWith(lessonDate.atTime(9, 0).toString()))
             .extract()
             .jsonPath()
             .getLong("id");
@@ -292,8 +304,8 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("만료 시각이 수업일 자정과 같으면 -> 400")
-    void createRequest_expiresAtAtLessonBoundary_returns400() {
+    @DisplayName("만료일이 수업일 이후이면 -> 400")
+    void createRequest_expiresDateAfterLessonDate_returns400() {
         LocalDate lessonDate = LocalDate.now().plusDays(9);
         Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
         registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "10:00:00", 1);
@@ -305,12 +317,61 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
             .body(Map.of(
                 "lessonDate", lessonDate.toString(),
                 "title", "수업일 경계 만료",
-                "content", "수업일 자정과 같은 만료 시각",
-                "expiresAt", lessonDate.atStartOfDay().toString()
+                "content", "수업일 이후의 만료일",
+                "expiresDate", lessonDate.plusDays(1).toString()
             ))
             .post()
             .then()
             .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("만료일에 날짜·시간 형식을 전달하면 -> 400")
+    void createRequest_expiresDateWithDateTimeFormat_returns400() {
+        LocalDate lessonDate = LocalDate.now().plusDays(10);
+        Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
+        registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "10:00:00", 1);
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "lessonDate", lessonDate.toString(),
+                "title", "잘못된 만료일 형식",
+                "content", "날짜만 전달해야 합니다.",
+                "expiresDate", lessonDate.minusDays(1).atStartOfDay().toString()
+            ))
+            .post()
+            .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("만료일을 생략하면 수업 시작 시각으로 자동 설정 -> 201")
+    void createRequest_withoutExpiresDate_defaultsToLessonStart() {
+        LocalDate lessonDate = LocalDate.now().plusDays(11);
+        Long subjectId = registerSubject(CLASSROOM_ID, TEACHER_ID);
+        registerLesson(subjectId, TEACHER_ID, lessonDate, "09:00:00", "10:00:00", 1);
+
+        Long requestId = given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "lessonDate", lessonDate.toString(),
+                "title", "기본 만료 시각",
+                "content", "만료일 생략"
+            ))
+            .post()
+            .then()
+            .statusCode(201)
+            .body("expiresAt", startsWith(lessonDate.atTime(9, 0).toString()))
+            .extract()
+            .jsonPath()
+            .getLong("id");
+
+        requestIds.add(requestId);
     }
 
     @Test
@@ -338,7 +399,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "재요청",
                 "content", "반려 후 같은 날짜 재요청",
-                "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
+                "expiresDate", lessonDate.minusDays(3).toString()
             ))
             .post()
             .then()
@@ -375,7 +436,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "완료 후 재요청",
                 "content", "완료된 요청 이후 새 요청 생성",
-                "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
+                "expiresDate", lessonDate.minusDays(3).toString()
             ))
             .post()
             .then()
@@ -412,7 +473,7 @@ class LessonExchangeRequestCreateTest extends RequestBaseTest {
                 "lessonDate", lessonDate.toString(),
                 "title", "취소 후 재요청",
                 "content", "취소된 요청 이후 새 요청 생성",
-                "expiresAt", lessonDate.minusDays(3).atTime(21, 0).toString()
+                "expiresDate", lessonDate.minusDays(3).toString()
             ))
             .post()
             .then()

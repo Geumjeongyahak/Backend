@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,16 +42,11 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class LessonExchangeRequestService {
 
-    private static final int REQUEST_DEADLINE_DAY = 4;
-    private static final int EXPIRE_DEADLINE_DAY = 3;
-    private static final int EXPIRE_DEADLINE_HOUR = 23;
-    private static final int EXPIRE_DEADLINE_MINUTE = 59;
-    private static final int EXPIRE_DEADLINE_SECOND = 59;
-
     private final LessonExchangeRequestRepository lessonExchangeRequestRepository;
     private final DailyScheduleProxyService dailyScheduleProxyService;
     private final UserProxyService userProxyService;
     private final EventPublisher eventPublisher;
+    private final Clock clock;
 
     @Transactional
     public LessonExchangeRequestDetailResponse createLessonExchangeRequest(
@@ -67,15 +63,16 @@ public class LessonExchangeRequestService {
             requesterId,
             request.lessonDate()
         );
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime lessonStartAt = getLessonStartAt(dailySchedule);
+        validateLessonNotStarted(now, lessonStartAt);
+        LocalDateTime expiresAt = resolveExpiresAt(request.expiresDate(), lessonStartAt);
+        validateExpiresAt(now, lessonStartAt, expiresAt);
 
         validateNoActiveExchangeRequestExists(
             requesterId,
             dailySchedule.getId()
         );
-        validateLessonWithPolicy(dailySchedule.getLessonDate());
-        validateExpiresAtIsFuture(request.expiresAt());
-        validateExpiresAtBeforeLessonDate(dailySchedule.getLessonDate(), request.expiresAt());
-        validateExpiresAtWithinPolicy(dailySchedule.getLessonDate(), request.expiresAt());
 
         User requester = userProxyService.getById(requesterId);
 
@@ -85,7 +82,7 @@ public class LessonExchangeRequestService {
             request.title(),
             dailySchedule.getClassroom().getName(),
             request.content(),
-            request.expiresAt()
+            expiresAt
         );
         LessonExchangeRequest saved = lessonExchangeRequestRepository.save(exchangeRequest);
 
@@ -131,6 +128,8 @@ public class LessonExchangeRequestService {
             throw new RequestAlreadyProcessedException();
         }
 
+        validateRequestNotExpired(exchangeRequest, LocalDateTime.now(clock));
+
         User approver = userProxyService.getById(approverId);
         exchangeRequest.approve(approver);
         eventPublisher.publish(RequestReviewedPushEvent.approved(
@@ -165,20 +164,24 @@ public class LessonExchangeRequestService {
             throw new RequestAlreadyProcessedException();
         }
 
+        LocalDateTime now = LocalDateTime.now(clock);
+        validateLessonNotStarted(now, getLessonStartAt(exchangeRequest.getDailySchedule()));
+        validateRequestNotExpired(exchangeRequest, now);
+
         DailySchedule dailySchedule = getTargetDailySchedule(
             requesterId,
             request.lessonDate()
         );
+        LocalDateTime lessonStartAt = getLessonStartAt(dailySchedule);
+        validateLessonNotStarted(now, lessonStartAt);
+        LocalDateTime expiresAt = resolveExpiresAt(request.expiresDate(), lessonStartAt);
+        validateExpiresAt(now, lessonStartAt, expiresAt);
 
         validateNoActiveExchangeRequestExists(
             requesterId,
             dailySchedule.getId(),
             exchangeRequest.getId()
         );
-        validateLessonWithPolicy(dailySchedule.getLessonDate());
-        validateExpiresAtIsFuture(request.expiresAt());
-        validateExpiresAtBeforeLessonDate(dailySchedule.getLessonDate(), request.expiresAt());
-        validateExpiresAtWithinPolicy(dailySchedule.getLessonDate(), request.expiresAt());
 
         // 수정 이후에도 요청 화면에는 최신 수정 기준의 반 이름이 유지되도록 snapshot을 함께 갱신
         exchangeRequest.update(
@@ -186,7 +189,7 @@ public class LessonExchangeRequestService {
             request.title(),
             dailySchedule.getClassroom().getName(),
             request.content(),
-            request.expiresAt()
+            expiresAt
         );
 
         log.debug("수업 교환 요청 수정 완료 (requestId={}, requesterId={})", requestId, requesterId);
@@ -210,6 +213,8 @@ public class LessonExchangeRequestService {
             throw new RequestAlreadyProcessedException();
         }
 
+        validateRequestNotExpired(exchangeRequest, LocalDateTime.now(clock));
+
         exchangeRequest.cancel();
 
         log.debug("수업 교환 요청 취소 완료 (requestId={}, requesterId={})", requestId, requesterId);
@@ -227,6 +232,8 @@ public class LessonExchangeRequestService {
         if (exchangeRequest.getStatus() != LessonExchangeRequestStatus.PENDING) {
             throw new RequestAlreadyProcessedException();
         }
+
+        validateRequestNotExpired(exchangeRequest, LocalDateTime.now(clock));
 
         User approver = userProxyService.getById(approverId);
         exchangeRequest.reject(approver, note);
@@ -246,9 +253,9 @@ public class LessonExchangeRequestService {
 
     @Transactional
     public int expireExpiredLessonExchangeRequests() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         List<LessonExchangeRequest> expiredRequests =
-            lessonExchangeRequestRepository.findAllByStatusInAndExpiresAtBefore(
+            lessonExchangeRequestRepository.findAllByStatusInAndExpiresAtLessThanEqual(
                 List.of(LessonExchangeRequestStatus.PENDING, LessonExchangeRequestStatus.APPROVED),
                 now
             );
@@ -262,40 +269,53 @@ public class LessonExchangeRequestService {
         return expiredRequests.size();
     }
 
-    // 교환 대상 수업 정책 반영 여부 (현재 기준 4일 이후 수업부터 교환 요청 가능)
-    private void validateLessonWithPolicy(LocalDate lessonDate) {
-        LocalDate today = LocalDate.now();
-        LocalDate earliestRequestableDate = today.plusDays(REQUEST_DEADLINE_DAY);
+    private LocalDateTime getLessonStartAt(DailySchedule dailySchedule) {
+        if (dailySchedule.getActivityStartTime() == null) {
+            throw new LessonExchangeRequestLessonStartTimeNotFoundException();
+        }
+        return dailySchedule.getLessonDate().atTime(dailySchedule.getActivityStartTime());
+    }
 
-        if (lessonDate.isBefore(earliestRequestableDate)) {
-            throw new InvalidRequestLessonPolicyException();
+    private void validateLessonNotStarted(LocalDateTime now, LocalDateTime lessonStartAt) {
+        if (!now.isBefore(lessonStartAt)) {
+            throw new LessonExchangeRequestLessonAlreadyStartedException();
         }
     }
 
-    // expiresAt이 현재 이후인지
-    private void validateExpiresAtIsFuture(LocalDateTime expiresAt) {
-        if (!expiresAt.isAfter(LocalDateTime.now())) {
+    private LocalDateTime resolveExpiresAt(LocalDate requestedExpiresDate, LocalDateTime lessonStartAt) {
+        if (requestedExpiresDate == null
+            || requestedExpiresDate.equals(lessonStartAt.toLocalDate())) {
+            return lessonStartAt;
+        }
+
+        if (requestedExpiresDate.isAfter(lessonStartAt.toLocalDate())) {
+            throw new InvalidRequestExpiresAfterLessonException();
+        }
+
+        return requestedExpiresDate.atTime(23, 59, 59);
+    }
+
+    private void validateExpiresAt(
+        LocalDateTime now,
+        LocalDateTime lessonStartAt,
+        LocalDateTime expiresAt
+    ) {
+        if (!expiresAt.isAfter(now)) {
             throw new InvalidRequestExpiresInPastException();
         }
-    }
 
-    // expiresAt이 수업 날짜 이후인지
-    private void validateExpiresAtBeforeLessonDate(LocalDate lessonDate, LocalDateTime expiresAt) {
-        LocalDateTime lessonStartBoundary = lessonDate.atStartOfDay();
-
-        if (!expiresAt.isBefore(lessonStartBoundary)) {
+        if (expiresAt.isAfter(lessonStartAt)) {
             throw new InvalidRequestExpiresAfterLessonException();
         }
     }
 
-    // 만료 정책 반영 여부 (만료 시각은 수업일 3일 전 23:59:59를 넘길 수 없음)
-    private void validateExpiresAtWithinPolicy(LocalDate lessonDate, LocalDateTime expiresAt) {
-        LocalDateTime maxAllowedExpiresAt = lessonDate
-            .minusDays(EXPIRE_DEADLINE_DAY)
-            .atTime(EXPIRE_DEADLINE_HOUR, EXPIRE_DEADLINE_MINUTE, EXPIRE_DEADLINE_SECOND);
-
-        if (expiresAt.isAfter(maxAllowedExpiresAt)) {
-            throw new InvalidRequestExpiresPolicyException();
+    private void validateRequestNotExpired(
+        LessonExchangeRequest request,
+        LocalDateTime now
+    ) {
+        LocalDateTime lessonStartAt = getLessonStartAt(request.getDailySchedule());
+        if (!request.getExpiresAt().isAfter(now) || !lessonStartAt.isAfter(now)) {
+            throw new LessonExchangeRequestExpiredException();
         }
     }
 

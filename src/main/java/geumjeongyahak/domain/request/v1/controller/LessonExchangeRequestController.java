@@ -44,8 +44,9 @@ public class LessonExchangeRequestController {
             + "반 이름은 생성 시점의 표시값을 snapshot 으로 함께 저장하며, 이후 실제 수업 교사가 변경되더라도 요청 화면에는 기존 값이 유지됩니다. "
             + "이 단계에서는 실제 담당 교사 변경이 일어나지 않으며, side effect(승인/제안/수락)는 승인 API에서만 발생합니다. "
             + "만료 시각이 지나면 요청은 스케줄러에 의해 EXPIRED 상태로 자동 전환되며, 남아 있는 ACTIVE 제안도 함께 정리됩니다. "
-            + "수업 교환 요청은 현재 기준 4일 이후 수업부터 가능합니다. (현재 6월 6일인 경우, 6월 10일 수업부터 교환 신청 가능) "
-            + "수업 교환 요청의 만료 시각은 교환 대상 수업의 3일 전 23:59:59까지 설정 가능합니다. (6월 10일 수업인 경우 6월 7일 23:59:59까지 설정 가능)"
+            + "대상 수업 시작 전까지 당일에도 신청할 수 있습니다. "
+            + "만료일을 생략하거나 수업일을 선택하면 대상 수업 시작 시각으로 설정됩니다. "
+            + "수업일 이전 날짜를 선택하면 해당 날짜 23:59:59에 만료되며, 수업일 이후 날짜는 선택할 수 없습니다."
     )
     @PostMapping
     public ResponseEntity<LessonExchangeRequestDetailResponse> createLessonExchangeRequest(
@@ -107,7 +108,8 @@ public class LessonExchangeRequestController {
     @Operation(
         summary = "수업 교환 요청 수정",
         description = "교사 이상 권한(VOLUNTEER, MANAGER, ADMIN)을 가진 사용자가 본인이 생성한 PENDING 상태의 수업 교환 요청을 수정합니다. "
-            + "생성 API와 동일하게 교시 범위 없이 하루 단위 입력 구조를 사용하며, 수정 후에도 대상 날짜 수업 존재 여부와 만료 시각 정책 검증을 동일하게 수행합니다. "
+            + "생성 API와 동일하게 교시 범위 없이 하루 단위 입력 구조를 사용하며, 수정 후에도 대상 날짜 수업 존재 여부와 만료일 정책 검증을 동일하게 수행합니다. "
+            + "요청 만료 시각 또는 대상 수업 시작 시각이 지나면 스케줄러 실행 전이라도 수정할 수 없습니다. "
             + "반 이름 snapshot 도 함께 갱신되며, 이후 조회 시에는 최신 수정 기준의 표시값이 유지됩니다. "
             + "승인 이후 상태의 요청은 수정할 수 없으며, 실제 수업 교환 side effect 는 발생하지 않습니다."
     )
@@ -129,6 +131,7 @@ public class LessonExchangeRequestController {
         summary = "수업 교환 요청 취소",
         description = "교사 이상 권한(VOLUNTEER, MANAGER, ADMIN)을 가진 사용자가 본인이 생성한 PENDING 상태의 수업 교환 요청을 취소합니다. "
             + "취소 시 요청 상태는 CANCELLED 로 변경되고 취소 시각이 기록됩니다. "
+            + "요청 만료 시각 또는 대상 수업 시작 시각이 지나면 스케줄러 실행 전이라도 취소할 수 없습니다. "
             + "승인 이후 상태의 요청은 취소할 수 없으며, 실제 수업 교환 side effect 는 발생하지 않습니다."
     )
     @PatchMapping("/{requestId}/cancel")
@@ -148,6 +151,7 @@ public class LessonExchangeRequestController {
         summary = "수업 교환 요청 승인",
         description = "ADMIN 또는 lesson-exchange-request:manage:* 권한을 가진 사용자가 PENDING 상태의 수업 교환 요청을 승인합니다. "
             + "요청 상태는 APPROVED 로 변경되고 처리자 및 처리 시각이 기록됩니다. "
+            + "요청 만료 시각 또는 대상 수업 시작 시각이 지나면 스케줄러 실행 전이라도 승인할 수 없습니다. "
             + "이 단계에서는 실제 수업 교환 side effect 는 발생하지 않으며, "
             + "이후 다른 교원이 해당 요청에 대해 교환 제안을 작성할 수 있게 됩니다."
     )
@@ -168,6 +172,7 @@ public class LessonExchangeRequestController {
         summary = "수업 교환 요청 반려",
         description = "ADMIN 또는 lesson-exchange-request:manage:* 권한을 가진 사용자가 PENDING 상태의 수업 교환 요청을 반려합니다. "
             + "반려 시 요청 상태는 REJECTED 로 변경되고 처리자, 처리 시각, 반려 사유(note)가 저장됩니다. "
+            + "요청 만료 시각 또는 대상 수업 시작 시각이 지나면 스케줄러 실행 전이라도 반려할 수 없습니다. "
             + "이 단계에서는 실제 수업 교환 side effect 는 발생하지 않으며, "
             + "이미 처리된 요청은 다시 반려할 수 없습니다."
     )

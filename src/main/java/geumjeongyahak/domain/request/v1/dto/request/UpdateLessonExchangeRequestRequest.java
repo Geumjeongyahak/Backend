@@ -1,12 +1,12 @@
 package geumjeongyahak.domain.request.v1.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.OptBoolean;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 public record UpdateLessonExchangeRequestRequest(
 
@@ -22,8 +22,7 @@ public record UpdateLessonExchangeRequestRequest(
     @Schema(description = "요청 내용", example = "개인 사정으로 교환 요청 내용을 수정합니다.")
     String content,
 
-    @NotNull
-    @Future
-    @Schema(description = "요청 만료 시각. 교환 대상 수업일 3일 전 23:59:59까지 설정할 수 있습니다.", example = "2026-06-07T22:00:00")
-    LocalDateTime expiresAt
+    @JsonFormat(pattern = "uuuu-MM-dd", lenient = OptBoolean.FALSE)
+    @Schema(description = "요청 만료일(yyyy-MM-dd). 생략하거나 수업일을 선택하면 대상 수업 시작 시각에 만료되며, 이전 날짜를 선택하면 해당 날짜 23:59:59에 만료됩니다.", example = "2026-06-09")
+    LocalDate expiresDate
 ) {}

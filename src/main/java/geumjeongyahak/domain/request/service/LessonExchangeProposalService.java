@@ -12,6 +12,7 @@ import geumjeongyahak.domain.request.enums.LessonExchangeProposalStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeProposalType;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import geumjeongyahak.domain.request.exception.LessonExchangeProposal.*;
+import geumjeongyahak.domain.request.exception.LessonExchangeRequest.LessonExchangeRequestLessonStartTimeNotFoundException;
 import geumjeongyahak.domain.request.exception.LessonExchangeRequest.RequestLessonsNotFoundException;
 import geumjeongyahak.domain.request.exception.RequestForbiddenException;
 import geumjeongyahak.domain.request.repository.LessonExchangeProposalRepository;
@@ -25,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,6 +43,7 @@ public class LessonExchangeProposalService {
     private final LessonProxyService lessonProxyService;
     private final UserProxyService userProxyService;
     private final EventPublisher eventPublisher;
+    private final Clock clock;
 
     @Transactional
     public LessonExchangeProposalResponse createLessonExchangeProposal(
@@ -224,9 +227,7 @@ public class LessonExchangeProposalService {
             throw new RequestNotAcceptableException();
         }
 
-        if (!request.getExpiresAt().isAfter(LocalDateTime.now())) {
-            throw new RequestExpiredForProposalException();
-        }
+        validateRequestDeadline(request);
     }
 
     // 수락하는 제안 이외의 제안들은 모두 CLOSED 상태로 바꿈
@@ -268,13 +269,25 @@ public class LessonExchangeProposalService {
         ));
     }
 
-    // 수업 교환 요청이 제안 가능 상태인지 확인 (APPROVED / 만료 기간 전)
+    // 수업 교환 요청이 제안 가능 상태인지 확인 (APPROVED / 만료 전)
     private void validateRequestIsProposable(LessonExchangeRequest request) {
         if (request.getStatus() != LessonExchangeRequestStatus.APPROVED) {
             throw new RequestNotProposableException();
         }
 
-        if (!request.getExpiresAt().isAfter(LocalDateTime.now())) {
+        validateRequestDeadline(request);
+    }
+
+    private void validateRequestDeadline(LessonExchangeRequest request) {
+        DailySchedule dailySchedule = request.getDailySchedule();
+        if (dailySchedule.getActivityStartTime() == null) {
+            throw new LessonExchangeRequestLessonStartTimeNotFoundException();
+        }
+
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime lessonStartAt = dailySchedule.getLessonDate()
+            .atTime(dailySchedule.getActivityStartTime());
+        if (!request.getExpiresAt().isAfter(now) || !lessonStartAt.isAfter(now)) {
             throw new RequestExpiredForProposalException();
         }
     }

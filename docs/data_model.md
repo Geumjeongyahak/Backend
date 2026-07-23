@@ -450,7 +450,7 @@ ADMIN이 특정 사용자에게 직접 권한을 부여해야 할 때 사용하�
 | classroom_name_snapshot | VARCHAR(255) | NOT NULL | 생성/수정 시점 반 이름 snapshot |
 | content | TEXT | NOT NULL | 수업 교환 요청 내용 |
 | status | VARCHAR(20) | NOT NULL | 수업 교환 요청 상태 |
-| expires_at | TIMESTAMP | NOT NULL | 제안 가능 만료 시각 |
+| expires_at | TIMESTAMP | NOT NULL | 제안 가능 만료 시각. 요청의 만료일이 없거나 수업일과 같으면 수업 시작 시각, 이전 날짜이면 해당 날짜 23:59:59로 변환 |
 | processed_at | TIMESTAMP | NULL | 승인/반려 처리 시각 |
 | processed_by | BIGINT | FOREIGN KEY | 승인/반려 처리자 ID |
 | completed_at | TIMESTAMP | NULL | 제안 수락 완료 시각 |
