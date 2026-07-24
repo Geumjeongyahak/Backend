@@ -104,7 +104,7 @@ public class PurchaseRequestViewController {
         }
 
         List<CreatePurchaseRequestRequest.Item> items = form.getItems().stream()
-            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getQuantity(), i.getPaymentType()))
+            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getQuantity()))
             .toList();
 
         Long requestId = purchaseRequestAdminViewService.createPurchaseRequest(
@@ -112,6 +112,7 @@ public class PurchaseRequestViewController {
             form.getClassroomId(),
             form.getTitle(),
             form.getContent(),
+            form.getPaymentType(),
             items);
 
         redirectAttributes.addFlashAttribute("message", "구매 요청이 생성되었습니다.");
@@ -131,6 +132,7 @@ public class PurchaseRequestViewController {
         form.setClassroomId(response.classroomId());
         form.setTitle(response.title());
         form.setContent(response.content());
+        form.setPaymentType(response.paymentType());
         form.setItems(response.items().stream()
             .map(i -> {
                 PurchaseRequestForm.ItemForm item = new PurchaseRequestForm.ItemForm();
@@ -138,7 +140,6 @@ public class PurchaseRequestViewController {
                 item.setName(i.name());
                 item.setReason(i.reason());
                 item.setQuantity(i.quantity());
-                item.setPaymentType(i.paymentType());
                 return item;
             })
             .collect(java.util.stream.Collectors.toList()));
@@ -172,7 +173,7 @@ public class PurchaseRequestViewController {
         }
 
         List<CreatePurchaseRequestRequest.Item> items = form.getItems().stream()
-            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getQuantity(), i.getPaymentType()))
+            .map(i -> new CreatePurchaseRequestRequest.Item(i.getName(), i.getReason(), i.getQuantity()))
             .toList();
 
         purchaseRequestAdminViewService.updatePurchaseRequest(

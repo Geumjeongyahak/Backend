@@ -29,12 +29,11 @@ import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.purchase_request.service.ExpenseDocumentService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestService;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestByAdminRequest;
-import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.GenerateExpenseDocumentRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.PurchaseRequestListRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReviewPurchaseRequestRequest;
-import geumjeongyahak.domain.purchase_request.v1.dto.request.UpdatePurchaseRequestByAdminRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.UpdatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
 
@@ -108,7 +107,7 @@ public class PurchaseRequestAdminController {
     @PatchMapping("/{requestId}")
     public ResponseEntity<PurchaseRequestDetailResponse> updatePurchaseRequest(
         @PathVariable Long requestId,
-        @Valid @RequestBody UpdatePurchaseRequestByAdminRequest request,
+        @Valid @RequestBody UpdatePurchaseRequestRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PATCH /api/v1/admin/purchase-requests/{}", requestId);
@@ -116,7 +115,7 @@ public class PurchaseRequestAdminController {
             purchaseRequestService.updatePurchaseRequest(
                 userDetails.getUserId(),
                 requestId,
-                new CreatePurchaseRequestRequest(request.title(), request.content(), null, request.items()),
+                request,
                 true
             )
         );

@@ -6,14 +6,13 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
 
-public record UpdatePurchaseRequestByAdminRequest(
+public record UpdatePurchaseRequestRequest(
 
     @NotBlank
     @Schema(description = "구입 요청 제목", example = "교재 구입")
     String title,
 
-    @NotBlank
-    @Schema(description = "구입 요청 내용", example = "수업에 필요한 교재를 구입합니다.")
+    @Schema(description = "구입 요청 내용", example = "수업에 필요한 교재를 구입합니다.", nullable = true)
     String content,
 
     @Valid

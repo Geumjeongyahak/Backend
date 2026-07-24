@@ -188,9 +188,9 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
         );
         createdVendorId = createVendor();
         createdRequestId = createPurchaseRequestWithItems("PREPAID", List.of(
-            purchaseItem("문해 교재 1단계", "PREPAID", 10),
-            purchaseItem("문해 교재 2단계", "PREPAID", 10),
-            purchaseItem("수업용 문제집", "PREPAID", 10)
+            purchaseItem("문해 교재 1단계", 10),
+            purchaseItem("문해 교재 2단계", 10),
+            purchaseItem("수업용 문제집", 10)
         ));
         approvePurchaseRequest(createdRequestId);
         reportPurchase(createdRequestId, List.of(
@@ -502,7 +502,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
         return createPurchaseRequestWithItems(
             paymentType,
             itemNames.stream()
-                .map(itemName -> purchaseItem(itemName, paymentType))
+                .map(this::purchaseItem)
                 .toList()
         );
     }
@@ -516,6 +516,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
                 entry("title", "지출증빙서류 E2E"),
                 entry("content", "지출증빙서류 생성 API 테스트입니다."),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", paymentType),
                 entry("items", items)
             ))
             .post()
@@ -526,16 +527,15 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
             .getLong("id");
     }
 
-    private Map<String, Object> purchaseItem(String name, String paymentType) {
-        return purchaseItem(name, paymentType, 1);
+    private Map<String, Object> purchaseItem(String name) {
+        return purchaseItem(name, 1);
     }
 
-    private Map<String, Object> purchaseItem(String name, String paymentType, int quantity) {
+    private Map<String, Object> purchaseItem(String name, int quantity) {
         return Map.ofEntries(
             entry("name", name),
             entry("reason", "문서 생성 테스트"),
-            entry("quantity", quantity),
-            entry("paymentType", paymentType)
+            entry("quantity", quantity)
         );
     }
 

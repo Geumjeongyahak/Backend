@@ -28,6 +28,7 @@ import geumjeongyahak.domain.notification.event.RequestReviewedPushEvent;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestPaymentTransaction;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.exception.PurchaseRequestErrorCode;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
@@ -36,6 +37,7 @@ import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseReque
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.PurchaseRequestListRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.UpdatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
 import geumjeongyahak.domain.users.entity.User;
@@ -64,17 +66,22 @@ public class PurchaseRequestService {
 
         Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
         User requester = userProxyService.getById(requesterId);
-
         List<PurchaseRequestItem> items = request.items().stream()
             .map(item -> new PurchaseRequestItem(
                 item.name(),
                 item.reason(),
-                item.quantity(),
-                item.paymentType()
+                item.quantity()
             ))
             .toList();
 
-        return createPurchaseRequest(requester, classroom, request.title(), request.content(), items);
+        return createPurchaseRequest(
+            requester,
+            classroom,
+            request.paymentType(),
+            request.title(),
+            request.content(),
+            items
+        );
     }
 
     @Transactional
@@ -90,17 +97,22 @@ public class PurchaseRequestService {
 
         Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
         User requester = userProxyService.getById(request.requestedById());
-
         List<PurchaseRequestItem> items = request.items().stream()
             .map(item -> new PurchaseRequestItem(
                 item.name(),
                 item.reason(),
-                item.quantity(),
-                item.paymentType()
+                item.quantity()
             ))
             .toList();
 
-        return createPurchaseRequest(requester, classroom, request.title(), request.content(), items);
+        return createPurchaseRequest(
+            requester,
+            classroom,
+            request.paymentType(),
+            request.title(),
+            request.content(),
+            items
+        );
     }
 
     public PaginationResponse<PurchaseRequestSummaryResponse> getPurchaseRequests(
@@ -159,7 +171,7 @@ public class PurchaseRequestService {
 
     @Transactional
     public PurchaseRequestDetailResponse updatePurchaseRequest(
-        Long requesterId, Long requestId, CreatePurchaseRequestRequest request, boolean isAdmin
+        Long requesterId, Long requestId, UpdatePurchaseRequestRequest request, boolean isAdmin
     ) {
         log.debug("구입 요청 수정 (requesterId={}, requestId={})", requesterId, requestId);
         PurchaseRequest purchaseRequest = findById(requestId);
@@ -173,8 +185,7 @@ public class PurchaseRequestService {
             .map(item -> new PurchaseRequestItem(
                 item.name(),
                 item.reason(),
-                item.quantity(),
-                item.paymentType()
+                item.quantity()
             ))
             .toList();
 
@@ -375,6 +386,7 @@ public class PurchaseRequestService {
     private PurchaseRequestDetailResponse createPurchaseRequest(
         User requester,
         Classroom classroom,
+        PurchasePaymentType paymentType,
         String title,
         String content,
         List<PurchaseRequestItem> items
@@ -382,7 +394,9 @@ public class PurchaseRequestService {
         PurchaseRequest saved = purchaseRequestRepository.save(
             new PurchaseRequest(
                 classroom,
+                requester.getDepartment(),
                 requester,
+                paymentType,
                 title,
                 content,
                 items

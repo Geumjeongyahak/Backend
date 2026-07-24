@@ -32,7 +32,10 @@
 | `PREPAID` | 선 결제 |
 | `ACTUAL` | 실 결제 |
 
-- 결제 유형은 요청 품목별 `paymentType`으로 저장합니다.
+- 결제 유형은 결제 신청 단위의 `paymentType`으로 저장합니다.
+- 하나의 결제 신청에는 `PREPAID`와 `ACTUAL` 품목을 혼합할 수 없습니다.
+- `content`는 선택값이며 생략하거나 `null`로 전달할 수 있습니다.
+- 신청자의 소속 부서는 서버가 신청 시점의 사용자 정보에서 자동 저장하며, 소속 부서가 없으면 `null`입니다.
 - 요청 생성 시 예상 금액, 거래처, 영수증은 받지 않습니다.
 - 구매 완료 보고 시 거래처별 거래 라인(`transactions[]`)에 실제 결제 금액을 입력합니다.
 - `CONFIRMED` 전환 시 거래처별 총 결제 금액만큼 잔액을 차감하고 `DEDUCT` 이력을 저장합니다.
@@ -143,12 +146,12 @@ sequenceDiagram
   "title": "교재 구입",
   "content": "수업에 필요한 교재를 구입합니다.",
   "classroomId": 1,
+  "paymentType": "PREPAID",
   "items": [
     {
       "name": "국어 교재",
       "reason": "수업 교재 부족",
-      "quantity": 2,
-      "paymentType": "PREPAID"
+      "quantity": 2
     }
   ]
 }
@@ -333,7 +336,7 @@ GET /api/v1/admin/purchase-requests/{requestId}
 | 품의금액/결의금액 | `totalPrice` |
 | 품목내역 내용 | `items[].name` |
 | 품목내역 수량 | `items[].quantity` |
-| 선결제 여부 확인 | `items[].paymentType` |
+| 선결제 여부 확인 | `paymentType` |
 | 거래내역 세부내역 | `transactions[].itemNames` |
 | 거래내역 금액 | `transactions[].amount` |
 | 거래처명 | `transactions[].vendorName` |

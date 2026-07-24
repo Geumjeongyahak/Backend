@@ -1518,7 +1518,7 @@ ALTER SEQUENCE vendors_id_seq RESTART WITH 5;
 
 -- 14-1. Purchased Prepaid Purchase Request for Expense Document API Test
 INSERT INTO purchase_requests (
-    id, classroom_id, requested_by, title, content, total_price, status,
+    id, classroom_id, department_id, requested_by, payment_type, title, content, total_price, status,
     approval_at, approval_by, purchased_at, note, created_at, updated_at
 )
 VALUES
@@ -1526,6 +1526,8 @@ VALUES
         1,
         1,
         2,
+        2,
+        'PREPAID',
         '목민서관 선결제 지출증빙서류 API 테스트',
         '목민서관에 교재 구입비를 선결제 충전한 뒤 구매 완료 보고까지 진행한 테스트 데이터입니다.',
         100000,
@@ -1539,11 +1541,11 @@ VALUES
     );
 ALTER SEQUENCE purchase_requests_id_seq RESTART WITH 2;
 
-INSERT INTO purchase_requests_items (id, purchase_request_id, name, reason, quantity, payment_type)
+INSERT INTO purchase_requests_items (id, purchase_request_id, name, reason, quantity)
 VALUES
-    (1, 1, '문해 교재 1단계', '목민서관 교재 구입 선결제 산출 근거', 10, 'PREPAID'),
-    (2, 1, '문해 교재 2단계', '목민서관 교재 구입 선결제 산출 근거', 10, 'PREPAID'),
-    (3, 1, '수업용 문제집', '목민서관 교재 구입 선결제 산출 근거', 10, 'PREPAID');
+    (1, 1, '문해 교재 1단계', '목민서관 교재 구입 선결제 산출 근거', 10),
+    (2, 1, '문해 교재 2단계', '목민서관 교재 구입 선결제 산출 근거', 10),
+    (3, 1, '수업용 문제집', '목민서관 교재 구입 선결제 산출 근거', 10);
 ALTER SEQUENCE purchase_requests_items_id_seq RESTART WITH 4;
 
 INSERT INTO purchase_request_payment_transactions (id, purchase_request_id, vendor_id, amount, receipt_file_id)

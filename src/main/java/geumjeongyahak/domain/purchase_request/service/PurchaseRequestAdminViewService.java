@@ -5,8 +5,10 @@ import geumjeongyahak.domain.classroom.service.ClassroomAdminViewService;
 import geumjeongyahak.domain.file.service.ImageUploadService;
 import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.PurchaseRequestListRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.UpdatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
 import geumjeongyahak.domain.vendor.service.VendorService;
@@ -59,11 +61,12 @@ public class PurchaseRequestAdminViewService {
         Long classroomId,
         String title,
         String content,
+        PurchasePaymentType paymentType,
         List<CreatePurchaseRequestRequest.Item> items
     ) {
         return purchaseRequestService.createPurchaseRequest(
             requesterId,
-            new CreatePurchaseRequestRequest(title, content, classroomId, items)
+            new CreatePurchaseRequestRequest(title, content, classroomId, paymentType, items)
         ).id();
     }
 
@@ -78,7 +81,7 @@ public class PurchaseRequestAdminViewService {
         purchaseRequestService.updatePurchaseRequest(
             requesterId,
             requestId,
-            new CreatePurchaseRequestRequest(title, content, null, items),
+            new UpdatePurchaseRequestRequest(title, content, items),
             true
         );
     }

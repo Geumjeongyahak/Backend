@@ -20,13 +20,16 @@ public record CreatePurchaseRequestByAdminRequest(
     @Schema(description = "구입 요청 제목", example = "교재 구입")
     String title,
 
-    @NotBlank
-    @Schema(description = "구입 요청 내용", example = "수업에 필요한 교재를 구입합니다.")
+    @Schema(description = "구입 요청 내용", example = "수업에 필요한 교재를 구입합니다.", nullable = true)
     String content,
 
     @NotNull
     @Schema(description = "구입 요청 대상 분반 ID", example = "1")
     Long classroomId,
+
+    @NotNull
+    @Schema(description = "결제 유형", example = "PREPAID")
+    PurchasePaymentType paymentType,
 
     @Valid
     @NotEmpty
@@ -45,10 +48,6 @@ public record CreatePurchaseRequestByAdminRequest(
         @NotNull
         @Min(1)
         @Schema(description = "수량", example = "2")
-        Integer quantity,
-
-        @NotNull
-        @Schema(description = "결제 유형", example = "PREPAID")
-        PurchasePaymentType paymentType
+        Integer quantity
     ) {}
 }

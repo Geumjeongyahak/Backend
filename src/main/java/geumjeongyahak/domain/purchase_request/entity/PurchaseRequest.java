@@ -6,6 +6,8 @@ import java.util.List;
 
 import geumjeongyahak.domain.base.entity.BaseEntity;
 import geumjeongyahak.domain.classroom.entity.Classroom;
+import geumjeongyahak.domain.department.entity.Department;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.users.entity.User;
 
@@ -41,13 +43,21 @@ public class PurchaseRequest extends BaseEntity {
     private Classroom classroom;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id")
+    private Department department;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requested_by", nullable = false)
     private User requestedBy;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_type", nullable = false, length = 20)
+    private PurchasePaymentType paymentType;
 
     @Column(nullable = false)
     private String title;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(columnDefinition = "TEXT")
     private String content;
 
     @Column(name = "total_price", nullable = false)
@@ -68,6 +78,12 @@ public class PurchaseRequest extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String note;
 
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted = false;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @OneToMany(mappedBy = "purchaseRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PurchaseRequestItem> items = new ArrayList<>();
 
@@ -76,17 +92,22 @@ public class PurchaseRequest extends BaseEntity {
 
     public PurchaseRequest(
         Classroom classroom,
+        Department department,
         User requestedBy,
+        PurchasePaymentType paymentType,
         String title,
         String content,
         List<PurchaseRequestItem> items
     ) {
         this.classroom = classroom;
+        this.department = department;
         this.requestedBy = requestedBy;
+        this.paymentType = paymentType;
         this.title = title;
         this.content = content;
         this.totalPrice = 0L;
         this.status = PurchaseRequestStatus.PENDING;
+        this.isDeleted = false;
         items.forEach(item -> item.assignRequest(this));
         this.items.addAll(items);
     }
@@ -106,6 +127,11 @@ public class PurchaseRequest extends BaseEntity {
 
     public void confirm() {
         this.status = PurchaseRequestStatus.CONFIRMED;
+    }
+
+    public void softDelete() {
+        this.isDeleted = true;
+        this.deletedAt = LocalDateTime.now();
     }
 
     public void reject(User approver, String note) {

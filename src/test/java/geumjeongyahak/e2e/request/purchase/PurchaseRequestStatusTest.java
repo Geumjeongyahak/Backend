@@ -377,8 +377,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
                 "items", List.of(Map.of(
                     "name", "수정된 품목",
                     "reason", "시트 수정 반영",
-                    "quantity", 3,
-                    "paymentType", "PREPAID"
+                    "quantity", 3
                 ))
             ))
             .patch("/{requestId}", currentRequestId)
@@ -390,7 +389,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .body("items", hasSize(1))
             .body("items[0].name", equalTo("수정된 품목"))
             .body("items[0].quantity", equalTo(3))
-            .body("items[0].paymentType", equalTo("PREPAID"));
+            .body("paymentType", equalTo("ACTUAL"));
     }
 
     @Test
@@ -418,8 +417,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
                 "items", List.of(Map.of(
                     "name", "수정 시도 품목",
                     "reason", "상태 검증",
-                    "quantity", 1,
-                    "paymentType", "ACTUAL"
+                    "quantity", 1
                 ))
             ))
             .patch("/{requestId}", currentRequestId)

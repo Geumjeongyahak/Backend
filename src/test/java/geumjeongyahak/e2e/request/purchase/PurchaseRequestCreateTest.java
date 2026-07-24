@@ -5,6 +5,7 @@ import static java.util.Map.entry;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 import io.restassured.http.ContentType;
 import java.util.ArrayList;
@@ -61,11 +62,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "교재 구입 요청"),
                 entry("content", "한글 기초 교재가 필요합니다."),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "PREPAID"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "한글 기초 교재"),
                     entry("reason", "수업 교재 부족"),
-                    entry("quantity", 2),
-                    entry("paymentType", "PREPAID")
+                    entry("quantity", 2)
                 )))
             ))
             .post()
@@ -73,6 +74,8 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .statusCode(201)
             .body("id", notNullValue())
             .body("classroomId", equalTo((int) CLASSROOM_ID))
+            .body("departmentId", equalTo(2))
+            .body("departmentName", equalTo("교육연구부"))
             .body("title", equalTo("교재 구입 요청"))
             .body("totalPrice", equalTo(0))
             .body("status", equalTo("PENDING"))
@@ -80,7 +83,7 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .body("items", hasSize(1))
             .body("items[0].name", equalTo("한글 기초 교재"))
             .body("items[0].quantity", equalTo(2))
-            .body("items[0].paymentType", equalTo("PREPAID"))
+            .body("paymentType", equalTo("PREPAID"))
             .extract()
             .jsonPath()
             .getLong("id");
@@ -97,16 +100,42 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "칠판 구입"),
                 entry("content", "교실용 칠판"),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "칠판"),
                     entry("reason", "교실 비품 교체"),
-                    entry("quantity", 1),
-                    entry("paymentType", "ACTUAL")
+                    entry("quantity", 1)
                 )))
             ))
             .post()
             .then()
             .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
+    }
+
+    @Test
+    @DisplayName("content 없이 구입 요청 생성 → 201, null 저장")
+    void createRequest_withoutContent_returns201() {
+        createdRequestId = given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.ofEntries(
+                entry("title", "내용 없는 구입 요청"),
+                entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "ACTUAL"),
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "복사용지"),
+                    entry("reason", "수업 준비"),
+                    entry("quantity", 1)
+                )))
+            ))
+            .post()
+            .then()
+            .statusCode(201)
+            .body("content", nullValue())
             .extract()
             .jsonPath()
             .getLong("id");
@@ -124,11 +153,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "시트 구입 요청"),
                 entry("content", "Apps Script에서 등록한 구입 요청입니다."),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "프린터 토너"),
                     entry("reason", "수업 자료 출력"),
-                    entry("quantity", 1),
-                    entry("paymentType", "ACTUAL")
+                    entry("quantity", 1)
                 )))
             ))
             .post()
@@ -139,6 +168,34 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .body("requestedByName", equalTo("김철수"))
             .body("title", equalTo("시트 구입 요청"))
             .body("status", equalTo("PENDING"))
+            .extract()
+            .jsonPath()
+            .getLong("id"));
+    }
+
+    @Test
+    @DisplayName("관리자가 소속 부서 없는 요청자의 구입 요청 대리 생성 → 부서 정보 null")
+    void createRequestByAdmin_withoutRequesterDepartment_returnsNullDepartment() {
+        createdRequestIds.add(given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.ofEntries(
+                entry("requestedById", 5L),
+                entry("title", "미소속 요청자 구입 요청"),
+                entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "ACTUAL"),
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "복사용지"),
+                    entry("reason", "수업 준비"),
+                    entry("quantity", 1)
+                )))
+            ))
+            .post()
+            .then()
+            .statusCode(201)
+            .body("departmentId", nullValue())
+            .body("departmentName", nullValue())
             .extract()
             .jsonPath()
             .getLong("id"));
@@ -162,11 +219,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "권한자 대리 요청"),
                 entry("content", "구입 요청 관리 권한자가 등록합니다."),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "PREPAID"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "마커"),
                     entry("reason", "수업 판서"),
-                    entry("quantity", 3),
-                    entry("paymentType", "PREPAID")
+                    entry("quantity", 3)
                 )))
             ))
             .post()
@@ -193,11 +250,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "Bot 대리 구입 요청"),
                 entry("content", "Apps Script Bot이 시트 값을 동기화합니다."),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "복사용지"),
                     entry("reason", "수업 자료 인쇄"),
-                    entry("quantity", 2),
-                    entry("paymentType", "ACTUAL")
+                    entry("quantity", 2)
                 )))
             ))
             .post()
@@ -222,11 +279,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "권한 없는 요청"),
                 entry("content", "권한 없는 사용자는 대리 생성할 수 없습니다."),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "교재"),
                     entry("reason", "수업 준비"),
-                    entry("quantity", 1),
-                    entry("paymentType", "ACTUAL")
+                    entry("quantity", 1)
                 )))
             ))
             .post()
@@ -246,11 +303,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "없는 요청자"),
                 entry("content", "존재하지 않는 사용자로 대리 생성할 수 없습니다."),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "교재"),
                     entry("reason", "수업 준비"),
-                    entry("quantity", 1),
-                    entry("paymentType", "ACTUAL")
+                    entry("quantity", 1)
                 )))
             ))
             .post()
@@ -283,11 +340,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
                     entry("reason", "사유"),
-                    entry("quantity", 1),
-                    entry("paymentType", "ACTUAL")
+                    entry("quantity", 1)
                 )))
             ))
             .post()
@@ -306,11 +363,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
                     entry("reason", "사유"),
-                    entry("quantity", 1),
-                    entry("paymentType", "ACTUAL")
+                    entry("quantity", 1)
                 )))
             ))
             .post()
@@ -331,11 +388,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", 99999L),
+                entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
                     entry("reason", "사유"),
-                    entry("quantity", 1),
-                    entry("paymentType", "ACTUAL")
+                    entry("quantity", 1)
                 )))
             ))
             .post()
@@ -356,11 +413,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", ""),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
                     entry("reason", "사유"),
-                    entry("quantity", 1),
-                    entry("paymentType", "ACTUAL")
+                    entry("quantity", 1)
                 )))
             ))
             .post()
@@ -379,7 +436,30 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "ACTUAL"),
                 entry("items", List.of())
+            ))
+            .post()
+            .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("paymentType 누락 → 400")
+    void createRequest_missingPaymentType_returns400() {
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.ofEntries(
+                entry("title", "제목"),
+                entry("content", "내용"),
+                entry("classroomId", CLASSROOM_ID),
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "품목"),
+                    entry("reason", "사유"),
+                    entry("quantity", 1)
+                )))
             ))
             .post()
             .then()
@@ -397,11 +477,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
                     entry("reason", "사유"),
-                    entry("quantity", 0),
-                    entry("paymentType", "ACTUAL")
+                    entry("quantity", 0)
                 )))
             ))
             .post()
@@ -420,11 +500,11 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", ""),
                     entry("reason", "사유"),
-                    entry("quantity", 1),
-                    entry("paymentType", "ACTUAL")
+                    entry("quantity", 1)
                 )))
             ))
             .post()
