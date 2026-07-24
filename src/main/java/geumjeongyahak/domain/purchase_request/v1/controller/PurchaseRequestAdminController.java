@@ -123,7 +123,7 @@ public class PurchaseRequestAdminController {
 
     @Operation(
         summary = "구입 요청 삭제",
-        description = "PENDING 상태의 구입 요청을 삭제합니다. 이미 처리된 요청은 삭제할 수 없습니다."
+        description = "PENDING 상태의 구입 요청을 소프트 삭제합니다. 이미 처리된 요청은 삭제할 수 없습니다."
     )
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
     @DeleteMapping("/{requestId}")

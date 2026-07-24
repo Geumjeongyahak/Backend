@@ -149,6 +149,7 @@ public class PurchaseRequestService {
         boolean mine
     ) {
         Specification<PurchaseRequest> spec = Specification.allOf(
+            PurchaseRequestSpecs.isNotDeleted(),
             PurchaseRequestSpecs.hasStatus(request.getStatus()),
             PurchaseRequestSpecs.keywordContains(request.getKeyword()),
             PurchaseRequestSpecs.classroomNameContains(request.getClassroomName()),
@@ -330,12 +331,12 @@ public class PurchaseRequestService {
             throw new BusinessException(PurchaseRequestErrorCode.ALREADY_PROCESSED);
         }
 
-        purchaseRequestRepository.delete(purchaseRequest);
+        purchaseRequest.softDelete();
         log.debug("구입 요청 삭제 완료 (requestId={})", requestId);
     }
 
     private PurchaseRequest findById(Long requestId) {
-        return purchaseRequestRepository.findById(requestId)
+        return purchaseRequestRepository.findByIdAndIsDeletedFalse(requestId)
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));
     }
 

@@ -14,6 +14,10 @@ public final class PurchaseRequestSpecs {
     private PurchaseRequestSpecs() {
     }
 
+    public static Specification<PurchaseRequest> isNotDeleted() {
+        return (root, query, cb) -> cb.isFalse(root.get("isDeleted"));
+    }
+
     public static Specification<PurchaseRequest> hasStatus(PurchaseRequestStatus status) {
         return (root, query, cb) -> status == null
             ? cb.conjunction()

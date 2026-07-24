@@ -31,7 +31,7 @@ class PurchaseRequestProxyServiceTest {
 
     @Test
     void existsActiveByRequesterId_checksPendingAndApprovedRequests() {
-        given(purchaseRequestRepository.existsByRequestedBy_IdAndStatusIn(
+        given(purchaseRequestRepository.existsByRequestedBy_IdAndStatusInAndIsDeletedFalse(
             USER_ID,
             ACTIVE_STATUSES
         )).willReturn(true);
@@ -39,7 +39,7 @@ class PurchaseRequestProxyServiceTest {
         boolean exists = purchaseRequestProxyService.existsActiveByRequesterId(USER_ID);
 
         assertThat(exists).isTrue();
-        verify(purchaseRequestRepository).existsByRequestedBy_IdAndStatusIn(
+        verify(purchaseRequestRepository).existsByRequestedBy_IdAndStatusInAndIsDeletedFalse(
             USER_ID,
             ACTIVE_STATUSES
         );

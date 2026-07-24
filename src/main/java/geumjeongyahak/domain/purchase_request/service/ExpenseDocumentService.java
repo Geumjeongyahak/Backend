@@ -131,7 +131,7 @@ public class ExpenseDocumentService {
     }
 
     private PurchaseRequest findPurchaseRequest(Long purchaseRequestId) {
-        return purchaseRequestRepository.findById(purchaseRequestId)
+        return purchaseRequestRepository.findByIdAndIsDeletedFalse(purchaseRequestId)
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, purchaseRequestId));
     }
 

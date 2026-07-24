@@ -107,7 +107,7 @@ public class PurchaseRequestController {
     @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "구입 요청 삭제",
-        description = "본인이 작성한 PENDING 상태의 구입 요청을 삭제합니다. "
+        description = "본인이 작성한 PENDING 상태의 구입 요청을 소프트 삭제합니다. "
             + "이미 처리된 요청은 이력 보존을 위해 삭제할 수 없습니다."
     )
     @DeleteMapping("/{requestId}")

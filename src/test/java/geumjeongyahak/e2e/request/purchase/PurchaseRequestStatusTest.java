@@ -280,7 +280,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     // ── 삭제 (delete) ─────────────────────────────────────
 
     @Test
-    @DisplayName("요청 작성자가 PENDING 구입 요청 삭제 → 204")
+    @DisplayName("요청 작성자가 PENDING 구입 요청 삭제 → soft delete 후 조회 제외")
     void delete_asOwnerAndPending_returns204() {
         currentRequestId = setupPendingRequest();
         Long requestId = currentRequestId;
@@ -292,8 +292,29 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .then()
             .statusCode(204);
 
-        assertThat(purchaseRequestRepository.existsById(requestId)).isFalse();
-        currentRequestId = null;
+        assertThat(purchaseRequestRepository.findById(requestId))
+            .isPresent()
+            .get()
+            .satisfies(request -> {
+                assertThat(request.isDeleted()).isTrue();
+                assertThat(request.getDeletedAt()).isNotNull();
+            });
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get("/{requestId}", requestId)
+            .then()
+            .statusCode(404);
+
+        List<Long> listedIds = given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get()
+            .then()
+            .statusCode(200)
+            .extract().jsonPath().getList("content.id", Long.class);
+        assertThat(listedIds).doesNotContain(requestId);
     }
 
     @Test
@@ -343,7 +364,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("관리자가 PENDING 구입 요청 삭제 → 204")
+    @DisplayName("관리자가 PENDING 구입 요청 삭제 → soft delete")
     void delete_asAdminAndPending_returns204() {
         currentRequestId = setupPendingRequest();
         Long requestId = currentRequestId;
@@ -355,8 +376,13 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .then()
             .statusCode(204);
 
-        assertThat(purchaseRequestRepository.existsById(requestId)).isFalse();
-        currentRequestId = null;
+        assertThat(purchaseRequestRepository.findById(requestId))
+            .isPresent()
+            .get()
+            .satisfies(request -> {
+                assertThat(request.isDeleted()).isTrue();
+                assertThat(request.getDeletedAt()).isNotNull();
+            });
     }
 
     // ── 관리자 수정 (update) ─────────────────────────────
