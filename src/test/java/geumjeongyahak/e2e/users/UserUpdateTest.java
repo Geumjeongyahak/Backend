@@ -13,6 +13,13 @@ import geumjeongyahak.domain.users.v1.dto.request.UpdateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.response.UserDetailResponse;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.empty;
@@ -24,6 +31,487 @@ class UserUpdateTest extends UserBaseTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Test
+    @DisplayName("같은 부서의 두 번째 사용자를 MANAGER로 변경할 수 없다(409 Conflict)")
+    void updateUser_ToDuplicateDepartmentManager_Conflict() {
+        var manager = createUser(
+            "update-manager-existing@test.com",
+            "기존 부서장",
+            "MANAGER",
+            3L
+        );
+        var volunteer = createUser(
+            "update-manager-target@test.com",
+            "부서장 변경 대상",
+            "VOLUNTEER",
+            3L
+        );
+
+        UpdateUserRequest updateRequest = new UpdateUserRequest(
+            null, null, null, null, null, "MANAGER", null
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(updateRequest)
+        .when()
+            .patch("/{userId}", volunteer.id())
+        .then()
+            .statusCode(409)
+            .body("code", equalTo("BIZ-01-010"));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/{userId}", manager.id())
+        .then()
+            .statusCode(200)
+            .body("role", equalTo("MANAGER"))
+            .body("department.id", equalTo(3));
+    }
+
+    @Test
+    @DisplayName("MANAGER를 이미 부서장이 있는 부서로 이동할 수 없다(409 Conflict)")
+    void updateUser_MoveManagerToOccupiedDepartment_Conflict() {
+        createUser(
+            "move-manager-existing@test.com",
+            "이동 대상 부서의 부서장",
+            "MANAGER",
+            3L
+        );
+        var movingManager = createUser(
+            "move-manager-target@test.com",
+            "이동할 부서장",
+            "MANAGER",
+            5L
+        );
+
+        UpdateUserRequest updateRequest = new UpdateUserRequest(
+            null, null, null, null, null, null, 3L
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(updateRequest)
+        .when()
+            .patch("/{userId}", movingManager.id())
+        .then()
+            .statusCode(409)
+            .body("code", equalTo("BIZ-01-010"));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/{userId}", movingManager.id())
+        .then()
+            .statusCode(200)
+            .body("role", equalTo("MANAGER"))
+            .body("department.id", equalTo(5));
+    }
+
+    @Test
+    @DisplayName("기존 MANAGER가 역할을 변경하면 같은 부서에 새 MANAGER를 지정할 수 있다")
+    void updateUser_ChangeManagerRole_ReleasesDepartmentManagerPosition() {
+        var previousManager = createUser(
+            "release-manager-existing@test.com",
+            "기존 부서장",
+            "MANAGER",
+            3L
+        );
+        var nextManager = createUser(
+            "release-manager-target@test.com",
+            "새 부서장",
+            "VOLUNTEER",
+            3L
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new UpdateUserRequest(
+                null, null, null, null, null, "VOLUNTEER", null
+            ))
+        .when()
+            .patch("/{userId}", previousManager.id())
+        .then()
+            .statusCode(200)
+            .body("role", equalTo("VOLUNTEER"));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new UpdateUserRequest(
+                null, null, null, null, null, "MANAGER", null
+            ))
+        .when()
+            .patch("/{userId}", nextManager.id())
+        .then()
+            .statusCode(200)
+            .body("role", equalTo("MANAGER"))
+            .body("department.id", equalTo(3));
+    }
+
+    @Test
+    @DisplayName("1. 삭제된 MANAGER는 부서장 계산에서 제외한다")
+    void departmentManager_DeactivatedManagerDoesNotBlockReplacement() {
+        var previousManager = createUser(
+            "deactivated-manager-existing@test.com",
+            "삭제할 부서장",
+            "MANAGER",
+            3L
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/{userId}", previousManager.id())
+        .then()
+            .statusCode(204);
+
+        UserDetailResponse replacement = createUser(
+            "deactivated-manager-replacement@test.com",
+            "후임 부서장",
+            "MANAGER",
+            3L
+        );
+        org.assertj.core.api.Assertions.assertThat(replacement.role()).isEqualTo("MANAGER");
+        org.assertj.core.api.Assertions.assertThat(replacement.department().id()).isEqualTo(3L);
+    }
+
+    @Test
+    @DisplayName("2. 부서가 해제된 MANAGER는 기존 부서의 부서장 계산에서 제외한다")
+    void departmentManager_ReleasedDepartmentDoesNotBlockReplacement() {
+        var previousManager = createUser(
+            "released-department-manager@test.com",
+            "부서를 해제할 부서장",
+            "MANAGER",
+            3L
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/{userId}/department", previousManager.id())
+        .then()
+            .statusCode(204);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/{userId}", previousManager.id())
+        .then()
+            .statusCode(200)
+            .body("role", equalTo("MANAGER"))
+            .body("department", nullValue());
+
+        UserDetailResponse replacement = createUser(
+            "released-department-replacement@test.com",
+            "후임 부서장",
+            "MANAGER",
+            3L
+        );
+        org.assertj.core.api.Assertions.assertThat(replacement.department().id()).isEqualTo(3L);
+    }
+
+    @Test
+    @DisplayName("3. 부서가 없는 MANAGER는 여러 명 생성할 수 있다")
+    void departmentManager_MultipleManagersWithoutDepartmentAreAllowed() {
+        UserDetailResponse firstManager = createUser(
+            "manager-without-department-first@test.com",
+            "미소속 부서장 1",
+            "MANAGER",
+            null
+        );
+        UserDetailResponse secondManager = createUser(
+            "manager-without-department-second@test.com",
+            "미소속 부서장 2",
+            "MANAGER",
+            null
+        );
+
+        org.assertj.core.api.Assertions.assertThat(firstManager.role()).isEqualTo("MANAGER");
+        org.assertj.core.api.Assertions.assertThat(firstManager.department()).isNull();
+        org.assertj.core.api.Assertions.assertThat(secondManager.role()).isEqualTo("MANAGER");
+        org.assertj.core.api.Assertions.assertThat(secondManager.department()).isNull();
+    }
+
+    @Test
+    @DisplayName("4. 미소속 MANAGER를 이미 부서장이 있는 부서에 배정할 수 없다")
+    void departmentManager_AssigningUnassignedManagerToOccupiedDepartmentFails() {
+        createUser(
+            "assign-unassigned-manager-existing@test.com",
+            "기존 부서장",
+            "MANAGER",
+            3L
+        );
+        var unassignedManager = createUser(
+            "assign-unassigned-manager-target@test.com",
+            "미소속 부서장",
+            "MANAGER",
+            null
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new UpdateUserRequest(
+                null, null, null, null, null, null, 3L
+            ))
+        .when()
+            .patch("/{userId}", unassignedManager.id())
+        .then()
+            .statusCode(409)
+            .body("code", equalTo("BIZ-01-010"));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/{userId}", unassignedManager.id())
+        .then()
+            .statusCode(200)
+            .body("role", equalTo("MANAGER"))
+            .body("department", nullValue());
+    }
+
+    @Test
+    @DisplayName("5. MANAGER가 빈 부서로 이동하면 기존 부서에 후임을 지정할 수 있다")
+    void departmentManager_MoveToEmptyDepartmentReleasesPreviousDepartment() {
+        var movingManager = createUser(
+            "move-to-empty-department-manager@test.com",
+            "이동할 부서장",
+            "MANAGER",
+            3L
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new UpdateUserRequest(
+                null, null, null, null, null, null, 5L
+            ))
+        .when()
+            .patch("/{userId}", movingManager.id())
+        .then()
+            .statusCode(200)
+            .body("role", equalTo("MANAGER"))
+            .body("department.id", equalTo(5));
+
+        UserDetailResponse replacement = createUser(
+            "move-to-empty-department-replacement@test.com",
+            "기존 부서 후임",
+            "MANAGER",
+            3L
+        );
+        org.assertj.core.api.Assertions.assertThat(replacement.department().id()).isEqualTo(3L);
+    }
+
+    @Test
+    @DisplayName("6. 역할과 부서를 동시에 변경해도 최종 상태를 기준으로 검증한다")
+    void departmentManager_ChangingRoleAndDepartmentTogetherUsesFinalState() {
+        var successfulTarget = createUser(
+            "combined-manager-success@test.com",
+            "동시 변경 성공 대상",
+            "VOLUNTEER",
+            null
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new UpdateUserRequest(
+                null, null, null, null, null, "MANAGER", 3L
+            ))
+        .when()
+            .patch("/{userId}", successfulTarget.id())
+        .then()
+            .statusCode(200)
+            .body("role", equalTo("MANAGER"))
+            .body("department.id", equalTo(3));
+
+        createUser(
+            "combined-manager-existing@test.com",
+            "다른 부서의 기존 부서장",
+            "MANAGER",
+            5L
+        );
+        var conflictingTarget = createUser(
+            "combined-manager-conflict@test.com",
+            "동시 변경 충돌 대상",
+            "VOLUNTEER",
+            null
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new UpdateUserRequest(
+                null, null, null, null, null, "MANAGER", 5L
+            ))
+        .when()
+            .patch("/{userId}", conflictingTarget.id())
+        .then()
+            .statusCode(409)
+            .body("code", equalTo("BIZ-01-010"));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/{userId}", conflictingTarget.id())
+        .then()
+            .statusCode(200)
+            .body("role", equalTo("VOLUNTEER"))
+            .body("department", nullValue());
+    }
+
+    @Test
+    @DisplayName("7. 기존 MANAGER에게 같은 부서를 다시 지정할 수 있다")
+    void departmentManager_ReassigningSameDepartmentToSelfSucceeds() {
+        var manager = createUser(
+            "same-department-manager@test.com",
+            "동일 부서 재지정 대상",
+            "MANAGER",
+            3L
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new UpdateUserRequest(
+                null, null, null, null, null, null, 3L
+            ))
+        .when()
+            .patch("/{userId}", manager.id())
+        .then()
+            .statusCode(200)
+            .body("role", equalTo("MANAGER"))
+            .body("department.id", equalTo(3));
+    }
+
+    @Test
+    @DisplayName("8. 같은 부서에 일반 사용자는 여러 명 생성할 수 있다")
+    void departmentManager_MultipleNonManagersInSameDepartmentAreAllowed() {
+        UserDetailResponse firstVolunteer = createUser(
+            "same-department-volunteer-first@test.com",
+            "같은 부서 봉사자 1",
+            "VOLUNTEER",
+            3L
+        );
+        UserDetailResponse secondVolunteer = createUser(
+            "same-department-volunteer-second@test.com",
+            "같은 부서 봉사자 2",
+            "VOLUNTEER",
+            3L
+        );
+
+        org.assertj.core.api.Assertions.assertThat(firstVolunteer.department().id()).isEqualTo(3L);
+        org.assertj.core.api.Assertions.assertThat(secondVolunteer.department().id()).isEqualTo(3L);
+    }
+
+    @Test
+    @DisplayName("9. MANAGER 중복 충돌 시 함께 요청한 다른 필드도 변경되지 않는다")
+    void departmentManager_ConflictRollsBackAllRequestedChanges() {
+        createUser(
+            "rollback-manager-existing@test.com",
+            "기존 부서장",
+            "MANAGER",
+            3L
+        );
+        var target = createUser(
+            "rollback-manager-target@test.com",
+            "변경 전 이름",
+            "VOLUNTEER",
+            3L
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new UpdateUserRequest(
+                "변경 후 이름",
+                "010-9999-9999",
+                null,
+                "rollback-manager-changed@test.com",
+                null,
+                "MANAGER",
+                3L
+            ))
+        .when()
+            .patch("/{userId}", target.id())
+        .then()
+            .statusCode(409)
+            .body("code", equalTo("BIZ-01-010"));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/{userId}", target.id())
+        .then()
+            .statusCode(200)
+            .body("name", equalTo("변경 전 이름"))
+            .body("phoneNumber", equalTo("010-2222-0000"))
+            .body("email", equalTo("rollback-manager-target@test.com"))
+            .body("role", equalTo("VOLUNTEER"))
+            .body("department.id", equalTo(3));
+    }
+
+    @Test
+    @DisplayName("10. 같은 부서의 MANAGER 동시 생성 요청 중 하나만 성공한다")
+    void departmentManager_ConcurrentCreationAllowsExactlyOneManager() throws Exception {
+        String firstEmail = "concurrent-manager-first@test.com";
+        String secondEmail = "concurrent-manager-second@test.com";
+        Long departmentId = 6L;
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        try {
+            Future<Integer> firstResponse = executor.submit(concurrentManagerCreation(
+                firstEmail,
+                "동시 생성 부서장 1",
+                departmentId,
+                ready,
+                start
+            ));
+            Future<Integer> secondResponse = executor.submit(concurrentManagerCreation(
+                secondEmail,
+                "동시 생성 부서장 2",
+                departmentId,
+                ready,
+                start
+            ));
+
+            org.assertj.core.api.Assertions.assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            List<Integer> statusCodes = List.of(
+                firstResponse.get(30, TimeUnit.SECONDS),
+                secondResponse.get(30, TimeUnit.SECONDS)
+            );
+            org.assertj.core.api.Assertions.assertThat(statusCodes)
+                .containsExactlyInAnyOrder(201, 409);
+
+            Integer activeManagerCount = jdbcTemplate.queryForObject(
+                """
+                    SELECT COUNT(*)
+                    FROM users
+                    WHERE department_id = ?
+                      AND role = 'MANAGER'
+                      AND is_deleted = FALSE
+                    """,
+                Integer.class,
+                departmentId
+            );
+            org.assertj.core.api.Assertions.assertThat(activeManagerCount).isEqualTo(1);
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+            userTestHelper.setUser(firstEmail);
+            userTestHelper.setUser(secondEmail);
+        }
+    }
 
     @Test
     @DisplayName("관리자 권한으로 User 정보 수정 성공(200 OK)")
@@ -486,5 +974,65 @@ class UserUpdateTest extends UserBaseTest {
         .then()
             .statusCode(401)
             .log().all();
+    }
+
+    private UserDetailResponse createUser(
+        String email,
+        String name,
+        String role,
+        Long departmentId
+    ) {
+        UserDetailResponse user = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(new CreateUserRequest(
+                email,
+                name,
+                "password123!",
+                "010-2222-0000",
+                DEFAULT_BIRTH_DATE,
+                role,
+                departmentId
+            ))
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .extract()
+            .as(UserDetailResponse.class);
+        userTestHelper.setUser(email);
+        return user;
+    }
+
+    private Callable<Integer> concurrentManagerCreation(
+        String email,
+        String name,
+        Long departmentId,
+        CountDownLatch ready,
+        CountDownLatch start
+    ) {
+        return () -> {
+            ready.countDown();
+            if (!start.await(10, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("동시 생성 요청 시작 신호를 받지 못했습니다.");
+            }
+            return given()
+                .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+                .contentType(ContentType.JSON)
+                .body(new CreateUserRequest(
+                    email,
+                    name,
+                    "password123!",
+                    "010-3333-0000",
+                    DEFAULT_BIRTH_DATE,
+                    "MANAGER",
+                    departmentId
+                ))
+            .when()
+                .post()
+            .then()
+                .extract()
+                .statusCode();
+        };
     }
 }

@@ -26,4 +26,13 @@ public class DepartmentProxyService {
         return departmentRepository.findById(departmentId)
                 .orElseThrow(() -> new ResourceNotFoundException(DepartmentErrorCode.DEPARTMENT_NOT_FOUND));
     }
+
+    /**
+     * 부서에 속한 자원의 유일성 검증을 위해 부서 행을 잠근 뒤 조회한다.
+     */
+    @Transactional
+    public Department getByIdForUpdate(Long departmentId) {
+        return departmentRepository.findByIdForUpdate(departmentId)
+                .orElseThrow(() -> new ResourceNotFoundException(DepartmentErrorCode.DEPARTMENT_NOT_FOUND));
+    }
 }

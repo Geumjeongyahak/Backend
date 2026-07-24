@@ -19,12 +19,7 @@ public enum RequestErrorCode implements ErrorCode {
     INVALID_REQUEST_EXPIRES_AFTER_LESSON(
         HttpStatus.BAD_REQUEST,
         "REQ-07-005",
-        "만료 시각은 수업일 이후일 수 없습니다."
-    ),
-    INVALID_REQUEST_EXPIRES_POLICY(
-        HttpStatus.BAD_REQUEST,
-        "REQ-07-006",
-        "만료 시각은 수업일 3일 전까지 설정해야 합니다."
+        "만료일은 수업일 이후일 수 없습니다."
     ),
     DUPLICATE_ACTIVE_REQUEST(
         HttpStatus.CONFLICT,
@@ -36,10 +31,35 @@ public enum RequestErrorCode implements ErrorCode {
         "REQ-07-022",
         "해당 수업에는 이미 진행 중인 결석 요청이 존재합니다."
     ),
-    INVALID_REQUEST_LESSON_POLICY(
+    ABSENCE_REQUEST_LESSON_ALREADY_STARTED(
         HttpStatus.BAD_REQUEST,
-        "REQ-07-008",
-        "수업 교환 요청 가능 기간이 지났습니다."
+        "REQ-07-023",
+        "이미 시작한 수업에는 결석 요청을 생성하거나 수정할 수 없습니다."
+    ),
+    ABSENCE_REQUEST_EXPIRED(
+        HttpStatus.CONFLICT,
+        "REQ-07-024",
+        "만료된 결석 요청은 처리할 수 없습니다."
+    ),
+    ABSENCE_REQUEST_LESSON_START_TIME_NOT_FOUND(
+        HttpStatus.CONFLICT,
+        "REQ-07-025",
+        "대상 수업의 시작 시각을 확인할 수 없습니다."
+    ),
+    LESSON_EXCHANGE_REQUEST_LESSON_ALREADY_STARTED(
+        HttpStatus.BAD_REQUEST,
+        "REQ-07-026",
+        "이미 시작한 수업에는 교환 요청을 생성하거나 수정할 수 없습니다."
+    ),
+    LESSON_EXCHANGE_REQUEST_EXPIRED(
+        HttpStatus.CONFLICT,
+        "REQ-07-027",
+        "만료된 수업 교환 요청은 처리할 수 없습니다."
+    ),
+    LESSON_EXCHANGE_REQUEST_LESSON_START_TIME_NOT_FOUND(
+        HttpStatus.CONFLICT,
+        "REQ-07-028",
+        "교환 대상 수업의 시작 시각을 확인할 수 없습니다."
     ),
     MULTIPLE_CLASSROOMS_IN_LESSON_EXCHANGE_REQUEST(
         HttpStatus.CONFLICT,

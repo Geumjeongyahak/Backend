@@ -172,7 +172,7 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
                 "lessonDate", emptyDate.toString(),
                 "title", "수업 없는 날짜로 수정",
                 "content", "수업이 없는 날짜",
-                "expiresAt", emptyDate.minusDays(3).atTime(21, 0).toString()
+                "expiresDate", emptyDate.minusDays(3).toString()
             ))
             .patch("/{id}", requestId)
             .then()
@@ -180,8 +180,8 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("만료 시각만 수정 -> 200")
-    void updateRequest_onlyExpiresAt_returns200() {
+    @DisplayName("만료일만 수정 -> 선택한 날짜의 23:59:59로 변경")
+    void updateRequest_onlyExpiresDate_returns200() {
         LocalDate lessonDate = LocalDate.now().plusDays(15);
         createLessons(TEACHER_ID, lessonDate, 1, 2);
 
@@ -189,7 +189,7 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
             getAuthHeader(volunteerToken),
             lessonDate,
             "원본 요청",
-            "만료 시각 수정 테스트",
+            "만료일 수정 테스트",
             lessonDate.minusDays(3).atTime(22, 0)
         );
         requestIds.add(requestId);
@@ -201,18 +201,18 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
             .body(buildLessonExchangeRequestBody(
                 lessonDate,
                 "원본 요청",
-                "만료 시각 수정 테스트",
-                lessonDate.minusDays(3).atTime(20, 30)
+                "만료일 수정 테스트",
+                lessonDate.minusDays(2).atStartOfDay()
             ))
             .patch("/{id}", requestId)
             .then()
             .statusCode(200)
-            .body("expiresAt", startsWith(lessonDate.minusDays(3).atTime(20, 30).toString()));
+            .body("expiresAt", startsWith(lessonDate.minusDays(2).atTime(23, 59, 59).toString()));
     }
 
     @Test
-    @DisplayName("만료 시각을 정책 위반 값으로 수정하면 -> 400")
-    void updateRequest_expiresAtAfterPolicy_returns400() {
+    @DisplayName("만료일을 수업일 이후로 수정하면 -> 400")
+    void updateRequest_expiresDateAfterLessonDate_returns400() {
         LocalDate lessonDate = LocalDate.now().plusDays(16);
         createLessons(TEACHER_ID, lessonDate, 1);
 
@@ -233,7 +233,7 @@ class LessonExchangeRequestUpdateTest extends RequestBaseTest {
                 lessonDate,
                 "정책 위반 수정",
                 "너무 늦은 만료 시각",
-                lessonDate.minusDays(2).atTime(12, 0)
+                lessonDate.plusDays(1).atStartOfDay()
             ))
             .patch("/{id}", requestId)
             .then()

@@ -3,9 +3,9 @@ package geumjeongyahak.domain.request.exception.LessonExchangeRequest;
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.domain.request.exception.RequestErrorCode;
 
-public class InvalidRequestLessonPolicyException extends BusinessException {
+public class LessonExchangeRequestExpiredException extends BusinessException {
 
-    public InvalidRequestLessonPolicyException() {
-        super(RequestErrorCode.INVALID_REQUEST_LESSON_POLICY);
+    public LessonExchangeRequestExpiredException() {
+        super(RequestErrorCode.LESSON_EXCHANGE_REQUEST_EXPIRED);
     }
 }

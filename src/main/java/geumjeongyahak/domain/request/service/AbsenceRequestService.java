@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.request.service;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -18,8 +19,10 @@ import geumjeongyahak.domain.notification.event.RequestReviewedPushEvent;
 import geumjeongyahak.domain.request.entity.AbsenceRequest;
 import geumjeongyahak.domain.request.enums.RequestStatus;
 import geumjeongyahak.domain.request.event.AbsenceApprovedEvent;
+import geumjeongyahak.domain.request.exception.AbsenceRequest.AbsenceRequestExpiredException;
+import geumjeongyahak.domain.request.exception.AbsenceRequest.AbsenceRequestLessonAlreadyStartedException;
+import geumjeongyahak.domain.request.exception.AbsenceRequest.AbsenceRequestLessonStartTimeNotFoundException;
 import geumjeongyahak.domain.request.exception.AbsenceRequest.DuplicateActiveAbsenceRequestException;
-import geumjeongyahak.domain.request.exception.AbsenceRequest.InvalidAbsenceRequestExpiresInPastException;
 import geumjeongyahak.domain.request.exception.RequestAlreadyProcessedException;
 import geumjeongyahak.domain.request.exception.RequestForbiddenException;
 import geumjeongyahak.domain.request.exception.RequestNotFoundException;
@@ -41,7 +44,7 @@ public class AbsenceRequestService {
     private final DailyScheduleProxyService dailyScheduleProxyService;
     private final UserProxyService userProxyService;
     private final EventPublisher eventPublisher;
-
+    private final Clock clock;
 
     @Transactional
     public AbsenceRequestResponse createAbsenceRequest(Long requesterId, CreateAbsenceRequestRequest request) {
@@ -58,14 +61,17 @@ public class AbsenceRequestService {
         User requester = userProxyService.getById(requesterId);
 
         validateRequesterIsDailyScheduleTeacher(dailySchedule, requesterId);
-        validateExpiresAtIsFuture(dailySchedule.getLessonDate().atStartOfDay());
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime lessonStartAt = getLessonStartAt(dailySchedule);
+        validateLessonNotStarted(now, lessonStartAt);
         validateNoActiveAbsenceRequest(dailySchedule.getId(), requesterId);
 
         AbsenceRequest absenceRequest = new AbsenceRequest(
             dailySchedule,
             requester,
             request.title(),
-            request.reason()
+            request.reason(),
+            lessonStartAt
         );
         AbsenceRequest saved = absenceRequestRepository.save(absenceRequest);
 
@@ -113,6 +119,10 @@ public class AbsenceRequestService {
             throw new RequestAlreadyProcessedException();
         }
 
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime lessonStartAt = getLessonStartAt(absenceRequest.getDailySchedule());
+        validateLessonNotStarted(now, lessonStartAt);
+
         absenceRequest.update(request.title(), request.reason());
 
         log.debug("결석 요청 수정 완료 (requestId={})", requestId);
@@ -128,6 +138,8 @@ public class AbsenceRequestService {
         if (absenceRequest.getStatus() != RequestStatus.PENDING) {
             throw new RequestAlreadyProcessedException();
         }
+
+        validateRequestNotExpired(absenceRequest, LocalDateTime.now(clock));
 
         User approver = userProxyService.getById(approverId);
         absenceRequest.approve(approver);
@@ -159,6 +171,8 @@ public class AbsenceRequestService {
             throw new RequestAlreadyProcessedException();
         }
 
+        validateRequestNotExpired(absenceRequest, LocalDateTime.now(clock));
+
         User approver = userProxyService.getById(approverId);
         absenceRequest.reject(approver, note);
         eventPublisher.publish(RequestReviewedPushEvent.rejected(
@@ -188,15 +202,17 @@ public class AbsenceRequestService {
             throw new RequestAlreadyProcessedException();
         }
 
+        validateRequestNotExpired(absenceRequest, LocalDateTime.now(clock));
+
         absenceRequest.cancel();
         log.debug("결석 요청 취소 완료 (requestId={})", requestId);
     }
 
     @Transactional
     public int expireExpiredAbsenceRequests() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         List<AbsenceRequest> expiredRequests =
-            absenceRequestRepository.findAllByStatusInAndExpiresAtBefore(
+            absenceRequestRepository.findAllByStatusInAndExpiresAtLessThanEqual(
                 List.of(RequestStatus.PENDING),
                 now
             );
@@ -227,9 +243,26 @@ public class AbsenceRequestService {
         }
     }
 
-    private void validateExpiresAtIsFuture(LocalDateTime expiresAt) {
-        if (!expiresAt.isAfter(LocalDateTime.now())) {
-            throw new InvalidAbsenceRequestExpiresInPastException();
+    private LocalDateTime getLessonStartAt(DailySchedule dailySchedule) {
+        if (dailySchedule.getActivityStartTime() == null) {
+            throw new AbsenceRequestLessonStartTimeNotFoundException();
+        }
+        return dailySchedule.getLessonDate().atTime(dailySchedule.getActivityStartTime());
+    }
+
+    private void validateLessonNotStarted(LocalDateTime now, LocalDateTime lessonStartAt) {
+        if (!now.isBefore(lessonStartAt)) {
+            throw new AbsenceRequestLessonAlreadyStartedException();
+        }
+    }
+
+    private void validateRequestNotExpired(
+        AbsenceRequest absenceRequest,
+        LocalDateTime now
+    ) {
+        LocalDateTime lessonStartAt = getLessonStartAt(absenceRequest.getDailySchedule());
+        if (!absenceRequest.getExpiresAt().isAfter(now) || !lessonStartAt.isAfter(now)) {
+            throw new AbsenceRequestExpiredException();
         }
     }
 

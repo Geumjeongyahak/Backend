@@ -5,6 +5,7 @@ import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.auth.service.UserCredentialService;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
+import geumjeongyahak.domain.department.entity.Department;
 import geumjeongyahak.domain.department.service.DepartmentPermissionProxyService;
 import geumjeongyahak.domain.department.service.DepartmentProxyService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestProxyService;
@@ -14,6 +15,7 @@ import geumjeongyahak.domain.subject.service.SubjectProxyService;
 import geumjeongyahak.domain.teacher_application.service.TeacherApplicationProxyService;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.event.UserDeactivatedEvent;
+import geumjeongyahak.domain.users.exception.DepartmentManagerConflictException;
 import geumjeongyahak.domain.users.exception.DuplicateEmailException;
 import geumjeongyahak.domain.users.exception.UserDeactivationConflictException;
 import geumjeongyahak.domain.users.exception.UserNotFoundException;
@@ -109,6 +111,9 @@ public class UserCrudService {
             throw new DuplicateEmailException(request.email());
         }
 
+        RoleType role = RoleType.valueOf(request.role());
+        Department department = resolveDepartmentForCreate(role, request.departmentId());
+
         User.UserBuilder userBuilder = User.builder()
             .name(request.name())
             .email(request.email())
@@ -116,11 +121,9 @@ public class UserCrudService {
             .residentRegistrationNumberPrefix(
                 UserBirthDateConverter.toResidentRegistrationNumberPrefix(request.birthDate())
             )
-            .role(RoleType.valueOf(request.role()));
+            .role(role)
+            .department(department);
 
-        if (request.departmentId() != null) {
-            userBuilder.department(departmentProxyService.getById(request.departmentId()));
-        }
         if (request.classroomId() != null) {
             userBuilder.classroom(classroomProxyService.getActiveById(request.classroomId()));
         }
@@ -243,6 +246,16 @@ public class UserCrudService {
             Optional<Long> departmentId,
             Optional<Long> classroomId
     ) {
+        RoleType requestedRole = role.map(RoleType::valueOf).orElse(null);
+        RoleType nextRole = requestedRole != null ? requestedRole : user.getRole();
+        boolean guestRequested = requestedRole == RoleType.GUEST;
+        Department requestedDepartment = resolveDepartmentForUpdate(
+            user,
+            nextRole,
+            guestRequested,
+            departmentId
+        );
+
         name.ifPresent(user::setName);
         phoneNumber.ifPresent(user::setPhoneNumber);
         birthDate
@@ -260,17 +273,75 @@ public class UserCrudService {
             user.setEmail(em);
             credentialService.updateLocalCredentialEmail(user, em);
         });
-        Optional<RoleType> requestedRole = role.map(RoleType::valueOf);
-        requestedRole.ifPresent(roleType -> updateRole(user, roleType));
-        if (requestedRole.filter(RoleType.GUEST::equals).isPresent()) {
+        Optional.ofNullable(requestedRole).ifPresent(roleType -> updateRole(user, roleType));
+        if (guestRequested) {
             return;
         }
-        departmentId.ifPresent(deptId -> {
-            user.setDepartment(departmentProxyService.getById(deptId));
-        });
+        departmentId.ifPresent(deptId -> user.setDepartment(requestedDepartment));
         classroomId.ifPresent(classroomIdValue -> {
             user.setClassroom(classroomProxyService.getActiveById(classroomIdValue));
         });
+    }
+
+    private Department resolveDepartmentForCreate(RoleType role, Long departmentId) {
+        if (departmentId == null) {
+            return null;
+        }
+        Department department = role == RoleType.MANAGER
+            ? departmentProxyService.getByIdForUpdate(departmentId)
+            : departmentProxyService.getById(departmentId);
+        if (role == RoleType.MANAGER) {
+            validateNoOtherActiveManager(departmentId, null);
+        }
+        return department;
+    }
+
+    private Department resolveDepartmentForUpdate(
+        User user,
+        RoleType nextRole,
+        boolean guestRequested,
+        Optional<Long> departmentId
+    ) {
+        if (guestRequested) {
+            return null;
+        }
+
+        Long currentDepartmentId = user.getDepartment() != null
+            ? user.getDepartment().getId()
+            : null;
+        Long nextDepartmentId = departmentId.orElse(currentDepartmentId);
+        boolean managerAssignmentChanged = nextRole == RoleType.MANAGER
+            && (user.getRole() != RoleType.MANAGER
+                || !java.util.Objects.equals(currentDepartmentId, nextDepartmentId));
+
+        if (nextDepartmentId == null) {
+            return null;
+        }
+        if (managerAssignmentChanged) {
+            Department department = departmentProxyService.getByIdForUpdate(nextDepartmentId);
+            validateNoOtherActiveManager(nextDepartmentId, user.getId());
+            return department;
+        }
+        if (departmentId.isPresent()) {
+            return departmentProxyService.getById(nextDepartmentId);
+        }
+        return user.getDepartment();
+    }
+
+    private void validateNoOtherActiveManager(Long departmentId, Long currentUserId) {
+        boolean managerExists = currentUserId == null
+            ? userRepository.existsByDepartmentIdAndRoleAndIsDeletedFalse(
+                departmentId,
+                RoleType.MANAGER
+            )
+            : userRepository.existsByDepartmentIdAndRoleAndIsDeletedFalseAndIdNot(
+                departmentId,
+                RoleType.MANAGER,
+                currentUserId
+            );
+        if (managerExists) {
+            throw DepartmentManagerConflictException.alreadyExists(departmentId);
+        }
     }
 
     private void updateRole(User user, RoleType roleType) {

@@ -55,12 +55,18 @@ public class AbsenceRequest extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String note;
 
-    public AbsenceRequest(DailySchedule dailySchedule, User requestedBy, String title, String reason) {
+    public AbsenceRequest(
+        DailySchedule dailySchedule,
+        User requestedBy,
+        String title,
+        String reason,
+        LocalDateTime expiresAt
+    ) {
         this.dailySchedule = dailySchedule;
         this.requestedBy = requestedBy;
         this.title = title;
         this.reason = reason;
-        this.expiresAt = dailySchedule.getLessonDate().atStartOfDay();
+        this.expiresAt = expiresAt;
         this.status = RequestStatus.PENDING;
     }
 

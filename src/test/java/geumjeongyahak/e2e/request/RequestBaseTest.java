@@ -148,7 +148,7 @@ public abstract class RequestBaseTest extends BaseE2ETest {
         body.put("lessonDate", lessonDate.toString());
         body.put("title", title);
         body.put("content", content);
-        body.put("expiresAt", expiresAt.toString());
+        body.put("expiresDate", expiresAt.toLocalDate().toString());
         return body;
     }
 

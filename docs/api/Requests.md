@@ -145,6 +145,8 @@
 }
 ```
 
+`expiresAt`은 입력받지 않으며 대상 하루 일정의 실제 수업 시작 시각으로 자동 설정됩니다.
+
 ### Response Body 예시
 
 ```json
@@ -158,7 +160,7 @@
   "requestedByName": "홍길동",
   "title": "개인 사정으로 결석합니다",
   "reason": "개인 사정으로 인한 결석",
-  "expiresAt": "2026-05-12T00:00:00",
+  "expiresAt": "2026-05-12T09:00:00",
   "status": "PENDING",
   "approvalAt": null,
   "approvalByName": null,
@@ -170,10 +172,10 @@
 ### 구현 기준 동작
 
 - 요청은 `PENDING` 상태로 생성됩니다.
-- `expiresAt`은 입력받지 않고 대상 하루 일정 수업일의 00:00으로 자동 설정합니다.
+- `expiresAt`은 입력받지 않고 대상 하루 일정의 실제 수업 시작 시각으로 자동 설정합니다.
 - 같은 하루 일정에 같은 요청자의 `PENDING` 또는 `APPROVED` 결석 요청이 있으면 중복 생성할 수 없습니다.
 - `REJECTED`, `CANCELLED` 요청은 재요청을 막지 않습니다.
-- 생성 시점에 이미 만료된 하루 일정 당일 또는 과거 일정은 요청할 수 없습니다.
+- 수업 당일에도 실제 수업 시작 전까지 요청할 수 있으며, 수업 시작 시각부터는 요청할 수 없습니다.
 
 ### 주요 실패 케이스
 
@@ -181,7 +183,8 @@
 |---|---|
 | 로그인 사용자의 해당 수업일 DailySchedule 없음 | 404 |
 | 같은 하루 일정에 진행 중인 결석 요청 존재 | 409 |
-| 이미 만료된 하루 일정에 대한 요청 | 400 |
+| 수업이 이미 시작된 하루 일정에 대한 요청 | 400 |
+| 대상 하루 일정의 수업 시작 시각을 확인할 수 없음 | 409 |
 
 ## 5.2 결석 요청 목록 조회
 
@@ -219,7 +222,7 @@
       "requestedByName": "홍길동",
       "title": "개인 사정으로 결석합니다",
       "reason": "개인 사정으로 인한 결석",
-      "expiresAt": "2026-05-12T00:00:00",
+      "expiresAt": "2026-05-12T09:00:00",
       "status": "PENDING",
       "approvalAt": null,
       "approvalByName": null,
@@ -249,7 +252,7 @@
 
 - **URL**: `/api/v1/absence-requests/{requestId}`
 - **Method**: `PATCH`
-- **Description**: 요청자 본인이 `PENDING` 상태의 결석 요청 제목과 사유를 수정합니다.
+- **Description**: 요청자 본인이 `PENDING` 상태의 결석 요청 제목과 사유를 수정합니다. 만료 시각은 수정할 수 없습니다.
 
 ### Request Body 예시
 
@@ -266,6 +269,7 @@
 |---|---|
 | 요청 작성자가 아님 | 403 |
 | 이미 처리된 요청 | 409 |
+| 수업이 이미 시작됨 | 400 |
 | 제목 또는 사유가 비어 있음 | 400 |
 
 ## 5.5 결석 요청 승인
@@ -280,6 +284,7 @@
 - `approvalAt`, `approvalBy`가 기록됩니다.
 - 승인 이벤트를 통해 연결된 DailySchedule 교사 출석이 `EXCUSED`로 반영됩니다.
 - 연결된 DailySchedule의 `isAbsent`가 `true`로 변경되며 Lesson/DailySchedule 조회 응답에서 결강 여부를 확인할 수 있습니다.
+- 스케줄러가 아직 실행되지 않았더라도 승인 시점에 만료 시각과 수업 시작 시각을 다시 확인하며, 둘 중 하나라도 지났으면 승인하지 않습니다.
 - 이미 `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED` 상태인 요청은 재처리할 수 없습니다.
 
 ## 5.6 결석 요청 반려
@@ -300,6 +305,7 @@
 
 - 요청 상태가 `REJECTED`로 변경됩니다.
 - `approvalAt`, `approvalBy`, `note`가 기록됩니다.
+- 스케줄러가 아직 실행되지 않았더라도 만료 시각 또는 수업 시작 시각이 지나면 반려하지 않습니다.
 - 이미 `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED` 상태인 요청은 재처리할 수 없습니다.
 
 ## 5.7 결석 요청 취소
@@ -313,11 +319,13 @@
 - 요청을 물리 삭제하지 않고 상태를 `CANCELLED`로 변경합니다.
 - DailySchedule 교사 출석 상태를 변경하지 않습니다.
 - 본인 요청이 아니거나 이미 처리된 요청이면 취소할 수 없습니다.
+- 스케줄러가 아직 실행되지 않았더라도 만료 시각 또는 수업 시작 시각이 지나면 취소할 수 없습니다.
 
 ## 5.8 결석 요청 자동 만료
 
-- `PENDING` 상태의 결석 요청 중 `expiresAt`이 지난 요청은 스케줄러가 자동으로 `EXPIRED` 처리합니다.
-- `expiresAt`은 수업 하루 전까지 처리를 유도하기 위해 대상 하루 일정 수업일의 00:00으로 자동 설정됩니다.
+- `PENDING` 상태의 결석 요청 중 `expiresAt`이 현재 시각 이하인 요청은 스케줄러가 자동으로 `EXPIRED` 처리합니다.
+- `expiresAt`은 대상 하루 일정의 실제 수업 시작 시각으로 자동 설정됩니다.
+- 이미 승인된 `APPROVED` 요청은 수업 시작 시각이 지나도 `EXPIRED`로 변경하지 않습니다.
 - 만료된 요청은 승인, 반려, 취소할 수 없습니다.
 
 ## 6. 수업 교환 요청 API
@@ -337,9 +345,16 @@
   "lessonDate": "2026-05-12",
   "title": "금요일 수업 교환 요청",
   "content": "개인 일정으로 인해 교환이 필요합니다.",
-  "expiresAt": "2026-05-09T23:00:00"
+  "expiresDate": "2026-05-11"
 }
 ```
+
+`expiresDate`는 선택값입니다.
+
+- 생략하거나 수업일과 같은 날짜를 입력하면 해당 DailySchedule의 실제 수업 시작 시각으로 설정됩니다.
+- 수업일 이전 날짜를 입력하면 해당 날짜 `23:59:59`로 설정됩니다.
+- 수업일 이후 날짜와 변환된 만료 시각이 현재 이하인 날짜는 허용하지 않습니다.
+- 요청에서는 날짜만 입력하지만 DB와 응답에서는 변환된 정확한 시각을 `expiresAt`으로 사용합니다.
 
 ### Side Effects
 
@@ -352,8 +367,10 @@
 |---|---|
 | 로그인 사용자의 해당 수업일 DailySchedule 없음 | 404 |
 | 이미 같은 DailySchedule에 `PENDING`/`APPROVED` 요청 존재 | 409 |
-| 교환 요청 가능 기간(현재+4일) 이전 수업 | 400 |
-| 만료 시각 정책 위반 | 400 |
+| 이미 시작한 수업 | 400 |
+| 변환된 만료 시각이 현재 이하 | 400 |
+| 만료일이 수업일 이후 | 400 |
+| 대상 DailySchedule에 수업 시작 시각 없음 | 409 |
 
 ## 6.2 요청 목록 조회
 
@@ -386,6 +403,8 @@
 - 요청 생성과 동일한 입력 정책을 사용합니다.
 - 수정 후 반 이름 snapshot도 함께 갱신됩니다.
 - `lessonDate`를 변경하면 변경된 수업일의 DailySchedule과 정책을 다시 검증합니다.
+- `expiresDate`를 생략하면 수정 대상 DailySchedule의 수업 시작 시각으로 다시 설정합니다.
+- 스케줄러가 아직 실행되지 않았더라도 요청 만료 시각 또는 대상 수업 시작 시각이 지나면 수정할 수 없습니다.
 
 ## 6.5 요청 취소
 
@@ -397,6 +416,7 @@
 
 - 요청 상태가 `CANCELLED`로 변경됩니다.
 - `cancelledAt`이 기록됩니다.
+- 스케줄러가 아직 실행되지 않았더라도 만료 시각 또는 수업 시작 시각이 지나면 취소할 수 없습니다.
 
 ## 6.6 요청 승인
 
@@ -408,6 +428,7 @@
 
 - 요청 상태가 `APPROVED`로 변경됩니다.
 - `processedAt`, `processedBy`가 기록됩니다.
+- 스케줄러가 아직 실행되지 않았더라도 만료 시각 또는 수업 시작 시각이 지나면 승인할 수 없습니다.
 
 ## 6.7 요청 반려
 
@@ -427,6 +448,7 @@
 
 - 요청 상태가 `REJECTED`로 변경됩니다.
 - `processedAt`, `processedBy`, `rejectionNote`가 기록됩니다.
+- 스케줄러가 아직 실행되지 않았더라도 만료 시각 또는 수업 시작 시각이 지나면 반려할 수 없습니다.
 
 ## 7. 수업 교환 제안 API
 
@@ -456,6 +478,7 @@
 ### 구현 기준 동작
 
 - 같은 요청에 대해 동일 제안자는 `ACTIVE` 제안 1건만 가질 수 있습니다.
+- 요청 만료 시각과 대상 수업 시작 시각 전까지만 제안을 생성·수정·수락할 수 있습니다.
 - `EXCHANGE` 제안은 요청 수업일과 같은 수업일로 생성할 수 없습니다.
 - `EXCHANGE` 제안은 제안자가 해당 수업일에 담당하는 DailySchedule이어야 하며, 해당 DailySchedule의 반/날짜 수업 전체가 교환 대상입니다.
 - `SUBSTITUTION` 제안은 요청 수업 시간대에 제안자의 기존 수업이 충돌하면 생성할 수 없습니다.
@@ -554,7 +577,11 @@ sequenceDiagram
     participant RequestRepo as LessonExchangeRequestRepository
 
     Scheduler->>RequestService: expireExpiredLessonExchangeRequests()
-    RequestService->>RequestRepo: findAllByStatusInAndExpiresAtBefore(...)
+    RequestService->>RequestRepo: findAllByStatusInAndExpiresAtLessThanEqual(...)
     RequestService->>RequestService: request.expire()
     RequestService->>RequestService: closeActiveProposals(request)
 ```
+
+- `PENDING`, `APPROVED` 요청 중 `expiresAt <= 현재 시각`인 요청을 `EXPIRED` 처리합니다.
+- 만료된 요청의 `ACTIVE` 제안은 `CLOSED` 처리합니다.
+- 이미 `COMPLETED` 상태인 요청은 자동 만료 대상에 포함하지 않습니다.

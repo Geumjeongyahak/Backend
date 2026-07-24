@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.equalTo;
 import geumjeongyahak.domain.request.repository.AbsenceRequestRepository;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 import io.restassured.http.ContentType;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +17,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Tag("absence-request")
 @DisplayName("E2E: 결석 요청 수정 테스트")
 class AbsenceRequestUpdateTest extends RequestBaseTest {
+
+    private static final DateTimeFormatter DATE_TIME_FORMAT =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     @Autowired
     private AbsenceRequestRepository absenceRequestRepository;
@@ -44,6 +48,10 @@ class AbsenceRequestUpdateTest extends RequestBaseTest {
     @DisplayName("요청자가 PENDING 결석 요청 수정 → 200, 제목과 사유 변경")
     void updatePendingRequest_asOwner_returns200() {
         requestId = setupPendingRequest();
+        String originalExpiresAt = absenceRequestRepository.findById(requestId)
+            .orElseThrow()
+            .getExpiresAt()
+            .format(DATE_TIME_FORMAT);
 
         given()
             .basePath("/api/v1/absence-requests")
@@ -55,6 +63,7 @@ class AbsenceRequestUpdateTest extends RequestBaseTest {
             .statusCode(200)
             .body("title", equalTo("수정된 결석 요청"))
             .body("reason", equalTo("수정된 결석 사유"))
+            .body("expiresAt", equalTo(originalExpiresAt))
             .body("status", equalTo("PENDING"));
     }
 

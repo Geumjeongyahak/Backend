@@ -417,7 +417,7 @@ ADMIN이 특정 사용자에게 직접 권한을 부여해야 할 때 사용하�
 | requested_by | BIGINT | FOREIGN KEY | 결석 요청자 ID |
 | title | VARCHAR(255) | NOT NULL | 결석 요청 제목 |
 | reason | TEXT | NOT NULL | 결석 이유 |
-| expires_at | TIMESTAMP | NOT NULL | 결석 요청 만료 시각. 대상 하루 일정 수업일의 00:00으로 자동 설정 |
+| expires_at | TIMESTAMP | NOT NULL | 결석 요청 만료 시각. 대상 하루 일정의 실제 수업 시작 시각으로 자동 설정 |
 | status | VARCHAR(20) | NOT NULL | 결석 요청 상태 |
 | approval_at | TIMESTAMP | NULL | 결석 요청 승인일시 |
 | approval_by | BIGINT | FOREIGN KEY | 결석 요청 승인자 ID |
@@ -450,7 +450,7 @@ ADMIN이 특정 사용자에게 직접 권한을 부여해야 할 때 사용하�
 | classroom_name_snapshot | VARCHAR(255) | NOT NULL | 생성/수정 시점 반 이름 snapshot |
 | content | TEXT | NOT NULL | 수업 교환 요청 내용 |
 | status | VARCHAR(20) | NOT NULL | 수업 교환 요청 상태 |
-| expires_at | TIMESTAMP | NOT NULL | 제안 가능 만료 시각 |
+| expires_at | TIMESTAMP | NOT NULL | 제안 가능 만료 시각. 요청의 만료일이 없거나 수업일과 같으면 수업 시작 시각, 이전 날짜이면 해당 날짜 23:59:59로 변환 |
 | processed_at | TIMESTAMP | NULL | 승인/반려 처리 시각 |
 | processed_by | BIGINT | FOREIGN KEY | 승인/반려 처리자 ID |
 | completed_at | TIMESTAMP | NULL | 제안 수락 완료 시각 |

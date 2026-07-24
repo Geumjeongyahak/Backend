@@ -19,6 +19,8 @@ public enum UserErrorCode implements ErrorCode {
     CANNOT_DEACTIVATE_SELF(HttpStatus.CONFLICT, "BIZ-01-007", "본인 계정은 비활성화할 수 없습니다."),
     CANNOT_DEACTIVATE_LAST_ADMIN(HttpStatus.CONFLICT, "BIZ-01-008", "마지막 활성 관리자 계정은 비활성화할 수 없습니다."),
     CANNOT_DEACTIVATE_USER_WITH_ACTIVE_WORKFLOW(HttpStatus.CONFLICT, "BIZ-01-009", "처리 중인 신청 또는 요청이 있는 사용자는 비활성화할 수 없습니다."),
+    ACTIVE_DEPARTMENT_MANAGER_ALREADY_EXISTS(HttpStatus.CONFLICT, "BIZ-01-010", "해당 부서에는 이미 활성 부서장이 있습니다."),
+    MULTIPLE_ACTIVE_DEPARTMENT_MANAGERS(HttpStatus.CONFLICT, "BIZ-01-011", "해당 부서에 활성 부서장이 여러 명 존재합니다."),
     INVALID_RESIDENT_REGISTRATION_NUMBER_PREFIX(HttpStatus.BAD_REQUEST, "VAL-01-002", "주민등록번호 앞자리의 형식 또는 날짜가 올바르지 않습니다.");
 
     private final HttpStatus status;

@@ -113,12 +113,14 @@ public class UserAdminController {
             - 생년월일은 내부 저장 형식으로 변환합니다.
             - 요청 role을 기본 역할로 저장합니다.
             - departmentId가 있으면 해당 부서를 연결합니다.
+            - MANAGER 역할은 한 부서에 활성 사용자 한 명만 둘 수 있습니다.
             - 사용자 레코드 생성 후 Local 로그인 자격 증명(email, password)을 함께 생성합니다.
 
             사이드 이펙트:
             - users 테이블에 새 사용자가 저장됩니다.
             - 인증 도메인에 local credential이 함께 생성됩니다.
             - 중복 이메일이면 생성되지 않고 예외가 반환됩니다.
+            - 해당 부서에 활성 MANAGER가 이미 있으면 생성되지 않고 409 Conflict가 반환됩니다.
             """
     )
     @PostMapping
@@ -150,6 +152,7 @@ public class UserAdminController {
             - 이메일이 변경되면 사용자 기본 이메일과 Local credential 이메일을 함께 갱신합니다.
             - role을 GUEST로 변경하면 교원 해제 처리로 간주하여 소속 부서, 배정 분반을 비우고 teacherEndAt을 현재 날짜로 설정합니다.
             - role이 GUEST인 요청에 departmentId/classroomId가 함께 전달되어도 소속 및 분반은 비워진 상태로 유지됩니다.
+            - 역할 또는 부서를 변경한 결과 한 부서에 활성 MANAGER가 두 명이 되면 409 Conflict가 반환됩니다.
 
             사이드 이펙트:
             - users 테이블의 기본 정보가 변경됩니다.
