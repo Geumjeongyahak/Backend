@@ -121,10 +121,11 @@ public class PurchaseRequestService {
         boolean mine
     ) {
         log.debug(
-            "구입 요청 목록 조회 (requesterId={}, mine={}, status={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
+            "구입 요청 목록 조회 (requesterId={}, mine={}, status={}, paymentType={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
             requesterId,
             mine,
             request.getStatus(),
+            request.getPaymentType(),
             request.getKeyword(),
             request.getClassroomName(),
             request.getRequestedByName(),
@@ -151,6 +152,7 @@ public class PurchaseRequestService {
         Specification<PurchaseRequest> spec = Specification.allOf(
             PurchaseRequestSpecs.isNotDeleted(),
             PurchaseRequestSpecs.hasStatus(request.getStatus()),
+            PurchaseRequestSpecs.hasPaymentType(request.getPaymentType()),
             PurchaseRequestSpecs.keywordContains(request.getKeyword()),
             PurchaseRequestSpecs.classroomNameContains(request.getClassroomName()),
             PurchaseRequestSpecs.requestedByNameContains(request.getRequestedByName())

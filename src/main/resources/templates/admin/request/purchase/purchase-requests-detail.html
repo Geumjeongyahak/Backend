@@ -32,7 +32,7 @@
         <div class="detail-item"><span>요청자</span><strong><a class="link" th:href="@{/admin/user/users/{userId}(userId=${request.requestedById})}" th:text="${request.requestedByName}">요청자</a></strong></div>
         <div class="detail-item"><span>분반</span><strong><a class="link" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${request.classroomId})}" th:text="${request.classroomName}">분반</a></strong></div>
         <div class="detail-item"><span>소속 부서</span><strong th:text="${request.departmentName ?: '미소속'}">미소속</strong></div>
-        <div class="detail-item"><span>결제 유형</span><strong th:text="${request.paymentType.name() == 'PREPAID' ? '선 결제' : '실 결제'}">실 결제</strong></div>
+        <div class="detail-item"><span>결제 유형</span><strong th:text="${request.paymentType.name() == 'PREPAID' ? '선금 결제' : '실 결제'}">실 결제</strong></div>
         <div class="detail-item"><span>결제 총액</span><strong th:text="${request.totalPrice ?: '-'}">-</strong></div>
         <div class="detail-item"><span>내용</span><strong th:text="${request.content}">내용</strong></div>
         <div class="detail-item"><span>메모</span><strong th:text="${request.note ?: '-'}">-</strong></div>

@@ -24,6 +24,15 @@
                     <option th:each="status : ${statuses}" th:value="${status.name()}" th:text="${status.name()}" th:selected="${selectedStatus == status}">PENDING</option>
                 </select>
             </label>
+            <label>결제 유형
+                <select name="paymentType">
+                    <option value="">전체</option>
+                    <option th:each="paymentType : ${paymentTypes}"
+                            th:value="${paymentType.name()}"
+                            th:text="${paymentType.name() == 'PREPAID' ? '선금 결제' : '실 결제'}"
+                            th:selected="${selectedPaymentType == paymentType}">실 결제</option>
+                </select>
+            </label>
             <label>분반
                 <input name="classroomName" th:value="${filter.classroomName}" placeholder="벚꽃반">
             </label>
@@ -60,6 +69,7 @@
                         <th>제목</th>
                         <th>분반</th>
                         <th>요청자</th>
+                        <th>결제 유형</th>
                         <th>결제 금액</th>
                         <th>상태</th>
                         <th>생성일</th>
@@ -72,6 +82,7 @@
                         <td><a class="link" th:href="@{/admin/request/purchase/purchase-requests/{requestId}(requestId=${request.id})}" th:text="${request.title}">교재 구입</a></td>
                         <td th:text="${request.classroomName}">벚꽃반</td>
                         <td th:text="${request.requestedByName}">홍길동</td>
+                        <td th:text="${request.paymentType.name() == 'PREPAID' ? '선금 결제' : '실 결제'}">실 결제</td>
                         <td th:text="${request.totalPrice != null ? request.totalPrice : '-'}">-</td>
                         <td><span class="pill" th:classappend="'status-' + ${request.status.name()}" th:text="${request.status.name()}">PENDING</span></td>
                         <td th:text="${#temporals.format(request.createdAt, 'yyyy.MM.dd')}">2026.01.01</td>
@@ -88,7 +99,7 @@
                         </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(purchaseRequestsPage.content)}">
-                        <td colspan="8" class="empty">구매 요청이 없습니다.</td>
+                        <td colspan="9" class="empty">구매 요청이 없습니다.</td>
                     </tr>
                     </tbody>
                 </table>
@@ -96,8 +107,8 @@
             <div class="pager">
                 <span th:text="|총 ${purchaseRequestsPage.totalElements}건 · ${purchaseRequestsPage.page + 1}/${purchaseRequestsPage.totalPages == 0 ? 1 : purchaseRequestsPage.totalPages} 페이지|">총 0건</span>
                 <div>
-                    <a class="reset-link" th:classappend="${!purchaseRequestsPage.hasPrevious()} ? 'disabled'" th:href="@{/admin/request/purchase/purchase-requests(status=${filter.status},keyword=${filter.keyword},classroomName=${filter.classroomName},requestedByName=${filter.requestedByName},size=${purchaseRequestsPage.size},sort=${filter.sort},page=${purchaseRequestsPage.previousPage()})}">이전</a>
-                    <a class="reset-link" th:classappend="${!purchaseRequestsPage.hasNext()} ? 'disabled'" th:href="@{/admin/request/purchase/purchase-requests(status=${filter.status},keyword=${filter.keyword},classroomName=${filter.classroomName},requestedByName=${filter.requestedByName},size=${purchaseRequestsPage.size},sort=${filter.sort},page=${purchaseRequestsPage.nextPage()})}">다음</a>
+                    <a class="reset-link" th:classappend="${!purchaseRequestsPage.hasPrevious()} ? 'disabled'" th:href="@{/admin/request/purchase/purchase-requests(status=${filter.status},paymentType=${filter.paymentType},keyword=${filter.keyword},classroomName=${filter.classroomName},requestedByName=${filter.requestedByName},size=${purchaseRequestsPage.size},sort=${filter.sort},page=${purchaseRequestsPage.previousPage()})}">이전</a>
+                    <a class="reset-link" th:classappend="${!purchaseRequestsPage.hasNext()} ? 'disabled'" th:href="@{/admin/request/purchase/purchase-requests(status=${filter.status},paymentType=${filter.paymentType},keyword=${filter.keyword},classroomName=${filter.classroomName},requestedByName=${filter.requestedByName},size=${purchaseRequestsPage.size},sort=${filter.sort},page=${purchaseRequestsPage.nextPage()})}">다음</a>
                 </div>
             </div>
         </section>

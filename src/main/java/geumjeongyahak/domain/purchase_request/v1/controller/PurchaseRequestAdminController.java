@@ -64,7 +64,8 @@ public class PurchaseRequestAdminController {
 
     @Operation(
         summary = "구입 요청 전체 목록 조회",
-        description = "전체 분반의 구입 요청 목록을 페이지 단위로 조회합니다. status, keyword, classroomName, requestedByName 파라미터로 필터링할 수 있습니다."
+        description = "전체 분반의 구입 요청 목록을 페이지 단위로 조회합니다. "
+            + "status, paymentType, keyword, classroomName, requestedByName 파라미터로 필터링할 수 있습니다."
     )
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:read:*')")
     @GetMapping
@@ -72,8 +73,9 @@ public class PurchaseRequestAdminController {
         @ParameterObject @Valid PurchaseRequestListRequest request
     ) {
         log.debug(
-            "GET /api/v1/admin/purchase-requests (status={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
+            "GET /api/v1/admin/purchase-requests (status={}, paymentType={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
             request.getStatus(),
+            request.getPaymentType(),
             request.getKeyword(),
             request.getClassroomName(),
             request.getRequestedByName(),

@@ -31,7 +31,7 @@
         <label>제목 <input th:field="*{title}" th:readonly="${request.status.name() != 'PENDING'}" required></label>
         <label>내용 <textarea th:field="*{content}" th:readonly="${request.status.name() != 'PENDING'}"></textarea></label>
         <label>결제 유형
-            <input type="text" th:value="${request.paymentType.name() == 'PREPAID' ? '선 결제' : '실 결제'}" readonly disabled>
+            <input type="text" th:value="${request.paymentType.name() == 'PREPAID' ? '선금 결제' : '실 결제'}" readonly disabled>
         </label>
         
         <div class="stack" style="--gap: 1rem;">

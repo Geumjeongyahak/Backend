@@ -154,6 +154,11 @@ public abstract class RequestBaseTest extends BaseE2ETest {
 
     protected Long createPurchaseRequest(String authHeader, Long classroomId,
         String title, String content, long price) {
+        return createPurchaseRequest(authHeader, classroomId, title, content, price, "ACTUAL");
+    }
+
+    protected Long createPurchaseRequest(String authHeader, Long classroomId,
+        String title, String content, long price, String paymentType) {
         return given()
             .basePath("/api/v1/purchase-requests")
             .header(AUTH_HEADER, authHeader)
@@ -162,7 +167,7 @@ public abstract class RequestBaseTest extends BaseE2ETest {
                 entry("title", title),
                 entry("content", content),
                 entry("classroomId", classroomId),
-                entry("paymentType", "ACTUAL"),
+                entry("paymentType", paymentType),
                 entry("items", java.util.List.of(Map.ofEntries(
                     entry("name", title + " 품목"),
                     entry("reason", content),

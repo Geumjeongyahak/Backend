@@ -3,6 +3,7 @@ package geumjeongyahak.domain.purchase_request.v1.dto.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 
 public record PurchaseRequestSummaryResponse(
@@ -25,6 +26,9 @@ public record PurchaseRequestSummaryResponse(
     @Schema(description = "구입 요청 제목", example = "교재 구입")
     String title,
 
+    @Schema(description = "결제 유형", example = "ACTUAL")
+    PurchasePaymentType paymentType,
+
     @Schema(description = "총 구매 금액 (원) - 구매 보고 이후 확정", example = "45000")
     Long totalPrice,
 
@@ -42,6 +46,7 @@ public record PurchaseRequestSummaryResponse(
             r.getRequestedBy().getId(),
             r.getRequestedBy().getName(),
             r.getTitle(),
+            r.getPaymentType(),
             r.getTotalPrice(),
             r.getStatus(),
             r.getCreatedAt()

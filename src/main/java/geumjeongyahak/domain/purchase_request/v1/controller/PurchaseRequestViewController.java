@@ -2,6 +2,7 @@ package geumjeongyahak.domain.purchase_request.v1.controller;
 
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestAdminViewService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestAdminViewService.PurchaseRequestFilter;
@@ -37,6 +38,7 @@ public class PurchaseRequestViewController {
     @GetMapping
     public String purchaseRequests(
         @RequestParam(required = false) PurchaseRequestStatus status,
+        @RequestParam(required = false) PurchasePaymentType paymentType,
         @RequestParam(required = false) String keyword,
         @RequestParam(required = false) String classroomName,
         @RequestParam(required = false) String requestedByName,
@@ -46,11 +48,22 @@ public class PurchaseRequestViewController {
         Model model,
         Authentication authentication
     ) {
-        PurchaseRequestFilter filter = new PurchaseRequestFilter(status, keyword, classroomName, requestedByName, page, size, sort);
+        PurchaseRequestFilter filter = new PurchaseRequestFilter(
+            status,
+            paymentType,
+            keyword,
+            classroomName,
+            requestedByName,
+            page,
+            size,
+            sort
+        );
         model.addAttribute("active", "purchaseRequests");
         model.addAttribute("adminName", authentication.getName());
         model.addAttribute("filter", filter);
         model.addAttribute("selectedStatus", status);
+        model.addAttribute("selectedPaymentType", paymentType);
+        model.addAttribute("paymentTypes", PurchasePaymentType.values());
         model.addAttribute("statuses", purchaseRequestAdminViewService.getStatuses());
         model.addAttribute("purchaseRequestsPage", purchaseRequestAdminViewService.getPurchaseRequests(filter));
         return "admin/request/purchase/purchase-requests";

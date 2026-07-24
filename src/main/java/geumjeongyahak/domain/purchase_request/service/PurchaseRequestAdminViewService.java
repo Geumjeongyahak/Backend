@@ -33,6 +33,7 @@ public class PurchaseRequestAdminViewService {
     public AdminPage<PurchaseRequestSummaryResponse> getPurchaseRequests(PurchaseRequestFilter filter) {
         PurchaseRequestListRequest request = new PurchaseRequestListRequest();
         request.setStatus(filter.status());
+        request.setPaymentType(filter.paymentType());
         request.setKeyword(filter.keyword());
         request.setClassroomName(filter.classroomName());
         request.setRequestedByName(filter.requestedByName());
@@ -130,6 +131,7 @@ public class PurchaseRequestAdminViewService {
 
     public record PurchaseRequestFilter(
         PurchaseRequestStatus status,
+        PurchasePaymentType paymentType,
         String keyword,
         String classroomName,
         String requestedByName,
