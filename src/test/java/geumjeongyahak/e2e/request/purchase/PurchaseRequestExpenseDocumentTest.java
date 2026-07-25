@@ -555,6 +555,34 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     }
 
     private void confirmPurchaseRequest(Long requestId) {
+        long totalPrice = given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get("/{requestId}", requestId)
+            .then()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getLong("totalPrice");
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "proposalDate", LocalDate.now().toString(),
+                "proposalAmount", totalPrice,
+                "paymentAccount", "NATIONAL_SUBSIDY_04",
+                "items", List.of(Map.of(
+                    "content", "지출증빙서류 테스트 품목",
+                    "quantity", 1,
+                    "estimatedUnitPrice", totalPrice
+                ))
+            ))
+            .put("/{requestId}/proposal", requestId)
+            .then()
+            .statusCode(200);
+
         given()
             .basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))

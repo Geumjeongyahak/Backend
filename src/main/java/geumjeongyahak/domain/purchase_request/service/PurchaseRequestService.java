@@ -418,9 +418,13 @@ public class PurchaseRequestService {
                 throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
             }
         }
+        purchaseRequestProposalService.validateForConfirmation(purchaseRequest);
         if (purchaseRequest.getPaymentType() == PurchasePaymentType.PREPAID) {
-            File receiptFile = purchaseRequest.getTransactions().getFirst().getReceiptFile();
-            if (receiptFile == null || receiptFile.isDeleted()) {
+            boolean hasActiveTransactionReceipt = purchaseRequest.getTransactions().stream()
+                .map(PurchaseRequestPaymentTransaction::getReceiptFile)
+                .anyMatch(receiptFile -> receiptFile != null && !receiptFile.isDeleted());
+            if (!hasActiveTransactionReceipt
+                && !purchaseRequestProposalService.hasActiveReceipt(purchaseRequest)) {
                 throw new BusinessException(PurchaseRequestErrorCode.PREPAID_RECEIPT_REQUIRED);
             }
         }

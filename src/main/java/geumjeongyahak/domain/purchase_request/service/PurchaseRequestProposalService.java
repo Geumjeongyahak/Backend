@@ -129,6 +129,43 @@ public class PurchaseRequestProposalService {
         );
     }
 
+    public void validateForConfirmation(PurchaseRequest purchaseRequest) {
+        PurchaseRequestProposal proposal = purchaseRequest.getProposal();
+        if (proposal == null) {
+            throw new BusinessException(PurchaseRequestErrorCode.PROPOSAL_REQUIRED);
+        }
+        if (proposal.getProposalDate() == null
+            || proposal.getPaymentAccount() == null
+            || proposal.getProposalAmount() == null
+            || proposal.getItems().isEmpty()
+            || proposal.getItems().stream().anyMatch(item ->
+                item.getQuantity() == null || item.getEstimatedUnitPrice() == null)) {
+            throw new BusinessException(PurchaseRequestErrorCode.PROPOSAL_REQUIRED_FIELD_MISSING);
+        }
+
+        long expectedAmountTotal;
+        try {
+            expectedAmountTotal = proposal.getItems().stream()
+                .map(PurchaseRequestProposalItem::calculateExpectedAmount)
+                .reduce(0L, Math::addExact);
+        } catch (ArithmeticException exception) {
+            throw new BusinessException(PurchaseRequestErrorCode.PROPOSAL_ITEM_AMOUNT_MISMATCH);
+        }
+
+        if (proposal.getProposalAmount() != expectedAmountTotal) {
+            throw new BusinessException(PurchaseRequestErrorCode.PROPOSAL_ITEM_AMOUNT_MISMATCH);
+        }
+        if (!proposal.getProposalAmount().equals(purchaseRequest.getTotalPrice())) {
+            throw new BusinessException(PurchaseRequestErrorCode.PROPOSAL_PAYMENT_AMOUNT_MISMATCH);
+        }
+    }
+
+    public boolean hasActiveReceipt(PurchaseRequest purchaseRequest) {
+        return purchaseRequest.getProposal() != null
+            && purchaseRequest.getProposal().getReceipts().stream()
+                .anyMatch(receipt -> !receipt.isDeleted() && !receipt.getFile().isDeleted());
+    }
+
     public PurchaseRequestProposalResponse toResponse(PurchaseRequest purchaseRequest) {
         if (purchaseRequest.getProposal() == null) {
             return null;

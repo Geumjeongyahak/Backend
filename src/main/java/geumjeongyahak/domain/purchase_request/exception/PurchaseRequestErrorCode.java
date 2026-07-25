@@ -75,6 +75,26 @@ public enum PurchaseRequestErrorCode implements ErrorCode {
         HttpStatus.NOT_FOUND,
         "PR-019",
         "품의 단계 영수증을 찾을 수 없습니다."
+    ),
+    PROPOSAL_REQUIRED(
+        HttpStatus.CONFLICT,
+        "PR-020",
+        "최종 확인을 위해 품의 정보가 필요합니다."
+    ),
+    PROPOSAL_REQUIRED_FIELD_MISSING(
+        HttpStatus.CONFLICT,
+        "PR-021",
+        "최종 확인에 필요한 품의 필수값이 누락되었습니다."
+    ),
+    PROPOSAL_ITEM_AMOUNT_MISMATCH(
+        HttpStatus.CONFLICT,
+        "PR-022",
+        "품의금액과 품목 예상 금액 합계가 일치하지 않습니다."
+    ),
+    PROPOSAL_PAYMENT_AMOUNT_MISMATCH(
+        HttpStatus.CONFLICT,
+        "PR-023",
+        "품의금액과 실제 결제 금액이 일치하지 않습니다."
     );
 
     private final HttpStatus status;
