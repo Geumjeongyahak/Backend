@@ -4,19 +4,24 @@ import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.department.entity.Department;
 import geumjeongyahak.domain.department.service.DepartmentProxyService;
+import geumjeongyahak.domain.file.entity.File;
+import geumjeongyahak.domain.file.service.FileProxyService;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposal;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalBudget;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalItem;
+import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalReceipt;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.exception.PurchaseRequestErrorCode;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestProposalRepository;
+import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestProposalReceiptRepository;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.SavePurchaseRequestProposalRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.SavePurchaseRequestProposalRequest.BudgetRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestProposalResponse;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,7 +36,9 @@ public class PurchaseRequestProposalService {
 
     private final PurchaseRequestRepository purchaseRequestRepository;
     private final PurchaseRequestProposalRepository proposalRepository;
+    private final PurchaseRequestProposalReceiptRepository receiptRepository;
     private final DepartmentProxyService departmentProxyService;
+    private final FileProxyService fileProxyService;
 
     @Transactional
     public PurchaseRequestProposalResponse saveProposal(
@@ -67,6 +74,59 @@ public class PurchaseRequestProposalService {
         PurchaseRequestProposal saved = proposalRepository.saveAndFlush(proposal);
         log.debug("품의 정보 저장 완료 (requestId={}, proposalId={})", requestId, saved.getId());
         return toResponse(saved);
+    }
+
+    @Transactional
+    public PurchaseRequestProposalResponse attachReceipt(
+        Long actorId,
+        Long requestId,
+        UUID fileId,
+        boolean isAdmin
+    ) {
+        PurchaseRequest purchaseRequest = findPurchaseRequest(requestId);
+        checkAccess(purchaseRequest, actorId, isAdmin);
+        validateEditable(purchaseRequest);
+
+        File file = fileProxyService.getActiveById(fileId);
+        PurchaseRequestProposal proposal = purchaseRequest.getProposal() != null
+            ? purchaseRequest.getProposal()
+            : new PurchaseRequestProposal(purchaseRequest);
+
+        boolean alreadyAttached = proposal.getReceipts().stream()
+            .anyMatch(receipt -> !receipt.isDeleted() && receipt.getFile().getId().equals(fileId));
+        if (!alreadyAttached) {
+            proposal.addReceipt(new PurchaseRequestProposalReceipt(file));
+        }
+
+        PurchaseRequestProposal saved = proposalRepository.saveAndFlush(proposal);
+        log.debug("품의 단계 영수증 첨부 완료 (requestId={}, fileId={})", requestId, fileId);
+        return toResponse(saved);
+    }
+
+    @Transactional
+    public void deleteReceipt(
+        Long actorId,
+        Long requestId,
+        Long receiptId,
+        boolean isAdmin
+    ) {
+        PurchaseRequest purchaseRequest = findPurchaseRequest(requestId);
+        checkAccess(purchaseRequest, actorId, isAdmin);
+        validateEditable(purchaseRequest);
+
+        PurchaseRequestProposalReceipt receipt = receiptRepository
+            .findByIdAndProposal_PurchaseRequest_IdAndIsDeletedFalse(receiptId, requestId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                PurchaseRequestErrorCode.PROPOSAL_RECEIPT_NOT_FOUND,
+                receiptId
+            ));
+        receipt.softDelete();
+        log.debug(
+            "품의 단계 영수증 삭제 완료 (requestId={}, receiptId={}, fileId={})",
+            requestId,
+            receiptId,
+            receipt.getFile().getId()
+        );
     }
 
     public PurchaseRequestProposalResponse toResponse(PurchaseRequest purchaseRequest) {

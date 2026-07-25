@@ -3,6 +3,7 @@ package geumjeongyahak.domain.purchase_request.v1.dto.response;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposal;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalBudget;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalItem;
+import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalReceipt;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseBudgetItemCategory;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseCalculationDetail;
 import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentAccount;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Schema(description = "품의 정보 응답")
 public record PurchaseRequestProposalResponse(
@@ -55,6 +57,9 @@ public record PurchaseRequestProposalResponse(
 
     @Schema(description = "품목 내역. 품목이 없으면 빈 배열입니다.")
     List<ItemResponse> items,
+
+    @Schema(description = "삭제되지 않은 품의 단계 영수증 목록")
+    List<ReceiptResponse> receipts,
 
     @Schema(description = "품의 정보 최초 저장 시각")
     LocalDateTime createdAt,
@@ -126,6 +131,42 @@ public record PurchaseRequestProposalResponse(
         }
     }
 
+    @Schema(description = "품의 단계 영수증 응답")
+    public record ReceiptResponse(
+        @Schema(description = "품의 단계 영수증 연결 ID", example = "1")
+        Long id,
+
+        @Schema(description = "파일 ID")
+        UUID fileId,
+
+        @Schema(description = "원본 파일 이름", example = "receipt.png", nullable = true)
+        String originalName,
+
+        @Schema(description = "파일 MIME 타입", example = "image/png")
+        String contentType,
+
+        @Schema(description = "파일 공개 URL", nullable = true)
+        String fileUrl,
+
+        @Schema(description = "영수증 표시 순서. 0부터 시작합니다.", example = "0")
+        int sortOrder,
+
+        @Schema(description = "영수증 첨부 시각")
+        LocalDateTime createdAt
+    ) {
+        static ReceiptResponse from(PurchaseRequestProposalReceipt receipt) {
+            return new ReceiptResponse(
+                receipt.getId(),
+                receipt.getFile().getId(),
+                receipt.getFile().getOriginalName(),
+                receipt.getFile().getContentType(),
+                receipt.getFile().getPublicUrl(),
+                receipt.getSortOrder(),
+                receipt.getCreatedAt()
+            );
+        }
+    }
+
     public static PurchaseRequestProposalResponse from(PurchaseRequestProposal proposal, String proposalNumber) {
         return new PurchaseRequestProposalResponse(
             proposal.getId(),
@@ -141,6 +182,10 @@ public record PurchaseRequestProposalResponse(
             proposal.getPaymentAccount(),
             proposal.getBudget() != null ? BudgetResponse.from(proposal.getBudget()) : null,
             proposal.getItems().stream().map(ItemResponse::from).toList(),
+            proposal.getReceipts().stream()
+                .filter(receipt -> !receipt.isDeleted() && !receipt.getFile().isDeleted())
+                .map(ReceiptResponse::from)
+                .toList(),
             proposal.getCreatedAt(),
             proposal.getUpdatedAt()
         );

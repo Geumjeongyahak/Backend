@@ -2,10 +2,13 @@ package geumjeongyahak.e2e.request.purchase;
 
 import static io.restassured.RestAssured.given;
 import static java.util.Map.entry;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 
+import geumjeongyahak.domain.file.repository.FileRepository;
+import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestProposalReceiptRepository;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 import io.restassured.http.ContentType;
@@ -14,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -31,12 +35,23 @@ class PurchaseRequestProposalTest extends RequestBaseTest {
     @Autowired
     private TransactionTemplate transactionTemplate;
 
+    @Autowired
+    private FileRepository fileRepository;
+
+    @Autowired
+    private PurchaseRequestProposalReceiptRepository proposalReceiptRepository;
+
     private final List<Long> createdRequestIds = new ArrayList<>();
+    private final List<UUID> uploadedFileIds = new ArrayList<>();
 
     @AfterEach
     void cleanup() {
         createdRequestIds.reversed().forEach(purchaseRequestRepository::deleteById);
         createdRequestIds.clear();
+        uploadedFileIds.stream()
+            .filter(fileRepository::existsById)
+            .forEach(fileRepository::deleteById);
+        uploadedFileIds.clear();
     }
 
     @Test
@@ -93,6 +108,164 @@ class PurchaseRequestProposalTest extends RequestBaseTest {
             .body("paymentAccount", nullValue())
             .body("budget", nullValue())
             .body("items", hasSize(0));
+    }
+
+    @Test
+    @DisplayName("품의 단계에 여러 영수증을 첨부하고 개별 영수증을 소프트 삭제할 수 있다")
+    void manageProposalReceipts_returnsOnlyActiveReceipts() {
+        Long requestId = createPurchaseRequest("품의 영수증 관리 테스트");
+        UUID firstFileId = uploadPurchaseReceipt("first-receipt.png");
+        UUID secondFileId = uploadPurchaseReceipt("second-receipt.png");
+
+        Long firstReceiptId = given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("fileId", firstFileId.toString()))
+            .post("/{requestId}/proposal/receipts", requestId)
+            .then()
+            .statusCode(201)
+            .body("receipts", hasSize(1))
+            .body("receipts[0].fileId", equalTo(firstFileId.toString()))
+            .extract()
+            .jsonPath()
+            .getLong("receipts[0].id");
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("fileId", secondFileId.toString()))
+            .post("/{requestId}/proposal/receipts", requestId)
+            .then()
+            .statusCode(201)
+            .body("receipts", hasSize(2))
+            .body("receipts[1].fileId", equalTo(secondFileId.toString()))
+            .body("receipts[1].sortOrder", equalTo(1));
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("fileId", firstFileId.toString()))
+            .post("/{requestId}/proposal/receipts", requestId)
+            .then()
+            .statusCode(201)
+            .body("receipts", hasSize(2));
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{requestId}/proposal/receipts/{receiptId}", requestId, firstReceiptId)
+            .then()
+            .statusCode(204);
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get("/{requestId}", requestId)
+            .then()
+            .statusCode(200)
+            .body("proposal.receipts", hasSize(1))
+            .body("proposal.receipts[0].fileId", equalTo(secondFileId.toString()));
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{requestId}/proposal/receipts/{receiptId}", requestId, firstReceiptId)
+            .then()
+            .statusCode(404)
+            .body("code", equalTo("PR-019"));
+
+        assertThat(proposalReceiptRepository.findById(firstReceiptId).orElseThrow().isDeleted()).isTrue();
+        assertThat(fileRepository.findById(firstFileId).orElseThrow().isDeleted()).isFalse();
+    }
+
+    @Test
+    @DisplayName("다른 작성자는 품의 영수증을 관리할 수 없고 관리자는 관리할 수 있다")
+    void manageProposalReceipts_checksAuthorAndAdminAccess() {
+        Long requestId = createPurchaseRequest("품의 영수증 권한 테스트");
+        UUID fileId = uploadPurchaseReceipt("admin-receipt.png");
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
+            .contentType(ContentType.JSON)
+            .body(Map.of("fileId", fileId.toString()))
+            .post("/{requestId}/proposal/receipts", requestId)
+            .then()
+            .statusCode(403)
+            .body("code", equalTo("PR-002"));
+
+        Long receiptId = given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("fileId", fileId.toString()))
+            .post("/{requestId}/proposal/receipts", requestId)
+            .then()
+            .statusCode(201)
+            .body("receipts", hasSize(1))
+            .extract()
+            .jsonPath()
+            .getLong("receipts[0].id");
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
+            .delete("/{requestId}/proposal/receipts/{receiptId}", requestId, receiptId)
+            .then()
+            .statusCode(403)
+            .body("code", equalTo("PR-002"));
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .delete("/{requestId}/proposal/receipts/{receiptId}", requestId, receiptId)
+            .then()
+            .statusCode(204);
+    }
+
+    @Test
+    @DisplayName("CONFIRMED 상태에서는 품의 영수증을 첨부하거나 삭제할 수 없다")
+    void manageProposalReceipts_whenConfirmed_returns409() {
+        Long requestId = createPurchaseRequest("품의 영수증 확정 상태 테스트");
+        UUID attachedFileId = uploadPurchaseReceipt("attached-receipt.png");
+        UUID newFileId = uploadPurchaseReceipt("new-receipt.png");
+
+        Long receiptId = given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("fileId", attachedFileId.toString()))
+            .post("/{requestId}/proposal/receipts", requestId)
+            .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("receipts[0].id");
+
+        var purchaseRequest = purchaseRequestRepository.findById(requestId).orElseThrow();
+        purchaseRequest.confirm();
+        purchaseRequestRepository.saveAndFlush(purchaseRequest);
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("fileId", newFileId.toString()))
+            .post("/{requestId}/proposal/receipts", requestId)
+            .then()
+            .statusCode(409)
+            .body("code", equalTo("PR-018"));
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{requestId}/proposal/receipts/{receiptId}", requestId, receiptId)
+            .then()
+            .statusCode(409)
+            .body("code", equalTo("PR-018"));
     }
 
     @Test
@@ -481,5 +654,19 @@ class PurchaseRequestProposalTest extends RequestBaseTest {
                 entry("estimatedUnitPrice", 2_000L)
             )))
         );
+    }
+
+    private UUID uploadPurchaseReceipt(String fileName) {
+        UUID fileId = UUID.fromString(given()
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .multiPart("file", fileName, "receipt".getBytes(), "image/png")
+            .post("/api/v1/files/images/purchase-items")
+            .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getString("fileId"));
+        uploadedFileIds.add(fileId);
+        return fileId;
     }
 }

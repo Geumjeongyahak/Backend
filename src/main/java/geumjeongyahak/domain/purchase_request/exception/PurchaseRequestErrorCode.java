@@ -70,6 +70,11 @@ public enum PurchaseRequestErrorCode implements ErrorCode {
         HttpStatus.CONFLICT,
         "PR-018",
         "현재 상태에서는 품의 정보를 수정할 수 없습니다."
+    ),
+    PROPOSAL_RECEIPT_NOT_FOUND(
+        HttpStatus.NOT_FOUND,
+        "PR-019",
+        "품의 단계 영수증을 찾을 수 없습니다."
     );
 
     private final HttpStatus status;

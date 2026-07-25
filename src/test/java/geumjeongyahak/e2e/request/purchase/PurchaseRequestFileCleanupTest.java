@@ -143,6 +143,35 @@ class PurchaseRequestFileCleanupTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("품의 단계에 연결된 영수증 파일은 임시 파일 청소 대상에서 제외된다")
+    void cleanupScheduler_keepsProposalReceiptUpload() {
+        useImmediateTemporaryRetention();
+        uploadedFileId = UUID.fromString(uploadPurchaseReceipt());
+        createdRequestId = createPurchaseRequest(
+            getAuthHeader(volunteerToken),
+            CLASSROOM_ID,
+            "품의 영수증 연결 요청",
+            "품의 단계 영수증 파일 청소 제외",
+            10000L
+        );
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("fileId", uploadedFileId.toString()))
+            .post("/{requestId}/proposal/receipts", createdRequestId)
+            .then()
+            .statusCode(201);
+
+        fileCleanupScheduler.cleanupDeletedFiles();
+
+        File file = fileRepository.findById(uploadedFileId).orElseThrow();
+        assertThat(file.isDeleted()).isFalse();
+        assertThat(file.getDeletedAt()).isNull();
+    }
+
+    @Test
     @DisplayName("soft delete 된 구매 영수증 파일은 구매 보고에 재연결할 수 없다")
     void report_withSoftDeletedReceipt_returns404() {
         useImmediateTemporaryRetention();

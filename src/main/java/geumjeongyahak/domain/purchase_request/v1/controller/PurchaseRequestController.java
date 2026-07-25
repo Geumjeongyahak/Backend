@@ -23,6 +23,7 @@ import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestReconfirmationService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestProposalService;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.AttachPurchaseRequestProposalReceiptRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.PurchaseRequestListRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
@@ -131,6 +132,50 @@ public class PurchaseRequestController {
                 false
             )
         );
+    }
+
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
+    @Operation(
+        summary = "품의 단계 영수증 첨부",
+        description = "최초 작성자가 CONFIRMED 이전까지 업로드된 영수증 파일을 품의 정보에 첨부합니다. "
+            + "같은 파일을 다시 요청하면 중복 첨부하지 않습니다."
+    )
+    @PostMapping("/{requestId}/proposal/receipts")
+    public ResponseEntity<PurchaseRequestProposalResponse> attachProposalReceipt(
+        @PathVariable Long requestId,
+        @Valid @RequestBody AttachPurchaseRequestProposalReceiptRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("POST /api/v1/purchase-requests/{}/proposal/receipts", requestId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+            purchaseRequestProposalService.attachReceipt(
+                userDetails.getUserId(),
+                requestId,
+                request.fileId(),
+                false
+            )
+        );
+    }
+
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
+    @Operation(
+        summary = "품의 단계 영수증 삭제",
+        description = "최초 작성자가 CONFIRMED 이전까지 품의 단계 영수증 연결을 소프트 삭제합니다."
+    )
+    @DeleteMapping("/{requestId}/proposal/receipts/{receiptId}")
+    public ResponseEntity<Void> deleteProposalReceipt(
+        @PathVariable Long requestId,
+        @PathVariable Long receiptId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("DELETE /api/v1/purchase-requests/{}/proposal/receipts/{}", requestId, receiptId);
+        purchaseRequestProposalService.deleteReceipt(
+            userDetails.getUserId(),
+            requestId,
+            receiptId,
+            false
+        );
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
