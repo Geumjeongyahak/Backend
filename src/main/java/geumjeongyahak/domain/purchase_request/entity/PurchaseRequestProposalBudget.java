@@ -51,6 +51,18 @@ public class PurchaseRequestProposalBudget extends BaseEntity {
         this.customCalculationDetail = customCalculationDetail;
     }
 
+    public void updateDetails(
+        PurchaseBudgetItemCategory itemCategory,
+        String customItemCategory,
+        PurchaseCalculationDetail calculationDetail,
+        String customCalculationDetail
+    ) {
+        this.itemCategory = itemCategory;
+        this.customItemCategory = customItemCategory;
+        this.calculationDetail = calculationDetail;
+        this.customCalculationDetail = customCalculationDetail;
+    }
+
     void assignProposal(PurchaseRequestProposal proposal) {
         this.proposal = proposal;
     }

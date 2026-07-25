@@ -65,6 +65,11 @@ public enum PurchaseRequestErrorCode implements ErrorCode {
         HttpStatus.CONFLICT,
         "PR-017",
         "선금 결제의 최종 승인에는 영수증이 필요합니다."
+    ),
+    PROPOSAL_NOT_EDITABLE(
+        HttpStatus.CONFLICT,
+        "PR-018",
+        "현재 상태에서는 품의 정보를 수정할 수 없습니다."
     );
 
     private final HttpStatus status;

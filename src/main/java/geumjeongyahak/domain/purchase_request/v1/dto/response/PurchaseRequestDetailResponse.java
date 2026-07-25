@@ -70,6 +70,9 @@ public record PurchaseRequestDetailResponse(
     @Schema(description = "현재 거래처별 잔액")
     List<VendorBalanceResponse> vendorBalances,
 
+    @Schema(description = "품의 정보. 아직 저장하지 않은 경우 null입니다.", nullable = true)
+    PurchaseRequestProposalResponse proposal,
+
     @Schema(description = "생성 시각")
     LocalDateTime createdAt
 ) {
@@ -127,7 +130,11 @@ public record PurchaseRequestDetailResponse(
         }
     }
 
-    public static PurchaseRequestDetailResponse from(PurchaseRequest r, List<VendorResponse> vendors) {
+    public static PurchaseRequestDetailResponse from(
+        PurchaseRequest r,
+        List<VendorResponse> vendors,
+        PurchaseRequestProposalResponse proposal
+    ) {
         return new PurchaseRequestDetailResponse(
             r.getId(),
             r.getClassroom().getId(),
@@ -148,6 +155,7 @@ public record PurchaseRequestDetailResponse(
             r.getItems().stream().map(ItemResponse::from).toList(),
             r.getTransactions().stream().map(TransactionResponse::from).toList(),
             vendors.stream().map(VendorBalanceResponse::from).toList(),
+            proposal,
             r.getCreatedAt()
         );
     }

@@ -57,6 +57,7 @@ public class PurchaseRequestService {
     private final UserProxyService userProxyService;
     private final VendorService vendorService;
     private final EventPublisher eventPublisher;
+    private final PurchaseRequestProposalService purchaseRequestProposalService;
 
     @Transactional
     public PurchaseRequestDetailResponse createPurchaseRequest(
@@ -456,7 +457,11 @@ public class PurchaseRequestService {
     }
 
     private PurchaseRequestDetailResponse toDetailResponse(PurchaseRequest purchaseRequest) {
-        return PurchaseRequestDetailResponse.from(purchaseRequest, vendorService.getVendors(null));
+        return PurchaseRequestDetailResponse.from(
+            purchaseRequest,
+            vendorService.getVendors(null),
+            purchaseRequestProposalService.toResponse(purchaseRequest)
+        );
     }
 
     private PurchaseRequestDetailResponse createPurchaseRequest(

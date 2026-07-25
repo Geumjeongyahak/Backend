@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,10 +22,13 @@ import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestReconfirmationService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestService;
+import geumjeongyahak.domain.purchase_request.service.PurchaseRequestProposalService;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.PurchaseRequestListRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.SavePurchaseRequestProposalRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
+import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestProposalResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
 
 @Slf4j
@@ -39,6 +43,7 @@ public class PurchaseRequestController {
 
     private final PurchaseRequestService purchaseRequestService;
     private final PurchaseRequestReconfirmationService purchaseRequestReconfirmationService;
+    private final PurchaseRequestProposalService purchaseRequestProposalService;
 
     @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
@@ -102,6 +107,29 @@ public class PurchaseRequestController {
         log.debug("GET /api/v1/purchase-requests/{}", requestId);
         return ResponseEntity.ok(
             purchaseRequestService.getPurchaseRequest(requestId)
+        );
+    }
+
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
+    @Operation(
+        summary = "품의 정보 저장",
+        description = "최초 작성자가 CONFIRMED 이전까지 품의 정보를 중간 저장하거나 수정합니다. "
+            + "모든 필드는 선택값이며 요청 본문의 전체 상태로 교체됩니다."
+    )
+    @PutMapping("/{requestId}/proposal")
+    public ResponseEntity<PurchaseRequestProposalResponse> saveProposal(
+        @PathVariable Long requestId,
+        @Valid @RequestBody SavePurchaseRequestProposalRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PUT /api/v1/purchase-requests/{}/proposal", requestId);
+        return ResponseEntity.ok(
+            purchaseRequestProposalService.saveProposal(
+                userDetails.getUserId(),
+                requestId,
+                request,
+                false
+            )
         );
     }
 
