@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.purchase_request.v1.dto.response;
 
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -94,6 +95,7 @@ public record PurchaseRequestDetailResponse(
         String vendorName,
         List<String> itemNames,
         Long amount,
+        PurchasePaymentMethod paymentMethod,
         java.util.UUID receiptFileId,
         String receiptFileUrl
     ) {
@@ -104,6 +106,7 @@ public record PurchaseRequestDetailResponse(
                 transaction.getVendor().getName(),
                 List.copyOf(transaction.getItemNames()),
                 transaction.getAmount(),
+                transaction.getPaymentMethod(),
                 transaction.getReceiptFile() != null ? transaction.getReceiptFile().getId() : null,
                 transaction.getReceiptFile() != null ? transaction.getReceiptFile().getPublicUrl() : null
             );

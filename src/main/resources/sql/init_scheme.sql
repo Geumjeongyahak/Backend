@@ -560,6 +560,7 @@ CREATE TABLE purchase_request_payment_transactions (
     purchase_request_id BIGINT NOT NULL,
     vendor_id BIGINT NOT NULL,
     amount BIGINT NOT NULL,
+    payment_method VARCHAR(20),
     receipt_file_id UUID,
     FOREIGN KEY (purchase_request_id) REFERENCES purchase_requests(id),
     FOREIGN KEY (vendor_id) REFERENCES vendors(id),

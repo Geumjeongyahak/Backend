@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 import io.restassured.http.ContentType;
 import java.util.List;
@@ -47,12 +48,16 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
 
     private Long currentRequestId;
     private Long createdVendorId;
+    private Long secondCreatedVendorId;
     private UUID registeredDriveFileId;
 
     @AfterEach
     void cleanup() {
         if (createdVendorId != null) {
             vendorBalanceHistoryRepository.deleteAllByVendor_Id(createdVendorId);
+        }
+        if (secondCreatedVendorId != null) {
+            vendorBalanceHistoryRepository.deleteAllByVendor_Id(secondCreatedVendorId);
         }
         if (currentRequestId != null) {
             if (purchaseRequestRepository.existsById(currentRequestId)) {
@@ -69,6 +74,12 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
                 vendorRepository.deleteById(createdVendorId);
             }
             createdVendorId = null;
+        }
+        if (secondCreatedVendorId != null) {
+            if (vendorRepository.existsById(secondCreatedVendorId)) {
+                vendorRepository.deleteById(secondCreatedVendorId);
+            }
+            secondCreatedVendorId = null;
         }
     }
 
@@ -480,8 +491,91 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .body("status", equalTo("PURCHASED"))
             .body("transactions", hasSize(1))
-            .body("transactions[0].itemNames", hasSize(2))
+            .body("transactions[0].itemNames", hasSize(1))
+            .body("transactions[0].paymentMethod", nullValue())
             .body("transactions[0].receiptFileId", equalTo(receiptFileId));
+    }
+
+    @Test
+    @DisplayName("선금 결제 구매 완료 보고에 거래가 여러 건이면 400")
+    void report_prepaidWithMultipleTransactions_returns400() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = createPurchaseRequest(
+            getAuthHeader(volunteerToken), CLASSROOM_ID, "선금 결제 구조 검증", "단일 거래만 허용", 20000L, "PREPAID");
+        approvePurchaseRequest(currentRequestId);
+
+        Map<String, Object> firstTransaction = transactionBody(
+            createdVendorId, 10000L, List.of("선금 결제 구조 검증 품목"), null);
+        Map<String, Object> secondTransaction = transactionBody(
+            createdVendorId, 10000L, List.of("선금 결제 구조 검증 품목"), null);
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("transactions", List.of(firstTransaction, secondTransaction)))
+            .post("/{requestId}/report", currentRequestId)
+            .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("선금 결제 구매 완료 보고에 지급 구분이 없으면 400")
+    void report_prepaidWithoutPaymentMethod_returns400() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = createPurchaseRequest(
+            getAuthHeader(volunteerToken), CLASSROOM_ID, "선금 지급 구분 검증", "지급 구분 필수", 20000L, "PREPAID");
+        approvePurchaseRequest(currentRequestId);
+        Map<String, Object> transaction = transactionBody(
+            createdVendorId, 20000L, List.of("선금 지급 구분 검증 품목"), null);
+        transaction.remove("paymentMethod");
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("transactions", List.of(transaction)))
+            .post("/{requestId}/report", currentRequestId)
+            .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("실 결제의 거래 수가 신청 품목 수와 다르면 400")
+    void report_actualWithMissingItemTransaction_returns400() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = createActualPurchaseRequestWithTwoItems();
+        approvePurchaseRequest(currentRequestId);
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("transactions", List.of(
+                transactionBody(createdVendorId, 20000L, List.of("교재"), null)
+            )))
+            .post("/{requestId}/report", currentRequestId)
+            .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("실 결제 거래 한 건에 품목이 여러 개이면 400")
+    void report_actualWithMultipleItemsInOneTransaction_returns400() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = createActualPurchaseRequestWithTwoItems();
+        approvePurchaseRequest(currentRequestId);
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("transactions", List.of(
+                transactionBody(createdVendorId, 20000L, List.of("교재", "문구"), null)
+            )))
+            .post("/{requestId}/report", currentRequestId)
+            .then()
+            .statusCode(400);
     }
 
     @Test
@@ -607,6 +701,180 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .then()
             .statusCode(200)
             .body("balance", equalTo(80000));
+    }
+
+    @Test
+    @DisplayName("선금 결제 결재 확인 시 거래처 잔액을 충전한다")
+    void confirm_prepaid_chargesVendorBalance() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = createPurchaseRequest(
+            getAuthHeader(volunteerToken), CLASSROOM_ID, "선금 결제 충전", "결재 확인 시 충전", 20000L, "PREPAID");
+        approvePurchaseRequest(currentRequestId);
+        String receiptFileId = uploadPurchaseReceipt();
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("transactions", List.of(transactionBody(
+                createdVendorId, 20000L, List.of("선금 결제 충전 품목"), receiptFileId))))
+            .post("/{requestId}/report", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", currentRequestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("CONFIRMED"));
+
+        given()
+            .basePath("/api/v1/admin/vendors")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .get("/{vendorId}", createdVendorId)
+            .then()
+            .statusCode(200)
+            .body("balance", equalTo(120000));
+    }
+
+    @Test
+    @DisplayName("선금 결제에 활성 영수증이 없으면 결재 확인을 거부한다")
+    void confirm_prepaidWithoutReceipt_returns409() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = createPurchaseRequest(
+            getAuthHeader(volunteerToken), CLASSROOM_ID, "선금 영수증 검증", "영수증 필수", 20000L, "PREPAID");
+        approvePurchaseRequest(currentRequestId);
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("transactions", List.of(transactionBody(
+                createdVendorId, 20000L, List.of("선금 영수증 검증 품목"), null))))
+            .post("/{requestId}/report", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", currentRequestId)
+            .then()
+            .statusCode(409);
+    }
+
+    @Test
+    @DisplayName("선금 결제 거래처가 비활성이면 충전과 결재 확인을 거부한다")
+    void confirm_prepaidWithInactiveVendor_returns409() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = createPurchaseRequest(
+            getAuthHeader(volunteerToken), CLASSROOM_ID, "선금 비활성 거래처", "비활성 충전 차단", 20000L, "PREPAID");
+        approvePurchaseRequest(currentRequestId);
+        String receiptFileId = uploadPurchaseReceipt();
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("transactions", List.of(transactionBody(
+                createdVendorId, 20000L, List.of("선금 비활성 거래처 품목"), receiptFileId))))
+            .post("/{requestId}/report", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .basePath("/api/v1/admin/vendors")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("isActive", false))
+            .patch("/{vendorId}", createdVendorId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", currentRequestId)
+            .then()
+            .statusCode(409);
+
+        assertVendorBalance(createdVendorId, 100000);
+    }
+
+    @Test
+    @DisplayName("실 결제는 품목별로 다른 거래처를 허용하고 각 잔액을 차감한다")
+    void confirm_actualWithDifferentVendors_deductsEachVendorBalance() {
+        createdVendorId = createVendorAndCharge(100000L);
+        secondCreatedVendorId = createVendorAndCharge(50000L);
+        currentRequestId = createActualPurchaseRequestWithTwoItems();
+        approvePurchaseRequest(currentRequestId);
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("transactions", List.of(
+                transactionBody(createdVendorId, 12000L, List.of("교재"), null),
+                transactionBody(secondCreatedVendorId, 8000L, List.of("문구"), null)
+            )))
+            .post("/{requestId}/report", currentRequestId)
+            .then()
+            .statusCode(200)
+            .body("transactions", hasSize(2))
+            .body("transactions[0].paymentMethod", nullValue())
+            .body("transactions[1].paymentMethod", nullValue());
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", currentRequestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("CONFIRMED"));
+
+        assertVendorBalance(createdVendorId, 88000);
+        assertVendorBalance(secondCreatedVendorId, 42000);
+    }
+
+    @Test
+    @DisplayName("실 결제 거래처 중 하나가 잔액 부족이면 모든 차감을 롤백한다")
+    void confirm_actualWithInsufficientSecondVendor_rollsBackAllDeductions() {
+        createdVendorId = createVendorAndCharge(100000L);
+        secondCreatedVendorId = createVendorAndCharge(1000L);
+        currentRequestId = createActualPurchaseRequestWithTwoItems();
+        approvePurchaseRequest(currentRequestId);
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("transactions", List.of(
+                transactionBody(createdVendorId, 12000L, List.of("교재"), null),
+                transactionBody(secondCreatedVendorId, 8000L, List.of("문구"), null)
+            )))
+            .post("/{requestId}/report", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", currentRequestId)
+            .then()
+            .statusCode(409);
+
+        assertVendorBalance(createdVendorId, 100000);
+        assertVendorBalance(secondCreatedVendorId, 1000);
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("PURCHASED"));
     }
 
     @Test
@@ -814,9 +1082,9 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .statusCode(200)
             .body("status", equalTo("PURCHASED"))
             .body("transactions", hasSize(1))
-            .body("transactions[0].itemNames", hasSize(2))
-            .body("transactions[0].itemNames[0]", equalTo("교재"))
-            .body("transactions[0].itemNames[1]", equalTo("복사용지"));
+            .body("transactions[0].itemNames", hasSize(1))
+            .body("transactions[0].itemNames[0]", equalTo("교재 구입 품목"))
+            .body("transactions[0].paymentMethod", nullValue());
     }
 
     @Test
@@ -854,12 +1122,73 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
         return requestId;
     }
 
+    private void approvePurchaseRequest(Long requestId) {
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", "구매 완료 보고 구조 검증"))
+            .patch("/{requestId}/approve", requestId)
+            .then()
+            .statusCode(200);
+    }
+
+    private Long createActualPurchaseRequestWithTwoItems() {
+        return given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "title", "실 결제 다중 거래처 검증",
+                "content", "품목별 거래처 검증",
+                "classroomId", CLASSROOM_ID,
+                "paymentType", "ACTUAL",
+                "items", List.of(
+                    Map.of("name", "교재", "reason", "수업 자료", "quantity", 1),
+                    Map.of("name", "문구", "reason", "수업 용품", "quantity", 1)
+                )
+            ))
+            .post()
+            .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
+    }
+
+    private Map<String, Object> transactionBody(
+        Long vendorId,
+        long amount,
+        List<String> itemNames,
+        String receiptFileId
+    ) {
+        Map<String, Object> transaction = new java.util.LinkedHashMap<>();
+        transaction.put("vendorId", vendorId);
+        transaction.put("itemNames", itemNames);
+        transaction.put("amount", amount);
+        transaction.put("paymentMethod", "CARD");
+        if (receiptFileId != null) {
+            transaction.put("receiptFileId", receiptFileId);
+        }
+        return transaction;
+    }
+
+    private void assertVendorBalance(Long vendorId, int expectedBalance) {
+        given()
+            .basePath("/api/v1/admin/vendors")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .get("/{vendorId}", vendorId)
+            .then()
+            .statusCode(200)
+            .body("balance", equalTo(expectedBalance));
+    }
+
     private Long createVendorAndCharge(long amount) {
         Long vendorId = given()
             .basePath("/api/v1/admin/vendors")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("name", "선결제 테스트 거래처"))
+            .body(Map.of("name", "결제 테스트 거래처 " + System.nanoTime()))
             .post()
             .then()
             .statusCode(201)
@@ -880,13 +1209,9 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     }
 
     private Map<String, Object> reportBody(Long vendorId, long amount, String receiptFileId) {
-        Map<String, Object> transaction = new java.util.LinkedHashMap<>();
-        transaction.put("vendorId", vendorId);
-        transaction.put("itemNames", List.of("교재", "복사용지"));
-        transaction.put("amount", amount);
-        if (receiptFileId != null) {
-            transaction.put("receiptFileId", receiptFileId);
-        }
+        Map<String, Object> transaction = transactionBody(
+            vendorId, amount, List.of("교재 구입 품목"), receiptFileId);
+        transaction.remove("paymentMethod");
         return Map.of("transactions", List.of(transaction));
     }
 

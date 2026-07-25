@@ -1548,9 +1548,9 @@ VALUES
     (3, 1, '수업용 문제집', '목민서관 교재 구입 선결제 산출 근거', 10);
 ALTER SEQUENCE purchase_requests_items_id_seq RESTART WITH 4;
 
-INSERT INTO purchase_request_payment_transactions (id, purchase_request_id, vendor_id, amount, receipt_file_id)
+INSERT INTO purchase_request_payment_transactions (id, purchase_request_id, vendor_id, amount, payment_method, receipt_file_id)
 VALUES
-    (1, 1, 2, 100000, NULL);
+    (1, 1, 2, 100000, 'TRANSFER', NULL);
 ALTER SEQUENCE purchase_request_payment_transactions_id_seq RESTART WITH 2;
 
 INSERT INTO purchase_request_payment_transaction_item_names (transaction_id, sort_order, item_name)

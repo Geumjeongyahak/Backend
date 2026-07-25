@@ -265,7 +265,7 @@ public class PurchaseRequestService {
             throw new BusinessException(PurchaseRequestErrorCode.PURCHASE_DEADLINE_EXCEEDED);
         }
 
-        purchaseRequest.replaceTransactions(toTransactions(request));
+        purchaseRequest.replaceTransactions(toTransactions(purchaseRequest, request));
 
         purchaseRequest.reportPurchase();
 
@@ -284,7 +284,7 @@ public class PurchaseRequestService {
             throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
         }
 
-        purchaseRequest.replaceTransactions(toTransactions(request));
+        purchaseRequest.replaceTransactions(toTransactions(purchaseRequest, request));
 
         return toDetailResponse(purchaseRequest);
     }
@@ -300,14 +300,25 @@ public class PurchaseRequestService {
 
         validateConfirmable(purchaseRequest);
         User confirmer = userProxyService.getById(confirmerId);
-        Map<Vendor, Long> amountByVendor = purchaseRequest.getTransactions().stream()
-            .collect(Collectors.groupingBy(
-                PurchaseRequestPaymentTransaction::getVendor,
-                Collectors.summingLong(PurchaseRequestPaymentTransaction::getAmount)
-            ));
-        amountByVendor.forEach((vendor, amount) ->
-            vendorService.deductForPurchaseRequest(vendor, purchaseRequest, amount, confirmer)
-        );
+        if (purchaseRequest.getPaymentType() == PurchasePaymentType.PREPAID) {
+            PurchaseRequestPaymentTransaction transaction = purchaseRequest.getTransactions().getFirst();
+            vendorService.chargeForPurchaseRequest(
+                transaction.getVendor(),
+                purchaseRequest,
+                purchaseRequest.getTotalPrice(),
+                transaction.getReceiptFile(),
+                confirmer
+            );
+        } else {
+            Map<Vendor, Long> amountByVendor = purchaseRequest.getTransactions().stream()
+                .collect(Collectors.groupingBy(
+                    PurchaseRequestPaymentTransaction::getVendor,
+                    Collectors.summingLong(PurchaseRequestPaymentTransaction::getAmount)
+                ));
+            amountByVendor.forEach((vendor, amount) ->
+                vendorService.deductForPurchaseRequest(vendor, purchaseRequest, amount, confirmer)
+            );
+        }
 
         purchaseRequest.confirm();
 
@@ -342,15 +353,40 @@ public class PurchaseRequestService {
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));
     }
 
-    private List<PurchaseRequestPaymentTransaction> toTransactions(ReportPurchaseRequest request) {
-        return request.transactions().stream()
+    private List<PurchaseRequestPaymentTransaction> toTransactions(
+        PurchaseRequest purchaseRequest,
+        ReportPurchaseRequest request
+    ) {
+        if (request == null || request.transactions() == null || request.transactions().isEmpty()) {
+            throw new BusinessException(PurchaseRequestErrorCode.INVALID_TRANSACTION_STRUCTURE);
+        }
+        request.transactions().forEach(this::validateTransactionReport);
+
+        List<PurchaseRequestPaymentTransaction> transactions = request.transactions().stream()
             .map(transaction -> new PurchaseRequestPaymentTransaction(
                 vendorService.getActiveById(transaction.vendorId()),
                 normalizeItemNames(transaction.itemNames()),
                 transaction.amount(),
+                purchaseRequest.getPaymentType() == PurchasePaymentType.PREPAID
+                    ? transaction.paymentMethod()
+                    : null,
                 getActiveFileOrNull(transaction.receiptFileId())
             ))
             .toList();
+        validateTransactionStructure(purchaseRequest, transactions);
+        return transactions;
+    }
+
+    private void validateTransactionReport(ReportPurchaseRequest.TransactionReport transaction) {
+        if (transaction == null
+            || transaction.vendorId() == null
+            || transaction.amount() == null
+            || transaction.amount() <= 0
+            || transaction.itemNames() == null
+            || transaction.itemNames().isEmpty()
+            || transaction.itemNames().stream().anyMatch(itemName -> itemName == null || itemName.isBlank())) {
+            throw new BusinessException(PurchaseRequestErrorCode.INVALID_TRANSACTION_STRUCTURE);
+        }
     }
 
     private List<String> normalizeItemNames(List<String> itemNames) {
@@ -372,6 +408,7 @@ public class PurchaseRequestService {
         if (purchaseRequest.getTransactions().isEmpty()) {
             throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
         }
+        validateTransactionStructure(purchaseRequest, purchaseRequest.getTransactions());
         for (PurchaseRequestPaymentTransaction transaction : purchaseRequest.getTransactions()) {
             if (transaction.getVendor() == null
                 || transaction.getAmount() == null
@@ -379,6 +416,42 @@ public class PurchaseRequestService {
                 || transaction.getItemNames().isEmpty()) {
                 throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
             }
+        }
+        if (purchaseRequest.getPaymentType() == PurchasePaymentType.PREPAID) {
+            File receiptFile = purchaseRequest.getTransactions().getFirst().getReceiptFile();
+            if (receiptFile == null || receiptFile.isDeleted()) {
+                throw new BusinessException(PurchaseRequestErrorCode.PREPAID_RECEIPT_REQUIRED);
+            }
+        }
+    }
+
+    private void validateTransactionStructure(
+        PurchaseRequest purchaseRequest,
+        List<PurchaseRequestPaymentTransaction> transactions
+    ) {
+        Map<String, Long> expectedItemCounts = purchaseRequest.getItems().stream()
+            .map(PurchaseRequestItem::getName)
+            .map(String::trim)
+            .collect(Collectors.groupingBy(name -> name, Collectors.counting()));
+        Map<String, Long> reportedItemCounts = transactions.stream()
+            .flatMap(transaction -> transaction.getItemNames().stream())
+            .collect(Collectors.groupingBy(name -> name, Collectors.counting()));
+
+        if (!expectedItemCounts.equals(reportedItemCounts)) {
+            throw new BusinessException(PurchaseRequestErrorCode.INVALID_TRANSACTION_STRUCTURE);
+        }
+
+        if (purchaseRequest.getPaymentType() == PurchasePaymentType.PREPAID) {
+            if (transactions.size() != 1 || transactions.getFirst().getPaymentMethod() == null) {
+                throw new BusinessException(PurchaseRequestErrorCode.INVALID_TRANSACTION_STRUCTURE);
+            }
+            return;
+        }
+
+        boolean everyTransactionHasOneItem = transactions.stream()
+            .allMatch(transaction -> transaction.getItemNames().size() == 1);
+        if (transactions.size() != purchaseRequest.getItems().size() || !everyTransactionHasOneItem) {
+            throw new BusinessException(PurchaseRequestErrorCode.INVALID_TRANSACTION_STRUCTURE);
         }
     }
 

@@ -3,6 +3,7 @@ package geumjeongyahak.domain.purchase_request.v1.controller;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
 import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestAdminViewService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestAdminViewService.PurchaseRequestFilter;
@@ -156,6 +157,31 @@ public class PurchaseRequestViewController {
                 return item;
             })
             .collect(java.util.stream.Collectors.toList()));
+        if (!response.transactions().isEmpty()) {
+            if (response.paymentType() == PurchasePaymentType.PREPAID) {
+                PurchaseRequestDetailResponse.TransactionResponse transaction = response.transactions().getFirst();
+                form.setVendorId(transaction.vendorId());
+                form.setAmount(transaction.amount());
+                form.setPaymentMethod(transaction.paymentMethod());
+                form.setReceiptFileId(transaction.receiptFileId());
+            } else {
+                java.util.List<PurchaseRequestDetailResponse.TransactionResponse> remainingTransactions =
+                    new java.util.ArrayList<>(response.transactions());
+                for (PurchaseRequestForm.ItemForm item : form.getItems()) {
+                    PurchaseRequestDetailResponse.TransactionResponse transaction = remainingTransactions.stream()
+                        .filter(candidate -> candidate.itemNames().size() == 1
+                            && candidate.itemNames().getFirst().equals(item.getName()))
+                        .findFirst()
+                        .orElse(null);
+                    if (transaction != null) {
+                        item.setVendorId(transaction.vendorId());
+                        item.setActualAmount(transaction.amount());
+                        item.setReceiptFileId(transaction.receiptFileId());
+                        remainingTransactions.remove(transaction);
+                    }
+                }
+            }
+        }
 
         model.addAttribute("active", "purchaseRequests");
         model.addAttribute("adminName", authentication.getName());
@@ -163,6 +189,7 @@ public class PurchaseRequestViewController {
         model.addAttribute("form", form);
         model.addAttribute("classrooms", purchaseRequestAdminViewService.getAllClassrooms());
         model.addAttribute("vendors", purchaseRequestAdminViewService.getAllVendors());
+        model.addAttribute("purchasePaymentMethods", PurchasePaymentMethod.values());
         return "admin/request/purchase/purchase-requests-edit";
     }
 
@@ -226,17 +253,24 @@ public class PurchaseRequestViewController {
             return "redirect:/admin/request/purchase/purchase-requests/" + requestId + "/edit";
         }
 
-        List<String> itemNames = form.getTransactionItemNames().isEmpty()
-            ? form.getItems().stream().map(PurchaseRequestForm.ItemForm::getName).toList()
-            : form.getTransactionItemNames();
-        List<geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.TransactionReport> itemReports = List.of(
-            new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.TransactionReport(
-                form.getVendorId(),
-                itemNames,
-                form.getAmount(),
-                form.getReceiptFileId()
-            )
-        );
+        List<geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.TransactionReport> itemReports =
+            form.getPaymentType() == PurchasePaymentType.PREPAID
+                ? List.of(new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.TransactionReport(
+                    form.getVendorId(),
+                    form.getItems().stream().map(PurchaseRequestForm.ItemForm::getName).toList(),
+                    form.getAmount(),
+                    form.getPaymentMethod(),
+                    form.getReceiptFileId()
+                ))
+                : form.getItems().stream()
+                    .map(item -> new geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest.TransactionReport(
+                        item.getVendorId(),
+                        List.of(item.getName()),
+                        item.getActualAmount(),
+                        null,
+                        item.getReceiptFileId()
+                    ))
+                    .toList();
 
         purchaseRequestAdminViewService.report(userDetails.getUserId(), requestId, itemReports);
 

@@ -29,7 +29,7 @@
 
 | 값 | 의미 |
 |---|---|
-| `PREPAID` | 선 결제 |
+| `PREPAID` | 선금 결제 |
 | `ACTUAL` | 실 결제 |
 
 - 결제 유형은 결제 신청 단위의 `paymentType`으로 저장합니다.
@@ -37,14 +37,18 @@
 - `content`는 선택값이며 생략하거나 `null`로 전달할 수 있습니다.
 - 신청자의 소속 부서는 서버가 신청 시점의 사용자 정보에서 자동 저장하며, 소속 부서가 없으면 `null`입니다.
 - 요청 생성 시 예상 금액, 거래처, 영수증은 받지 않습니다.
-- 구매 완료 보고 시 거래처별 거래 라인(`transactions[]`)에 실제 결제 금액을 입력합니다.
-- `CONFIRMED` 전환 시 거래처별 총 결제 금액만큼 잔액을 차감하고 `DEDUCT` 이력을 저장합니다.
-- 거래처 잔액이 결제 금액보다 적으면 결재 확인 요청은 `409 CONFLICT`로 실패하며 요청 상태와 거래처 잔액은 변경되지 않습니다.
+- 선금 결제는 신청의 모든 품목을 포함한 거래를 정확히 1건만 보고합니다.
+- 실 결제는 신청 품목별로 거래를 정확히 1건씩 보고하며, 각 거래는 서로 다른 거래처를 선택할 수 있습니다.
+- 선금 결제를 `CONFIRMED`로 전환하면 보고 금액만큼 거래처 잔액을 충전하고 `CHARGE` 이력을 저장합니다.
+- 실 결제를 `CONFIRMED`로 전환하면 거래처별 총 결제 금액만큼 잔액을 차감하고 `DEDUCT` 이력을 저장합니다.
+- 실 결제에서 거래처 잔액이 결제 금액보다 적으면 결재 확인 요청은 `409 CONFLICT`로 실패하며 요청 상태와 거래처 잔액은 변경되지 않습니다.
 - 거래처 잔액 차감은 같은 거래처에 대한 동시 승인 요청을 고려해 `PESSIMISTIC_WRITE` lock으로 거래처를 다시 조회한 뒤 수행합니다.
 
 ### 2.3 영수증 정책
 
-- 영수증은 구매 완료 거래 라인 단위로 선택 첨부합니다.
+- 영수증은 구매 완료 거래 라인당 최대 1개를 첨부합니다.
+- 선금 결제는 최종 결재 확인 시 활성 영수증이 필수이고, 실 결제의 영수증은 선택입니다.
+- `paymentMethod`는 선금 결제 거래에서만 필수입니다. 실 결제에서 전달하더라도 서버는 저장하지 않습니다.
 - 구매 완료 보고 API는 `transactions[].receiptFileId`를 받습니다.
 - soft delete된 파일은 영수증으로 재연결할 수 없습니다.
 
@@ -58,7 +62,7 @@
 
 ## 3. 대표 플로우
 
-### 3.1 결재 확인 시 거래처 잔액 차감
+### 3.1 결재 확인 시 거래처 잔액 변경
 
 ```mermaid
 sequenceDiagram
@@ -73,11 +77,18 @@ sequenceDiagram
     Admin->>API: PATCH /api/v1/admin/purchase-requests/{id}/confirm
     API->>PR: confirmPurchase(confirmerId, requestId)
     PR->>PR: PURCHASED 상태와 거래 라인 필수값 검증
-    loop 거래처별 합산 금액
+    alt 선금 결제
+        PR->>VendorSvc: chargeForPurchaseRequest(vendor, request, amount, receipt, confirmer)
+        VendorSvc->>VendorRepo: findByIdForUpdate(vendorId)
+        VendorSvc->>VendorSvc: 활성 검증 및 충전
+        VendorSvc->>HistoryRepo: CHARGE 이력 저장
+    else 실 결제
+      loop 거래처별 합산 금액
         PR->>VendorSvc: deductForPurchaseRequest(vendor, request, amount, confirmer)
         VendorSvc->>VendorRepo: findByIdForUpdate(vendorId)
         VendorSvc->>VendorSvc: 활성/잔액 검증 및 차감
         VendorSvc->>HistoryRepo: DEDUCT 이력 저장
+      end
     end
     PR->>PR: request.confirm()
 ```
@@ -259,11 +270,14 @@ sequenceDiagram
       "vendorId": 1,
       "itemNames": ["국어 교재", "복사용지"],
       "amount": 15000,
+      "paymentMethod": "CARD",
       "receiptFileId": "9e20d3e8-d4f2-42df-bf73-6dd97cc6fc2d"
     }
   ]
 }
 ```
+
+`paymentMethod`는 선금 결제에서만 필수이며, 실 결제 요청에서는 생략합니다.
 
 ### 4.5 거래처 관리
 
@@ -285,7 +299,7 @@ sequenceDiagram
 - **응답**: `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
 - **파일명**: `지출증빙서류-{구매요청 제목}-{생성일}.docx`
 
-품의서와 결의서를 한 문서로 생성하므로, 선결제 구매 요청이 구매 완료 보고된 뒤 관리자 결재 확인까지 완료된 `CONFIRMED` 상태에서만 생성할 수 있습니다.
+품의서와 결의서를 한 문서로 생성하므로, 선금 결제 구매 요청이 구매 완료 보고된 뒤 관리자 결재 확인까지 완료된 `CONFIRMED` 상태에서만 생성할 수 있습니다.
 
 #### 생성 가능 조건
 
@@ -336,7 +350,7 @@ GET /api/v1/admin/purchase-requests/{requestId}
 | 품의금액/결의금액 | `totalPrice` |
 | 품목내역 내용 | `items[].name` |
 | 품목내역 수량 | `items[].quantity` |
-| 선결제 여부 확인 | `paymentType` |
+| 선금 결제 여부 확인 | `paymentType` |
 | 거래내역 세부내역 | `transactions[].itemNames` |
 | 거래내역 금액 | `transactions[].amount` |
 | 거래처명 | `transactions[].vendorName` |
@@ -421,7 +435,7 @@ GET /api/v1/admin/purchase-requests/{requestId}
 
 #### 초기 데이터 확인 흐름
 
-`src/main/resources/sql/init_data.sql`에는 배포 후 수동 테스트를 위한 선결제 구매 완료 데이터가 있습니다.
+`src/main/resources/sql/init_data.sql`에는 배포 후 수동 테스트를 위한 선금 결제 구매 완료 데이터가 있습니다.
 
 - 구매 요청 ID: `1`
 - 거래처: `목민서관`
@@ -450,7 +464,7 @@ PATCH /api/v1/admin/purchase-requests/1/confirm
 | 구매 완료 거래 입력 오류 | 400/409 | `PR-006`, `PR-007` |
 | 지출증빙서류 템플릿 없음/읽기 실패 | 500 | `PR-008`, `PR-009` |
 | 지출증빙서류 생성 불가 상태 | 409 | `PR-010` |
-| 선결제가 아닌 구매 요청의 지출증빙서류 생성 | 409 | `PR-011` |
+| 선금 결제가 아닌 구매 요청의 지출증빙서류 생성 | 409 | `PR-011` |
 | 지출증빙서류 생성 실패 | 500 | `PR-012` |
 | 지출증빙서류 영수증 파일 읽기 실패 | 500 | `PR-013` |
 | 지원하지 않는 영수증 이미지 형식 | 409 | `PR-014` |

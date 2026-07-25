@@ -169,7 +169,7 @@ class PurchaseRequestFileCleanupTest extends RequestBaseTest {
             .contentType(ContentType.JSON)
             .body(Map.of("transactions", List.of(Map.of(
                 "vendorId", createdVendorId,
-                "itemNames", List.of("복사용지"),
+                "itemNames", List.of("재연결 차단 요청 품목"),
                 "amount", 10000L,
                 "receiptFileId", uploadedFileId.toString()
             ))))

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -34,8 +35,8 @@ public class PurchaseRequestForm {
 
     private Long vendorId;
     private Long amount;
+    private PurchasePaymentMethod paymentMethod;
     private UUID receiptFileId;
-    private List<String> transactionItemNames = new ArrayList<>();
 
     @Getter
     @Setter
@@ -47,5 +48,8 @@ public class PurchaseRequestForm {
         private String name;
         private String reason;
         private Integer quantity = 1;
+        private Long vendorId;
+        private Long actualAmount;
+        private UUID receiptFileId;
     }
 }

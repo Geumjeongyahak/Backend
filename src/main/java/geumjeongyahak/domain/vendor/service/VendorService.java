@@ -3,6 +3,7 @@ package geumjeongyahak.domain.vendor.service;
 import java.util.List;
 import java.util.UUID;
 
+import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.file.service.FileProxyService;
@@ -112,6 +113,31 @@ public class VendorService {
             lockedVendor.getBalance(),
             "결재 확인 차감",
             null,
+            purchaseRequest,
+            approver
+        ));
+    }
+
+    @Transactional
+    public void chargeForPurchaseRequest(
+        Vendor vendor,
+        PurchaseRequest purchaseRequest,
+        Long amount,
+        File receiptFile,
+        User approver
+    ) {
+        Vendor lockedVendor = getByIdForUpdate(vendor.getId());
+        if (!lockedVendor.isActive()) {
+            throw new BusinessException(VendorErrorCode.INACTIVE);
+        }
+        lockedVendor.charge(amount);
+        vendorBalanceHistoryRepository.save(new VendorBalanceHistory(
+            lockedVendor,
+            VendorBalanceHistoryType.CHARGE,
+            amount,
+            lockedVendor.getBalance(),
+            "선금 결제 확인 충전",
+            receiptFile,
             purchaseRequest,
             approver
         ));

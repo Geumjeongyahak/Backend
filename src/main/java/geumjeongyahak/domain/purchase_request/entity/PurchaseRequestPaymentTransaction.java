@@ -4,11 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import geumjeongyahak.domain.file.entity.File;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import geumjeongyahak.domain.vendor.entity.Vendor;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -42,6 +45,10 @@ public class PurchaseRequestPaymentTransaction {
     @Column(nullable = false)
     private Long amount;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 20)
+    private PurchasePaymentMethod paymentMethod;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "receipt_file_id")
     private File receiptFile;
@@ -55,10 +62,17 @@ public class PurchaseRequestPaymentTransaction {
     @Column(name = "item_name", nullable = false)
     private List<String> itemNames = new ArrayList<>();
 
-    public PurchaseRequestPaymentTransaction(Vendor vendor, List<String> itemNames, Long amount, File receiptFile) {
+    public PurchaseRequestPaymentTransaction(
+        Vendor vendor,
+        List<String> itemNames,
+        Long amount,
+        PurchasePaymentMethod paymentMethod,
+        File receiptFile
+    ) {
         this.vendor = vendor;
         this.itemNames.addAll(itemNames);
         this.amount = amount;
+        this.paymentMethod = paymentMethod;
         this.receiptFile = receiptFile;
     }
 

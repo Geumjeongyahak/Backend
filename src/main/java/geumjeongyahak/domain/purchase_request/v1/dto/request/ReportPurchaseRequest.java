@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 
 public record ReportPurchaseRequest(
 
@@ -30,6 +31,9 @@ public record ReportPurchaseRequest(
         @Min(1)
         @Schema(description = "총 결제 금액", example = "15000")
         Long amount,
+
+        @Schema(description = "지급 구분(선금 결제 시 필수)", example = "CARD")
+        PurchasePaymentMethod paymentMethod,
 
         @Schema(description = "영수증 파일 ID")
         UUID receiptFileId
