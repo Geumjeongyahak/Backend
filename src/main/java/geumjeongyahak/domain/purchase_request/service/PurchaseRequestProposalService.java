@@ -8,18 +8,22 @@ import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.file.service.FileProxyService;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposal;
+import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalApprovalLine;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalBudget;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalItem;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalReceipt;
+import geumjeongyahak.domain.purchase_request.enums.PurchaseDocumentApprovalType;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.exception.PurchaseRequestErrorCode;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestProposalRepository;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestProposalReceiptRepository;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.SavePurchaseRequestProposalRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.SavePurchaseRequestProposalRequest.ApprovalLineRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.SavePurchaseRequestProposalRequest.BudgetRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestProposalResponse;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -59,6 +63,9 @@ public class PurchaseRequestProposalService {
             : null;
 
         proposal.updateDetails(
+            normalize(request.proposalTitle()),
+            normalize(request.resolutionTitle()),
+            request.completionDate(),
             normalize(request.overview()),
             normalize(request.policyProject()),
             normalize(request.unitProject()),
@@ -70,6 +77,7 @@ public class PurchaseRequestProposalService {
         );
         updateBudget(proposal, request.budget());
         proposal.replaceItems(toItems(request.items()));
+        proposal.replaceApprovalLines(toApprovalLines(request));
 
         PurchaseRequestProposal saved = proposalRepository.saveAndFlush(proposal);
         log.debug("품의 정보 저장 완료 (requestId={}, proposalId={})", requestId, saved.getId());
@@ -137,6 +145,7 @@ public class PurchaseRequestProposalService {
         if (proposal.getProposalDate() == null
             || proposal.getPaymentAccount() == null
             || proposal.getProposalAmount() == null
+            || proposal.getCompletionDate() == null
             || proposal.getItems().isEmpty()
             || proposal.getItems().stream().anyMatch(item ->
                 item.getQuantity() == null || item.getEstimatedUnitPrice() == null)) {
@@ -177,7 +186,7 @@ public class PurchaseRequestProposalService {
         return PurchaseRequestProposalResponse.from(proposal, calculateProposalNumber(proposal));
     }
 
-    private String calculateProposalNumber(PurchaseRequestProposal proposal) {
+    public String calculateProposalNumber(PurchaseRequestProposal proposal) {
         if (proposal.getProposalDate() == null
             || proposal.getPaymentAccount() == null
             || proposal.getPurchaseRequest().isDeleted()
@@ -242,6 +251,35 @@ public class PurchaseRequestProposalService {
                 item.estimatedUnitPrice()
             ))
             .toList();
+    }
+
+    private List<PurchaseRequestProposalApprovalLine> toApprovalLines(
+        SavePurchaseRequestProposalRequest request
+    ) {
+        List<PurchaseRequestProposalApprovalLine> result = new ArrayList<>();
+        addApprovalLines(result, PurchaseDocumentApprovalType.DRAFT_APPROVAL, request.draftApprovals());
+        addApprovalLines(result, PurchaseDocumentApprovalType.DRAFT_COOPERATION, request.draftCooperations());
+        addApprovalLines(result, PurchaseDocumentApprovalType.RESOLUTION_APPROVAL, request.resolutionApprovals());
+        return result;
+    }
+
+    private void addApprovalLines(
+        List<PurchaseRequestProposalApprovalLine> result,
+        PurchaseDocumentApprovalType lineType,
+        List<ApprovalLineRequest> lines
+    ) {
+        if (lines == null) {
+            return;
+        }
+        for (int index = 0; index < lines.size(); index++) {
+            ApprovalLineRequest line = lines.get(index);
+            result.add(new PurchaseRequestProposalApprovalLine(
+                lineType,
+                normalize(line.position()),
+                normalize(line.name()),
+                index
+            ));
+        }
     }
 
     private PurchaseRequest findPurchaseRequest(Long requestId) {

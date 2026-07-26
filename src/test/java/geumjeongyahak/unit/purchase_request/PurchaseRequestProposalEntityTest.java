@@ -9,11 +9,13 @@ import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposal;
+import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalApprovalLine;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalBudget;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalItem;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalReceipt;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseBudgetItemCategory;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseCalculationDetail;
+import geumjeongyahak.domain.purchase_request.enums.PurchaseDocumentApprovalType;
 import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentAccount;
 import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
 import geumjeongyahak.domain.users.entity.User;
@@ -43,6 +45,9 @@ class PurchaseRequestProposalEntityTest {
         LocalDate proposalDate = LocalDate.of(2026, 7, 25);
 
         proposal.updateDetails(
+            "7월 교재 구입",
+            "7월 교재비 지출",
+            LocalDate.of(2026, 7, 30),
             "교재 구매 품의",
             "2026년 성인문해교육 지원사업",
             "프로그램운영비",
@@ -53,6 +58,9 @@ class PurchaseRequestProposalEntityTest {
             PurchasePaymentAccount.NATIONAL_SUBSIDY_04
         );
 
+        assertThat(proposal.getProposalTitle()).isEqualTo("7월 교재 구입");
+        assertThat(proposal.getResolutionTitle()).isEqualTo("7월 교재비 지출");
+        assertThat(proposal.getCompletionDate()).isEqualTo(LocalDate.of(2026, 7, 30));
         assertThat(proposal.getOverview()).isEqualTo("교재 구매 품의");
         assertThat(proposal.getPolicyProject()).isEqualTo("2026년 성인문해교육 지원사업");
         assertThat(proposal.getUnitProject()).isEqualTo("프로그램운영비");
@@ -62,12 +70,34 @@ class PurchaseRequestProposalEntityTest {
         assertThat(proposal.getProposalAmount()).isEqualTo(20_000L);
         assertThat(proposal.getPaymentAccount()).isEqualTo(PurchasePaymentAccount.NATIONAL_SUBSIDY_04);
 
-        proposal.updateDetails(null, null, null, null, null, null, null, null);
+        proposal.updateDetails(null, null, null, null, null, null, null, null, null, null, null);
 
+        assertThat(proposal.getProposalTitle()).isNull();
+        assertThat(proposal.getCompletionDate()).isNull();
         assertThat(proposal.getOverview()).isNull();
         assertThat(proposal.getProposalDate()).isNull();
         assertThat(proposal.getProposalAmount()).isNull();
         assertThat(proposal.getPaymentAccount()).isNull();
+    }
+
+    @Test
+    void replaceApprovalLines_assignsStoredDocumentLines() {
+        PurchaseRequestProposal proposal = new PurchaseRequestProposal(createPurchaseRequest());
+        PurchaseRequestProposalApprovalLine approval = new PurchaseRequestProposalApprovalLine(
+            PurchaseDocumentApprovalType.DRAFT_APPROVAL,
+            "총무",
+            "관리자",
+            0
+        );
+
+        proposal.replaceApprovalLines(List.of(approval));
+
+        assertThat(proposal.getApprovalLines()).containsExactly(approval);
+        assertThat(approval.getProposal()).isSameAs(proposal);
+        assertThat(approval.getLineType()).isEqualTo(PurchaseDocumentApprovalType.DRAFT_APPROVAL);
+        assertThat(approval.getPosition()).isEqualTo("총무");
+        assertThat(approval.getName()).isEqualTo("관리자");
+        assertThat(approval.getSortOrder()).isZero();
     }
 
     @Test

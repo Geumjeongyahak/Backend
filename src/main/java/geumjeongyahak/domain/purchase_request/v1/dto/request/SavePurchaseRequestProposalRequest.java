@@ -17,6 +17,29 @@ import java.util.List;
 
 @Schema(description = "품의 정보 중간 저장 요청. 모든 필드는 선택값이며 전달된 전체 상태로 교체됩니다.")
 public record SavePurchaseRequestProposalRequest(
+    @Schema(description = "품의서 제목. 미입력 시 결제 신청 제목을 사용합니다.", example = "7월 교재 구입", nullable = true)
+    @Size(max = 255)
+    String proposalTitle,
+
+    @Schema(description = "결의서 지출명·내용·세부내역. 미입력 시 결제 신청 제목을 사용합니다.", example = "7월 교재 구입", nullable = true)
+    @Size(max = 255)
+    String resolutionTitle,
+
+    @Schema(description = "완료 요청일. 결의서 생성 시 필수이며 결의일자와 지급일자에도 사용합니다.", example = "2026-07-26", nullable = true)
+    LocalDate completionDate,
+
+    @Schema(description = "품의서 결재라인. 최대 3명까지 저장합니다.")
+    @Size(max = 3, message = "품의서 결재자는 최대 3명까지 입력할 수 있습니다.")
+    List<@NotNull @Valid ApprovalLineRequest> draftApprovals,
+
+    @Schema(description = "품의서 협조라인. 최대 3명까지 입력 순서대로 저장합니다.")
+    @Size(max = 3, message = "품의서 협조자는 최대 3명까지 입력할 수 있습니다.")
+    List<@NotNull @Valid ApprovalLineRequest> draftCooperations,
+
+    @Schema(description = "결의서 결재라인. 최대 3명까지 저장합니다.")
+    @Size(max = 3, message = "결의서 결재자는 최대 3명까지 입력할 수 있습니다.")
+    List<@NotNull @Valid ApprovalLineRequest> resolutionApprovals,
+
     @Schema(description = "품의 개요", example = "7월 교재 구입 비용을 다음과 같이 지출하고자 합니다.", nullable = true)
     String overview,
 
@@ -57,6 +80,18 @@ public record SavePurchaseRequestProposalRequest(
     @Schema(description = "품목 내역. null 또는 빈 배열이면 기존 품목을 모두 제거합니다.", nullable = true)
     List<@NotNull @Valid ItemRequest> items
 ) {
+    @Schema(description = "문서 결재·협조 항목")
+    public record ApprovalLineRequest(
+        @Schema(description = "직위", example = "총무", nullable = true)
+        @Size(max = 255)
+        String position,
+
+        @Schema(description = "이름", example = "관리자", nullable = true)
+        @Size(max = 255)
+        String name
+    ) {
+    }
+
     @Schema(description = "품의 예산 내역")
     @ValidPurchaseProposalBudget
     public record BudgetRequest(

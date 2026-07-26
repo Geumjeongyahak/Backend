@@ -418,8 +418,8 @@ public class PurchaseRequestService {
                 throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
             }
         }
-        purchaseRequestProposalService.validateForConfirmation(purchaseRequest);
         if (purchaseRequest.getPaymentType() == PurchasePaymentType.PREPAID) {
+            purchaseRequestProposalService.validateForConfirmation(purchaseRequest);
             boolean hasActiveTransactionReceipt = purchaseRequest.getTransactions().stream()
                 .map(PurchaseRequestPaymentTransaction::getReceiptFile)
                 .anyMatch(receiptFile -> receiptFile != null && !receiptFile.isDeleted());

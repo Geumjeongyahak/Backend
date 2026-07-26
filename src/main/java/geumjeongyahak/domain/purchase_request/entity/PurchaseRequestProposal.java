@@ -36,6 +36,15 @@ public class PurchaseRequestProposal extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String overview;
 
+    @Column(name = "proposal_title")
+    private String proposalTitle;
+
+    @Column(name = "resolution_title")
+    private String resolutionTitle;
+
+    @Column(name = "completion_date")
+    private LocalDate completionDate;
+
     @Column(name = "policy_project")
     private String policyProject;
 
@@ -70,12 +79,19 @@ public class PurchaseRequestProposal extends BaseEntity {
     @OrderBy("sortOrder ASC, id ASC")
     private List<PurchaseRequestProposalReceipt> receipts = new ArrayList<>();
 
+    @OneToMany(mappedBy = "proposal", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("lineType ASC, sortOrder ASC, id ASC")
+    private List<PurchaseRequestProposalApprovalLine> approvalLines = new ArrayList<>();
+
     public PurchaseRequestProposal(@NonNull PurchaseRequest purchaseRequest) {
         this.purchaseRequest = purchaseRequest;
         purchaseRequest.assignProposal(this);
     }
 
     public void updateDetails(
+        String proposalTitle,
+        String resolutionTitle,
+        LocalDate completionDate,
         String overview,
         String policyProject,
         String unitProject,
@@ -85,6 +101,9 @@ public class PurchaseRequestProposal extends BaseEntity {
         Long proposalAmount,
         PurchasePaymentAccount paymentAccount
     ) {
+        this.proposalTitle = proposalTitle;
+        this.resolutionTitle = resolutionTitle;
+        this.completionDate = completionDate;
         this.overview = overview;
         this.policyProject = policyProject;
         this.unitProject = unitProject;
@@ -114,5 +133,13 @@ public class PurchaseRequestProposal extends BaseEntity {
     public void addReceipt(PurchaseRequestProposalReceipt receipt) {
         receipt.assignProposal(this, receipts.size());
         this.receipts.add(receipt);
+    }
+
+    public void replaceApprovalLines(List<PurchaseRequestProposalApprovalLine> approvalLines) {
+        this.approvalLines.clear();
+        approvalLines.forEach(line -> {
+            line.assignProposal(this);
+            this.approvalLines.add(line);
+        });
     }
 }

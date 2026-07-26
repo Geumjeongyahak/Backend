@@ -6,14 +6,15 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.NumberFormat;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,10 +22,12 @@ import javax.imageio.ImageIO;
 
 import org.apache.poi.util.Units;
 import org.apache.poi.xwpf.usermodel.Document;
+import org.apache.poi.xwpf.usermodel.IBodyElement;
 import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,16 +44,19 @@ import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.file.service.DriveStorageService;
 import geumjeongyahak.domain.file.service.StorageService;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
-import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestPaymentTransaction;
-import geumjeongyahak.domain.purchase_request.enums.ExpenseDocumentPaymentMethod;
+import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposal;
+import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalApprovalLine;
+import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalBudget;
+import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalItem;
+import geumjeongyahak.domain.purchase_request.enums.PurchaseBudgetItemCategory;
+import geumjeongyahak.domain.purchase_request.enums.PurchaseCalculationDetail;
+import geumjeongyahak.domain.purchase_request.enums.PurchaseDocumentApprovalType;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.exception.PurchaseRequestErrorCode;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
-import geumjeongyahak.domain.purchase_request.v1.dto.request.GenerateExpenseDocumentRequest;
-import geumjeongyahak.domain.purchase_request.v1.dto.request.GenerateExpenseDocumentRequest.ApprovalLine;
-import geumjeongyahak.domain.purchase_request.v1.dto.request.GenerateExpenseDocumentRequest.ExpenseDocumentItem;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -71,28 +77,69 @@ public class ExpenseDocumentService {
     private static final Pattern INVALID_FILENAME_CHARACTER_PATTERN = Pattern.compile("[\\\\/:*?\"<>|]");
     private static final int MAX_FILENAME_TITLE_LENGTH = 60;
     private static final NumberFormat MONEY_FORMATTER = NumberFormat.getNumberInstance(Locale.KOREA);
-    private static final int TEMPLATE_APPROVAL_SLOT_COUNT = 9;
+    private static final int MAX_APPROVAL_LINE_COUNT = 3;
+    private static final int TEMPLATE_APPROVAL_PLACEHOLDER_COUNT = MAX_APPROVAL_LINE_COUNT * 2;
     private static final int TEMPLATE_PLACEHOLDER_START_INDEX = 1;
     private static final int RECEIPT_IMAGE_MAX_WIDTH_POINT = 451;
     private static final int RECEIPT_IMAGE_MAX_HEIGHT_POINT = 650;
     private static final Configure RENDER_CONFIG = Configure.builder()
         .bind("itemRows", new LoopRowTableRenderPolicy(true))
-        .bind("transactionRows", new LoopRowTableRenderPolicy(true))
         .build();
 
     private final PurchaseRequestRepository purchaseRequestRepository;
+    private final PurchaseRequestProposalService purchaseRequestProposalService;
     private final StorageService storageService;
     private final DriveStorageService driveStorageService;
 
     @Transactional(readOnly = true)
-    public ExpenseDocumentResult generate(Long purchaseRequestId, GenerateExpenseDocumentRequest request) {
-        log.debug("지출증빙서류 생성 요청 (purchaseRequestId={})", purchaseRequestId);
+    public ExpenseDocumentResult generateProposal(
+        Long actorId,
+        Long purchaseRequestId,
+        boolean isAdmin
+    ) {
+        log.debug("품의서 생성 요청 (purchaseRequestId={})", purchaseRequestId);
         PurchaseRequest purchaseRequest = findPurchaseRequest(purchaseRequestId);
-        validateGeneratable(purchaseRequest);
+        checkAccess(purchaseRequest, actorId, isAdmin);
+        validatePrepaidPurchaseRequest(purchaseRequest);
+        if (purchaseRequest.getStatus() == PurchaseRequestStatus.REJECTED) {
+            throw new BusinessException(PurchaseRequestErrorCode.PROPOSAL_DOCUMENT_UNSUPPORTED_STATUS);
+        }
 
         return new ExpenseDocumentResult(
-            renderTemplate(purchaseRequest, buildRenderData(purchaseRequest, request)),
-            buildDownloadFilename(purchaseRequest)
+            renderTemplate(
+                purchaseRequest,
+                buildDocumentRenderData(purchaseRequest),
+                DocumentSection.PROPOSAL
+            ),
+            buildDownloadFilename(documentTitle(purchaseRequest, DocumentSection.PROPOSAL), "품의서")
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public ExpenseDocumentResult generateResolution(
+        Long actorId,
+        Long purchaseRequestId,
+        boolean isAdmin
+    ) {
+        log.debug("결의서 생성 요청 (purchaseRequestId={})", purchaseRequestId);
+        PurchaseRequest purchaseRequest = findPurchaseRequest(purchaseRequestId);
+        checkAccess(purchaseRequest, actorId, isAdmin);
+        validatePrepaidPurchaseRequest(purchaseRequest);
+        if (purchaseRequest.getStatus() != PurchaseRequestStatus.CONFIRMED) {
+            throw new BusinessException(PurchaseRequestErrorCode.RESOLUTION_DOCUMENT_UNSUPPORTED_STATUS);
+        }
+        if (purchaseRequest.getProposal() == null
+            || purchaseRequest.getProposal().getCompletionDate() == null) {
+            throw new BusinessException(PurchaseRequestErrorCode.RESOLUTION_DOCUMENT_COMPLETION_DATE_REQUIRED);
+        }
+
+        return new ExpenseDocumentResult(
+            renderTemplate(
+                purchaseRequest,
+                buildDocumentRenderData(purchaseRequest),
+                DocumentSection.RESOLUTION
+            ),
+            buildDownloadFilename(documentTitle(purchaseRequest, DocumentSection.RESOLUTION), "결의서")
         );
     }
 
@@ -113,13 +160,19 @@ public class ExpenseDocumentService {
         }
     }
 
-    private byte[] renderTemplate(PurchaseRequest purchaseRequest, Map<String, Object> data) {
+    private byte[] renderTemplate(
+        PurchaseRequest purchaseRequest,
+        Map<String, Object> data,
+        DocumentSection section
+    ) {
         try (
             ByteArrayInputStream templateInputStream = new ByteArrayInputStream(loadTemplate());
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             XWPFTemplate template = XWPFTemplate.compile(templateInputStream, RENDER_CONFIG).render(data)
         ) {
-            appendReceiptImages(template.getXWPFDocument(), purchaseRequest.getTransactions());
+            XWPFDocument document = template.getXWPFDocument();
+            retainDocumentSection(document, section);
+            appendReceiptImages(document, activeReceiptFiles(purchaseRequest));
             template.write(outputStream);
             return outputStream.toByteArray();
         } catch (BusinessException e) {
@@ -130,89 +183,178 @@ public class ExpenseDocumentService {
         }
     }
 
+    private void checkAccess(PurchaseRequest purchaseRequest, Long actorId, boolean isAdmin) {
+        if (!isAdmin && !purchaseRequest.getRequestedBy().getId().equals(actorId)) {
+            throw new BusinessException(PurchaseRequestErrorCode.FORBIDDEN);
+        }
+    }
+
     private PurchaseRequest findPurchaseRequest(Long purchaseRequestId) {
         return purchaseRequestRepository.findByIdAndIsDeletedFalse(purchaseRequestId)
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, purchaseRequestId));
     }
 
-    private void validateGeneratable(PurchaseRequest purchaseRequest) {
-        if (purchaseRequest.getStatus() != PurchaseRequestStatus.CONFIRMED) {
-            throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_UNSUPPORTED_STATUS);
-        }
-
+    private void validatePrepaidPurchaseRequest(PurchaseRequest purchaseRequest) {
         if (purchaseRequest.getPaymentType() != PurchasePaymentType.PREPAID) {
             throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_ONLY_PREPAID_ALLOWED);
         }
     }
 
-    private Map<String, Object> buildRenderData(
-        PurchaseRequest purchaseRequest,
-        GenerateExpenseDocumentRequest request
-    ) {
+    private Map<String, Object> buildDocumentRenderData(PurchaseRequest purchaseRequest) {
         Map<String, Object> data = new HashMap<>();
         fillAllKnownPlaceholders(data);
-
-        String resolutionAmount = formatMoney(purchaseRequest.getTotalPrice());
-        String draftAmount = formatMoney(purchaseRequest.getTotalPrice());
-        String purchasedAt = formatDate(purchaseRequest.getPurchasedAt());
-        String draftDate = formatKoreanDate(defaultText(request.draftDate(), formatDate(purchaseRequest.getCreatedAt())));
-        String paymentDate = defaultText(request.paymentDate(), purchasedAt);
-        String resolutionDate = defaultText(request.resolutionDate(), purchasedAt);
-        String initiationDate = defaultText(request.initiationDate(), resolutionDate);
-        String overview = defaultText(purchaseRequest.getContent(), "아래 비용을 다음과 같이 지출하고자 합니다.");
-        String transactionNote = paymentMethodLabel(request.paymentMethod());
-
-        data.put("fiscalYear", defaultText(request.fiscalYear(), ""));
-        data.put("draftDocumentNumber", defaultText(request.draftDocumentNumber(), ""));
-        data.put("resolutionDocumentNumber", defaultText(request.resolutionDocumentNumber(), ""));
-        data.put("draftTitle", purchaseRequest.getTitle());
-        data.put("draftOverview", overview);
-        data.put("draftCostSummary", "1. 청구비용 : " + draftAmount);
-        data.put("policyProject", defaultText(request.policyProject(), ""));
-        data.put("requestDepartment", defaultText(request.requestDepartment(), ""));
-        data.put("unitProject", defaultText(request.unitProject(), ""));
-        data.put("draftDate", draftDate);
-        data.put("detailProject", defaultText(request.detailProject(), ""));
-        data.put("draftAmount", draftAmount);
-        data.put("budgetProject", defaultText(request.detailProject(), ""));
-        data.put("budgetItem", defaultText(request.unitProject(), ""));
-        data.put("budgetDetail", defaultText(request.budgetDetail(), summarizeItemNames(purchaseRequest.getItems())));
-        data.put("budgetAmount", draftAmount);
-        data.put("budgetBalance", formatNullableMoney(request.budgetBalance()));
-        data.put("projectBalance", formatNullableMoney(request.projectBalance()));
-        data.put("budgetTotal", draftAmount);
-        data.put("budgetTotalBalance", formatNullableMoney(request.budgetBalance()));
-        data.put("projectTotalBalance", formatNullableMoney(request.projectBalance()));
-        data.put("completionDate", formatKoreanDate(request.completionDate()));
         data.put("requesterName", purchaseRequest.getRequestedBy().getName());
-        data.put("receiver", defaultText(request.receiver(), ""));
-        data.put("draftNote", defaultText(request.note(), ""));
+        PurchaseRequestProposal proposal = purchaseRequest.getProposal();
 
-        validateDocumentItemAmounts(purchaseRequest.getItems(), request.items(), purchaseRequest.getTotalPrice());
-        fillItemRows(data, purchaseRequest.getItems(), request.items(), draftAmount);
+        if (proposal == null) {
+            data.put("draftTitle", purchaseRequest.getTitle());
+            clearProposalRenderData(data);
+            return data;
+        }
 
-        data.put("initiationDate", initiationDate);
-        data.put("resolutionDate", resolutionDate);
-        data.put("resolutionTitle", purchaseRequest.getTitle());
-        data.put("resolutionAmount", resolutionAmount);
-        data.put("resolutionContent", purchaseRequest.getContent());
-        data.put("attachments", "견적서 및 거래명세서(별첨)");
-        data.put("transactionTotal", resolutionAmount);
-        data.put("transactionTotalNote", transactionNote);
-        data.put("paymentDate", paymentDate);
-        data.put("bankAccount", defaultText(request.bankAccount(), ""));
+        List<ApprovalLine> draftApprovals = storedApprovalLines(
+            proposal,
+            PurchaseDocumentApprovalType.DRAFT_APPROVAL
+        );
+        List<ApprovalLine> draftCooperations = storedApprovalLines(
+            proposal,
+            PurchaseDocumentApprovalType.DRAFT_COOPERATION
+        );
+        List<ApprovalLine> resolutionApprovals = storedApprovalLines(
+            proposal,
+            PurchaseDocumentApprovalType.RESOLUTION_APPROVAL
+        );
+        data.put("draftTitle", defaultText(proposal.getProposalTitle(), purchaseRequest.getTitle()));
+        data.put("completionDate", formatKoreanDate(formatDate(proposal.getCompletionDate())));
+        fillApprovalLines(data, "draftApproval", draftApprovals);
+        fillApprovalLines(data, "resolutionApproval", resolutionApprovals);
+
+        String proposalAmount = formatNullableMoney(proposal.getProposalAmount());
+        data.put("fiscalYear", proposal.getProposalDate() != null
+            ? proposal.getProposalDate().getYear() + "년"
+            : "");
+        String proposalNumber = defaultText(purchaseRequestProposalService.calculateProposalNumber(proposal), "");
+        String proposalDate = formatKoreanDate(formatDate(proposal.getProposalDate()));
+        String completionDate = formatKoreanDate(formatDate(proposal.getCompletionDate()));
+        PurchasePaymentMethod paymentMethod = storedPaymentMethod(purchaseRequest);
+        String paymentClassification = paymentMethodLabel(paymentMethod);
+
+        data.put("draftDocumentNumber", proposalNumber);
+        data.put("resolutionDocumentNumber", toResolutionDocumentNumber(proposalNumber));
+        data.put("draftOverview", defaultText(proposal.getOverview(), ""));
+        data.put("policyProject", defaultText(proposal.getPolicyProject(), ""));
+        data.put("unitProject", defaultText(proposal.getUnitProject(), ""));
+        data.put("detailProject", defaultText(proposal.getDetailProject(), ""));
+        data.put("requestDepartment", proposal.getRequestDepartment() != null
+            ? proposal.getRequestDepartment().getName()
+            : "");
+        data.put("draftDate", proposalDate);
+        data.put("draftAmount", proposalAmount);
+        fillStoredBudget(data, proposal.getBudget());
+        fillStoredProposalItems(data, proposal.getItems(), proposalAmount);
+        data.put("initiationDate", proposalDate);
+        data.put("resolutionDate", completionDate);
+        data.put("resolutionTitle", defaultText(proposal.getResolutionTitle(), purchaseRequest.getTitle()));
+        data.put("paymentClassification", paymentClassification);
         data.put("vendorName", summarizeVendors(purchaseRequest.getTransactions()));
-        data.put("businessNumber", defaultText(request.businessNumber(), ""));
-        data.put("paymentAmount", resolutionAmount);
-        data.put("accountHolder", defaultText(request.accountHolder(), ""));
-
-        fillPaymentMethod(data, request.paymentMethod());
-        fillTransactionRows(data, purchaseRequest.getTransactions(), paymentDate, transactionNote);
-        fillApprovalLines(data, "draftApproval", request.draftApprovals());
-        fillApprovalLines(data, "draftCooperation", request.draftCooperations());
-        fillApprovalLines(data, "resolutionApproval", request.resolutionApprovals());
-
+        fillPaymentMethod(data, paymentMethod);
+        fillApprovalLines(
+            data,
+            "draftCooperation",
+            draftCooperations
+        );
         return data;
+    }
+
+    private List<ApprovalLine> storedApprovalLines(
+        PurchaseRequestProposal proposal,
+        PurchaseDocumentApprovalType type
+    ) {
+        return proposal.getApprovalLines().stream()
+            .filter(line -> line.getLineType() == type)
+            .map(this::toApprovalLine)
+            .toList();
+    }
+
+    private ApprovalLine toApprovalLine(PurchaseRequestProposalApprovalLine line) {
+        return new ApprovalLine(line.getPosition(), line.getName());
+    }
+
+    private String toResolutionDocumentNumber(String proposalNumber) {
+        return StringUtils.hasText(proposalNumber) ? proposalNumber.replaceFirst("품", "결") : "";
+    }
+
+    private PurchasePaymentMethod storedPaymentMethod(PurchaseRequest purchaseRequest) {
+        return purchaseRequest.getTransactions().isEmpty()
+            ? null
+            : purchaseRequest.getTransactions().getFirst().getPaymentMethod();
+    }
+
+    private void clearProposalRenderData(Map<String, Object> data) {
+        List.of(
+            "fiscalYear",
+            "draftDocumentNumber",
+            "draftOverview",
+            "policyProject",
+            "requestDepartment",
+            "unitProject",
+            "draftDate",
+            "detailProject",
+            "draftAmount",
+            "budgetItem",
+            "budgetDetail",
+            "itemTotalQuantity",
+            "itemTotalAmount"
+        ).forEach(key -> data.put(key, ""));
+        data.put("itemRows", List.of());
+    }
+
+    private void fillStoredBudget(Map<String, Object> data, PurchaseRequestProposalBudget budget) {
+        if (budget == null) {
+            data.put("budgetItem", "");
+            data.put("budgetDetail", "");
+            return;
+        }
+        data.put("budgetItem", budget.getItemCategory() != null
+            ? defaultText(
+                budget.getItemCategory() == PurchaseBudgetItemCategory.DIRECT_INPUT
+                    ? budget.getCustomItemCategory()
+                    : budget.getItemCategory().getDisplayName(),
+                ""
+            )
+            : "");
+        data.put("budgetDetail", budget.getCalculationDetail() != null
+            ? defaultText(
+                budget.getCalculationDetail() == PurchaseCalculationDetail.DIRECT_INPUT
+                    ? budget.getCustomCalculationDetail()
+                    : budget.getCalculationDetail().getDisplayName(),
+                ""
+            )
+            : "");
+    }
+
+    private void fillStoredProposalItems(
+        Map<String, Object> data,
+        List<PurchaseRequestProposalItem> items,
+        String proposalAmount
+    ) {
+        List<Map<String, Object>> itemRows = new ArrayList<>();
+        long totalQuantity = 0L;
+        for (int index = 0; index < items.size(); index++) {
+            PurchaseRequestProposalItem item = items.get(index);
+            totalQuantity += item.getQuantity() != null ? item.getQuantity() : 0;
+            itemRows.add(Map.of(
+                "no", String.valueOf(index + TEMPLATE_PLACEHOLDER_START_INDEX),
+                "description", defaultText(item.getContent(), ""),
+                "spec", defaultText(item.getSpecification(), ""),
+                "quantity", item.getQuantity() != null ? String.valueOf(item.getQuantity()) : "",
+                "unitPrice", formatNullableMoney(item.getEstimatedUnitPrice()),
+                "amount", formatNullableMoney(item.calculateExpectedAmount())
+            ));
+        }
+        data.put("itemRows", itemRows);
+        data.put("itemTotalQuantity", items.isEmpty() ? "" : String.valueOf(totalQuantity));
+        data.put("itemTotalAmount", proposalAmount);
     }
 
     private void fillAllKnownPlaceholders(Map<String, Object> data) {
@@ -222,28 +364,18 @@ public class ExpenseDocumentService {
             "resolutionDocumentNumber",
             "draftTitle",
             "draftOverview",
-            "draftCostSummary",
             "policyProject",
             "requestDepartment",
             "unitProject",
             "draftDate",
             "detailProject",
             "draftAmount",
-            "budgetProject",
             "budgetItem",
             "budgetDetail",
-            "budgetAmount",
-            "budgetBalance",
-            "projectBalance",
-            "budgetTotal",
-            "budgetTotalBalance",
-            "projectTotalBalance",
             "itemTotalQuantity",
             "itemTotalAmount",
             "completionDate",
             "requesterName",
-            "receiver",
-            "draftNote",
             "payCash",
             "payCard",
             "payTransfer",
@@ -252,128 +384,27 @@ public class ExpenseDocumentService {
             "initiationDate",
             "resolutionDate",
             "resolutionTitle",
-            "resolutionAmount",
-            "resolutionContent",
-            "attachments",
-            "transactionTotal",
-            "transactionTotalNote",
-            "paymentDate",
-            "bankAccount",
-            "vendorName",
-            "businessNumber",
-            "paymentAmount",
-            "accountHolder"
+            "paymentClassification",
+            "vendorName"
         ).forEach(key -> data.put(key, ""));
 
         data.put("itemRows", List.of());
-        data.put("transactionRows", List.of());
-
-        for (int i = TEMPLATE_PLACEHOLDER_START_INDEX; i <= TEMPLATE_APPROVAL_SLOT_COUNT; i++) {
+        for (int i = TEMPLATE_PLACEHOLDER_START_INDEX; i <= TEMPLATE_APPROVAL_PLACEHOLDER_COUNT; i++) {
             data.put("draftApproval" + i, "");
             data.put("draftCooperation" + i, "");
             data.put("resolutionApproval" + i, "");
         }
     }
 
-    private void fillItemRows(
-        Map<String, Object> data,
-        List<PurchaseRequestItem> items,
-        List<ExpenseDocumentItem> documentItems,
-        String totalAmount
-    ) {
-        List<Map<String, Object>> itemRows = new ArrayList<>();
-        long documentItemAmountTotal = 0L;
-        boolean hasDocumentItemAmount = false;
-        for (int index = 0; index < items.size(); index++) {
-            PurchaseRequestItem item = items.get(index);
-            ExpenseDocumentItem documentItem = getDocumentItem(documentItems, index);
-            Long itemAmount = calculateDocumentItemAmount(item, documentItem);
-            if (itemAmount != null) {
-                documentItemAmountTotal += itemAmount;
-                hasDocumentItemAmount = true;
-            }
-            int row = index + TEMPLATE_PLACEHOLDER_START_INDEX;
-            itemRows.add(Map.of(
-                "no", String.valueOf(row),
-                "description", defaultText(item.getName(), ""),
-                "spec", documentItem != null ? defaultText(documentItem.spec(), "") : "",
-                "quantity", String.valueOf(item.getQuantity()),
-                "unitPrice", formatNullableMoney(documentItem != null ? documentItem.unitPrice() : null),
-                "amount", formatNullableMoney(itemAmount)
-            ));
-        }
-        data.put("itemRows", itemRows);
-        data.put("itemTotalQuantity", String.valueOf(items.stream().mapToInt(PurchaseRequestItem::getQuantity).sum()));
-        data.put("itemTotalAmount", hasDocumentItemAmount ? formatMoney(documentItemAmountTotal) : totalAmount);
+    private void fillPaymentMethod(Map<String, Object> data, PurchasePaymentMethod paymentMethod) {
+        data.put("payCash", paymentMethod == PurchasePaymentMethod.CASH ? CHECKED : UNCHECKED);
+        data.put("payCard", paymentMethod == PurchasePaymentMethod.CARD ? CHECKED : UNCHECKED);
+        data.put("payTransfer", paymentMethod == PurchasePaymentMethod.TRANSFER ? CHECKED : UNCHECKED);
+        data.put("payAuto", paymentMethod == PurchasePaymentMethod.AUTO_TRANSFER ? CHECKED : UNCHECKED);
+        data.put("payOther", paymentMethod == PurchasePaymentMethod.OTHER ? CHECKED : UNCHECKED);
     }
 
-    private void validateDocumentItemAmounts(
-        List<PurchaseRequestItem> items,
-        List<ExpenseDocumentItem> documentItems,
-        Long totalPrice
-    ) {
-        if (documentItems == null || documentItems.isEmpty()) {
-            return;
-        }
-
-        long total = 0L;
-        for (int index = 0; index < items.size(); index++) {
-            ExpenseDocumentItem documentItem = getDocumentItem(documentItems, index);
-            if (documentItem == null || documentItem.unitPrice() == null) {
-                throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_ITEM_AMOUNT_MISMATCH);
-            }
-            total += documentItem.unitPrice() * items.get(index).getQuantity();
-        }
-
-        if (total != totalPrice) {
-            throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_ITEM_AMOUNT_MISMATCH);
-        }
-    }
-
-    private Long calculateDocumentItemAmount(PurchaseRequestItem item, ExpenseDocumentItem documentItem) {
-        if (documentItem == null || documentItem.unitPrice() == null) {
-            return null;
-        }
-        return documentItem.unitPrice() * item.getQuantity();
-    }
-
-    private ExpenseDocumentItem getDocumentItem(List<ExpenseDocumentItem> documentItems, int index) {
-        if (documentItems == null || index >= documentItems.size()) {
-            return null;
-        }
-        return documentItems.get(index);
-    }
-
-    private void fillTransactionRows(
-        Map<String, Object> data,
-        List<PurchaseRequestPaymentTransaction> transactions,
-        String paymentDate,
-        String transactionNote
-    ) {
-        List<Map<String, Object>> transactionRows = new ArrayList<>();
-        for (int index = 0; index < transactions.size(); index++) {
-            PurchaseRequestPaymentTransaction transaction = transactions.get(index);
-            int row = index + TEMPLATE_PLACEHOLDER_START_INDEX;
-            transactionRows.add(Map.of(
-                "no", String.valueOf(row),
-                "date", paymentDate,
-                "detail", String.join(", ", transaction.getItemNames()),
-                "amount", formatMoney(transaction.getAmount()),
-                "note", transactionNote
-            ));
-        }
-        data.put("transactionRows", transactionRows);
-    }
-
-    private void fillPaymentMethod(Map<String, Object> data, ExpenseDocumentPaymentMethod paymentMethod) {
-        data.put("payCash", paymentMethod == ExpenseDocumentPaymentMethod.CASH ? CHECKED : UNCHECKED);
-        data.put("payCard", paymentMethod == ExpenseDocumentPaymentMethod.CARD ? CHECKED : UNCHECKED);
-        data.put("payTransfer", paymentMethod == ExpenseDocumentPaymentMethod.TRANSFER ? CHECKED : UNCHECKED);
-        data.put("payAuto", paymentMethod == ExpenseDocumentPaymentMethod.AUTO_TRANSFER ? CHECKED : UNCHECKED);
-        data.put("payOther", paymentMethod == ExpenseDocumentPaymentMethod.OTHER ? CHECKED : UNCHECKED);
-    }
-
-    private String paymentMethodLabel(ExpenseDocumentPaymentMethod paymentMethod) {
+    private String paymentMethodLabel(PurchasePaymentMethod paymentMethod) {
         if (paymentMethod == null) {
             return "";
         }
@@ -393,13 +424,13 @@ public class ExpenseDocumentService {
 
         int keyIndex = TEMPLATE_PLACEHOLDER_START_INDEX;
         for (ApprovalLine line : approvalLines) {
-            if (keyIndex > TEMPLATE_APPROVAL_SLOT_COUNT) {
+            if (keyIndex > TEMPLATE_APPROVAL_PLACEHOLDER_COUNT) {
                 return;
             }
             data.put(keyPrefix + keyIndex, defaultText(line.position(), ""));
             keyIndex++;
 
-            if (keyIndex > TEMPLATE_APPROVAL_SLOT_COUNT) {
+            if (keyIndex > TEMPLATE_APPROVAL_PLACEHOLDER_COUNT) {
                 return;
             }
             data.put(keyPrefix + keyIndex, defaultText(line.name(), ""));
@@ -407,16 +438,8 @@ public class ExpenseDocumentService {
         }
     }
 
-    private void appendReceiptImages(
-        XWPFDocument document,
-        List<PurchaseRequestPaymentTransaction> transactions
-    ) {
-        for (PurchaseRequestPaymentTransaction transaction : transactions) {
-            File receiptFile = transaction.getReceiptFile();
-            if (receiptFile == null || receiptFile.isDeleted()) {
-                continue;
-            }
-
+    private void appendReceiptImages(XWPFDocument document, List<File> receiptFiles) {
+        for (File receiptFile : receiptFiles) {
             byte[] content = downloadReceiptImage(receiptFile);
             BufferedImage image = readReceiptImage(content);
             ImageSize imageSize = fitReceiptImage(image);
@@ -429,6 +452,64 @@ public class ExpenseDocumentService {
             XWPFRun run = paragraph.createRun();
             addReceiptPicture(run, receiptFile, content, pictureType, imageSize);
         }
+    }
+
+    private List<File> activeReceiptFiles(PurchaseRequest purchaseRequest) {
+        Map<UUID, File> filesById = new LinkedHashMap<>();
+        if (purchaseRequest.getProposal() != null) {
+            purchaseRequest.getProposal().getReceipts().stream()
+                .filter(receipt -> !receipt.isDeleted() && !receipt.getFile().isDeleted())
+                .forEach(receipt -> filesById.putIfAbsent(receipt.getFile().getId(), receipt.getFile()));
+        }
+        purchaseRequest.getTransactions().stream()
+            .map(PurchaseRequestPaymentTransaction::getReceiptFile)
+            .filter(Objects::nonNull)
+            .filter(file -> !file.isDeleted())
+            .forEach(file -> filesById.putIfAbsent(file.getId(), file));
+        return List.copyOf(filesById.values());
+    }
+
+    private void retainDocumentSection(XWPFDocument document, DocumentSection section) {
+        List<IBodyElement> bodyElements = new ArrayList<>(document.getBodyElements());
+        int resolutionTitleIndex = -1;
+        for (int index = 0; index < bodyElements.size(); index++) {
+            if (isResolutionSectionStart(bodyElements.get(index))) {
+                resolutionTitleIndex = index;
+                break;
+            }
+        }
+        if (resolutionTitleIndex < 0) {
+            throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_GENERATION_FAILED);
+        }
+
+        if (section == DocumentSection.RESOLUTION) {
+            for (int index = resolutionTitleIndex - 1; index >= 0; index--) {
+                document.removeBodyElement(index);
+            }
+            return;
+        }
+
+        int firstRemovedIndex = resolutionTitleIndex;
+        while (firstRemovedIndex > 0
+            && bodyElements.get(firstRemovedIndex - 1) instanceof XWPFParagraph paragraph
+            && paragraph.getText().isBlank()) {
+            firstRemovedIndex--;
+        }
+        for (int index = bodyElements.size() - 1; index >= firstRemovedIndex; index--) {
+            document.removeBodyElement(index);
+        }
+    }
+
+    private boolean isResolutionSectionStart(IBodyElement bodyElement) {
+        String text;
+        if (bodyElement instanceof XWPFParagraph paragraph) {
+            text = paragraph.getText();
+        } else if (bodyElement instanceof XWPFTable table) {
+            text = table.getText();
+        } else {
+            return false;
+        }
+        return text.replaceAll("\\s+", "").contains("지출결의서");
     }
 
     private void addReceiptPicture(
@@ -506,16 +587,6 @@ public class ExpenseDocumentService {
         throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_UNSUPPORTED_RECEIPT_IMAGE);
     }
 
-    private String summarizeItemNames(List<PurchaseRequestItem> items) {
-        if (items.isEmpty()) {
-            return "";
-        }
-        if (items.size() == 1) {
-            return items.getFirst().getName();
-        }
-        return items.getFirst().getName() + " 외 " + (items.size() - 1) + "건";
-    }
-
     private String summarizeVendors(List<PurchaseRequestPaymentTransaction> transactions) {
         List<String> vendorNames = transactions.stream()
             .map(transaction -> transaction.getVendor().getName())
@@ -535,13 +606,24 @@ public class ExpenseDocumentService {
         return StringUtils.hasText(value) ? value.trim() : fallback;
     }
 
-    private String formatDate(LocalDateTime dateTime) {
-        return dateTime != null ? dateTime.format(DATE_FORMATTER) : "";
+    private String formatDate(LocalDate date) {
+        return date != null ? date.format(DATE_FORMATTER) : "";
     }
 
-    private String buildDownloadFilename(PurchaseRequest purchaseRequest) {
-        return "지출증빙서류-%s-%s.docx".formatted(
-            sanitizeFilenameTitle(purchaseRequest.getTitle()),
+    private String documentTitle(PurchaseRequest purchaseRequest, DocumentSection section) {
+        PurchaseRequestProposal proposal = purchaseRequest.getProposal();
+        if (proposal == null) {
+            return purchaseRequest.getTitle();
+        }
+        return section == DocumentSection.PROPOSAL
+            ? defaultText(proposal.getProposalTitle(), purchaseRequest.getTitle())
+            : defaultText(proposal.getResolutionTitle(), purchaseRequest.getTitle());
+    }
+
+    private String buildDownloadFilename(String title, String documentName) {
+        return "%s-%s-%s.docx".formatted(
+            documentName,
+            sanitizeFilenameTitle(title),
             LocalDate.now().format(FILE_DATE_FORMATTER)
         );
     }
@@ -583,5 +665,13 @@ public class ExpenseDocumentService {
     }
 
     private record ImageSize(int widthPoint, int heightPoint) {
+    }
+
+    private record ApprovalLine(String position, String name) {
+    }
+
+    private enum DocumentSection {
+        PROPOSAL,
+        RESOLUTION
     }
 }

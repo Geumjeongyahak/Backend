@@ -1,11 +1,13 @@
 package geumjeongyahak.domain.purchase_request.v1.dto.response;
 
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposal;
+import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalApprovalLine;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalBudget;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalItem;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestProposalReceipt;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseBudgetItemCategory;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseCalculationDetail;
+import geumjeongyahak.domain.purchase_request.enums.PurchaseDocumentApprovalType;
 import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentAccount;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
@@ -24,6 +26,24 @@ public record PurchaseRequestProposalResponse(
         nullable = true
     )
     String proposalNumber,
+
+    @Schema(description = "품의서 제목. null이면 결제 신청 제목을 사용합니다.", example = "7월 교재 구입", nullable = true)
+    String proposalTitle,
+
+    @Schema(description = "결의서 지출명·내용·세부내역. null이면 결제 신청 제목을 사용합니다.", example = "7월 교재 구입", nullable = true)
+    String resolutionTitle,
+
+    @Schema(description = "완료 요청일", example = "2026-07-26", nullable = true)
+    LocalDate completionDate,
+
+    @Schema(description = "저장된 품의서 결재라인")
+    List<ApprovalLineResponse> draftApprovals,
+
+    @Schema(description = "저장된 품의서 협조라인")
+    List<ApprovalLineResponse> draftCooperations,
+
+    @Schema(description = "저장된 결의서 결재라인")
+    List<ApprovalLineResponse> resolutionApprovals,
 
     @Schema(description = "품의 개요", example = "7월 교재 구입 비용을 다음과 같이 지출하고자 합니다.", nullable = true)
     String overview,
@@ -67,6 +87,22 @@ public record PurchaseRequestProposalResponse(
     @Schema(description = "품의 정보 최종 수정 시각")
     LocalDateTime updatedAt
 ) {
+    @Schema(description = "문서 결재·협조 항목 응답")
+    public record ApprovalLineResponse(
+        @Schema(description = "직위", example = "총무", nullable = true)
+        String position,
+
+        @Schema(description = "이름", example = "관리자", nullable = true)
+        String name,
+
+        @Schema(description = "표시 순서. 0부터 시작합니다.", example = "0")
+        int sortOrder
+    ) {
+        static ApprovalLineResponse from(PurchaseRequestProposalApprovalLine line) {
+            return new ApprovalLineResponse(line.getPosition(), line.getName(), line.getSortOrder());
+        }
+    }
+
     @Schema(description = "품의 예산 내역 응답")
     public record BudgetResponse(
         @Schema(description = "예산 내역 ID", example = "1")
@@ -171,6 +207,12 @@ public record PurchaseRequestProposalResponse(
         return new PurchaseRequestProposalResponse(
             proposal.getId(),
             proposalNumber,
+            proposal.getProposalTitle(),
+            proposal.getResolutionTitle(),
+            proposal.getCompletionDate(),
+            approvalLines(proposal, PurchaseDocumentApprovalType.DRAFT_APPROVAL),
+            approvalLines(proposal, PurchaseDocumentApprovalType.DRAFT_COOPERATION),
+            approvalLines(proposal, PurchaseDocumentApprovalType.RESOLUTION_APPROVAL),
             proposal.getOverview(),
             proposal.getPolicyProject(),
             proposal.getUnitProject(),
@@ -189,5 +231,15 @@ public record PurchaseRequestProposalResponse(
             proposal.getCreatedAt(),
             proposal.getUpdatedAt()
         );
+    }
+
+    private static List<ApprovalLineResponse> approvalLines(
+        PurchaseRequestProposal proposal,
+        PurchaseDocumentApprovalType type
+    ) {
+        return proposal.getApprovalLines().stream()
+            .filter(line -> line.getLineType() == type)
+            .map(ApprovalLineResponse::from)
+            .toList();
     }
 }

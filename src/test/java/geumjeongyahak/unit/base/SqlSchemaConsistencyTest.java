@@ -47,11 +47,10 @@ class SqlSchemaConsistencyTest {
     }
 
     @Test
-    @DisplayName("V1, 개발, 테스트 스키마의 테이블 목록은 같아야 한다")
-    void schemas_haveSameTables() throws IOException {
+    @DisplayName("개발과 테스트 초기화 스키마의 테이블 목록은 같아야 한다")
+    void initializationSchemas_haveSameTables() throws IOException {
         Set<String> expectedTables = tableNames(MAIN_SCHEMA);
 
-        assertEquals(expectedTables, tableNames(V1_SCHEMA), "V1 테이블 목록이 개발 스키마와 다릅니다.");
         assertEquals(expectedTables, tableNames(TEST_SCHEMA), "테스트 테이블 목록이 개발 스키마와 다릅니다.");
     }
 

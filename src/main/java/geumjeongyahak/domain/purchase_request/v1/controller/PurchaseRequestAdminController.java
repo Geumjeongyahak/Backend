@@ -32,7 +32,6 @@ import geumjeongyahak.domain.purchase_request.service.PurchaseRequestService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestProposalService;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.AttachPurchaseRequestProposalReceiptRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestByAdminRequest;
-import geumjeongyahak.domain.purchase_request.v1.dto.request.GenerateExpenseDocumentRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.PurchaseRequestListRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReviewPurchaseRequestRequest;
@@ -296,17 +295,42 @@ public class PurchaseRequestAdminController {
     }
 
     @Operation(
-        summary = "지출증빙서류 DOCX 생성",
-        description = "결재 확인까지 완료된 선금 결제 구매 요청의 품의서/결의서 DOCX 문서를 생성해 다운로드합니다."
+        summary = "품의서 DOCX 생성",
+        description = "관리자가 미완성 품의 정보를 포함한 최신 품의서를 생성합니다. 반려된 신청은 출력할 수 없습니다."
     )
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
-    @PostMapping("/{requestId}/expense-document")
-    public ResponseEntity<Resource> generateExpenseDocument(
+    @PostMapping("/{requestId}/proposal-document")
+    public ResponseEntity<Resource> generateProposalDocument(
         @PathVariable Long requestId,
-        @Valid @RequestBody GenerateExpenseDocumentRequest request
+        @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.debug("POST /api/v1/admin/purchase-requests/{}/expense-document", requestId);
-        ExpenseDocumentService.ExpenseDocumentResult document = expenseDocumentService.generate(requestId, request);
+        log.debug("POST /api/v1/admin/purchase-requests/{}/proposal-document", requestId);
+        return documentResponse(expenseDocumentService.generateProposal(
+            userDetails.getUserId(),
+            requestId,
+            true
+        ));
+    }
+
+    @Operation(
+        summary = "결의서 DOCX 생성",
+        description = "관리자가 CONFIRMED 상태의 결제 신청을 최신 실제 거래 정보로 결의서 DOCX로 생성합니다."
+    )
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
+    @PostMapping("/{requestId}/resolution-document")
+    public ResponseEntity<Resource> generateResolutionDocument(
+        @PathVariable Long requestId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("POST /api/v1/admin/purchase-requests/{}/resolution-document", requestId);
+        return documentResponse(expenseDocumentService.generateResolution(
+            userDetails.getUserId(),
+            requestId,
+            true
+        ));
+    }
+
+    private ResponseEntity<Resource> documentResponse(ExpenseDocumentService.ExpenseDocumentResult document) {
         ByteArrayResource resource = new ByteArrayResource(document.content());
 
         return ResponseEntity.ok()
