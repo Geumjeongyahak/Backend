@@ -28,6 +28,7 @@ import geumjeongyahak.domain.notification.event.RequestReviewedPushEvent;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestItem;
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestPaymentTransaction;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.exception.PurchaseRequestErrorCode;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
@@ -36,6 +37,7 @@ import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseReque
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.PurchaseRequestListRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.UpdatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
 import geumjeongyahak.domain.users.entity.User;
@@ -64,17 +66,22 @@ public class PurchaseRequestService {
 
         Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
         User requester = userProxyService.getById(requesterId);
-
         List<PurchaseRequestItem> items = request.items().stream()
             .map(item -> new PurchaseRequestItem(
                 item.name(),
                 item.reason(),
-                item.quantity(),
-                item.paymentType()
+                item.quantity()
             ))
             .toList();
 
-        return createPurchaseRequest(requester, classroom, request.title(), request.content(), items);
+        return createPurchaseRequest(
+            requester,
+            classroom,
+            request.paymentType(),
+            request.title(),
+            request.content(),
+            items
+        );
     }
 
     @Transactional
@@ -90,17 +97,22 @@ public class PurchaseRequestService {
 
         Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
         User requester = userProxyService.getById(request.requestedById());
-
         List<PurchaseRequestItem> items = request.items().stream()
             .map(item -> new PurchaseRequestItem(
                 item.name(),
                 item.reason(),
-                item.quantity(),
-                item.paymentType()
+                item.quantity()
             ))
             .toList();
 
-        return createPurchaseRequest(requester, classroom, request.title(), request.content(), items);
+        return createPurchaseRequest(
+            requester,
+            classroom,
+            request.paymentType(),
+            request.title(),
+            request.content(),
+            items
+        );
     }
 
     public PaginationResponse<PurchaseRequestSummaryResponse> getPurchaseRequests(
@@ -109,10 +121,11 @@ public class PurchaseRequestService {
         boolean mine
     ) {
         log.debug(
-            "구입 요청 목록 조회 (requesterId={}, mine={}, status={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
+            "구입 요청 목록 조회 (requesterId={}, mine={}, status={}, paymentType={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
             requesterId,
             mine,
             request.getStatus(),
+            request.getPaymentType(),
             request.getKeyword(),
             request.getClassroomName(),
             request.getRequestedByName(),
@@ -137,7 +150,9 @@ public class PurchaseRequestService {
         boolean mine
     ) {
         Specification<PurchaseRequest> spec = Specification.allOf(
+            PurchaseRequestSpecs.isNotDeleted(),
             PurchaseRequestSpecs.hasStatus(request.getStatus()),
+            PurchaseRequestSpecs.hasPaymentType(request.getPaymentType()),
             PurchaseRequestSpecs.keywordContains(request.getKeyword()),
             PurchaseRequestSpecs.classroomNameContains(request.getClassroomName()),
             PurchaseRequestSpecs.requestedByNameContains(request.getRequestedByName())
@@ -159,7 +174,7 @@ public class PurchaseRequestService {
 
     @Transactional
     public PurchaseRequestDetailResponse updatePurchaseRequest(
-        Long requesterId, Long requestId, CreatePurchaseRequestRequest request, boolean isAdmin
+        Long requesterId, Long requestId, UpdatePurchaseRequestRequest request, boolean isAdmin
     ) {
         log.debug("구입 요청 수정 (requesterId={}, requestId={})", requesterId, requestId);
         PurchaseRequest purchaseRequest = findById(requestId);
@@ -173,8 +188,7 @@ public class PurchaseRequestService {
             .map(item -> new PurchaseRequestItem(
                 item.name(),
                 item.reason(),
-                item.quantity(),
-                item.paymentType()
+                item.quantity()
             ))
             .toList();
 
@@ -251,7 +265,7 @@ public class PurchaseRequestService {
             throw new BusinessException(PurchaseRequestErrorCode.PURCHASE_DEADLINE_EXCEEDED);
         }
 
-        purchaseRequest.replaceTransactions(toTransactions(request));
+        purchaseRequest.replaceTransactions(toTransactions(purchaseRequest, request));
 
         purchaseRequest.reportPurchase();
 
@@ -270,7 +284,7 @@ public class PurchaseRequestService {
             throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
         }
 
-        purchaseRequest.replaceTransactions(toTransactions(request));
+        purchaseRequest.replaceTransactions(toTransactions(purchaseRequest, request));
 
         return toDetailResponse(purchaseRequest);
     }
@@ -286,14 +300,25 @@ public class PurchaseRequestService {
 
         validateConfirmable(purchaseRequest);
         User confirmer = userProxyService.getById(confirmerId);
-        Map<Vendor, Long> amountByVendor = purchaseRequest.getTransactions().stream()
-            .collect(Collectors.groupingBy(
-                PurchaseRequestPaymentTransaction::getVendor,
-                Collectors.summingLong(PurchaseRequestPaymentTransaction::getAmount)
-            ));
-        amountByVendor.forEach((vendor, amount) ->
-            vendorService.deductForPurchaseRequest(vendor, purchaseRequest, amount, confirmer)
-        );
+        if (purchaseRequest.getPaymentType() == PurchasePaymentType.PREPAID) {
+            PurchaseRequestPaymentTransaction transaction = purchaseRequest.getTransactions().getFirst();
+            vendorService.chargeForPurchaseRequest(
+                transaction.getVendor(),
+                purchaseRequest,
+                purchaseRequest.getTotalPrice(),
+                transaction.getReceiptFile(),
+                confirmer
+            );
+        } else {
+            Map<Vendor, Long> amountByVendor = purchaseRequest.getTransactions().stream()
+                .collect(Collectors.groupingBy(
+                    PurchaseRequestPaymentTransaction::getVendor,
+                    Collectors.summingLong(PurchaseRequestPaymentTransaction::getAmount)
+                ));
+            amountByVendor.forEach((vendor, amount) ->
+                vendorService.deductForPurchaseRequest(vendor, purchaseRequest, amount, confirmer)
+            );
+        }
 
         purchaseRequest.confirm();
 
@@ -319,24 +344,49 @@ public class PurchaseRequestService {
             throw new BusinessException(PurchaseRequestErrorCode.ALREADY_PROCESSED);
         }
 
-        purchaseRequestRepository.delete(purchaseRequest);
+        purchaseRequest.softDelete();
         log.debug("구입 요청 삭제 완료 (requestId={})", requestId);
     }
 
     private PurchaseRequest findById(Long requestId) {
-        return purchaseRequestRepository.findById(requestId)
+        return purchaseRequestRepository.findByIdAndIsDeletedFalse(requestId)
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));
     }
 
-    private List<PurchaseRequestPaymentTransaction> toTransactions(ReportPurchaseRequest request) {
-        return request.transactions().stream()
+    private List<PurchaseRequestPaymentTransaction> toTransactions(
+        PurchaseRequest purchaseRequest,
+        ReportPurchaseRequest request
+    ) {
+        if (request == null || request.transactions() == null || request.transactions().isEmpty()) {
+            throw new BusinessException(PurchaseRequestErrorCode.INVALID_TRANSACTION_STRUCTURE);
+        }
+        request.transactions().forEach(this::validateTransactionReport);
+
+        List<PurchaseRequestPaymentTransaction> transactions = request.transactions().stream()
             .map(transaction -> new PurchaseRequestPaymentTransaction(
                 vendorService.getActiveById(transaction.vendorId()),
                 normalizeItemNames(transaction.itemNames()),
                 transaction.amount(),
+                purchaseRequest.getPaymentType() == PurchasePaymentType.PREPAID
+                    ? transaction.paymentMethod()
+                    : null,
                 getActiveFileOrNull(transaction.receiptFileId())
             ))
             .toList();
+        validateTransactionStructure(purchaseRequest, transactions);
+        return transactions;
+    }
+
+    private void validateTransactionReport(ReportPurchaseRequest.TransactionReport transaction) {
+        if (transaction == null
+            || transaction.vendorId() == null
+            || transaction.amount() == null
+            || transaction.amount() <= 0
+            || transaction.itemNames() == null
+            || transaction.itemNames().isEmpty()
+            || transaction.itemNames().stream().anyMatch(itemName -> itemName == null || itemName.isBlank())) {
+            throw new BusinessException(PurchaseRequestErrorCode.INVALID_TRANSACTION_STRUCTURE);
+        }
     }
 
     private List<String> normalizeItemNames(List<String> itemNames) {
@@ -358,6 +408,7 @@ public class PurchaseRequestService {
         if (purchaseRequest.getTransactions().isEmpty()) {
             throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
         }
+        validateTransactionStructure(purchaseRequest, purchaseRequest.getTransactions());
         for (PurchaseRequestPaymentTransaction transaction : purchaseRequest.getTransactions()) {
             if (transaction.getVendor() == null
                 || transaction.getAmount() == null
@@ -365,6 +416,42 @@ public class PurchaseRequestService {
                 || transaction.getItemNames().isEmpty()) {
                 throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
             }
+        }
+        if (purchaseRequest.getPaymentType() == PurchasePaymentType.PREPAID) {
+            File receiptFile = purchaseRequest.getTransactions().getFirst().getReceiptFile();
+            if (receiptFile == null || receiptFile.isDeleted()) {
+                throw new BusinessException(PurchaseRequestErrorCode.PREPAID_RECEIPT_REQUIRED);
+            }
+        }
+    }
+
+    private void validateTransactionStructure(
+        PurchaseRequest purchaseRequest,
+        List<PurchaseRequestPaymentTransaction> transactions
+    ) {
+        Map<String, Long> expectedItemCounts = purchaseRequest.getItems().stream()
+            .map(PurchaseRequestItem::getName)
+            .map(String::trim)
+            .collect(Collectors.groupingBy(name -> name, Collectors.counting()));
+        Map<String, Long> reportedItemCounts = transactions.stream()
+            .flatMap(transaction -> transaction.getItemNames().stream())
+            .collect(Collectors.groupingBy(name -> name, Collectors.counting()));
+
+        if (!expectedItemCounts.equals(reportedItemCounts)) {
+            throw new BusinessException(PurchaseRequestErrorCode.INVALID_TRANSACTION_STRUCTURE);
+        }
+
+        if (purchaseRequest.getPaymentType() == PurchasePaymentType.PREPAID) {
+            if (transactions.size() != 1 || transactions.getFirst().getPaymentMethod() == null) {
+                throw new BusinessException(PurchaseRequestErrorCode.INVALID_TRANSACTION_STRUCTURE);
+            }
+            return;
+        }
+
+        boolean everyTransactionHasOneItem = transactions.stream()
+            .allMatch(transaction -> transaction.getItemNames().size() == 1);
+        if (transactions.size() != purchaseRequest.getItems().size() || !everyTransactionHasOneItem) {
+            throw new BusinessException(PurchaseRequestErrorCode.INVALID_TRANSACTION_STRUCTURE);
         }
     }
 
@@ -375,6 +462,7 @@ public class PurchaseRequestService {
     private PurchaseRequestDetailResponse createPurchaseRequest(
         User requester,
         Classroom classroom,
+        PurchasePaymentType paymentType,
         String title,
         String content,
         List<PurchaseRequestItem> items
@@ -382,7 +470,9 @@ public class PurchaseRequestService {
         PurchaseRequest saved = purchaseRequestRepository.save(
             new PurchaseRequest(
                 classroom,
+                requester.getDepartment(),
                 requester,
+                paymentType,
                 title,
                 content,
                 items

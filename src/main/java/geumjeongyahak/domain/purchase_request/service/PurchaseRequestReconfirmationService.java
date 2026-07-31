@@ -21,7 +21,7 @@ public class PurchaseRequestReconfirmationService {
 
     public void requestReconfirmation(Long requesterId, Long requestId) {
         log.debug("구입 요청 재확인 요청 (requesterId={}, requestId={})", requesterId, requestId);
-        PurchaseRequest purchaseRequest = purchaseRequestRepository.findById(requestId)
+        PurchaseRequest purchaseRequest = purchaseRequestRepository.findByIdAndIsDeletedFalse(requestId)
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));
 
         if (!purchaseRequest.getRequestedBy().getId().equals(requesterId)) {

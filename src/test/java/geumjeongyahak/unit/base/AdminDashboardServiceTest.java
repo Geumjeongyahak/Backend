@@ -69,7 +69,7 @@ class AdminDashboardServiceTest {
         given(userRepository.countByIsDeletedFalse()).willReturn(4L);
         given(departmentRepository.count()).willReturn(6L);
         given(classroomRepository.count()).willReturn(9L);
-        given(purchaseRequestRepository.countByStatus(PurchaseRequestStatus.PENDING)).willReturn(2L);
+        given(purchaseRequestRepository.countByStatusAndIsDeletedFalse(PurchaseRequestStatus.PENDING)).willReturn(2L);
         given(absenceRequestRepository.countByStatus(RequestStatus.PENDING)).willReturn(5L);
         given(teacherApplicationRepository.countByStatus(TeacherApplicationStatus.PENDING)).willReturn(13L);
         given(studentRepository.count()).willReturn(11L);

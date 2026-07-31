@@ -29,24 +29,47 @@
             <input type="text" th:value="${request.classroomName}" readonly disabled>
         </label>
         <label>제목 <input th:field="*{title}" th:readonly="${request.status.name() != 'PENDING'}" required></label>
-        <label>내용 <textarea th:field="*{content}" th:readonly="${request.status.name() != 'PENDING'}" required></textarea></label>
+        <label>내용 <textarea th:field="*{content}" th:readonly="${request.status.name() != 'PENDING'}"></textarea></label>
+        <label>결제 유형
+            <input type="text" th:value="${request.paymentType.name() == 'PREPAID' ? '선금 결제' : '실 결제'}" readonly disabled>
+            <input type="hidden" th:field="*{paymentType}">
+        </label>
         
         <div class="stack" style="--gap: 1rem;">
             <h3>구매 항목</h3>
             <div id="items-container" class="stack" style="--gap: 0.5rem;">
-                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(100px, .6fr) minmax(140px, .8fr) auto; gap: 1rem; align-items: end;">
+                <div th:each="item, stat : *{items}" class="panel item-row" style="display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(100px, .6fr) auto; gap: 1rem; align-items: end;">
                     <input type="hidden" th:field="*{items[__${stat.index}__].id}">
                     <label>품명 <input th:field="*{items[__${stat.index}__].name}" th:readonly="${request.status.name() != 'PENDING'}" required></label>
                     <label>사유 <input th:field="*{items[__${stat.index}__].reason}" th:readonly="${request.status.name() != 'PENDING'}"></label>
                     <label>개수 <input type="number" th:field="*{items[__${stat.index}__].quantity}" min="1" th:readonly="${request.status.name() != 'PENDING'}" required></label>
-                    <label>결제 유형 <select th:field="*{items[__${stat.index}__].paymentType}" th:disabled="${request.status.name() != 'PENDING'}"><option value="PREPAID">선 결제</option><option value="ACTUAL">실 결제</option></select></label>
                     <button type="button" class="button danger" th:if="${stat.index > 0 && request.status.name() == 'PENDING'}" onclick="removeRow(this)">삭제</button>
+                    <th:block th:if="${request.status.name() == 'APPROVED' && request.paymentType.name() == 'ACTUAL'}">
+                        <label>거래처
+                            <select th:field="*{items[__${stat.index}__].vendorId}" required>
+                                <option value="">선택</option>
+                                <option th:each="vendor : ${vendors}" th:value="${vendor.id}" th:text="|${vendor.name} (${vendor.balance}원)|">거래처</option>
+                            </select>
+                        </label>
+                        <label>결제 금액
+                            <input type="number" th:field="*{items[__${stat.index}__].actualAmount}" min="1" required>
+                        </label>
+                        <div class="receipt-field">
+                            <span class="field-label">영수증</span>
+                            <input type="hidden" th:field="*{items[__${stat.index}__].receiptFileId}">
+                            <div class="receipt-preview"><span class="receipt-empty">미첨부</span></div>
+                            <label class="file-button">
+                                <span>파일 선택</span>
+                                <input type="file" accept="image/*" onchange="uploadItemReceipt(this)">
+                            </label>
+                        </div>
+                    </th:block>
                 </div>
             </div>
             <button type="button" class="button secondary" onclick="addItemRow()" th:if="${request.status.name() == 'PENDING'}">항목 추가</button>
         </div>
 
-        <div class="stack" style="--gap: 1rem;" th:if="${request.status.name() == 'APPROVED'}">
+        <div class="stack" style="--gap: 1rem;" th:if="${request.status.name() == 'APPROVED' && request.paymentType.name() == 'PREPAID'}">
             <h3>구매 완료 보고</h3>
             <label>거래처
                 <select th:field="*{vendorId}" required>
@@ -55,7 +78,12 @@
                 </select>
             </label>
             <label>결제 금액 <input type="number" th:field="*{amount}" min="1" required></label>
-            <label>거래 품목명 <input name="transactionItemNames[0]" th:value="${request.items[0].name}" required></label>
+            <label>지급 구분
+                <select th:field="*{paymentMethod}" required>
+                    <option value="">선택</option>
+                    <option th:each="method : ${purchasePaymentMethods}" th:value="${method.name()}" th:text="${method.name()}">CARD</option>
+                </select>
+            </label>
             <div class="receipt-field">
                 <span class="field-label">영수증</span>
                 <input id="report-receipt-id" type="hidden" th:field="*{receiptFileId}">
@@ -115,12 +143,11 @@
             const container = document.getElementById('items-container');
             const newRow = document.createElement('div');
             newRow.className = 'panel item-row';
-            newRow.style.cssText = 'display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(100px, .6fr) minmax(140px, .8fr) auto; gap: 1rem; align-items: end;';
+            newRow.style.cssText = 'display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(100px, .6fr) auto; gap: 1rem; align-items: end;';
             newRow.innerHTML = `
                 <label>품명 <input name="items[${itemIndex}].name" required></label>
                 <label>사유 <input name="items[${itemIndex}].reason"></label>
                 <label>개수 <input type="number" name="items[${itemIndex}].quantity" min="1" required value="1"></label>
-                <label>결제 유형 <select name="items[${itemIndex}].paymentType"><option value="PREPAID">선 결제</option><option value="ACTUAL" selected>실 결제</option></select></label>
                 <button type="button" class="button danger" onclick="removeRow(this)">삭제</button>
             `;
             container.appendChild(newRow);
@@ -140,13 +167,11 @@
                 const nameInput = row.querySelector('input[name*=".name"]');
                 const reasonInput = row.querySelector('input[name*=".reason"]');
                 const quantityInput = row.querySelector('input[name*=".quantity"]');
-                const paymentTypeInput = row.querySelector('select[name*=".paymentType"]');
                 
                 if (idInput) idInput.name = `items[${index}].id`;
                 if (nameInput) nameInput.name = `items[${index}].name`;
                 if (reasonInput) reasonInput.name = `items[${index}].reason`;
                 if (quantityInput) quantityInput.name = `items[${index}].quantity`;
-                if (paymentTypeInput) paymentTypeInput.name = `items[${index}].paymentType`;
             });
             itemIndex = rows.length;
         }

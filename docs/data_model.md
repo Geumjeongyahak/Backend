@@ -36,7 +36,7 @@
 | Lesson Exchange Requests | Lesson Exchange Proposals | request_id | 교환 요청별 제안 |
 | Classrooms | Purchase Requests | classroom_id | 분반별 기자재 구입 요청 |
 | Purchase Requests | Purchase Request Items | purchase_request_id | 구입 요청별 품목 |
-| Vendors | Purchase Requests | vendor_id | 거래처 선결제 구입 요청 |
+| Vendors | Purchase Requests | vendor_id | 거래처 선금 결제 구입 요청 |
 | Vendors | Vendor Balance Histories | vendor_id | 거래처 충전/차감 이력 |
 | Users | 각종 요청들 | requested_by | 요청자 |
 | Users | 각종 요청들 | approval_by | 승인자 |
@@ -488,14 +488,14 @@ ADMIN이 특정 사용자에게 직접 권한을 부여해야 할 때 사용하�
 
 ### 3.13 거래처 (vendors)
 
-거래처 선결제 방식에서 사용할 거래처와 현재 잔액을 관리하는 엔티티입니다.
+거래처 선금 결제 방식에서 사용할 거래처와 현재 잔액을 관리하는 엔티티입니다.
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
 | id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 거래처 고유 ID |
 | name | VARCHAR(255) | NOT NULL | 거래처명 |
 | description | TEXT | NULL | 거래처 설명 |
-| balance | BIGINT | NOT NULL, DEFAULT 0 | 현재 선결제 잔액 |
+| balance | BIGINT | NOT NULL, DEFAULT 0 | 현재 선금 결제 잔액 |
 | is_active | BOOLEAN | NOT NULL, DEFAULT TRUE | 사용 가능 여부 |
 | is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | 삭제 여부 |
 | deleted_at | TIMESTAMP | NULL | 삭제 시각 |
@@ -528,9 +528,11 @@ ADMIN이 특정 사용자에게 직접 권한을 부여해야 할 때 사용하�
 - `PURCHASED` → `CONFIRMED`
 
 **결재 확인 규칙:**
-- 구매 완료 거래 라인에 거래처, 품목명, 양수 결제 금액이 있어야 `CONFIRMED` 전환이 가능합니다.
-- `CONFIRMED` 전환 시 거래처별 총 결제 금액을 차감하고 `vendor_balance_histories`에 `DEDUCT` 이력을 저장합니다.
-- 거래처 잔액 부족, 비활성, 삭제 상태이면 결재 확인은 실패하며 요청 상태와 거래처 잔액은 변경되지 않습니다.
+- 구매 완료 거래에 거래처, 신청 품목과 일치하는 품목명, 양수 결제 금액이 있어야 `CONFIRMED` 전환이 가능합니다.
+- 지급 구분은 선금 결제에서만 필수이며 실 결제에서는 저장하지 않습니다.
+- 선금 결제는 단일 거래와 활성 영수증을 필수로 검증하고, 거래 금액을 `CHARGE` 이력으로 저장하며 잔액에 충전합니다.
+- 실 결제는 품목별 단일 거래을 검증하고, 거래처별 총 결제 금액을 `DEDUCT` 이력으로 저장하며 잔액에서 차감합니다.
+- 거래처 비활성 또는 실 결제 잔액 부족 시 결재 확인은 실패하며 요청 상태와 거래처 잔액은 변경되지 않습니다.
 
 ### 3.15 기자재 구입 요청 품목 (purchase_requests_items)
 
@@ -543,13 +545,12 @@ ADMIN이 특정 사용자에게 직접 권한을 부여해야 할 때 사용하�
 | name | VARCHAR(255) | NOT NULL | 품명 |
 | reason | TEXT | NULL | 구입 사유 |
 | quantity | INTEGER | NOT NULL | 개수 |
-| payment_type | VARCHAR(20) | NOT NULL | 결제 유형 (`PREPAID`, `ACTUAL`) |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
 ### 3.15.1 구매 완료 거래 (purchase_request_payment_transactions)
 
-구매 완료 보고 단계에서 거래처별 실제 결제 금액과 선택 영수증을 관리하는 엔티티입니다. 한 거래 라인에는 여러 품목명을 연결할 수 있습니다.
+구매 완료 보고 단계에서 거래처, 실제 결제 금액, 지급 구분과 선택 영수증을 관리하는 엔티티입니다. 선금 결제는 모든 품목을 포함한 단일 거래, 실 결제는 품목별 단일 거래로 저장합니다.
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
@@ -557,6 +558,7 @@ ADMIN이 특정 사용자에게 직접 권한을 부여해야 할 때 사용하�
 | purchase_request_id | BIGINT | FOREIGN KEY, NOT NULL | 기자재 구입 요청 ID |
 | vendor_id | BIGINT | FOREIGN KEY, NOT NULL | 거래처 ID |
 | amount | BIGINT | NOT NULL | 총 결제 금액 |
+| payment_method | VARCHAR(20) | NULL | 선금 결제 지급 구분 (`CASH`, `CARD`, `TRANSFER`, `AUTO_TRANSFER`, `OTHER`) |
 | receipt_file_id | UUID | FOREIGN KEY, NULL | 영수증 파일 ID |
 
 ### 3.16 거래처 잔액 이력 (vendor_balance_histories)

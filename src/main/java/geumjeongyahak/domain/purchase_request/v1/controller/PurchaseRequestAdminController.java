@@ -29,12 +29,11 @@ import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.purchase_request.service.ExpenseDocumentService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestService;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestByAdminRequest;
-import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.GenerateExpenseDocumentRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.PurchaseRequestListRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReviewPurchaseRequestRequest;
-import geumjeongyahak.domain.purchase_request.v1.dto.request.UpdatePurchaseRequestByAdminRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.UpdatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
 
@@ -65,7 +64,8 @@ public class PurchaseRequestAdminController {
 
     @Operation(
         summary = "구입 요청 전체 목록 조회",
-        description = "전체 분반의 구입 요청 목록을 페이지 단위로 조회합니다. status, keyword, classroomName, requestedByName 파라미터로 필터링할 수 있습니다."
+        description = "전체 분반의 구입 요청 목록을 페이지 단위로 조회합니다. "
+            + "status, paymentType, keyword, classroomName, requestedByName 파라미터로 필터링할 수 있습니다."
     )
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:read:*')")
     @GetMapping
@@ -73,8 +73,9 @@ public class PurchaseRequestAdminController {
         @ParameterObject @Valid PurchaseRequestListRequest request
     ) {
         log.debug(
-            "GET /api/v1/admin/purchase-requests (status={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
+            "GET /api/v1/admin/purchase-requests (status={}, paymentType={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
             request.getStatus(),
+            request.getPaymentType(),
             request.getKeyword(),
             request.getClassroomName(),
             request.getRequestedByName(),
@@ -108,7 +109,7 @@ public class PurchaseRequestAdminController {
     @PatchMapping("/{requestId}")
     public ResponseEntity<PurchaseRequestDetailResponse> updatePurchaseRequest(
         @PathVariable Long requestId,
-        @Valid @RequestBody UpdatePurchaseRequestByAdminRequest request,
+        @Valid @RequestBody UpdatePurchaseRequestRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("PATCH /api/v1/admin/purchase-requests/{}", requestId);
@@ -116,7 +117,7 @@ public class PurchaseRequestAdminController {
             purchaseRequestService.updatePurchaseRequest(
                 userDetails.getUserId(),
                 requestId,
-                new CreatePurchaseRequestRequest(request.title(), request.content(), null, request.items()),
+                request,
                 true
             )
         );
@@ -124,7 +125,7 @@ public class PurchaseRequestAdminController {
 
     @Operation(
         summary = "구입 요청 삭제",
-        description = "PENDING 상태의 구입 요청을 삭제합니다. 이미 처리된 요청은 삭제할 수 없습니다."
+        description = "PENDING 상태의 구입 요청을 소프트 삭제합니다. 이미 처리된 요청은 삭제할 수 없습니다."
     )
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
     @DeleteMapping("/{requestId}")
@@ -223,7 +224,7 @@ public class PurchaseRequestAdminController {
 
     @Operation(
         summary = "지출증빙서류 DOCX 생성",
-        description = "결재 확인까지 완료된 선결제 구매 요청의 품의서/결의서 DOCX 문서를 생성해 다운로드합니다."
+        description = "결재 확인까지 완료된 선금 결제 구매 요청의 품의서/결의서 DOCX 문서를 생성해 다운로드합니다."
     )
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
     @PostMapping("/{requestId}/expense-document")

@@ -131,7 +131,7 @@ public class ExpenseDocumentService {
     }
 
     private PurchaseRequest findPurchaseRequest(Long purchaseRequestId) {
-        return purchaseRequestRepository.findById(purchaseRequestId)
+        return purchaseRequestRepository.findByIdAndIsDeletedFalse(purchaseRequestId)
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, purchaseRequestId));
     }
 
@@ -140,10 +140,7 @@ public class ExpenseDocumentService {
             throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_UNSUPPORTED_STATUS);
         }
 
-        boolean allPrepaid = purchaseRequest.getItems().stream()
-            .map(PurchaseRequestItem::getPaymentType)
-            .allMatch(PurchasePaymentType.PREPAID::equals);
-        if (!allPrepaid) {
+        if (purchaseRequest.getPaymentType() != PurchasePaymentType.PREPAID) {
             throw new BusinessException(PurchaseRequestErrorCode.EXPENSE_DOCUMENT_ONLY_PREPAID_ALLOWED);
         }
     }

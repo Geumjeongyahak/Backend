@@ -5,6 +5,7 @@ import java.util.Locale;
 import org.springframework.data.jpa.domain.Specification;
 
 import geumjeongyahak.domain.purchase_request.entity.PurchaseRequest;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -14,10 +15,20 @@ public final class PurchaseRequestSpecs {
     private PurchaseRequestSpecs() {
     }
 
+    public static Specification<PurchaseRequest> isNotDeleted() {
+        return (root, query, cb) -> cb.isFalse(root.get("isDeleted"));
+    }
+
     public static Specification<PurchaseRequest> hasStatus(PurchaseRequestStatus status) {
         return (root, query, cb) -> status == null
             ? cb.conjunction()
             : cb.equal(root.get("status"), status);
+    }
+
+    public static Specification<PurchaseRequest> hasPaymentType(PurchasePaymentType paymentType) {
+        return (root, query, cb) -> paymentType == null
+            ? cb.conjunction()
+            : cb.equal(root.get("paymentType"), paymentType);
     }
 
     public static Specification<PurchaseRequest> requestedBy(Long requesterId) {

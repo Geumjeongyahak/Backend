@@ -86,17 +86,19 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("관리자가 결제 확인 완료된 선결제 구매 요청 지출증빙서류 DOCX를 생성할 수 있다")
+    @DisplayName("관리자가 결제 확인 완료된 선금 결제 구매 요청 지출증빙서류 DOCX를 생성할 수 있다")
     void generateExpenseDocument_withPrepaidPurchaseAndReceipt_returnsDocx() throws Exception {
         createdVendorId = createVendor();
         createdRequestId = createPrepaidPurchaseRequest();
         approvePurchaseRequest(createdRequestId);
         UUID uploadedReceiptFileId = UUID.fromString(uploadPurchaseReceipt(PNG_BYTES));
         reportPurchase(createdRequestId, List.of(
-            transaction(createdVendorId, 1000L, List.of("거래품목1"), uploadedReceiptFileId.toString()),
-            transaction(createdVendorId, 2000L, List.of("거래품목2"), null),
-            transaction(createdVendorId, 3000L, List.of("거래품목3"), null),
-            transaction(createdVendorId, 4000L, List.of("거래품목4"), null)
+            transaction(
+                createdVendorId,
+                10000L,
+                List.of("품목1", "품목2", "품목3", "품목4"),
+                uploadedReceiptFileId.toString()
+            )
         ));
         confirmPurchaseRequest(createdRequestId);
 
@@ -138,7 +140,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
                     "규격4",
                     "4,000원",
                     "10,000원",
-                    "거래품목4",
+                    "품목4",
                     "카드결제",
                     "견적서 및 거래명세서(별첨)"
                 )
@@ -188,9 +190,9 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
         );
         createdVendorId = createVendor();
         createdRequestId = createPurchaseRequestWithItems("PREPAID", List.of(
-            purchaseItem("문해 교재 1단계", "PREPAID", 10),
-            purchaseItem("문해 교재 2단계", "PREPAID", 10),
-            purchaseItem("수업용 문제집", "PREPAID", 10)
+            purchaseItem("문해 교재 1단계", 10),
+            purchaseItem("문해 교재 2단계", 10),
+            purchaseItem("수업용 문제집", 10)
         ));
         approvePurchaseRequest(createdRequestId);
         reportPurchase(createdRequestId, List.of(
@@ -213,7 +215,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("CONFIRMED 상태의 선결제 구매 요청은 지출증빙서류 DOCX를 생성할 수 있다")
+    @DisplayName("CONFIRMED 상태의 선금 결제 구매 요청은 지출증빙서류 DOCX를 생성할 수 있다")
     void generateExpenseDocument_withConfirmedPurchase_returnsDocx() {
         createdVendorId = createVendor();
         createdRequestId = createConfirmedPrepaidRequest();
@@ -268,16 +270,14 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("영수증이 2개 이상이면 지출증빙서류 DOCX에 모두 첨부된다")
-    void generateExpenseDocument_withMultipleReceipts_containsAllPictures() throws Exception {
+    @DisplayName("선금 결제의 단일 거래 영수증이 지출증빙서류 DOCX에 첨부된다")
+    void generateExpenseDocument_withPrepaidReceipt_containsPicture() throws Exception {
         createdVendorId = createVendor();
         createdRequestId = createPrepaidPurchaseRequest();
         approvePurchaseRequest(createdRequestId);
-        UUID receiptFileId1 = UUID.fromString(uploadPurchaseReceipt(PNG_BYTES));
-        UUID receiptFileId2 = UUID.fromString(uploadPurchaseReceipt(PNG_BYTES_WITH_TRAILING_BYTE));
+        UUID receiptFileId = UUID.fromString(uploadPurchaseReceipt(PNG_BYTES));
         reportPurchase(createdRequestId, List.of(
-            transaction(createdVendorId, 5000L, List.of("거래품목1"), receiptFileId1.toString()),
-            transaction(createdVendorId, 5000L, List.of("거래품목2"), receiptFileId2.toString())
+            transaction(createdVendorId, 10000L, List.of("거래품목"), receiptFileId.toString())
         ));
         confirmPurchaseRequest(createdRequestId);
 
@@ -289,7 +289,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
             .asByteArray();
 
         try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(docx))) {
-            assertThat(document.getAllPictures()).hasSize(2);
+            assertThat(document.getAllPictures()).hasSize(1);
         }
     }
 
@@ -367,7 +367,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("선결제가 아닌 구매 요청은 지출증빙서류를 생성할 수 없다")
+    @DisplayName("선금 결제가 아닌 구매 요청은 지출증빙서류를 생성할 수 없다")
     void generateExpenseDocument_withActualPaymentItem_returns409() {
         createdVendorId = createVendor();
         createdRequestId = createPurchaseRequest("ACTUAL");
@@ -401,27 +401,6 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
         requestExpenseDocument(createdRequestId, expenseDocumentBody())
             .then()
             .statusCode(409);
-    }
-
-    @Test
-    @DisplayName("영수증이 없는 거래도 지출증빙서류 DOCX를 생성할 수 있다")
-    void generateExpenseDocument_withoutReceipt_returnsDocxWithoutPictures() throws Exception {
-        createdVendorId = createVendor();
-        createdRequestId = createPrepaidPurchaseRequest();
-        approvePurchaseRequest(createdRequestId);
-        reportPurchase(createdRequestId, List.of(transaction(createdVendorId, 10000L, List.of("거래품목"), null)));
-        confirmPurchaseRequest(createdRequestId);
-
-        byte[] docx = requestExpenseDocument(createdRequestId, expenseDocumentBody())
-            .then()
-            .statusCode(200)
-            .contentType(DOCX_CONTENT_TYPE)
-            .extract()
-            .asByteArray();
-
-        try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(docx))) {
-            assertThat(document.getAllPictures()).isEmpty();
-        }
     }
 
     @Test
@@ -502,7 +481,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
         return createPurchaseRequestWithItems(
             paymentType,
             itemNames.stream()
-                .map(itemName -> purchaseItem(itemName, paymentType))
+                .map(this::purchaseItem)
                 .toList()
         );
     }
@@ -516,6 +495,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
                 entry("title", "지출증빙서류 E2E"),
                 entry("content", "지출증빙서류 생성 API 테스트입니다."),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", paymentType),
                 entry("items", items)
             ))
             .post()
@@ -526,16 +506,15 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
             .getLong("id");
     }
 
-    private Map<String, Object> purchaseItem(String name, String paymentType) {
-        return purchaseItem(name, paymentType, 1);
+    private Map<String, Object> purchaseItem(String name) {
+        return purchaseItem(name, 1);
     }
 
-    private Map<String, Object> purchaseItem(String name, String paymentType, int quantity) {
+    private Map<String, Object> purchaseItem(String name, int quantity) {
         return Map.ofEntries(
             entry("name", name),
             entry("reason", "문서 생성 테스트"),
-            entry("quantity", quantity),
-            entry("paymentType", paymentType)
+            entry("quantity", quantity)
         );
     }
 
@@ -600,11 +579,67 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     }
 
     private void reportPurchase(Long requestId, List<Map<String, Object>> transactions) {
+        io.restassured.response.Response detail = given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get("/{requestId}", requestId)
+            .then()
+            .statusCode(200)
+            .extract()
+            .response();
+        List<String> requestItemNames = detail.jsonPath().getList("items.name", String.class);
+        String paymentType = detail.jsonPath().getString("paymentType");
+
+        List<Map<String, Object>> normalizedTransactions = new java.util.ArrayList<>();
+        if ("PREPAID".equals(paymentType)) {
+            Map<String, Object> source = transactions.getFirst();
+            Map<String, Object> transaction = new java.util.LinkedHashMap<>();
+            transaction.put("vendorId", source.get("vendorId"));
+            transaction.put("itemNames", requestItemNames);
+            transaction.put(
+                "amount",
+                transactions.stream()
+                    .mapToLong(value -> ((Number) value.get("amount")).longValue())
+                    .sum()
+            );
+            transaction.put("paymentMethod", source.getOrDefault("paymentMethod", "CARD"));
+            Object receiptFileId = transactions.stream()
+                .map(value -> value.get("receiptFileId"))
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElseGet(() -> uploadPurchaseReceipt(PNG_BYTES));
+            transaction.put("receiptFileId", receiptFileId);
+            normalizedTransactions.add(transaction);
+        } else {
+            long totalAmount = transactions.stream()
+                .mapToLong(value -> ((Number) value.get("amount")).longValue())
+                .sum();
+            long baseAmount = totalAmount / requestItemNames.size();
+            long remainder = totalAmount % requestItemNames.size();
+            for (int index = 0; index < requestItemNames.size(); index++) {
+                Map<String, Object> source = transactions.get(Math.min(index, transactions.size() - 1));
+                Map<String, Object> transaction = new java.util.LinkedHashMap<>();
+                transaction.put("vendorId", source.get("vendorId"));
+                transaction.put("itemNames", List.of(requestItemNames.get(index)));
+                transaction.put(
+                    "amount",
+                    transactions.size() == requestItemNames.size()
+                        ? source.get("amount")
+                        : baseAmount + (index < remainder ? 1 : 0)
+                );
+                transaction.put("paymentMethod", source.getOrDefault("paymentMethod", "CARD"));
+                if (source.get("receiptFileId") != null) {
+                    transaction.put("receiptFileId", source.get("receiptFileId"));
+                }
+                normalizedTransactions.add(transaction);
+            }
+        }
+
         given()
             .basePath("/api/v1/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("transactions", transactions))
+            .body(Map.of("transactions", normalizedTransactions))
             .post("/{requestId}/report", requestId)
             .then()
             .statusCode(200);
@@ -620,6 +655,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
         transaction.put("vendorId", vendorId);
         transaction.put("itemNames", itemNames);
         transaction.put("amount", amount);
+        transaction.put("paymentMethod", "CARD");
         if (receiptFileId != null) {
             transaction.put("receiptFileId", receiptFileId);
         }

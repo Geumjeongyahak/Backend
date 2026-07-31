@@ -98,11 +98,11 @@ class PurchaseRequestFileCleanupTest extends RequestBaseTest {
                 entry("title", "영수증 연결 구입 요청"),
                 entry("content", "영수증 파일이 품목에 연결된 요청입니다."),
                 entry("classroomId", CLASSROOM_ID),
+                entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "복사용지"),
                     entry("reason", "수업 자료 출력"),
-                    entry("quantity", 1),
-                    entry("paymentType", "ACTUAL")
+                    entry("quantity", 1)
                 )))
             ))
             .post()
@@ -169,7 +169,7 @@ class PurchaseRequestFileCleanupTest extends RequestBaseTest {
             .contentType(ContentType.JSON)
             .body(Map.of("transactions", List.of(Map.of(
                 "vendorId", createdVendorId,
-                "itemNames", List.of("복사용지"),
+                "itemNames", List.of("재연결 차단 요청 품목"),
                 "amount", 10000L,
                 "receiptFileId", uploadedFileId.toString()
             ))))

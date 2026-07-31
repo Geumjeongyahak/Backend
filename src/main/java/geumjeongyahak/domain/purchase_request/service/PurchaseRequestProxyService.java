@@ -15,7 +15,7 @@ public class PurchaseRequestProxyService {
     private final PurchaseRequestRepository purchaseRequestRepository;
 
     public boolean existsActiveByRequesterId(Long requesterId) {
-        return purchaseRequestRepository.existsByRequestedBy_IdAndStatusIn(
+        return purchaseRequestRepository.existsByRequestedBy_IdAndStatusInAndIsDeletedFalse(
             requesterId,
             List.of(
                 PurchaseRequestStatus.PENDING,

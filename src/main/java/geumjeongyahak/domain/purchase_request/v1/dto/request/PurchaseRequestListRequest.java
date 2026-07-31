@@ -7,6 +7,7 @@ import org.springframework.data.domain.Sort;
 
 import geumjeongyahak.common.validation.annotation.ValidSortField;
 import geumjeongyahak.domain.base.dto.request.BasePaginationRequest;
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
@@ -19,6 +20,9 @@ public class PurchaseRequestListRequest extends BasePaginationRequest {
 
     @Schema(description = "구입 요청 상태")
     private PurchaseRequestStatus status;
+
+    @Schema(description = "결제 유형", example = "PREPAID")
+    private PurchasePaymentType paymentType;
 
     @Schema(description = "본인 요청만 조회 여부", example = "false")
     private boolean mine = false;

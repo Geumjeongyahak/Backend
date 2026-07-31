@@ -61,7 +61,7 @@ public class PurchaseRequestController {
     @Operation(
         summary = "구입 요청 목록 조회",
         description = "구입 요청 목록을 페이지 단위로 조회합니다. 기본 목록은 전체 요청을 반환하며, mine=true 파라미터를 전달하면 본인이 신청한 요청만 반환합니다. "
-            + "status, keyword, classroomName, requestedByName 파라미터로 필터링할 수 있습니다."
+            + "status, paymentType, keyword, classroomName, requestedByName 파라미터로 필터링할 수 있습니다."
     )
     @GetMapping
     public ResponseEntity<PaginationResponse<PurchaseRequestSummaryResponse>> getPurchaseRequests(
@@ -69,8 +69,9 @@ public class PurchaseRequestController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug(
-            "GET /api/v1/purchase-requests (status={}, mine={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
+            "GET /api/v1/purchase-requests (status={}, paymentType={}, mine={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
             request.getStatus(),
+            request.getPaymentType(),
             request.isMine(),
             request.getKeyword(),
             request.getClassroomName(),
@@ -107,7 +108,7 @@ public class PurchaseRequestController {
     @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "구입 요청 삭제",
-        description = "본인이 작성한 PENDING 상태의 구입 요청을 삭제합니다. "
+        description = "본인이 작성한 PENDING 상태의 구입 요청을 소프트 삭제합니다. "
             + "이미 처리된 요청은 이력 보존을 위해 삭제할 수 없습니다."
     )
     @DeleteMapping("/{requestId}")

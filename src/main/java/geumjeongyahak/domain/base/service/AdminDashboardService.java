@@ -46,7 +46,7 @@ public class AdminDashboardService {
             userRepository.countByIsDeletedFalse(),
             departmentRepository.count(),
             classroomRepository.count(),
-            purchaseRequestRepository.countByStatus(PurchaseRequestStatus.PENDING),
+            purchaseRequestRepository.countByStatusAndIsDeletedFalse(PurchaseRequestStatus.PENDING),
             absenceRequestRepository.countByStatus(RequestStatus.PENDING),
             teacherApplicationRepository.countByStatus(TeacherApplicationStatus.PENDING),
             studentRepository.count(),

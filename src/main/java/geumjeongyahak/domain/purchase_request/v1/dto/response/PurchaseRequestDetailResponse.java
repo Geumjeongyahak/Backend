@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.purchase_request.v1.dto.response;
 
+import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,6 +22,12 @@ public record PurchaseRequestDetailResponse(
     @Schema(description = "분반 이름", example = "한글반")
     String classroomName,
 
+    @Schema(description = "신청 당시 요청자의 소속 부서 ID. 소속 부서가 없으면 null입니다.", example = "2", nullable = true)
+    Long departmentId,
+
+    @Schema(description = "신청 당시 요청자의 소속 부서 이름. 소속 부서가 없으면 null입니다.", example = "교육연구부", nullable = true)
+    String departmentName,
+
     @Schema(description = "요청자 ID", example = "3")
     Long requestedById,
 
@@ -32,6 +39,9 @@ public record PurchaseRequestDetailResponse(
 
     @Schema(description = "구입 요청 내용")
     String content,
+
+    @Schema(description = "결제 유형", example = "PREPAID")
+    PurchasePaymentType paymentType,
 
     @Schema(description = "총 구매 금액 (원) - 구매 보고 이후 확정", example = "45000")
     Long totalPrice,
@@ -67,16 +77,14 @@ public record PurchaseRequestDetailResponse(
         Long id,
         String name,
         String reason,
-        Integer quantity,
-        PurchasePaymentType paymentType
+        Integer quantity
     ) {
         static ItemResponse from(PurchaseRequestItem item) {
             return new ItemResponse(
                 item.getId(),
                 item.getName(),
                 item.getReason(),
-                item.getQuantity(),
-                item.getPaymentType()
+                item.getQuantity()
             );
         }
     }
@@ -87,6 +95,7 @@ public record PurchaseRequestDetailResponse(
         String vendorName,
         List<String> itemNames,
         Long amount,
+        PurchasePaymentMethod paymentMethod,
         java.util.UUID receiptFileId,
         String receiptFileUrl
     ) {
@@ -97,6 +106,7 @@ public record PurchaseRequestDetailResponse(
                 transaction.getVendor().getName(),
                 List.copyOf(transaction.getItemNames()),
                 transaction.getAmount(),
+                transaction.getPaymentMethod(),
                 transaction.getReceiptFile() != null ? transaction.getReceiptFile().getId() : null,
                 transaction.getReceiptFile() != null ? transaction.getReceiptFile().getPublicUrl() : null
             );
@@ -122,10 +132,13 @@ public record PurchaseRequestDetailResponse(
             r.getId(),
             r.getClassroom().getId(),
             r.getClassroom().getName(),
+            r.getDepartment() != null ? r.getDepartment().getId() : null,
+            r.getDepartment() != null ? r.getDepartment().getName() : null,
             r.getRequestedBy().getId(),
             r.getRequestedBy().getName(),
             r.getTitle(),
             r.getContent(),
+            r.getPaymentType(),
             r.getTotalPrice(),
             r.getStatus(),
             r.getApprovalAt(),

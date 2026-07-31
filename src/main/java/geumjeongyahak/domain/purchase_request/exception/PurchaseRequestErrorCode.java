@@ -34,7 +34,7 @@ public enum PurchaseRequestErrorCode implements ErrorCode {
     EXPENSE_DOCUMENT_ONLY_PREPAID_ALLOWED(
         HttpStatus.CONFLICT,
         "PR-011",
-        "선결제 구매 요청만 지출증빙서류를 생성할 수 있습니다."
+        "선금 결제 구매 요청만 지출증빙서류를 생성할 수 있습니다."
     ),
     EXPENSE_DOCUMENT_GENERATION_FAILED(
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -55,6 +55,16 @@ public enum PurchaseRequestErrorCode implements ErrorCode {
         HttpStatus.CONFLICT,
         "PR-015",
         "지출증빙서류 품목 예상금액 합계가 구매 완료 보고 금액과 일치하지 않습니다."
+    ),
+    INVALID_TRANSACTION_STRUCTURE(
+        HttpStatus.BAD_REQUEST,
+        "PR-016",
+        "결제 유형에 맞지 않는 거래 또는 품목 구성입니다."
+    ),
+    PREPAID_RECEIPT_REQUIRED(
+        HttpStatus.CONFLICT,
+        "PR-017",
+        "선금 결제의 최종 승인에는 영수증이 필요합니다."
     );
 
     private final HttpStatus status;

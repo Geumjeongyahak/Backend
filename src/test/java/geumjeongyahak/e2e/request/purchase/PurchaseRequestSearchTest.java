@@ -1,8 +1,10 @@
 package geumjeongyahak.e2e.request.purchase;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -100,13 +102,39 @@ class PurchaseRequestSearchTest extends RequestBaseTest {
             .body("content.requestedById", everyItem(org.hamcrest.Matchers.equalTo((int) TEACHER_ID)));
     }
 
+    @Test
+    @DisplayName("결제 유형 필터는 기존 검색 조건과 함께 적용되고 목록에 결제 유형을 반환한다")
+    void list_filtersByPaymentTypeTogetherWithKeyword() {
+        String marker = "결제유형검색-" + UUID.randomUUID();
+        Long prepaidRequestId = createRequest(marker + "-선금", "PREPAID");
+        Long actualRequestId = createRequest(marker + "-실결제", "ACTUAL");
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .queryParam("paymentType", "PREPAID")
+            .queryParam("keyword", marker)
+        .when()
+            .get()
+        .then()
+            .statusCode(200)
+            .body("content.id", hasItem(prepaidRequestId.intValue()))
+            .body("content.id", not(hasItem(actualRequestId.intValue())))
+            .body("content.paymentType", everyItem(equalTo("PREPAID")));
+    }
+
     private Long createRequest(String title) {
+        return createRequest(title, "ACTUAL");
+    }
+
+    private Long createRequest(String title, String paymentType) {
         Long requestId = createPurchaseRequest(
             getAuthHeader(volunteerToken),
             CLASSROOM_ID,
             title,
             "검색 조건 확인",
-            10000L
+            10000L,
+            paymentType
         );
         createdRequestIds.add(requestId);
         return requestId;
