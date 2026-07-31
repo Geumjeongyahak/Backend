@@ -18,7 +18,7 @@ spring:
       data-locations: classpath:/sql/init_data.sql
       continue-on-error: false
   flyway:
-    enabled: false
+    enabled: ${FLYWAY_ENABLED:false}
   cloud:
     gcp:
       storage:

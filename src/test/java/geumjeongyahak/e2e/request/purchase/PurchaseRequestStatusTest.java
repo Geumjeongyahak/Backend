@@ -8,6 +8,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
 import io.restassured.http.ContentType;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -50,6 +51,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     private Long createdVendorId;
     private Long secondCreatedVendorId;
     private UUID registeredDriveFileId;
+    private UUID uploadedProposalReceiptFileId;
 
     @AfterEach
     void cleanup() {
@@ -68,6 +70,10 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
         if (registeredDriveFileId != null && fileRepository.existsById(registeredDriveFileId)) {
             fileRepository.deleteById(registeredDriveFileId);
             registeredDriveFileId = null;
+        }
+        if (uploadedProposalReceiptFileId != null && fileRepository.existsById(uploadedProposalReceiptFileId)) {
+            fileRepository.deleteById(uploadedProposalReceiptFileId);
+            uploadedProposalReceiptFileId = null;
         }
         if (createdVendorId != null) {
             if (vendorRepository.existsById(createdVendorId)) {
@@ -681,10 +687,10 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     // ── 결재 확인 (confirm) ────────────────────────────────
 
     @Test
-    @DisplayName("관리자가 PURCHASED 구입 요청 결재 확인 → 200, CONFIRMED")
-    void confirm_asAdminAndPurchased_returns200() {
+    @DisplayName("실 결제는 품의 정보가 없어도 결재 확인 → 200, CONFIRMED")
+    void confirm_actualWithoutProposal_returns200() {
         createdVendorId = createVendorAndCharge(100000L);
-        currentRequestId = setupPurchasedRequest(createdVendorId, 20000L, null);
+        currentRequestId = setupPurchasedRequestWithoutProposal(createdVendorId, 20000L, null);
 
         given()
             .basePath("/api/v1/admin/purchase-requests")
@@ -701,6 +707,125 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .then()
             .statusCode(200)
             .body("balance", equalTo(80000));
+    }
+
+    @Test
+    @DisplayName("선금 결제는 품의 정보가 없으면 결재 확인을 거부한다")
+    void confirm_prepaidWithoutProposal_returns409() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = setupPurchasedPrepaidRequestWithoutProposal(createdVendorId, 20000L, null);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", currentRequestId)
+            .then()
+            .statusCode(409)
+            .body("code", equalTo("PR-020"));
+
+        assertVendorBalance(createdVendorId, 100000);
+        assertPurchaseRequestStatus(currentRequestId, "PURCHASED");
+    }
+
+    @Test
+    @DisplayName("품의 최종 확인 필수값이 누락되면 결재 확인을 거부한다")
+    void confirm_withIncompleteProposal_returns409() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = setupPurchasedPrepaidRequestWithoutProposal(createdVendorId, 20000L, null);
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of())
+            .put("/{requestId}/proposal", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", currentRequestId)
+            .then()
+            .statusCode(409)
+            .body("code", equalTo("PR-021"));
+
+        assertVendorBalance(createdVendorId, 100000);
+        assertPurchaseRequestStatus(currentRequestId, "PURCHASED");
+    }
+
+    @Test
+    @DisplayName("완료 요청일이 없으면 결재 확인을 거부한다")
+    void confirm_withoutCompletionDate_returns409() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = setupPurchasedPrepaidRequestWithoutProposal(createdVendorId, 20000L, null);
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "proposalDate", LocalDate.now().toString(),
+                "proposalAmount", 20000L,
+                "paymentAccount", "NATIONAL_SUBSIDY_04",
+                "items", List.of(Map.of(
+                    "content", "완료 요청일 검증 품목",
+                    "quantity", 1,
+                    "estimatedUnitPrice", 20000L
+                ))
+            ))
+            .put("/{requestId}/proposal", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", currentRequestId)
+            .then()
+            .statusCode(409)
+            .body("code", equalTo("PR-021"));
+
+        assertVendorBalance(createdVendorId, 100000);
+        assertPurchaseRequestStatus(currentRequestId, "PURCHASED");
+    }
+
+    @Test
+    @DisplayName("품의금액과 품목 예상 금액 합계가 다르면 결재 확인을 거부한다")
+    void confirm_withProposalItemAmountMismatch_returns409() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = setupPurchasedPrepaidRequestWithoutProposal(createdVendorId, 20000L, null);
+        saveProposal(currentRequestId, 20000L, 19000L);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", currentRequestId)
+            .then()
+            .statusCode(409)
+            .body("code", equalTo("PR-022"));
+
+        assertVendorBalance(createdVendorId, 100000);
+        assertPurchaseRequestStatus(currentRequestId, "PURCHASED");
+    }
+
+    @Test
+    @DisplayName("품의금액과 실제 결제 금액이 다르면 결재 확인을 거부한다")
+    void confirm_withProposalPaymentAmountMismatch_returns409() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = setupPurchasedPrepaidRequestWithoutProposal(createdVendorId, 20000L, null);
+        saveProposal(currentRequestId, 19000L, 19000L);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", currentRequestId)
+            .then()
+            .statusCode(409)
+            .body("code", equalTo("PR-023"));
+
+        assertVendorBalance(createdVendorId, 100000);
+        assertPurchaseRequestStatus(currentRequestId, "PURCHASED");
     }
 
     @Test
@@ -721,6 +846,8 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .post("/{requestId}/report", currentRequestId)
             .then()
             .statusCode(200);
+
+        saveCompleteProposal(currentRequestId, 20000L);
 
         given()
             .basePath("/api/v1/admin/purchase-requests")
@@ -757,12 +884,61 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .then()
             .statusCode(200);
 
+        saveCompleteProposal(currentRequestId, 20000L);
+
         given()
             .basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .patch("/{requestId}/confirm", currentRequestId)
             .then()
-            .statusCode(409);
+            .statusCode(409)
+            .body("code", equalTo("PR-017"));
+    }
+
+    @Test
+    @DisplayName("선금 결제는 품의 단계의 활성 영수증만 있어도 결재 확인할 수 있다")
+    void confirm_prepaidWithProposalReceipt_returns200() {
+        createdVendorId = createVendorAndCharge(100000L);
+        currentRequestId = createPurchaseRequest(
+            getAuthHeader(volunteerToken),
+            CLASSROOM_ID,
+            "품의 영수증 선금 결제",
+            "품의 단계 영수증 인정",
+            20000L,
+            "PREPAID");
+        approvePurchaseRequest(currentRequestId);
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("transactions", List.of(transactionBody(
+                createdVendorId, 20000L, List.of("품의 영수증 선금 결제 품목"), null))))
+            .post("/{requestId}/report", currentRequestId)
+            .then()
+            .statusCode(200);
+
+        saveCompleteProposal(currentRequestId, 20000L);
+        uploadedProposalReceiptFileId = UUID.fromString(uploadPurchaseReceipt());
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("fileId", uploadedProposalReceiptFileId.toString()))
+            .post("/{requestId}/proposal/receipts", currentRequestId)
+            .then()
+            .statusCode(201);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", currentRequestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("CONFIRMED"));
+
+        assertVendorBalance(createdVendorId, 120000);
     }
 
     @Test
@@ -783,6 +959,8 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .post("/{requestId}/report", currentRequestId)
             .then()
             .statusCode(200);
+
+        saveCompleteProposal(currentRequestId, 20000L);
 
         given()
             .basePath("/api/v1/admin/vendors")
@@ -826,6 +1004,8 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .body("transactions[0].paymentMethod", nullValue())
             .body("transactions[1].paymentMethod", nullValue());
 
+        saveCompleteProposal(currentRequestId, 20000L);
+
         given()
             .basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
@@ -857,6 +1037,8 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .post("/{requestId}/report", currentRequestId)
             .then()
             .statusCode(200);
+
+        saveCompleteProposal(currentRequestId, 20000L);
 
         given()
             .basePath("/api/v1/admin/purchase-requests")
@@ -1098,6 +1280,12 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     }
 
     private Long setupPurchasedRequest(Long vendorId, long amount, String receiptFileId) {
+        Long requestId = setupPurchasedRequestWithoutProposal(vendorId, amount, receiptFileId);
+        saveCompleteProposal(requestId, amount);
+        return requestId;
+    }
+
+    private Long setupPurchasedRequestWithoutProposal(Long vendorId, long amount, String receiptFileId) {
         Long requestId = setupPendingRequest();
 
         given()
@@ -1120,6 +1308,74 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .body("status", equalTo("PURCHASED"));
 
         return requestId;
+    }
+
+    private Long setupPurchasedPrepaidRequestWithoutProposal(
+        Long vendorId,
+        long amount,
+        String receiptFileId
+    ) {
+        Long requestId = createPurchaseRequest(
+            getAuthHeader(volunteerToken),
+            CLASSROOM_ID,
+            "선금 결재 확인",
+            "선금 품의 검증",
+            amount,
+            "PREPAID"
+        );
+        approvePurchaseRequest(requestId);
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("transactions", List.of(transactionBody(
+                vendorId,
+                amount,
+                List.of("선금 결재 확인 품목"),
+                receiptFileId
+            ))))
+            .post("/{requestId}/report", requestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("PURCHASED"));
+
+        return requestId;
+    }
+
+    private void saveCompleteProposal(Long requestId, long amount) {
+        saveProposal(requestId, amount, amount);
+    }
+
+    private void saveProposal(Long requestId, long proposalAmount, long estimatedUnitPrice) {
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "proposalDate", LocalDate.now().toString(),
+                "completionDate", LocalDate.now().toString(),
+                "proposalAmount", proposalAmount,
+                "paymentAccount", "NATIONAL_SUBSIDY_04",
+                "items", List.of(Map.of(
+                    "content", "최종 확인 품목",
+                    "quantity", 1,
+                    "estimatedUnitPrice", estimatedUnitPrice
+                ))
+            ))
+            .put("/{requestId}/proposal", requestId)
+            .then()
+            .statusCode(200);
+    }
+
+    private void assertPurchaseRequestStatus(Long requestId, String expectedStatus) {
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .get("/{requestId}", requestId)
+            .then()
+            .statusCode(200)
+            .body("status", equalTo(expectedStatus));
     }
 
     private void approvePurchaseRequest(Long requestId) {

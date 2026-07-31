@@ -26,11 +26,6 @@ public enum PurchaseRequestErrorCode implements ErrorCode {
         "PR-009",
         "지출증빙서류 템플릿을 읽을 수 없습니다."
     ),
-    EXPENSE_DOCUMENT_UNSUPPORTED_STATUS(
-        HttpStatus.CONFLICT,
-        "PR-010",
-        "지출증빙서류를 생성할 수 없는 구매 요청 상태입니다."
-    ),
     EXPENSE_DOCUMENT_ONLY_PREPAID_ALLOWED(
         HttpStatus.CONFLICT,
         "PR-011",
@@ -51,11 +46,6 @@ public enum PurchaseRequestErrorCode implements ErrorCode {
         "PR-014",
         "지출증빙서류에 첨부할 수 없는 영수증 이미지 형식입니다."
     ),
-    EXPENSE_DOCUMENT_ITEM_AMOUNT_MISMATCH(
-        HttpStatus.CONFLICT,
-        "PR-015",
-        "지출증빙서류 품목 예상금액 합계가 구매 완료 보고 금액과 일치하지 않습니다."
-    ),
     INVALID_TRANSACTION_STRUCTURE(
         HttpStatus.BAD_REQUEST,
         "PR-016",
@@ -65,6 +55,51 @@ public enum PurchaseRequestErrorCode implements ErrorCode {
         HttpStatus.CONFLICT,
         "PR-017",
         "선금 결제의 최종 승인에는 영수증이 필요합니다."
+    ),
+    PROPOSAL_NOT_EDITABLE(
+        HttpStatus.CONFLICT,
+        "PR-018",
+        "현재 상태에서는 품의 정보를 수정할 수 없습니다."
+    ),
+    PROPOSAL_RECEIPT_NOT_FOUND(
+        HttpStatus.NOT_FOUND,
+        "PR-019",
+        "품의 단계 영수증을 찾을 수 없습니다."
+    ),
+    PROPOSAL_REQUIRED(
+        HttpStatus.CONFLICT,
+        "PR-020",
+        "최종 확인을 위해 품의 정보가 필요합니다."
+    ),
+    PROPOSAL_REQUIRED_FIELD_MISSING(
+        HttpStatus.CONFLICT,
+        "PR-021",
+        "최종 확인에 필요한 품의 필수값이 누락되었습니다."
+    ),
+    PROPOSAL_ITEM_AMOUNT_MISMATCH(
+        HttpStatus.CONFLICT,
+        "PR-022",
+        "품의금액과 품목 예상 금액 합계가 일치하지 않습니다."
+    ),
+    PROPOSAL_PAYMENT_AMOUNT_MISMATCH(
+        HttpStatus.CONFLICT,
+        "PR-023",
+        "품의금액과 실제 결제 금액이 일치하지 않습니다."
+    ),
+    PROPOSAL_DOCUMENT_UNSUPPORTED_STATUS(
+        HttpStatus.CONFLICT,
+        "PR-024",
+        "현재 상태에서는 품의서를 생성할 수 없습니다."
+    ),
+    RESOLUTION_DOCUMENT_UNSUPPORTED_STATUS(
+        HttpStatus.CONFLICT,
+        "PR-025",
+        "결의서는 최종 확인된 결제 신청에서만 생성할 수 있습니다."
+    ),
+    RESOLUTION_DOCUMENT_COMPLETION_DATE_REQUIRED(
+        HttpStatus.CONFLICT,
+        "PR-026",
+        "결의서 생성에는 완료 요청일이 필요합니다."
     );
 
     private final HttpStatus status;

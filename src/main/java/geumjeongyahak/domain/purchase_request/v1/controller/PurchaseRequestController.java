@@ -3,10 +3,16 @@ package geumjeongyahak.domain.purchase_request.v1.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -14,17 +20,23 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
+import geumjeongyahak.domain.purchase_request.service.ExpenseDocumentService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestReconfirmationService;
 import geumjeongyahak.domain.purchase_request.service.PurchaseRequestService;
+import geumjeongyahak.domain.purchase_request.service.PurchaseRequestProposalService;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.AttachPurchaseRequestProposalReceiptRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.PurchaseRequestListRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.SavePurchaseRequestProposalRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
+import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestProposalResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
 
 @Slf4j
@@ -39,6 +51,8 @@ public class PurchaseRequestController {
 
     private final PurchaseRequestService purchaseRequestService;
     private final PurchaseRequestReconfirmationService purchaseRequestReconfirmationService;
+    private final PurchaseRequestProposalService purchaseRequestProposalService;
+    private final ExpenseDocumentService expenseDocumentService;
 
     @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
@@ -107,6 +121,109 @@ public class PurchaseRequestController {
 
     @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
+        summary = "품의 정보 저장",
+        description = "최초 작성자가 CONFIRMED 이전까지 품의 정보를 중간 저장하거나 수정합니다. "
+            + "모든 필드는 선택값이며 요청 본문의 전체 상태로 교체됩니다."
+    )
+    @PutMapping("/{requestId}/proposal")
+    public ResponseEntity<PurchaseRequestProposalResponse> saveProposal(
+        @PathVariable Long requestId,
+        @Valid @RequestBody SavePurchaseRequestProposalRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PUT /api/v1/purchase-requests/{}/proposal", requestId);
+        return ResponseEntity.ok(
+            purchaseRequestProposalService.saveProposal(
+                userDetails.getUserId(),
+                requestId,
+                request,
+                false
+            )
+        );
+    }
+
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
+    @Operation(
+        summary = "품의 단계 영수증 첨부",
+        description = "최초 작성자가 CONFIRMED 이전까지 업로드된 영수증 파일을 품의 정보에 첨부합니다. "
+            + "같은 파일을 다시 요청하면 중복 첨부하지 않습니다."
+    )
+    @PostMapping("/{requestId}/proposal/receipts")
+    public ResponseEntity<PurchaseRequestProposalResponse> attachProposalReceipt(
+        @PathVariable Long requestId,
+        @Valid @RequestBody AttachPurchaseRequestProposalReceiptRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("POST /api/v1/purchase-requests/{}/proposal/receipts", requestId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+            purchaseRequestProposalService.attachReceipt(
+                userDetails.getUserId(),
+                requestId,
+                request.fileId(),
+                false
+            )
+        );
+    }
+
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
+    @Operation(
+        summary = "품의 단계 영수증 삭제",
+        description = "최초 작성자가 CONFIRMED 이전까지 품의 단계 영수증 연결을 소프트 삭제합니다."
+    )
+    @DeleteMapping("/{requestId}/proposal/receipts/{receiptId}")
+    public ResponseEntity<Void> deleteProposalReceipt(
+        @PathVariable Long requestId,
+        @PathVariable Long receiptId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("DELETE /api/v1/purchase-requests/{}/proposal/receipts/{}", requestId, receiptId);
+        purchaseRequestProposalService.deleteReceipt(
+            userDetails.getUserId(),
+            requestId,
+            receiptId,
+            false
+        );
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
+    @Operation(
+        summary = "품의서 DOCX 생성",
+        description = "최초 작성자가 미완성 품의 정보를 포함한 최신 품의서를 생성합니다. 반려된 신청은 출력할 수 없습니다."
+    )
+    @PostMapping("/{requestId}/proposal-document")
+    public ResponseEntity<Resource> generateProposalDocument(
+        @PathVariable Long requestId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("POST /api/v1/purchase-requests/{}/proposal-document", requestId);
+        return documentResponse(expenseDocumentService.generateProposal(
+            userDetails.getUserId(),
+            requestId,
+            false
+        ));
+    }
+
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
+    @Operation(
+        summary = "결의서 DOCX 생성",
+        description = "최초 작성자가 CONFIRMED 상태의 결제 신청을 최신 실제 거래 정보로 결의서 DOCX로 생성합니다."
+    )
+    @PostMapping("/{requestId}/resolution-document")
+    public ResponseEntity<Resource> generateResolutionDocument(
+        @PathVariable Long requestId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("POST /api/v1/purchase-requests/{}/resolution-document", requestId);
+        return documentResponse(expenseDocumentService.generateResolution(
+            userDetails.getUserId(),
+            requestId,
+            false
+        ));
+    }
+
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
+    @Operation(
         summary = "구입 요청 삭제",
         description = "본인이 작성한 PENDING 상태의 구입 요청을 소프트 삭제합니다. "
             + "이미 처리된 요청은 이력 보존을 위해 삭제할 수 없습니다."
@@ -167,6 +284,21 @@ public class PurchaseRequestController {
         return ResponseEntity.ok(
             purchaseRequestService.updateItemReceipts(userDetails.getUserId(), requestId, request, false)
         );
+    }
+
+    private ResponseEntity<Resource> documentResponse(ExpenseDocumentService.ExpenseDocumentResult document) {
+        ByteArrayResource resource = new ByteArrayResource(document.content());
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(ExpenseDocumentService.DOCX_CONTENT_TYPE))
+            .contentLength(document.content().length)
+            .header(
+                HttpHeaders.CONTENT_DISPOSITION,
+                ContentDisposition.attachment()
+                    .filename(document.filename(), StandardCharsets.UTF_8)
+                    .build()
+                    .toString()
+            )
+            .body(resource);
     }
 
 }

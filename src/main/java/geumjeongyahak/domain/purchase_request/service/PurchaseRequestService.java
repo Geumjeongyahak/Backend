@@ -57,6 +57,7 @@ public class PurchaseRequestService {
     private final UserProxyService userProxyService;
     private final VendorService vendorService;
     private final EventPublisher eventPublisher;
+    private final PurchaseRequestProposalService purchaseRequestProposalService;
 
     @Transactional
     public PurchaseRequestDetailResponse createPurchaseRequest(
@@ -418,8 +419,12 @@ public class PurchaseRequestService {
             }
         }
         if (purchaseRequest.getPaymentType() == PurchasePaymentType.PREPAID) {
-            File receiptFile = purchaseRequest.getTransactions().getFirst().getReceiptFile();
-            if (receiptFile == null || receiptFile.isDeleted()) {
+            purchaseRequestProposalService.validateForConfirmation(purchaseRequest);
+            boolean hasActiveTransactionReceipt = purchaseRequest.getTransactions().stream()
+                .map(PurchaseRequestPaymentTransaction::getReceiptFile)
+                .anyMatch(receiptFile -> receiptFile != null && !receiptFile.isDeleted());
+            if (!hasActiveTransactionReceipt
+                && !purchaseRequestProposalService.hasActiveReceipt(purchaseRequest)) {
                 throw new BusinessException(PurchaseRequestErrorCode.PREPAID_RECEIPT_REQUIRED);
             }
         }
@@ -456,7 +461,11 @@ public class PurchaseRequestService {
     }
 
     private PurchaseRequestDetailResponse toDetailResponse(PurchaseRequest purchaseRequest) {
-        return PurchaseRequestDetailResponse.from(purchaseRequest, vendorService.getVendors(null));
+        return PurchaseRequestDetailResponse.from(
+            purchaseRequest,
+            vendorService.getVendors(null),
+            purchaseRequestProposalService.toResponse(purchaseRequest)
+        );
     }
 
     private PurchaseRequestDetailResponse createPurchaseRequest(

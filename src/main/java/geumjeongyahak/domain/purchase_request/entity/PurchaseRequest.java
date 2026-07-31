@@ -23,6 +23,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -89,6 +90,9 @@ public class PurchaseRequest extends BaseEntity {
 
     @OneToMany(mappedBy = "purchaseRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PurchaseRequestPaymentTransaction> transactions = new ArrayList<>();
+
+    @OneToOne(mappedBy = "purchaseRequest", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private PurchaseRequestProposal proposal;
 
     public PurchaseRequest(
         Classroom classroom,
@@ -158,6 +162,10 @@ public class PurchaseRequest extends BaseEntity {
         transactions.forEach(transaction -> transaction.assignRequest(this));
         this.transactions.addAll(transactions);
         this.totalPrice = calculateTotalPrice();
+    }
+
+    void assignProposal(PurchaseRequestProposal proposal) {
+        this.proposal = proposal;
     }
 
     private long calculateTotalPrice() {
