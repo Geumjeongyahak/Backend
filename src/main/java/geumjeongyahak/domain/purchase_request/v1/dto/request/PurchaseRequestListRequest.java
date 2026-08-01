@@ -27,11 +27,14 @@ public class PurchaseRequestListRequest extends BasePaginationRequest {
     @Schema(description = "본인 요청만 조회 여부", example = "false")
     private boolean mine = false;
 
-    @Schema(description = "제목, 분반명, 작성자명 통합 검색어")
+    @Schema(description = "제목, 분반명, 부서명, 작성자명 통합 검색어")
     private String keyword;
 
     @Schema(description = "분반명 검색어")
     private String classroomName;
+
+    @Schema(description = "부서명 검색어")
+    private String departmentName;
 
     @Schema(description = "작성자명 검색어")
     private String requestedByName;
@@ -41,6 +44,7 @@ public class PurchaseRequestListRequest extends BasePaginationRequest {
         "id",
         "title",
         "classroomName",
+        "departmentName",
         "requestedByName",
         "totalPrice",
         "status",
@@ -68,6 +72,7 @@ public class PurchaseRequestListRequest extends BasePaginationRequest {
     private String toEntitySortProperty(String property) {
         return switch (property) {
             case "classroomName" -> "classroom.name";
+            case "departmentName" -> "department.name";
             case "requestedByName" -> "requestedBy.name";
             default -> property;
         };

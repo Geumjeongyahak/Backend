@@ -55,7 +55,7 @@ public class PurchaseRequestAdminController {
     @Operation(
         summary = "구입 요청 대리 생성",
         description = "관리자 또는 purchase-request:manage:* 권한자가 requestedById 사용자를 실제 요청자로 지정해 구입 요청을 생성합니다. "
-            + "필수값인 classroomId와 departmentId로 담당 분반과 부서를 직접 지정합니다."
+            + "classroomId와 departmentId 중 정확히 하나를 요청 대상으로 지정합니다."
     )
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
     @PostMapping
@@ -71,7 +71,7 @@ public class PurchaseRequestAdminController {
     @Operation(
         summary = "구입 요청 전체 목록 조회",
         description = "전체 분반의 구입 요청 목록을 페이지 단위로 조회합니다. "
-            + "status, paymentType, keyword, classroomName, requestedByName 파라미터로 필터링할 수 있습니다."
+            + "status, paymentType, keyword, classroomName, departmentName, requestedByName 파라미터로 필터링할 수 있습니다."
     )
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:read:*')")
     @GetMapping
@@ -79,11 +79,12 @@ public class PurchaseRequestAdminController {
         @ParameterObject @Valid PurchaseRequestListRequest request
     ) {
         log.debug(
-            "GET /api/v1/admin/purchase-requests (status={}, paymentType={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
+            "GET /api/v1/admin/purchase-requests (status={}, paymentType={}, keyword={}, classroomName={}, departmentName={}, requestedByName={}, page={}, size={}, sort={})",
             request.getStatus(),
             request.getPaymentType(),
             request.getKeyword(),
             request.getClassroomName(),
+            request.getDepartmentName(),
             request.getRequestedByName(),
             request.getPage(),
             request.getSize(),
@@ -176,7 +177,8 @@ public class PurchaseRequestAdminController {
 
     @Operation(
         summary = "구입 요청 수정",
-        description = "관리자 또는 purchase-request:manage:* 권한자가 PENDING 상태의 구입 요청 분반, 담당 부서, 제목, 내용, 품목을 전체 교체합니다."
+        description = "관리자 또는 purchase-request:manage:* 권한자가 PENDING 상태의 구입 요청 대상, 제목, 내용, 품목을 전체 교체합니다. "
+            + "classroomId와 departmentId 중 정확히 하나를 입력해야 합니다."
     )
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
     @PutMapping("/{requestId}")

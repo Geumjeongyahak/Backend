@@ -38,6 +38,7 @@ public class PurchaseRequestAdminViewService {
         request.setPaymentType(filter.paymentType());
         request.setKeyword(filter.keyword());
         request.setClassroomName(filter.classroomName());
+        request.setDepartmentName(filter.departmentName());
         request.setRequestedByName(filter.requestedByName());
         if (filter.page() != null) {
             request.setPage(filter.page());
@@ -145,6 +146,7 @@ public class PurchaseRequestAdminViewService {
         PurchasePaymentType paymentType,
         String keyword,
         String classroomName,
+        String departmentName,
         String requestedByName,
         Integer page,
         Integer size,

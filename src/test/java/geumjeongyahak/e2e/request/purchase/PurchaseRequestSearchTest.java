@@ -5,9 +5,12 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 
+import io.restassured.http.ContentType;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -68,6 +71,54 @@ class PurchaseRequestSearchTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(adminToken))
             .queryParam("requestedByName", "홍길동")
             .queryParam("keyword", marker)
+        .when()
+            .get()
+        .then()
+            .statusCode(200)
+            .body("content.id", hasItem(requestId.intValue()));
+    }
+
+    @Test
+    @DisplayName("부서 대상 구입 요청은 목록에 부서 정보를 반환하고 부서명으로 검색할 수 있다")
+    void adminList_returnsAndSearchesDepartmentTarget() {
+        Long requestId = given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "title", "부서 대상 검색 요청",
+                "departmentId", DEPARTMENT_ID,
+                "paymentType", "ACTUAL",
+                "items", List.of(Map.of(
+                    "name", "복사용지",
+                    "reason", "부서 검색 검증",
+                    "quantity", 1
+                ))
+            ))
+            .post()
+            .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
+        createdRequestIds.add(requestId);
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .queryParam("keyword", "총무부")
+        .when()
+            .get()
+        .then()
+            .statusCode(200)
+            .body("content.find { it.id == " + requestId + " }.classroomId", nullValue())
+            .body("content.find { it.id == " + requestId + " }.departmentId", equalTo((int) DEPARTMENT_ID))
+            .body("content.find { it.id == " + requestId + " }.departmentName", equalTo("총무부"));
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .queryParam("departmentName", "총무")
         .when()
             .get()
         .then()

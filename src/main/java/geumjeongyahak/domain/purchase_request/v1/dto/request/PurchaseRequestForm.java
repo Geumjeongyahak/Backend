@@ -6,6 +6,8 @@ import java.util.UUID;
 
 import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
 import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentMethod;
+import geumjeongyahak.domain.purchase_request.v1.validation.PurchaseRequestTarget;
+import geumjeongyahak.domain.purchase_request.v1.validation.ValidPurchaseRequestTarget;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -18,12 +20,11 @@ import lombok.AllArgsConstructor;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class PurchaseRequestForm {
+@ValidPurchaseRequestTarget
+public class PurchaseRequestForm implements PurchaseRequestTarget {
 
-    @NotNull(message = "분반은 필수입니다.")
     private Long classroomId;
 
-    @NotNull(message = "담당 부서는 필수입니다.")
     private Long departmentId;
 
     @NotBlank(message = "제목은 필수입니다.")
@@ -41,6 +42,16 @@ public class PurchaseRequestForm {
     private Long amount;
     private PurchasePaymentMethod paymentMethod;
     private UUID receiptFileId;
+
+    @Override
+    public Long classroomId() {
+        return classroomId;
+    }
+
+    @Override
+    public Long departmentId() {
+        return departmentId;
+    }
 
     @Getter
     @Setter

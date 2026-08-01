@@ -16,14 +16,16 @@
     </div>
 
     <form class="panel form-grid" th:action="@{/admin/request/purchase/purchase-requests}" th:object="${form}" method="post">
-        <label>분반
-            <select th:field="*{classroomId}" required>
+        <div th:if="${#fields.hasErrors('classroomId')}" th:errors="*{classroomId}" style="color: #c0392b;"></div>
+        <label>요청 대상 분반
+            <select id="classroomId" th:field="*{classroomId}" onchange="clearOtherTarget('classroomId', 'departmentId')">
+                <option value="">선택 안 함</option>
                 <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}">분반명</option>
             </select>
         </label>
-        <label>담당 부서
-            <select th:field="*{departmentId}" required>
-                <option value="">선택</option>
+        <label>요청 대상 부서
+            <select id="departmentId" th:field="*{departmentId}" onchange="clearOtherTarget('departmentId', 'classroomId')">
+                <option value="">선택 안 함</option>
                 <option th:each="department : ${departments}" th:value="${department.id}" th:text="${department.name}">부서명</option>
             </select>
         </label>
@@ -53,6 +55,13 @@
     </form>
     <script th:inline="javascript">
         let itemIndex = /*[[${form.items.size()}]]*/ 0;
+
+        function clearOtherTarget(selectedId, otherId) {
+            const selected = document.getElementById(selectedId);
+            if (selected && selected.value) {
+                document.getElementById(otherId).value = '';
+            }
+        }
 
         async function uploadItemReceipt(input) {
             const file = input.files && input.files[0];

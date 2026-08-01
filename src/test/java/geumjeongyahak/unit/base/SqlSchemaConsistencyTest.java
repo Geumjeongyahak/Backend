@@ -55,6 +55,19 @@ class SqlSchemaConsistencyTest {
     }
 
     @Test
+    @DisplayName("개발과 테스트 스키마는 부서 대상 결제 신청을 허용해야 한다")
+    void initializationSchemas_allowDepartmentPurchaseRequestTarget() throws IOException {
+        for (Path schema : List.of(MAIN_SCHEMA, TEST_SCHEMA)) {
+            String sql = Files.readString(schema);
+
+            assertTrue(
+                purchaseRequestTable(sql).contains("classroom_id BIGINT,"),
+                () -> schema + "의 결제 신청 분반 컬럼이 nullable이 아닙니다."
+            );
+        }
+    }
+
+    @Test
     @DisplayName("첫 배포 전 V1에 흡수한 add migration은 남기지 않는다")
     void absorbedAuthMigrations_areRemoved() throws IOException {
         try (var files = Files.list(MIGRATION_DIR)) {
@@ -73,5 +86,11 @@ class SqlSchemaConsistencyTest {
             .results()
             .map(match -> match.group(1).toLowerCase())
             .collect(Collectors.toCollection(java.util.TreeSet::new));
+    }
+
+    private static String purchaseRequestTable(String sql) {
+        int start = sql.indexOf("CREATE TABLE purchase_requests (");
+        int end = sql.indexOf("CREATE INDEX idx_purchase_requests_classroom_id", start);
+        return sql.substring(start, end);
     }
 }

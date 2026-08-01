@@ -62,7 +62,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "교재 구입 요청"),
                 entry("content", "한글 기초 교재가 필요합니다."),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "PREPAID"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "한글 기초 교재"),
@@ -75,8 +74,8 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .statusCode(201)
             .body("id", notNullValue())
             .body("classroomId", equalTo((int) CLASSROOM_ID))
-            .body("departmentId", equalTo((int) DEPARTMENT_ID))
-            .body("departmentName", equalTo("총무부"))
+            .body("departmentId", nullValue())
+            .body("departmentName", nullValue())
             .body("title", equalTo("교재 구입 요청"))
             .body("totalPrice", equalTo(0))
             .body("status", equalTo("PENDING"))
@@ -85,6 +84,36 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .body("items[0].name", equalTo("한글 기초 교재"))
             .body("items[0].quantity", equalTo(2))
             .body("paymentType", equalTo("PREPAID"))
+            .extract()
+            .jsonPath()
+            .getLong("id");
+    }
+
+    @Test
+    @DisplayName("인증된 봉사자가 부서를 대상으로 구입 요청 생성 → 201")
+    void createRequest_withDepartmentTarget_returns201() {
+        createdRequestId = given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.ofEntries(
+                entry("title", "부서 비품 구입 요청"),
+                entry("content", "부서에서 사용할 비품입니다."),
+                entry("departmentId", DEPARTMENT_ID),
+                entry("paymentType", "ACTUAL"),
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "복사용지"),
+                    entry("reason", "부서 업무용"),
+                    entry("quantity", 1)
+                )))
+            ))
+            .post()
+            .then()
+            .statusCode(201)
+            .body("classroomId", nullValue())
+            .body("classroomName", nullValue())
+            .body("departmentId", equalTo((int) DEPARTMENT_ID))
+            .body("departmentName", equalTo("총무부"))
             .extract()
             .jsonPath()
             .getLong("id");
@@ -101,7 +130,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "칠판 구입"),
                 entry("content", "교실용 칠판"),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "칠판"),
@@ -127,7 +155,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .body(Map.ofEntries(
                 entry("title", "내용 없는 구입 요청"),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "복사용지"),
@@ -156,7 +183,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "시트 구입 요청"),
                 entry("content", "Apps Script에서 등록한 구입 요청입니다."),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "프린터 토너"),
@@ -178,8 +204,8 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("관리자가 소속 부서 없는 요청자의 구입 요청 대리 생성 → 선택한 부서 저장")
-    void createRequestByAdmin_withoutRequesterDepartment_savesSelectedDepartment() {
+    @DisplayName("관리자가 부서를 대상으로 구입 요청 대리 생성 → 선택한 부서만 저장")
+    void createRequestByAdmin_withDepartmentTarget_savesOnlyDepartment() {
         createdRequestIds.add(given()
             .basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
@@ -187,7 +213,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .body(Map.ofEntries(
                 entry("requestedById", 5L),
                 entry("title", "미소속 요청자 구입 요청"),
-                entry("classroomId", CLASSROOM_ID),
                 entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
@@ -199,6 +224,8 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .post()
             .then()
             .statusCode(201)
+            .body("classroomId", nullValue())
+            .body("classroomName", nullValue())
             .body("departmentId", equalTo((int) DEPARTMENT_ID))
             .body("departmentName", equalTo("총무부"))
             .extract()
@@ -224,7 +251,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "권한자 대리 요청"),
                 entry("content", "구입 요청 관리 권한자가 등록합니다."),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "PREPAID"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "마커"),
@@ -256,7 +282,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "Bot 대리 구입 요청"),
                 entry("content", "Apps Script Bot이 시트 값을 동기화합니다."),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "복사용지"),
@@ -286,7 +311,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "권한 없는 요청"),
                 entry("content", "권한 없는 사용자는 대리 생성할 수 없습니다."),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "교재"),
@@ -311,7 +335,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "없는 요청자"),
                 entry("content", "존재하지 않는 사용자로 대리 생성할 수 없습니다."),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "교재"),
@@ -325,8 +348,8 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("관리자 대리 생성 시 departmentId 누락 → 400")
-    void createRequestByAdmin_missingDepartment_returns400() {
+    @DisplayName("관리자 대리 생성 시 분반과 부서를 모두 입력 → 400")
+    void createRequestByAdmin_withBothTargets_returns400() {
         given()
             .basePath("/api/v1/admin/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(adminToken))
@@ -334,8 +357,9 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .body(Map.ofEntries(
                 entry("requestedById", TEACHER2_ID),
                 entry("title", "담당 부서 없는 대리 요청"),
-                entry("content", "담당 부서는 필수입니다."),
+                entry("content", "요청 대상은 하나만 선택해야 합니다."),
                 entry("classroomId", CLASSROOM_ID),
+                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "교재"),
@@ -373,7 +397,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
@@ -397,7 +420,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
@@ -423,7 +445,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", 99999L),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
@@ -446,7 +467,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .body(Map.ofEntries(
                 entry("title", "제목"),
                 entry("content", "내용"),
-                entry("classroomId", CLASSROOM_ID),
                 entry("departmentId", 99999L),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
@@ -463,8 +483,32 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
     // ── 유효성 오류 ───────────────────────────────────────
 
     @Test
-    @DisplayName("departmentId 누락 → 400")
-    void createRequest_missingDepartment_returns400() {
+    @DisplayName("분반과 부서를 모두 입력 → 400")
+    void createRequest_withBothTargets_returns400() {
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.ofEntries(
+                entry("title", "중복 대상 요청"),
+                entry("content", "분반과 부서를 동시에 전송합니다."),
+                entry("classroomId", CLASSROOM_ID),
+                entry("departmentId", DEPARTMENT_ID),
+                entry("paymentType", "ACTUAL"),
+                entry("items", List.of(Map.ofEntries(
+                    entry("name", "품목"),
+                    entry("reason", "배타 선택 검증"),
+                    entry("quantity", 1)
+                )))
+            ))
+            .post()
+            .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("분반과 부서 모두 누락 → 400")
+    void createRequest_missingTarget_returns400() {
         given()
             .basePath("/api/v1/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
@@ -472,7 +516,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
             .body(Map.ofEntries(
                 entry("title", "제목"),
                 entry("content", "내용"),
-                entry("classroomId", CLASSROOM_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
@@ -496,7 +539,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", ""),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
@@ -520,7 +562,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of())
             ))
@@ -540,7 +581,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
                     entry("reason", "사유"),
@@ -563,7 +603,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "품목"),
@@ -587,7 +626,6 @@ class PurchaseRequestCreateTest extends RequestBaseTest {
                 entry("title", "제목"),
                 entry("content", "내용"),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "ACTUAL"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", ""),

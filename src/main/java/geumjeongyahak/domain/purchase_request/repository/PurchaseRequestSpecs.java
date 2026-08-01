@@ -49,12 +49,16 @@ public final class PurchaseRequestSpecs {
                 cb.lower(root.join("classroom", JoinType.LEFT).get("name")),
                 pattern
             );
+            Predicate departmentNameLike = cb.like(
+                cb.lower(root.join("department", JoinType.LEFT).get("name")),
+                pattern
+            );
             Predicate requestedByNameLike = cb.like(
                 cb.lower(root.join("requestedBy", JoinType.LEFT).get("name")),
                 pattern
             );
 
-            return cb.or(titleLike, classroomNameLike, requestedByNameLike);
+            return cb.or(titleLike, classroomNameLike, departmentNameLike, requestedByNameLike);
         };
     }
 
@@ -62,6 +66,12 @@ public final class PurchaseRequestSpecs {
         return (root, query, cb) -> isBlank(classroomName)
             ? cb.conjunction()
             : cb.like(cb.lower(root.join("classroom", JoinType.LEFT).get("name")), containsPattern(classroomName));
+    }
+
+    public static Specification<PurchaseRequest> departmentNameContains(String departmentName) {
+        return (root, query, cb) -> isBlank(departmentName)
+            ? cb.conjunction()
+            : cb.like(cb.lower(root.join("department", JoinType.LEFT).get("name")), containsPattern(departmentName));
     }
 
     public static Specification<PurchaseRequest> requestedByNameContains(String requestedByName) {

@@ -58,7 +58,7 @@ public class PurchaseRequestController {
     @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "구입 요청 생성",
-        description = "필수값인 classroomId와 departmentId로 담당 분반과 부서를 직접 지정하여 기자재 구입 요청을 생성합니다. "
+        description = "classroomId와 departmentId 중 정확히 하나를 요청 대상으로 지정하여 기자재 구입 요청을 생성합니다. "
             + "품목은 품명, 사유, 확정 결제금액, 선택 영수증을 입력합니다. "
             + "상태는 PENDING 으로 시작합니다."
     )
@@ -76,7 +76,7 @@ public class PurchaseRequestController {
     @Operation(
         summary = "구입 요청 목록 조회",
         description = "구입 요청 목록을 페이지 단위로 조회합니다. 기본 목록은 전체 요청을 반환하며, mine=true 파라미터를 전달하면 본인이 신청한 요청만 반환합니다. "
-            + "status, paymentType, keyword, classroomName, requestedByName 파라미터로 필터링할 수 있습니다."
+            + "status, paymentType, keyword, classroomName, departmentName, requestedByName 파라미터로 필터링할 수 있습니다."
     )
     @GetMapping
     public ResponseEntity<PaginationResponse<PurchaseRequestSummaryResponse>> getPurchaseRequests(
@@ -84,12 +84,13 @@ public class PurchaseRequestController {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug(
-            "GET /api/v1/purchase-requests (status={}, paymentType={}, mine={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
+            "GET /api/v1/purchase-requests (status={}, paymentType={}, mine={}, keyword={}, classroomName={}, departmentName={}, requestedByName={}, page={}, size={}, sort={})",
             request.getStatus(),
             request.getPaymentType(),
             request.isMine(),
             request.getKeyword(),
             request.getClassroomName(),
+            request.getDepartmentName(),
             request.getRequestedByName(),
             request.getPage(),
             request.getSize(),
@@ -123,7 +124,8 @@ public class PurchaseRequestController {
     @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "구입 요청 수정",
-        description = "작성자가 본인의 PENDING 상태 구입 요청 분반, 담당 부서, 제목, 내용, 품목을 전체 교체합니다."
+        description = "작성자가 본인의 PENDING 상태 구입 요청 대상, 제목, 내용, 품목을 전체 교체합니다. "
+            + "classroomId와 departmentId 중 정확히 하나를 입력해야 합니다."
     )
     @PutMapping("/{requestId}")
     public ResponseEntity<PurchaseRequestDetailResponse> updatePurchaseRequest(
