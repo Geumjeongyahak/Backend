@@ -22,10 +22,10 @@ public record PurchaseRequestDetailResponse(
     @Schema(description = "분반 이름", example = "한글반")
     String classroomName,
 
-    @Schema(description = "신청 당시 요청자의 소속 부서 ID. 소속 부서가 없으면 null입니다.", example = "2", nullable = true)
+    @Schema(description = "구입 요청 담당 부서 ID. 기존 데이터에 담당 부서가 없으면 null입니다.", example = "2", nullable = true)
     Long departmentId,
 
-    @Schema(description = "신청 당시 요청자의 소속 부서 이름. 소속 부서가 없으면 null입니다.", example = "교육연구부", nullable = true)
+    @Schema(description = "구입 요청 담당 부서 이름. 기존 데이터에 담당 부서가 없으면 null입니다.", example = "교육연구부", nullable = true)
     String departmentName,
 
     @Schema(description = "요청자 ID", example = "3")
