@@ -421,7 +421,6 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
                 entry("title", "지출증빙서류 E2E"),
                 entry("content", "지출증빙서류 생성 API 테스트입니다."),
                 entry("classroomId", CLASSROOM_ID),
-                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", paymentType),
                 entry("items", items)
             ))

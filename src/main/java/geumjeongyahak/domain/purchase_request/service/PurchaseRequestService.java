@@ -73,8 +73,8 @@ public class PurchaseRequestService {
             request.departmentId()
         );
 
-        Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
-        Department department = departmentProxyService.getById(request.departmentId());
+        Classroom classroom = getClassroom(request.classroomId());
+        Department department = getDepartment(request.departmentId());
         User requester = userProxyService.getById(requesterId);
         List<PurchaseRequestItem> items = request.items().stream()
             .map(item -> new PurchaseRequestItem(
@@ -107,8 +107,8 @@ public class PurchaseRequestService {
             request.departmentId()
         );
 
-        Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
-        Department department = departmentProxyService.getById(request.departmentId());
+        Classroom classroom = getClassroom(request.classroomId());
+        Department department = getDepartment(request.departmentId());
         User requester = userProxyService.getById(request.requestedById());
         List<PurchaseRequestItem> items = request.items().stream()
             .map(item -> new PurchaseRequestItem(
@@ -135,13 +135,14 @@ public class PurchaseRequestService {
         boolean mine
     ) {
         log.debug(
-            "구입 요청 목록 조회 (requesterId={}, mine={}, status={}, paymentType={}, keyword={}, classroomName={}, requestedByName={}, page={}, size={}, sort={})",
+            "구입 요청 목록 조회 (requesterId={}, mine={}, status={}, paymentType={}, keyword={}, classroomName={}, departmentName={}, requestedByName={}, page={}, size={}, sort={})",
             requesterId,
             mine,
             request.getStatus(),
             request.getPaymentType(),
             request.getKeyword(),
             request.getClassroomName(),
+            request.getDepartmentName(),
             request.getRequestedByName(),
             request.getPage(),
             request.getSize(),
@@ -169,6 +170,7 @@ public class PurchaseRequestService {
             PurchaseRequestSpecs.hasPaymentType(request.getPaymentType()),
             PurchaseRequestSpecs.keywordContains(request.getKeyword()),
             PurchaseRequestSpecs.classroomNameContains(request.getClassroomName()),
+            PurchaseRequestSpecs.departmentNameContains(request.getDepartmentName()),
             PurchaseRequestSpecs.requestedByNameContains(request.getRequestedByName())
         );
         return mine
@@ -198,8 +200,8 @@ public class PurchaseRequestService {
             throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
         }
 
-        Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
-        Department department = departmentProxyService.getById(request.departmentId());
+        Classroom classroom = getClassroom(request.classroomId());
+        Department department = getDepartment(request.departmentId());
         List<PurchaseRequestItem> items = request.items().stream()
             .map(item -> new PurchaseRequestItem(
                 item.name(),
@@ -512,6 +514,14 @@ public class PurchaseRequestService {
         if (!isAdmin && !purchaseRequest.getRequestedBy().getId().equals(requesterId)) {
             throw new BusinessException(PurchaseRequestErrorCode.FORBIDDEN);
         }
+    }
+
+    private Classroom getClassroom(Long classroomId) {
+        return classroomId != null ? classroomProxyService.getActiveById(classroomId) : null;
+    }
+
+    private Department getDepartment(Long departmentId) {
+        return departmentId != null ? departmentProxyService.getById(departmentId) : null;
     }
 
     private String requireNote(String note) {

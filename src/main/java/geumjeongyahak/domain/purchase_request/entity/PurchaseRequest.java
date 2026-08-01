@@ -40,7 +40,7 @@ public class PurchaseRequest extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "classroom_id", nullable = false)
+    @JoinColumn(name = "classroom_id")
     private Classroom classroom;
 
     @ManyToOne(fetch = FetchType.LAZY)

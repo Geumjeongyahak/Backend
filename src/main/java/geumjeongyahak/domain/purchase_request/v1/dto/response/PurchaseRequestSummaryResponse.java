@@ -11,11 +11,17 @@ public record PurchaseRequestSummaryResponse(
     @Schema(description = "요청 ID", example = "1")
     Long id,
 
-    @Schema(description = "분반 ID", example = "1")
+    @Schema(description = "요청 대상 분반 ID. 부서 대상 요청이면 null입니다.", example = "1", nullable = true)
     Long classroomId,
 
-    @Schema(description = "분반 이름", example = "한글반")
+    @Schema(description = "요청 대상 분반 이름. 부서 대상 요청이면 null입니다.", example = "한글반", nullable = true)
     String classroomName,
+
+    @Schema(description = "요청 대상 부서 ID. 분반 대상 요청이면 null입니다.", example = "2", nullable = true)
+    Long departmentId,
+
+    @Schema(description = "요청 대상 부서 이름. 분반 대상 요청이면 null입니다.", example = "교육연구부", nullable = true)
+    String departmentName,
 
     @Schema(description = "요청자 ID", example = "3")
     Long requestedById,
@@ -41,8 +47,10 @@ public record PurchaseRequestSummaryResponse(
     public static PurchaseRequestSummaryResponse from(PurchaseRequest r) {
         return new PurchaseRequestSummaryResponse(
             r.getId(),
-            r.getClassroom().getId(),
-            r.getClassroom().getName(),
+            r.getClassroom() != null ? r.getClassroom().getId() : null,
+            r.getClassroom() != null ? r.getClassroom().getName() : null,
+            r.getDepartment() != null ? r.getDepartment().getId() : null,
+            r.getDepartment() != null ? r.getDepartment().getName() : null,
             r.getRequestedBy().getId(),
             r.getRequestedBy().getName(),
             r.getTitle(),

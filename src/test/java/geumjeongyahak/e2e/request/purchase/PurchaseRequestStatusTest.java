@@ -415,7 +415,6 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .contentType(ContentType.JSON)
             .body(Map.of(
                 "classroomId", 2L,
-                "departmentId", 3L,
                 "title", "작성자 수정 구입 요청",
                 "content", "작성자가 수정한 내용입니다.",
                 "items", List.of(Map.of(
@@ -428,7 +427,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .then()
             .statusCode(200)
             .body("classroomId", equalTo(2))
-            .body("departmentId", equalTo(3))
+            .body("departmentId", nullValue())
             .body("title", equalTo("작성자 수정 구입 요청"))
             .body("items[0].name", equalTo("작성자 수정 품목"));
     }
@@ -444,7 +443,6 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .contentType(ContentType.JSON)
             .body(Map.of(
                 "classroomId", CLASSROOM_ID,
-                "departmentId", DEPARTMENT_ID,
                 "title", "타인 수정 시도",
                 "content", "다른 작성자는 수정할 수 없습니다.",
                 "items", List.of(Map.of(
@@ -459,7 +457,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("Apps Script Bot이 PENDING 구입 요청 수정 → 200, 분반·부서·기본 정보·품목 교체")
+    @DisplayName("Apps Script Bot이 PENDING 구입 요청 수정 → 200, 부서 대상으로 교체")
     void update_asAppsScriptBotAndPending_returns200() {
         currentRequestId = setupPendingRequest();
         String botAccessToken = loginAppsScriptBot();
@@ -469,7 +467,6 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(botAccessToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
-                "classroomId", 2L,
                 "departmentId", 3L,
                 "title", "시트 수정 구입 요청",
                 "content", "Apps Script에서 수정한 내용입니다.",
@@ -482,8 +479,8 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .put("/{requestId}", currentRequestId)
             .then()
             .statusCode(200)
-            .body("classroomId", equalTo(2))
-            .body("classroomName", equalTo("장미반"))
+            .body("classroomId", nullValue())
+            .body("classroomName", nullValue())
             .body("departmentId", equalTo(3))
             .body("departmentName", equalTo("생활안전부"))
             .body("title", equalTo("시트 수정 구입 요청"))
@@ -519,6 +516,31 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("구입 요청 수정 시 분반과 담당 부서를 모두 입력 → 400")
+    void update_withBothTargets_returns400() {
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "classroomId", CLASSROOM_ID,
+                "departmentId", DEPARTMENT_ID,
+                "title", "중복 대상 수정",
+                "content", "분반과 부서를 동시에 전송합니다.",
+                "items", List.of(Map.of(
+                    "name", "수정 품목",
+                    "reason", "배타 선택 검증",
+                    "quantity", 1
+                ))
+            ))
+            .put("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(400);
+    }
+
+    @Test
     @DisplayName("APPROVED 구입 요청 수정 → 409")
     void update_approvedRequest_returns409() {
         currentRequestId = setupPendingRequest();
@@ -539,7 +561,6 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .contentType(ContentType.JSON)
             .body(Map.of(
                 "classroomId", CLASSROOM_ID,
-                "departmentId", DEPARTMENT_ID,
                 "title", "승인 후 수정",
                 "content", "승인 후에는 수정할 수 없습니다.",
                 "items", List.of(Map.of(
@@ -1483,7 +1504,6 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
                 "title", "실 결제 다중 거래처 검증",
                 "content", "품목별 거래처 검증",
                 "classroomId", CLASSROOM_ID,
-                "departmentId", DEPARTMENT_ID,
                 "paymentType", "ACTUAL",
                 "items", List.of(
                     Map.of("name", "교재", "reason", "수업 자료", "quantity", 1),

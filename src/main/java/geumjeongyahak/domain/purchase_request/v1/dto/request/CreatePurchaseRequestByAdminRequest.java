@@ -9,7 +9,10 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
+import geumjeongyahak.domain.purchase_request.v1.validation.PurchaseRequestTarget;
+import geumjeongyahak.domain.purchase_request.v1.validation.ValidPurchaseRequestTarget;
 
+@ValidPurchaseRequestTarget
 public record CreatePurchaseRequestByAdminRequest(
 
     @NotNull
@@ -23,12 +26,10 @@ public record CreatePurchaseRequestByAdminRequest(
     @Schema(description = "구입 요청 내용", example = "수업에 필요한 교재를 구입합니다.", nullable = true)
     String content,
 
-    @NotNull
-    @Schema(description = "구입 요청 대상 분반 ID", example = "1")
+    @Schema(description = "구입 요청 대상 분반 ID. departmentId와 정확히 하나만 입력합니다.", example = "1", nullable = true)
     Long classroomId,
 
-    @NotNull
-    @Schema(description = "구입 요청 담당 부서 ID", example = "4")
+    @Schema(description = "구입 요청 대상 부서 ID. classroomId와 정확히 하나만 입력합니다.", example = "4", nullable = true)
     Long departmentId,
 
     @NotNull
@@ -39,7 +40,7 @@ public record CreatePurchaseRequestByAdminRequest(
     @NotEmpty
     @Schema(description = "결제 항목 목록")
     List<Item> items
-) {
+) implements PurchaseRequestTarget {
     public record Item(
 
         @NotBlank

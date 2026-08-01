@@ -25,22 +25,25 @@
     </div>
 
     <form id="purchase-form" class="panel form-grid" th:action="${request.status.name() == 'APPROVED'} ? @{/admin/request/purchase/purchase-requests/{requestId}/report(requestId=${request.id})} : @{/admin/request/purchase/purchase-requests/{requestId}(requestId=${request.id})}" th:object="${form}" method="post">
-        <label th:if="${request.status.name() == 'PENDING'}">분반
-            <select th:field="*{classroomId}" required>
+        <div th:if="${#fields.hasErrors('classroomId')}" th:errors="*{classroomId}" style="color: #c0392b;"></div>
+        <label th:if="${request.status.name() == 'PENDING'}">요청 대상 분반
+            <select id="classroomId" th:field="*{classroomId}" onchange="clearOtherTarget('classroomId', 'departmentId')">
+                <option value="">선택 안 함</option>
                 <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}">분반명</option>
             </select>
         </label>
-        <label th:unless="${request.status.name() == 'PENDING'}">분반
-            <input type="text" th:value="${request.classroomName}" readonly disabled>
+        <label th:unless="${request.status.name() == 'PENDING'}">요청 대상 분반
+            <input type="text" th:value="${request.classroomName ?: '-'}" readonly disabled>
             <input type="hidden" th:field="*{classroomId}">
         </label>
-        <label th:if="${request.status.name() == 'PENDING'}">담당 부서
-            <select th:field="*{departmentId}" required>
+        <label th:if="${request.status.name() == 'PENDING'}">요청 대상 부서
+            <select id="departmentId" th:field="*{departmentId}" onchange="clearOtherTarget('departmentId', 'classroomId')">
+                <option value="">선택 안 함</option>
                 <option th:each="department : ${departments}" th:value="${department.id}" th:text="${department.name}">부서명</option>
             </select>
         </label>
-        <label th:unless="${request.status.name() == 'PENDING'}">담당 부서
-            <input type="text" th:value="${request.departmentName}" readonly disabled>
+        <label th:unless="${request.status.name() == 'PENDING'}">요청 대상 부서
+            <input type="text" th:value="${request.departmentName ?: '-'}" readonly disabled>
             <input type="hidden" th:field="*{departmentId}">
         </label>
         <label>제목 <input th:field="*{title}" th:readonly="${request.status.name() != 'PENDING'}" required></label>
@@ -119,6 +122,13 @@
         let itemIndex = /*[[${form.items.size()}]]*/ 0;
         const isPending = /*[[${request.status.name() == 'PENDING'}]]*/ true;
         const isApproved = /*[[${request.status.name() == 'APPROVED'}]]*/ false;
+
+        function clearOtherTarget(selectedId, otherId) {
+            const selected = document.getElementById(selectedId);
+            if (selected && selected.value) {
+                document.getElementById(otherId).value = '';
+            }
+        }
 
         async function uploadItemReceipt(input) {
             const file = input.files && input.files[0];
