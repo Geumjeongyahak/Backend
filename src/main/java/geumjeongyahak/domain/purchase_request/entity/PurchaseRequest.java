@@ -146,10 +146,14 @@ public class PurchaseRequest extends BaseEntity {
     }
 
     public void update(
+        Classroom classroom,
+        Department department,
         String title,
         String content,
         List<PurchaseRequestItem> items
     ) {
+        this.classroom = classroom;
+        this.department = department;
         this.title = title;
         this.content = content;
         this.items.clear();

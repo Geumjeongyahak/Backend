@@ -43,6 +43,7 @@ public abstract class RequestBaseTest extends BaseE2ETest {
     protected static final String VOLUNTEER_USERNAME = "teacher01";   // id=2
     protected static final String VOLUNTEER2_USERNAME = "teacher02";  // id=3
     protected static final long CLASSROOM_ID = 1L;
+    protected static final long DEPARTMENT_ID = 4L;  // 총무부
     protected static final long TEACHER_ID = 2L;   // teacher01
     protected static final long TEACHER2_ID = 3L;  // teacher02
     protected static final long SUBJECT_ID = 1L;   // init_data subject (teacher01 담당)
@@ -167,6 +168,7 @@ public abstract class RequestBaseTest extends BaseE2ETest {
                 entry("title", title),
                 entry("content", content),
                 entry("classroomId", classroomId),
+                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", paymentType),
                 entry("items", java.util.List.of(Map.ofEntries(
                     entry("name", title + " 품목"),

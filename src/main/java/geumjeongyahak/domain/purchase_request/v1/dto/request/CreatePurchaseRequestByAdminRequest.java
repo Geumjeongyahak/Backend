@@ -28,6 +28,10 @@ public record CreatePurchaseRequestByAdminRequest(
     Long classroomId,
 
     @NotNull
+    @Schema(description = "구입 요청 담당 부서 ID", example = "4")
+    Long departmentId,
+
+    @NotNull
     @Schema(description = "결제 유형", example = "PREPAID")
     PurchasePaymentType paymentType,
 

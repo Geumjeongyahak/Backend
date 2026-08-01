@@ -91,6 +91,7 @@ public class PurchaseRequestViewController {
         model.addAttribute("active", "purchaseRequests");
         model.addAttribute("adminName", authentication.getName());
         model.addAttribute("classrooms", purchaseRequestAdminViewService.getAllClassrooms());
+        model.addAttribute("departments", purchaseRequestAdminViewService.getAllDepartments());
         model.addAttribute("vendors", purchaseRequestAdminViewService.getAllVendors());
 
         PurchaseRequestForm form = new PurchaseRequestForm();
@@ -113,6 +114,7 @@ public class PurchaseRequestViewController {
             model.addAttribute("active", "purchaseRequests");
             model.addAttribute("adminName", authentication.getName());
             model.addAttribute("classrooms", purchaseRequestAdminViewService.getAllClassrooms());
+            model.addAttribute("departments", purchaseRequestAdminViewService.getAllDepartments());
             model.addAttribute("vendors", purchaseRequestAdminViewService.getAllVendors());
             return "admin/request/purchase/purchase-requests-form";
         }
@@ -124,6 +126,7 @@ public class PurchaseRequestViewController {
         Long requestId = purchaseRequestAdminViewService.createPurchaseRequest(
             userDetails.getUserId(),
             form.getClassroomId(),
+            form.getDepartmentId(),
             form.getTitle(),
             form.getContent(),
             form.getPaymentType(),
@@ -144,6 +147,7 @@ public class PurchaseRequestViewController {
 
         PurchaseRequestForm form = new PurchaseRequestForm();
         form.setClassroomId(response.classroomId());
+        form.setDepartmentId(response.departmentId());
         form.setTitle(response.title());
         form.setContent(response.content());
         form.setPaymentType(response.paymentType());
@@ -188,6 +192,7 @@ public class PurchaseRequestViewController {
         model.addAttribute("request", response);
         model.addAttribute("form", form);
         model.addAttribute("classrooms", purchaseRequestAdminViewService.getAllClassrooms());
+        model.addAttribute("departments", purchaseRequestAdminViewService.getAllDepartments());
         model.addAttribute("vendors", purchaseRequestAdminViewService.getAllVendors());
         model.addAttribute("purchasePaymentMethods", PurchasePaymentMethod.values());
         return "admin/request/purchase/purchase-requests-edit";
@@ -207,6 +212,7 @@ public class PurchaseRequestViewController {
             model.addAttribute("active", "purchaseRequests");
             model.addAttribute("adminName", authentication.getName());
             model.addAttribute("classrooms", purchaseRequestAdminViewService.getAllClassrooms());
+            model.addAttribute("departments", purchaseRequestAdminViewService.getAllDepartments());
             model.addAttribute("vendors", purchaseRequestAdminViewService.getAllVendors());
             model.addAttribute("request", purchaseRequestAdminViewService.getPurchaseRequest(userDetails.getUserId(), requestId));
             return "admin/request/purchase/purchase-requests-edit";
@@ -219,6 +225,8 @@ public class PurchaseRequestViewController {
         purchaseRequestAdminViewService.updatePurchaseRequest(
             userDetails.getUserId(),
             requestId,
+            form.getClassroomId(),
+            form.getDepartmentId(),
             form.getTitle(),
             form.getContent(),
             items);

@@ -585,6 +585,7 @@ class PurchaseRequestProposalTest extends RequestBaseTest {
             .body(Map.ofEntries(
                 entry("title", title),
                 entry("classroomId", CLASSROOM_ID),
+                entry("departmentId", DEPARTMENT_ID),
                 entry("paymentType", "PREPAID"),
                 entry("items", List.of(Map.ofEntries(
                     entry("name", "교재"),

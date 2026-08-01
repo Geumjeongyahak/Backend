@@ -25,8 +25,23 @@
     </div>
 
     <form id="purchase-form" class="panel form-grid" th:action="${request.status.name() == 'APPROVED'} ? @{/admin/request/purchase/purchase-requests/{requestId}/report(requestId=${request.id})} : @{/admin/request/purchase/purchase-requests/{requestId}(requestId=${request.id})}" th:object="${form}" method="post">
-        <label>분반
+        <label th:if="${request.status.name() == 'PENDING'}">분반
+            <select th:field="*{classroomId}" required>
+                <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}">분반명</option>
+            </select>
+        </label>
+        <label th:unless="${request.status.name() == 'PENDING'}">분반
             <input type="text" th:value="${request.classroomName}" readonly disabled>
+            <input type="hidden" th:field="*{classroomId}">
+        </label>
+        <label th:if="${request.status.name() == 'PENDING'}">담당 부서
+            <select th:field="*{departmentId}" required>
+                <option th:each="department : ${departments}" th:value="${department.id}" th:text="${department.name}">부서명</option>
+            </select>
+        </label>
+        <label th:unless="${request.status.name() == 'PENDING'}">담당 부서
+            <input type="text" th:value="${request.departmentName}" readonly disabled>
+            <input type="hidden" th:field="*{departmentId}">
         </label>
         <label>제목 <input th:field="*{title}" th:readonly="${request.status.name() != 'PENDING'}" required></label>
         <label>내용 <textarea th:field="*{content}" th:readonly="${request.status.name() != 'PENDING'}"></textarea></label>
