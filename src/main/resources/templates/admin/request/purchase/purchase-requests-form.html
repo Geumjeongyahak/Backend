@@ -21,6 +21,12 @@
                 <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}">분반명</option>
             </select>
         </label>
+        <label>담당 부서
+            <select th:field="*{departmentId}" required>
+                <option value="">선택</option>
+                <option th:each="department : ${departments}" th:value="${department.id}" th:text="${department.name}">부서명</option>
+            </select>
+        </label>
         <label>제목 <input th:field="*{title}" required placeholder="예: 교재 구입"></label>
         <label>내용 <textarea th:field="*{content}" placeholder="구매 요청 사유 및 상세 내용을 입력하세요."></textarea></label>
         <label>결제 유형

@@ -35,6 +35,7 @@ import geumjeongyahak.domain.purchase_request.v1.dto.request.CreatePurchaseReque
 import geumjeongyahak.domain.purchase_request.v1.dto.request.PurchaseRequestListRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.ReportPurchaseRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.SavePurchaseRequestProposalRequest;
+import geumjeongyahak.domain.purchase_request.v1.dto.request.UpdatePurchaseRequestRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDetailResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestProposalResponse;
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
@@ -57,7 +58,7 @@ public class PurchaseRequestController {
     @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
     @Operation(
         summary = "구입 요청 생성",
-        description = "classroomId 로 지정한 분반에 대한 기자재 구입 요청을 생성합니다. "
+        description = "필수값인 classroomId와 departmentId로 담당 분반과 부서를 직접 지정하여 기자재 구입 요청을 생성합니다. "
             + "품목은 품명, 사유, 확정 결제금액, 선택 영수증을 입력합니다. "
             + "상태는 PENDING 으로 시작합니다."
     )
@@ -116,6 +117,28 @@ public class PurchaseRequestController {
         log.debug("GET /api/v1/purchase-requests/{}", requestId);
         return ResponseEntity.ok(
             purchaseRequestService.getPurchaseRequest(requestId)
+        );
+    }
+
+    @PreAuthorize(TEACHER_OR_HIGHER_ACCESS)
+    @Operation(
+        summary = "구입 요청 수정",
+        description = "작성자가 본인의 PENDING 상태 구입 요청 분반, 담당 부서, 제목, 내용, 품목을 전체 교체합니다."
+    )
+    @PutMapping("/{requestId}")
+    public ResponseEntity<PurchaseRequestDetailResponse> updatePurchaseRequest(
+        @PathVariable Long requestId,
+        @Valid @RequestBody UpdatePurchaseRequestRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.debug("PUT /api/v1/purchase-requests/{}", requestId);
+        return ResponseEntity.ok(
+            purchaseRequestService.updatePurchaseRequest(
+                userDetails.getUserId(),
+                requestId,
+                request,
+                false
+            )
         );
     }
 

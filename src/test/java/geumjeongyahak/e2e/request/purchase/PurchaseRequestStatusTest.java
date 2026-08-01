@@ -402,10 +402,64 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             });
     }
 
-    // ── 관리자 수정 (update) ─────────────────────────────
+    // ── 수정 (update) ────────────────────────────────────
 
     @Test
-    @DisplayName("Apps Script Bot이 PENDING 구입 요청 수정 → 200, 기본 정보와 품목 교체")
+    @DisplayName("작성자가 본인의 PENDING 구입 요청 수정 → 200")
+    void update_asRequesterAndPending_returns200() {
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "classroomId", 2L,
+                "departmentId", 3L,
+                "title", "작성자 수정 구입 요청",
+                "content", "작성자가 수정한 내용입니다.",
+                "items", List.of(Map.of(
+                    "name", "작성자 수정 품목",
+                    "reason", "작성자 수정 검증",
+                    "quantity", 2
+                ))
+            ))
+            .put("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(200)
+            .body("classroomId", equalTo(2))
+            .body("departmentId", equalTo(3))
+            .body("title", equalTo("작성자 수정 구입 요청"))
+            .body("items[0].name", equalTo("작성자 수정 품목"));
+    }
+
+    @Test
+    @DisplayName("다른 작성자가 PENDING 구입 요청 수정 → 403")
+    void update_asOtherRequester_returns403() {
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "classroomId", CLASSROOM_ID,
+                "departmentId", DEPARTMENT_ID,
+                "title", "타인 수정 시도",
+                "content", "다른 작성자는 수정할 수 없습니다.",
+                "items", List.of(Map.of(
+                    "name", "수정 시도 품목",
+                    "reason", "접근 권한 검증",
+                    "quantity", 1
+                ))
+            ))
+            .put("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("Apps Script Bot이 PENDING 구입 요청 수정 → 200, 분반·부서·기본 정보·품목 교체")
     void update_asAppsScriptBotAndPending_returns200() {
         currentRequestId = setupPendingRequest();
         String botAccessToken = loginAppsScriptBot();
@@ -415,6 +469,8 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(botAccessToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
+                "classroomId", 2L,
+                "departmentId", 3L,
                 "title", "시트 수정 구입 요청",
                 "content", "Apps Script에서 수정한 내용입니다.",
                 "items", List.of(Map.of(
@@ -423,9 +479,13 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
                     "quantity", 3
                 ))
             ))
-            .patch("/{requestId}", currentRequestId)
+            .put("/{requestId}", currentRequestId)
             .then()
             .statusCode(200)
+            .body("classroomId", equalTo(2))
+            .body("classroomName", equalTo("장미반"))
+            .body("departmentId", equalTo(3))
+            .body("departmentName", equalTo("생활안전부"))
             .body("title", equalTo("시트 수정 구입 요청"))
             .body("content", equalTo("Apps Script에서 수정한 내용입니다."))
             .body("status", equalTo("PENDING"))
@@ -433,6 +493,29 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .body("items[0].name", equalTo("수정된 품목"))
             .body("items[0].quantity", equalTo(3))
             .body("paymentType", equalTo("ACTUAL"));
+    }
+
+    @Test
+    @DisplayName("구입 요청 수정 시 분반·담당 부서 누락 → 400")
+    void update_missingClassroomAndDepartment_returns400() {
+        currentRequestId = setupPendingRequest();
+
+        given()
+            .basePath("/api/v1/admin/purchase-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "title", "필수값 누락 수정",
+                "content", "분반과 담당 부서를 전송하지 않습니다.",
+                "items", List.of(Map.of(
+                    "name", "수정 품목",
+                    "reason", "필수값 검증",
+                    "quantity", 1
+                ))
+            ))
+            .put("/{requestId}", currentRequestId)
+            .then()
+            .statusCode(400);
     }
 
     @Test
@@ -455,6 +538,8 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
             .header(AUTH_HEADER, getAuthHeader(botAccessToken))
             .contentType(ContentType.JSON)
             .body(Map.of(
+                "classroomId", CLASSROOM_ID,
+                "departmentId", DEPARTMENT_ID,
                 "title", "승인 후 수정",
                 "content", "승인 후에는 수정할 수 없습니다.",
                 "items", List.of(Map.of(
@@ -463,7 +548,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
                     "quantity", 1
                 ))
             ))
-            .patch("/{requestId}", currentRequestId)
+            .put("/{requestId}", currentRequestId)
             .then()
             .statusCode(409);
     }
@@ -1398,6 +1483,7 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
                 "title", "실 결제 다중 거래처 검증",
                 "content", "품목별 거래처 검증",
                 "classroomId", CLASSROOM_ID,
+                "departmentId", DEPARTMENT_ID,
                 "paymentType", "ACTUAL",
                 "items", List.of(
                     Map.of("name", "교재", "reason", "수업 자료", "quantity", 1),

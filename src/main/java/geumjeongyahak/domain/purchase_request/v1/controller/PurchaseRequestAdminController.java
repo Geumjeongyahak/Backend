@@ -54,7 +54,8 @@ public class PurchaseRequestAdminController {
 
     @Operation(
         summary = "구입 요청 대리 생성",
-        description = "관리자 또는 purchase-request:manage:* 권한자가 requestedById 사용자를 실제 요청자로 지정해 구입 요청을 생성합니다."
+        description = "관리자 또는 purchase-request:manage:* 권한자가 requestedById 사용자를 실제 요청자로 지정해 구입 요청을 생성합니다. "
+            + "필수값인 classroomId와 departmentId로 담당 분반과 부서를 직접 지정합니다."
     )
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
     @PostMapping
@@ -175,16 +176,16 @@ public class PurchaseRequestAdminController {
 
     @Operation(
         summary = "구입 요청 수정",
-        description = "관리자 또는 purchase-request:manage:* 권한자가 PENDING 상태의 구입 요청 제목, 내용, 품목을 수정합니다."
+        description = "관리자 또는 purchase-request:manage:* 권한자가 PENDING 상태의 구입 요청 분반, 담당 부서, 제목, 내용, 품목을 전체 교체합니다."
     )
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('purchase-request:manage:*')")
-    @PatchMapping("/{requestId}")
+    @PutMapping("/{requestId}")
     public ResponseEntity<PurchaseRequestDetailResponse> updatePurchaseRequest(
         @PathVariable Long requestId,
         @Valid @RequestBody UpdatePurchaseRequestRequest request,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.debug("PATCH /api/v1/admin/purchase-requests/{}", requestId);
+        log.debug("PUT /api/v1/admin/purchase-requests/{}", requestId);
         return ResponseEntity.ok(
             purchaseRequestService.updatePurchaseRequest(
                 userDetails.getUserId(),

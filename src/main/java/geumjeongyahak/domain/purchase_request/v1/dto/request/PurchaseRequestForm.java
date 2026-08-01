@@ -20,7 +20,11 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class PurchaseRequestForm {
 
+    @NotNull(message = "분반은 필수입니다.")
     private Long classroomId;
+
+    @NotNull(message = "담당 부서는 필수입니다.")
+    private Long departmentId;
 
     @NotBlank(message = "제목은 필수입니다.")
     private String title;

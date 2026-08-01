@@ -20,6 +20,8 @@ import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
+import geumjeongyahak.domain.department.entity.Department;
+import geumjeongyahak.domain.department.service.DepartmentProxyService;
 import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.file.service.FileProxyService;
 import geumjeongyahak.domain.notification.enums.PushRequestType;
@@ -54,6 +56,7 @@ public class PurchaseRequestService {
     private final PurchaseRequestRepository purchaseRequestRepository;
     private final FileProxyService fileProxyService;
     private final ClassroomProxyService classroomProxyService;
+    private final DepartmentProxyService departmentProxyService;
     private final UserProxyService userProxyService;
     private final VendorService vendorService;
     private final EventPublisher eventPublisher;
@@ -63,9 +66,15 @@ public class PurchaseRequestService {
     public PurchaseRequestDetailResponse createPurchaseRequest(
         Long requesterId, CreatePurchaseRequestRequest request
     ) {
-        log.debug("구입 요청 생성 (requesterId={}, classroomId={})", requesterId, request.classroomId());
+        log.debug(
+            "구입 요청 생성 (requesterId={}, classroomId={}, departmentId={})",
+            requesterId,
+            request.classroomId(),
+            request.departmentId()
+        );
 
         Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
+        Department department = departmentProxyService.getById(request.departmentId());
         User requester = userProxyService.getById(requesterId);
         List<PurchaseRequestItem> items = request.items().stream()
             .map(item -> new PurchaseRequestItem(
@@ -78,6 +87,7 @@ public class PurchaseRequestService {
         return createPurchaseRequest(
             requester,
             classroom,
+            department,
             request.paymentType(),
             request.title(),
             request.content(),
@@ -90,13 +100,15 @@ public class PurchaseRequestService {
         Long actorId, CreatePurchaseRequestByAdminRequest request
     ) {
         log.debug(
-            "관리자 구입 요청 대리 생성 (actorId={}, requestedById={}, classroomId={})",
+            "관리자 구입 요청 대리 생성 (actorId={}, requestedById={}, classroomId={}, departmentId={})",
             actorId,
             request.requestedById(),
-            request.classroomId()
+            request.classroomId(),
+            request.departmentId()
         );
 
         Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
+        Department department = departmentProxyService.getById(request.departmentId());
         User requester = userProxyService.getById(request.requestedById());
         List<PurchaseRequestItem> items = request.items().stream()
             .map(item -> new PurchaseRequestItem(
@@ -109,6 +121,7 @@ public class PurchaseRequestService {
         return createPurchaseRequest(
             requester,
             classroom,
+            department,
             request.paymentType(),
             request.title(),
             request.content(),
@@ -185,6 +198,8 @@ public class PurchaseRequestService {
             throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
         }
 
+        Classroom classroom = classroomProxyService.getActiveById(request.classroomId());
+        Department department = departmentProxyService.getById(request.departmentId());
         List<PurchaseRequestItem> items = request.items().stream()
             .map(item -> new PurchaseRequestItem(
                 item.name(),
@@ -193,7 +208,7 @@ public class PurchaseRequestService {
             ))
             .toList();
 
-        purchaseRequest.update(request.title(), request.content(), items);
+        purchaseRequest.update(classroom, department, request.title(), request.content(), items);
 
         log.debug("구입 요청 수정 완료 (id={})", purchaseRequest.getId());
         return toDetailResponse(purchaseRequest);
@@ -471,6 +486,7 @@ public class PurchaseRequestService {
     private PurchaseRequestDetailResponse createPurchaseRequest(
         User requester,
         Classroom classroom,
+        Department department,
         PurchasePaymentType paymentType,
         String title,
         String content,
@@ -479,7 +495,7 @@ public class PurchaseRequestService {
         PurchaseRequest saved = purchaseRequestRepository.save(
             new PurchaseRequest(
                 classroom,
-                requester.getDepartment(),
+                department,
                 requester,
                 paymentType,
                 title,

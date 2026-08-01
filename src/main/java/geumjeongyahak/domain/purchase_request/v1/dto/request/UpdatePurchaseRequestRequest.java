@@ -4,9 +4,18 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 public record UpdatePurchaseRequestRequest(
+
+    @NotNull
+    @Schema(description = "구입 요청 대상 분반 ID", example = "1")
+    Long classroomId,
+
+    @NotNull
+    @Schema(description = "구입 요청 담당 부서 ID", example = "4")
+    Long departmentId,
 
     @NotBlank
     @Schema(description = "구입 요청 제목", example = "교재 구입")

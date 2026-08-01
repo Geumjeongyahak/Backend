@@ -2,6 +2,7 @@ package geumjeongyahak.domain.purchase_request.service;
 
 import geumjeongyahak.domain.base.dto.response.AdminPage;
 import geumjeongyahak.domain.classroom.service.ClassroomAdminViewService;
+import geumjeongyahak.domain.department.service.DepartmentAdminViewService;
 import geumjeongyahak.domain.file.service.ImageUploadService;
 import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
@@ -27,6 +28,7 @@ public class PurchaseRequestAdminViewService {
 
     private final PurchaseRequestService purchaseRequestService;
     private final ClassroomAdminViewService classroomAdminViewService;
+    private final DepartmentAdminViewService departmentAdminViewService;
     private final ImageUploadService imageUploadService;
     private final VendorService vendorService;
 
@@ -60,6 +62,7 @@ public class PurchaseRequestAdminViewService {
     public Long createPurchaseRequest(
         Long requesterId,
         Long classroomId,
+        Long departmentId,
         String title,
         String content,
         PurchasePaymentType paymentType,
@@ -67,7 +70,7 @@ public class PurchaseRequestAdminViewService {
     ) {
         return purchaseRequestService.createPurchaseRequest(
             requesterId,
-            new CreatePurchaseRequestRequest(title, content, classroomId, paymentType, items)
+            new CreatePurchaseRequestRequest(title, content, classroomId, departmentId, paymentType, items)
         ).id();
     }
 
@@ -75,6 +78,8 @@ public class PurchaseRequestAdminViewService {
     public void updatePurchaseRequest(
         Long requesterId,
         Long requestId,
+        Long classroomId,
+        Long departmentId,
         String title,
         String content,
         List<CreatePurchaseRequestRequest.Item> items
@@ -82,7 +87,7 @@ public class PurchaseRequestAdminViewService {
         purchaseRequestService.updatePurchaseRequest(
             requesterId,
             requestId,
-            new UpdatePurchaseRequestRequest(title, content, items),
+            new UpdatePurchaseRequestRequest(classroomId, departmentId, title, content, items),
             true
         );
     }
@@ -94,6 +99,12 @@ public class PurchaseRequestAdminViewService {
 
     public List<ClassroomAdminViewService.AdminClassroomRow> getAllClassrooms() {
         return classroomAdminViewService.getClassrooms(new ClassroomAdminViewService.ClassroomFilter(null, null, "name,ASC"));
+    }
+
+    public List<DepartmentAdminViewService.AdminDepartmentRow> getAllDepartments() {
+        return departmentAdminViewService.getDepartments(
+            new DepartmentAdminViewService.DepartmentFilter(null, null, null, "name,ASC")
+        );
     }
 
     public List<VendorResponse> getAllVendors() {
