@@ -190,12 +190,34 @@ permission code로는 표현되지 않습니다.
 | `GET /admin/request/lesson-exchange` | 관리자 콘솔 접근 가능 사용자 |
 | `POST /admin/request/lesson-exchange/{requestId}/approve` | `ADMIN` \| `lesson-exchange-request:manage:*` |
 | `POST /admin/request/lesson-exchange/{requestId}/reject` | `ADMIN` \| `lesson-exchange-request:manage:*` |
-| `POST /api/v1/purchase-requests` | 인증만 |
+| `POST /api/v1/purchase-requests` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` |
+| `GET /api/v1/purchase-requests` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` (기본 전체, `mine=true`이면 본인 요청) |
+| `GET /api/v1/purchase-requests/{requestId}` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` |
+| `PUT /api/v1/purchase-requests/{requestId}` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` (본인 요청) |
+| `DELETE /api/v1/purchase-requests/{requestId}` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` (본인 요청) |
+| `PUT /api/v1/purchase-requests/{requestId}/proposal` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` (본인 요청) |
+| `POST /api/v1/purchase-requests/{requestId}/proposal/receipts` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` (본인 요청) |
+| `DELETE /api/v1/purchase-requests/{requestId}/proposal/receipts/{receiptId}` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` (본인 요청) |
+| `POST /api/v1/purchase-requests/{requestId}/proposal-document` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` (본인 요청) |
+| `POST /api/v1/purchase-requests/{requestId}/resolution-document` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` (본인 요청) |
+| `POST /api/v1/purchase-requests/{requestId}/report` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` (본인 요청) |
+| `POST /api/v1/purchase-requests/{requestId}/reconfirmation` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` (본인 요청) |
+| `POST /api/v1/purchase-requests/{requestId}/item-receipts` | `VOLUNTEER` \| `MANAGER` \| `ADMIN` (본인 요청) |
+| `POST /api/v1/admin/purchase-requests` | `ADMIN` \| `purchase-request:manage:*` |
 | `GET /api/v1/admin/purchase-requests` | `ADMIN` \| `purchase-request:read:*` |
 | `GET /api/v1/admin/purchase-requests/{requestId}` | `ADMIN` \| `MANAGER` \| `purchase-request:read:*` |
+| `PUT /api/v1/admin/purchase-requests/{requestId}` | `ADMIN` \| `purchase-request:manage:*` |
+| `DELETE /api/v1/admin/purchase-requests/{requestId}` | `ADMIN` \| `purchase-request:manage:*` |
+| `PUT /api/v1/admin/purchase-requests/{requestId}/proposal` | `ADMIN` \| `purchase-request:manage:*` |
+| `POST /api/v1/admin/purchase-requests/{requestId}/proposal/receipts` | `ADMIN` \| `purchase-request:manage:*` |
+| `DELETE /api/v1/admin/purchase-requests/{requestId}/proposal/receipts/{receiptId}` | `ADMIN` \| `purchase-request:manage:*` |
 | `PATCH /api/v1/admin/purchase-requests/{requestId}/approve` | `ADMIN` \| `purchase-request:review:*` |
 | `PATCH /api/v1/admin/purchase-requests/{requestId}/reject` | `ADMIN` \| `purchase-request:review:*` |
 | `PATCH /api/v1/admin/purchase-requests/{requestId}/confirm` | `ADMIN` \| `purchase-request:manage:*` |
+| `POST /api/v1/admin/purchase-requests/{requestId}/report` | `ADMIN` \| `purchase-request:manage:*` |
+| `PATCH /api/v1/admin/purchase-requests/{requestId}/item-receipts` | `ADMIN` \| `purchase-request:manage:*` |
+| `POST /api/v1/admin/purchase-requests/{requestId}/proposal-document` | `ADMIN` \| `purchase-request:manage:*` |
+| `POST /api/v1/admin/purchase-requests/{requestId}/resolution-document` | `ADMIN` \| `purchase-request:manage:*` |
 | `POST /api/v1/subject-exchange-requests` | 인증만 |
 | `GET /api/v1/subject-exchange-requests` | 인증만 |
 | `GET /api/v1/subject-exchange-requests/{requestId}` | 인증만 |

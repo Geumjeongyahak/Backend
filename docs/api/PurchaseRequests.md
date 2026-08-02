@@ -6,7 +6,7 @@
 
 ## 1. 역할과 범위
 
-- 일반 사용자는 본인이 작성한 구입 요청을 생성, 조회, 삭제, 구매 완료 보고할 수 있습니다.
+- 일반 사용자는 구입 요청 전체 목록과 상세를 조회할 수 있고, 본인이 작성한 요청을 수정·삭제·구매 완료 보고할 수 있습니다.
 - 관리자 또는 `purchase-request:read:*` 권한자는 전체 구입 요청을 조회할 수 있습니다.
 - 관리자 또는 `purchase-request:review:*` 권한자는 구입 요청을 승인/반려할 수 있습니다.
 - 관리자 또는 `purchase-request:manage:*` 권한자는 처리 전 요청 삭제와 최종 결재 확인을 수행할 수 있습니다.
@@ -35,7 +35,7 @@
 - 결제 유형은 결제 신청 단위의 `paymentType`으로 저장합니다.
 - 하나의 결제 신청에는 `PREPAID`와 `ACTUAL` 품목을 혼합할 수 없습니다.
 - `content`는 선택값이며 생략하거나 `null`로 전달할 수 있습니다.
-- 신청자의 소속 부서는 서버가 신청 시점의 사용자 정보에서 자동 저장하며, 소속 부서가 없으면 `null`입니다.
+- 요청 대상은 `classroomId`와 `departmentId` 중 정확히 하나를 지정합니다.
 - 요청 생성 시 예상 금액, 거래처, 영수증은 받지 않습니다.
 - 선금 결제는 신청의 모든 품목을 포함한 거래를 정확히 1건만 보고합니다.
 - 실 결제는 신청 품목별로 거래를 정확히 1건씩 보고하며, 각 거래는 서로 다른 거래처를 선택할 수 있습니다.
@@ -51,12 +51,14 @@
 - `paymentMethod`는 선금 결제 거래에서만 필수입니다. 실 결제에서 전달하더라도 서버는 저장하지 않습니다.
 - 구매 완료 보고 API는 `transactions[].receiptFileId`를 받습니다.
 - soft delete된 파일은 영수증으로 재연결할 수 없습니다.
+- 품의서 DOCX에는 품의 단계와 구매 완료 거래에 연결된 영수증 이미지를 첨부하지 않습니다.
+- 결의서 DOCX에는 활성 영수증 이미지를 문서 마지막에 영수증 1개당 1페이지로 첨부합니다.
 
 ### 2.4 임시 업로드 파일 정리
 
 - 품목 영수증 이미지는 `POST /api/v1/files/images/purchase-items`로 먼저 업로드합니다.
 - 업로드된 파일은 `documents/purchase-items/` 경로와 `files` 메타데이터로 저장됩니다.
-- 파일이 어떤 구매 완료 거래 라인의 `receiptFile`에도 연결되지 않은 상태로 `app.file.cleanup.temporary-retention-hours`를 초과하면 `FileCleanupScheduler`가 soft delete 처리합니다.
+- 파일이 구매 완료 거래 라인의 `receiptFile` 또는 활성 품의 단계 영수증에 연결되지 않은 상태로 `app.file.cleanup.temporary-retention-hours`를 초과하면 `FileCleanupScheduler`가 soft delete 처리합니다.
 - soft delete 파일은 기존 파일 정리 정책에 따라 `app.file.cleanup.retention-days`가 지난 뒤 storage 삭제에 성공한 경우에만 DB에서 hard delete 됩니다.
 - storage 삭제 실패 시 DB 레코드는 유지되어 다음 스케줄러 실행 때 재시도됩니다.
 
@@ -127,6 +129,7 @@ sequenceDiagram
     participant PostFile as PostFileRepository
     participant PostAttachment as PostAttachmentRepository
     participant TxRepo as PurchaseRequestPaymentTransactionRepository
+    participant ProposalReceiptRepo as PurchaseRequestProposalReceiptRepository
 
     Scheduler->>FileRepo: findUnlinkedPurchaseItemFilesBefore(prefix, threshold)
     Scheduler->>Scheduler: 연결 없는 purchase-items 파일 soft delete
@@ -137,6 +140,7 @@ sequenceDiagram
             Scheduler->>PostFile: deleteByFileId(fileId)
             Scheduler->>PostAttachment: deleteByFileId(fileId)
             Scheduler->>TxRepo: clearReceiptFileByFileId(fileId)
+            Scheduler->>ProposalReceiptRepo: deleteAllByFileId(fileId)
             Scheduler->>FileRepo: delete(file)
         else storage 삭제 실패
             Scheduler->>Scheduler: DB 레코드 유지
@@ -150,7 +154,7 @@ sequenceDiagram
 
 - **URL**: `/api/v1/purchase-requests`
 - **Method**: `POST`
-- **권한**: 인증 사용자
+- **권한**: `VOLUNTEER`, `MANAGER`, `ADMIN`
 
 ```json
 {
@@ -181,9 +185,11 @@ sequenceDiagram
 | 파라미터 | 타입 | 필수 | 설명 |
 |---|---|---|---|
 | `status` | `PurchaseRequestStatus` | N | 구입 요청 상태 필터. `PENDING`, `APPROVED`, `PURCHASED`, `CONFIRMED`, `REJECTED` |
+| `paymentType` | `PurchasePaymentType` | N | 결제 유형 필터. `PREPAID`, `ACTUAL` |
 | `mine` | boolean | N | `true`이면 로그인 사용자가 작성한 요청만 조회합니다. 기본값은 `false`입니다. |
-| `keyword` | string | N | 제목, 분반명, 작성자명 통합 검색어 |
+| `keyword` | string | N | 제목, 분반명, 부서명, 작성자명 통합 검색어 |
 | `classroomName` | string | N | 분반명 부분 검색어 |
+| `departmentName` | string | N | 부서명 부분 검색어 |
 | `requestedByName` | string | N | 작성자명 부분 검색어 |
 | `page` | integer | N | 페이지 번호. 기본값은 `0`입니다. |
 | `size` | integer | N | 페이지 크기. 기본값은 `10`, 최대값은 `100`입니다. |
@@ -198,8 +204,10 @@ sequenceDiagram
 | 파라미터 | 타입 | 필수 | 설명 |
 |---|---|---|---|
 | `status` | `PurchaseRequestStatus` | N | 구입 요청 상태 필터. `PENDING`, `APPROVED`, `PURCHASED`, `CONFIRMED`, `REJECTED` |
-| `keyword` | string | N | 제목, 분반명, 작성자명 통합 검색어 |
+| `paymentType` | `PurchasePaymentType` | N | 결제 유형 필터. `PREPAID`, `ACTUAL` |
+| `keyword` | string | N | 제목, 분반명, 부서명, 작성자명 통합 검색어 |
 | `classroomName` | string | N | 분반명 부분 검색어 |
+| `departmentName` | string | N | 부서명 부분 검색어 |
 | `requestedByName` | string | N | 작성자명 부분 검색어 |
 | `page` | integer | N | 페이지 번호. 기본값은 `0`입니다. |
 | `size` | integer | N | 페이지 크기. 기본값은 `10`, 최대값은 `100`입니다. |
@@ -212,6 +220,7 @@ sequenceDiagram
 | `id` | 구입 요청 ID |
 | `title` | 제목 |
 | `classroomName` | 분반명 |
+| `departmentName` | 부서명 |
 | `requestedByName` | 작성자명 |
 | `totalPrice` | 구매 완료 보고 총액 |
 | `status` | 상태 |
@@ -229,13 +238,15 @@ sequenceDiagram
       "id": 1,
       "classroomId": 1,
       "classroomName": "벚꽃반",
+      "departmentId": null,
+      "departmentName": null,
       "requestedById": 2,
       "requestedByName": "홍길동",
       "title": "교재 구입",
+      "paymentType": "PREPAID",
       "totalPrice": 100000,
       "status": "PURCHASED",
-      "createdAt": "2026-06-30T10:00:00",
-      "updatedAt": "2026-06-30T10:00:00"
+      "createdAt": "2026-06-30T10:00:00"
     }
   ],
   "page": 0,
@@ -291,166 +302,100 @@ sequenceDiagram
 | 거래처 충전 | `/api/v1/admin/vendors/{vendorId}/charges` | `POST` | `ADMIN` 또는 `vendor:manage:*` |
 | 거래처 잔액 이력 | `/api/v1/admin/vendors/{vendorId}/histories` | `GET` | `ADMIN` 또는 `vendor:read:*` |
 
-### 4.6 지출증빙서류 DOCX 생성
+### 4.6 품의 정보 저장 및 DOCX 생성
 
-- **URL**: `/api/v1/admin/purchase-requests/{requestId}/expense-document`
-- **Method**: `POST`
-- **권한**: `ADMIN` 또는 `purchase-request:manage:*`
-- **응답**: `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
-- **파일명**: `지출증빙서류-{구매요청 제목}-{생성일}.docx`
+품의 정보 저장 API는 결제 유형을 제한하지 않으므로 `PREPAID`, `ACTUAL` 요청 모두 호출할 수 있습니다. 다만 프론트엔드는 결제 유형별 작성 템플릿을 분리하며, `ACTUAL` 요청에서는 품의 정보를 저장하지 않습니다. DOCX 출력은 `PREPAID` 요청에만 적용되며, 품의 정보를 먼저 저장한 뒤 별도의 요청 바디 없이 서버에 저장된 최신 정보로 문서를 생성합니다.
 
-품의서와 결의서를 한 문서로 생성하므로, 선금 결제 구매 요청이 구매 완료 보고된 뒤 관리자 결재 확인까지 완료된 `CONFIRMED` 상태에서만 생성할 수 있습니다.
+#### 품의 정보 저장
 
-#### 생성 가능 조건
+| 구분 | URL | Method | 권한 |
+|---|---|---|---|
+| 사용자 | `/api/v1/purchase-requests/{requestId}/proposal` | `PUT` | 최초 작성자 |
+| 관리자 | `/api/v1/admin/purchase-requests/{requestId}/proposal` | `PUT` | `ADMIN` 또는 `purchase-request:manage:*` |
 
-| 조건 | 설명 |
-|---|---|
-| 상태 | `CONFIRMED`만 허용 |
-| 결제 유형 | 구매 요청의 모든 품목이 `PREPAID`여야 함 |
-| 품목 단가 | `items`를 보낼 경우 구매 요청 품목 개수만큼 순서대로 모두 보내야 함 |
-| 품목 금액 | `items[].unitPrice * 구매 요청 품목 수량` 합계가 구매 완료 보고 총액과 같아야 함 |
-| 영수증 | 없어도 문서 생성 가능. 연결된 영수증 이미지가 있으면 문서 마지막에 영수증 1개당 1페이지로 첨부 |
-
-#### 문서 값 매핑
-
-| 문서 위치 | 값 출처 |
-|---|---|
-| 품의서 제목/내용 | 구매 요청 `title`, `content` |
-| 품의금액 | 구매 완료 보고 총액 `purchaseRequest.totalPrice` |
-| 결의금액 | 구매 완료 보고 총액 `purchaseRequest.totalPrice` |
-| 예산내역 세부사업 | 요청 바디 `detailProject` |
-| 예산내역 세부항목 | 요청 바디 `unitProject` |
-| 예산내역 산출내역 | 요청 바디 `budgetDetail` |
-| 예산내역 품의금액 | 구매 완료 보고 총액 |
-| 예산잔액 | 요청 바디 `budgetBalance` |
-| 사업잔액 | 요청 바디 `projectBalance` |
-| 품목내역 내용 | 구매 요청 품목명 |
-| 품목내역 수량 | 구매 요청 품목 수량 |
-| 품목내역 규격 | 요청 바디 `items[].spec` |
-| 품목내역 예상단가 | 요청 바디 `items[].unitPrice` |
-| 품목내역 예상금액 | `items[].unitPrice * 구매 요청 품목 수량` |
-| 거래내역 세부내역 | 구매 완료 보고 거래의 `itemNames` |
-| 거래내역 금액 | 구매 완료 보고 거래의 `amount` |
-| 거래처 | 구매 완료 보고 거래의 거래처명 요약 |
-| 지급구분 | 요청 바디 `paymentMethod` |
-| 결재라인 | 요청 바디 `draftApprovals`, `draftCooperations`, `resolutionApprovals` |
-
-#### 문서 생성 전 상세 조회로 확인 가능한 DB 값
-
-프론트는 문서 생성 폼을 열기 전에 관리자 구매 요청 상세 조회 API를 호출하면, 문서에 자동 기입될 DB 기반 값을 확인할 수 있습니다.
-
-```http
-GET /api/v1/admin/purchase-requests/{requestId}
-```
-
-| 문서에 자동 기입되는 값 | 상세 응답 필드 |
-|---|---|
-| 품의서/결의서 제목 | `title` |
-| 품의서 개요/결의서 내용 | `content` |
-| 품의금액/결의금액 | `totalPrice` |
-| 품목내역 내용 | `items[].name` |
-| 품목내역 수량 | `items[].quantity` |
-| 선금 결제 여부 확인 | `paymentType` |
-| 거래내역 세부내역 | `transactions[].itemNames` |
-| 거래내역 금액 | `transactions[].amount` |
-| 거래처명 | `transactions[].vendorName` |
-| 영수증 첨부 여부/링크 | `transactions[].receiptFileId`, `transactions[].receiptFileUrl` |
-| 구매 완료 보고일 기본값 | `purchasedAt` |
-| 요청자 이름 | `requestedByName` |
-| 문서 생성 가능 상태 확인 | `status` |
-
-이 상세 응답에 없는 값은 문서 양식 전용 입력값입니다. 예를 들어 품의번호, 지출번호, 예산내역, 결재라인, 품목 규격, 품목 단가는 문서 생성 요청 바디로 별도 입력받습니다.
-
-#### 요청 바디 예시
-
-요청 바디의 값들은 문서 양식에 추가로 채워 넣기 위한 선택값입니다. 값을 보내지 않으면 해당 칸은 빈 칸으로 남고, DB에서 확인 가능한 제목, 금액, 품목명, 수량, 거래처, 거래금액 등은 그대로 문서에 반영됩니다.
-
-`items`도 선택값입니다. 다만 `items`를 보낼 경우에는 구매 요청 품목 순서와 같은 순서로 전달합니다. `description`, `quantity`, `amount`는 받지 않고, 품목명과 수량은 구매 요청 DB 값을 사용합니다.
+- 모든 필드는 중간 저장 시 선택값입니다.
+- 요청 본문의 전체 상태로 교체하므로 수정할 때 현재 화면의 모든 품의 정보를 전달해야 합니다.
+- `REJECTED`, `CONFIRMED` 상태에서는 품의 정보를 수정할 수 없습니다.
+- 품의일자와 결제 통장을 저장하면 응답의 `proposalNumber`에 서버가 계산한 품의번호가 반환됩니다.
 
 ```json
 {
-  "fiscalYear": "2026년",
-  "draftDocumentNumber": "2026품-목민서관-01",
-  "resolutionDocumentNumber": "2026결-목민서관-01",
-  "policyProject": "성인문해교육 지원사업",
-  "unitProject": "교재비",
-  "detailProject": "사업추진비",
-  "budgetDetail": "문해 교재",
-  "budgetBalance": 100000,
-  "projectBalance": 500000,
-  "requestDepartment": "교육연구부",
-  "draftDate": "2026. 06. 30.",
-  "completionDate": "2026. 06. 30.",
-  "receiver": "목민서관",
-  "paymentMethod": "TRANSFER",
-  "initiationDate": "2026. 06. 30.",
-  "resolutionDate": "2026. 06. 30.",
-  "paymentDate": "2026. 06. 30.",
-  "items": [
-    {
-      "spec": "A4",
-      "unitPrice": 3000
-    },
-    {
-      "spec": "A4",
-      "unitPrice": 3000
-    },
-    {
-      "spec": "A4",
-      "unitPrice": 4000
-    }
-  ],
+  "proposalTitle": "7월 교재 구입",
+  "resolutionTitle": "7월 교재 구입",
+  "completionDate": "2026-07-30",
   "draftApprovals": [
-    {
-      "position": "담당",
-      "name": "김담당"
-    }
+    { "position": "총무", "name": "김담당" }
   ],
   "draftCooperations": [],
   "resolutionApprovals": [
+    { "position": "교장", "name": "정해용" }
+  ],
+  "overview": "7월 교재 구입 비용을 지출하고자 합니다.",
+  "policyProject": "성인문해교육 지원사업",
+  "unitProject": "프로그램운영비",
+  "detailProject": "교재 구입",
+  "requestDepartmentId": 2,
+  "proposalDate": "2026-07-25",
+  "proposalAmount": 20000,
+  "paymentAccount": "NATIONAL_SUBSIDY_04",
+  "budget": {
+    "itemCategory": "TEXTBOOK",
+    "customItemCategory": null,
+    "calculationDetail": "COMMERCIAL_TEXTBOOK",
+    "customCalculationDetail": null
+  },
+  "items": [
     {
-      "position": "회계",
-      "name": "최회계"
+      "content": "국어 교재",
+      "specification": "권",
+      "quantity": 2,
+      "estimatedUnitPrice": 10000
     }
   ]
 }
 ```
 
-위 예시는 `init_data.sql`의 수동 테스트 데이터 기준입니다.
+#### 문서 출력 API
 
-| 구매 요청 품목 | DB 수량 | 요청 단가 | 계산 예상금액 |
-|---|---:|---:|---:|
-| 문해 교재 1단계 | 10 | 3,000원 | 30,000원 |
-| 문해 교재 2단계 | 10 | 3,000원 | 30,000원 |
-| 수업용 문제집 | 10 | 4,000원 | 40,000원 |
+| 문서 | 사용자 URL | 관리자 URL | 생성 조건 |
+|---|---|---|---|
+| 품의서 | `/api/v1/purchase-requests/{requestId}/proposal-document` | `/api/v1/admin/purchase-requests/{requestId}/proposal-document` | `PREPAID`, `REJECTED`가 아닌 요청 |
+| 결의서 | `/api/v1/purchase-requests/{requestId}/resolution-document` | `/api/v1/admin/purchase-requests/{requestId}/resolution-document` | `PREPAID`, `CONFIRMED`, 완료 요청일 저장 |
 
-```text
-3,000원 * 10 = 30,000원
-3,000원 * 10 = 30,000원
-4,000원 * 10 = 40,000원
-합계 = 100,000원
-```
+- **Method**: `POST`
+- **요청 바디**: 없음
+- **사용자 권한**: 최초 작성자
+- **관리자 권한**: `ADMIN` 또는 `purchase-request:manage:*`
+- **응답**: `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+- **품의서 파일명**: `품의서-{품의서 제목}-{생성일}.docx`
+- **결의서 파일명**: `결의서-{결의서 제목}-{생성일}.docx`
 
-이 합계가 구매 완료 보고 총액과 다르면 `409 CONFLICT`가 발생합니다.
+#### 문서 값 매핑
 
-#### 초기 데이터 확인 흐름
+| 문서 위치 | 값 출처 |
+|---|---|
+| 품의서 제목 | `proposal.proposalTitle`, 없으면 구매 요청 `title` |
+| 결의서 제목 | `proposal.resolutionTitle`, 없으면 구매 요청 `title` |
+| 품의번호 | `proposal.proposalDate`, `proposal.paymentAccount`로 서버 계산 |
+| 결의번호 | 품의번호의 첫 번째 `품`을 `결`로 변환 |
+| 품의 개요 | `proposal.overview` |
+| 정책·단위·세부 사업 | `proposal.policyProject`, `unitProject`, `detailProject` |
+| 요구 부서 | `proposal.requestDepartmentName` |
+| 예산내역 세부항목 | `proposal.budget.itemCategory` 또는 `customItemCategory` |
+| 예산내역 산출내역 | `proposal.budget.calculationDetail` 또는 `customCalculationDetail` |
+| 품목내역 | `proposal.items[]` |
+| 품의서 결재·협조선 | `proposal.draftApprovals`, `proposal.draftCooperations` |
+| 결의서 결재선 | `proposal.resolutionApprovals` |
+| 지급 구분·거래처 | 구매 완료 거래 `transactions[]` |
+| 품의서 영수증 | 첨부하지 않음 |
+| 결의서 영수증 | 품의 단계와 구매 완료 거래에 연결된 활성 영수증을 1개당 1페이지로 첨부 |
 
-`src/main/resources/sql/init_data.sql`에는 배포 후 수동 테스트를 위한 선금 결제 구매 완료 데이터가 있습니다.
-
-- 구매 요청 ID: `1`
-- 거래처: `목민서관`
-- 상태: `PURCHASED`
-- 품목: `문해 교재 1단계`, `문해 교재 2단계`, `수업용 문제집`
-- 품목별 수량: 각 `10`
-- 구매 완료 보고 금액: `100,000원`
-
-이 데이터는 아직 `PURCHASED` 상태이므로, 문서 생성 전에 관리자 결재 확인 API를 호출해 `CONFIRMED` 상태로 바꿔야 합니다.
+문서 생성 전에 구입 요청 상세 조회 응답의 `proposal`과 `transactions`를 통해 저장된 값을 확인할 수 있습니다.
 
 ```http
-PATCH /api/v1/admin/purchase-requests/1/confirm
+GET /api/v1/purchase-requests/{requestId}
+GET /api/v1/admin/purchase-requests/{requestId}
 ```
-
-그 다음 위 요청 바디 예시로 지출증빙서류 생성 API를 호출하면 됩니다.
 
 ## 5. 주요 실패 케이스
 
@@ -461,14 +406,22 @@ PATCH /api/v1/admin/purchase-requests/1/confirm
 | 이미 처리된 요청 승인/반려 | 409 | `PR-003` |
 | 존재하지 않는 품목 보고 | 404 | `PR-004` |
 | 승인 후 7일 초과 구매 보고 | 409 | `PR-005` |
-| 구매 완료 거래 입력 오류 | 400/409 | `PR-006`, `PR-007` |
+| 현재 상태에서 처리할 수 없음 | 409 | `PR-006` |
+| 결제 방식과 거래처 정보 오류 | 400 | `PR-007` |
 | 지출증빙서류 템플릿 없음/읽기 실패 | 500 | `PR-008`, `PR-009` |
-| 지출증빙서류 생성 불가 상태 | 409 | `PR-010` |
 | 선금 결제가 아닌 구매 요청의 지출증빙서류 생성 | 409 | `PR-011` |
 | 지출증빙서류 생성 실패 | 500 | `PR-012` |
 | 지출증빙서류 영수증 파일 읽기 실패 | 500 | `PR-013` |
 | 지원하지 않는 영수증 이미지 형식 | 409 | `PR-014` |
-| 품목 예상금액 합계와 구매 완료 보고 총액 불일치 | 409 | `PR-015` |
+| 결제 유형과 거래·품목 구성 불일치 | 400 | `PR-016` |
+| 선금 결제 최종 승인 영수증 누락 | 409 | `PR-017` |
+| 현재 상태에서 품의 정보 수정 불가 | 409 | `PR-018` |
+| 품의 단계 영수증 없음 | 404 | `PR-019` |
+| 최종 확인에 필요한 품의 정보/필수값 누락 | 409 | `PR-020`, `PR-021` |
+| 품의금액과 품목 예상 금액 합계 불일치 | 409 | `PR-022` |
+| 품의금액과 실제 결제 금액 불일치 | 409 | `PR-023` |
+| 현재 상태에서 품의서/결의서 생성 불가 | 409 | `PR-024`, `PR-025` |
+| 결의서 완료 요청일 누락 | 409 | `PR-026` |
 | 거래처 없음 | 404 | `VEN-001` |
 | 비활성 거래처 사용 | 409 | `VEN-002` |
 | 거래처 잔액 부족 | 409 | `VEN-003` |

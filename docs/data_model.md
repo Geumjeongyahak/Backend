@@ -35,14 +35,19 @@
 | Daily Schedules | Absence Requests | daily_schedule_id | 하루 일정별 결석 요청 |
 | Lesson Exchange Requests | Lesson Exchange Proposals | request_id | 교환 요청별 제안 |
 | Classrooms | Purchase Requests | classroom_id | 분반별 기자재 구입 요청 |
+| Departments | Purchase Requests | department_id | 부서별 기자재 구입 요청 |
 | Purchase Requests | Purchase Request Items | purchase_request_id | 구입 요청별 품목 |
-| Vendors | Purchase Requests | vendor_id | 거래처 선금 결제 구입 요청 |
+| Purchase Requests | Purchase Request Payment Transactions | purchase_request_id | 구입 요청별 구매 완료 거래 |
+| Vendors | Purchase Request Payment Transactions | vendor_id | 구매 완료 거래의 거래처 |
+| Purchase Requests | Purchase Request Proposals | purchase_request_id | 구입 요청별 품의 정보 |
+| Purchase Request Proposals | Proposal Budgets/Items/Receipts/Approval Lines | proposal_id | 품의 예산·품목·영수증·결재선 |
 | Vendors | Vendor Balance Histories | vendor_id | 거래처 충전/차감 이력 |
 | Users | 각종 요청들 | requested_by | 요청자 |
 | Users | 각종 요청들 | approval_by | 승인자 |
 | Files | Post Files | file_id | 게시글 이미지 파일 |
 | Files | Post Attachments | file_id | 게시글 첨부 파일 |
-| Files | Purchase Request Items | receipt_file_id | 품목별 기자재 구입 영수증 파일 |
+| Files | Purchase Request Payment Transactions | receipt_file_id | 구매 완료 거래 영수증 파일 |
+| Files | Purchase Request Proposal Receipts | file_id | 품의 단계 영수증 파일 |
 
 #### N:M 관계
 
@@ -79,12 +84,22 @@ erDiagram
     lesson_exchange_requests ||--o{ lesson_exchange_proposals : "has"
     users ||--o{ lesson_exchange_proposals : "proposes"
     classrooms ||--o{ purchase_requests : "has"
-    vendors ||--o{ purchase_requests : "used by prepaid request"
+    departments ||--o{ purchase_requests : "requests"
     vendors ||--o{ vendor_balance_histories : "has"
     purchase_requests ||--o{ purchase_requests_items : "has"
+    purchase_requests ||--o{ purchase_request_payment_transactions : "reports"
+    vendors ||--o{ purchase_request_payment_transactions : "paid to"
+    purchase_request_payment_transactions ||--o{ purchase_request_payment_transaction_item_names : "contains"
+    purchase_requests ||--o| purchase_request_proposals : "has"
+    departments ||--o{ purchase_request_proposals : "requested by"
+    purchase_request_proposals ||--o| purchase_request_proposal_budgets : "has"
+    purchase_request_proposals ||--o{ purchase_request_proposal_items : "contains"
+    purchase_request_proposals ||--o{ purchase_request_proposal_receipts : "attaches"
+    purchase_request_proposals ||--o{ purchase_request_proposal_approval_lines : "defines"
     files ||--o{ post_files : "used as image"
     files ||--o{ post_attachments : "used as attachment"
-    files ||--o{ purchase_requests_items : "used as item receipt"
+    files ||--o{ purchase_request_payment_transactions : "used as receipt"
+    files ||--o{ purchase_request_proposal_receipts : "used as proposal receipt"
 
     %% 엔티티 정의
       users {
@@ -187,15 +202,19 @@ erDiagram
     purchase_requests {
         bigint id PK
         bigint classroom_id FK
+        bigint department_id FK
         bigint requested_by FK
+        varchar payment_type
+        varchar title
+        text content
         bigint total_price
-        varchar payment_method
-        bigint vendor_id FK
         varchar status
         timestamp approval_at
         bigint approval_by FK
         timestamp purchased_at
         text note
+        boolean is_deleted
+        timestamp deleted_at
     }
 
     purchase_requests_items {
@@ -203,8 +222,75 @@ erDiagram
         bigint purchase_request_id FK
         varchar name
         text reason
-        bigint price
+        integer quantity
+    }
+
+    purchase_request_payment_transactions {
+        bigint id PK
+        bigint purchase_request_id FK
+        bigint vendor_id FK
+        bigint amount
+        varchar payment_method
         uuid receipt_file_id FK
+    }
+
+    purchase_request_payment_transaction_item_names {
+        bigint transaction_id FK
+        integer sort_order
+        varchar item_name
+    }
+
+    purchase_request_proposals {
+        bigint id PK
+        bigint purchase_request_id FK,UK
+        varchar proposal_title
+        varchar resolution_title
+        date completion_date
+        text overview
+        varchar policy_project
+        varchar unit_project
+        varchar detail_project
+        bigint request_department_id FK
+        date proposal_date
+        bigint proposal_amount
+        varchar payment_account
+    }
+
+    purchase_request_proposal_budgets {
+        bigint id PK
+        bigint proposal_id FK,UK
+        varchar item_category
+        varchar custom_item_category
+        varchar calculation_detail
+        varchar custom_calculation_detail
+    }
+
+    purchase_request_proposal_items {
+        bigint id PK
+        bigint proposal_id FK
+        text content
+        varchar specification
+        integer quantity
+        bigint estimated_unit_price
+        integer sort_order
+    }
+
+    purchase_request_proposal_receipts {
+        bigint id PK
+        bigint proposal_id FK
+        uuid file_id FK
+        integer sort_order
+        boolean is_deleted
+        timestamp deleted_at
+    }
+
+    purchase_request_proposal_approval_lines {
+        bigint id PK
+        bigint proposal_id FK
+        varchar line_type
+        varchar position
+        varchar name
+        integer sort_order
     }
 
     vendors {
@@ -237,6 +323,7 @@ erDiagram
         varchar content_type
         bigint file_size
         varchar ext
+        boolean is_google_drive
         boolean is_deleted
         timestamp deleted_at
     }
@@ -504,23 +591,29 @@ ADMIN이 특정 사용자에게 직접 권한을 부여해야 할 때 사용하�
 
 ### 3.14 기자재 구입 요청 (purchase_requests)
 
-봉사자 혹은 관리자가 수업에 필요한 기자재를 구입하기 위해 사용하는 엔티티입니다. 최초 요청에는 예상 금액을 저장하지 않고, 구매 완료 보고 거래 라인의 금액 합산으로 총액을 계산합니다.
+봉사자 혹은 관리자가 수업이나 부서에 필요한 기자재를 구입하기 위해 사용하는 엔티티입니다. 최초 요청에는 예상 금액을 저장하지 않고, 구매 완료 보고 거래 라인의 금액 합산으로 총액을 계산합니다.
+
+요청 생성·수정 시 `classroom_id`와 `department_id` 중 정확히 하나를 지정하도록 애플리케이션 계층에서 검증합니다.
 
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
 | id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 엔티티 고유 ID |
-| classroom_id | BIGINT | FOREIGN KEY, NOT NULL | 분반 ID |
+| classroom_id | BIGINT | FOREIGN KEY, NULL | 분반 ID |
+| department_id | BIGINT | FOREIGN KEY, NULL | 부서 ID |
 | requested_by | BIGINT | FOREIGN KEY, NOT NULL | 기자재 구입 요청자 ID |
+| payment_type | VARCHAR(20) | NOT NULL | 결제 유형 (`PREPAID`, `ACTUAL`) |
 | title | VARCHAR(255) | NOT NULL | 기자재 구입 요청 제목 |
-| content | TEXT | NOT NULL | 기자재 구입 요청 내용 |
+| content | TEXT | NULL | 기자재 구입 요청 내용 |
 | total_price | BIGINT | NOT NULL | 구매 완료 거래 금액 합산 총액 |
 | status | VARCHAR(20) | NOT NULL | 기자재 구입 요청 상태 |
 | approval_at | TIMESTAMP | NULL | 기자재 구입 요청 승인일시 |
 | approval_by | BIGINT | FOREIGN KEY | 기자재 구입 요청 승인자 ID |
 | purchased_at | TIMESTAMP | NULL | 구매 완료 보고 시각 |
 | note | TEXT | NULL | 추가 정보(관리자가 기입) |
-| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
-| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
+| is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | 삭제 여부 |
+| deleted_at | TIMESTAMP | NULL | 삭제 시각 |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | 생성일시 |
+| updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | 수정일시 |
 
 **상태 규칙:**
 - `PENDING` → `APPROVED` 또는 `REJECTED`
@@ -531,7 +624,7 @@ ADMIN이 특정 사용자에게 직접 권한을 부여해야 할 때 사용하�
 - 구매 완료 거래에 거래처, 신청 품목과 일치하는 품목명, 양수 결제 금액이 있어야 `CONFIRMED` 전환이 가능합니다.
 - 지급 구분은 선금 결제에서만 필수이며 실 결제에서는 저장하지 않습니다.
 - 선금 결제는 단일 거래와 활성 영수증을 필수로 검증하고, 거래 금액을 `CHARGE` 이력으로 저장하며 잔액에 충전합니다.
-- 실 결제는 품목별 단일 거래을 검증하고, 거래처별 총 결제 금액을 `DEDUCT` 이력으로 저장하며 잔액에서 차감합니다.
+- 실 결제는 품목별 단일 거래를 검증하고, 거래처별 총 결제 금액을 `DEDUCT` 이력으로 저장하며 잔액에서 차감합니다.
 - 거래처 비활성 또는 실 결제 잔액 부족 시 결재 확인은 실패하며 요청 상태와 거래처 잔액은 변경되지 않습니다.
 
 ### 3.15 기자재 구입 요청 품목 (purchase_requests_items)
@@ -545,8 +638,6 @@ ADMIN이 특정 사용자에게 직접 권한을 부여해야 할 때 사용하�
 | name | VARCHAR(255) | NOT NULL | 품명 |
 | reason | TEXT | NULL | 구입 사유 |
 | quantity | INTEGER | NOT NULL | 개수 |
-| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
-| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
 
 ### 3.15.1 구매 완료 거래 (purchase_request_payment_transactions)
 
@@ -560,6 +651,93 @@ ADMIN이 특정 사용자에게 직접 권한을 부여해야 할 때 사용하�
 | amount | BIGINT | NOT NULL | 총 결제 금액 |
 | payment_method | VARCHAR(20) | NULL | 선금 결제 지급 구분 (`CASH`, `CARD`, `TRANSFER`, `AUTO_TRANSFER`, `OTHER`) |
 | receipt_file_id | UUID | FOREIGN KEY, NULL | 영수증 파일 ID |
+
+### 3.15.2 구매 완료 거래 품목명 (purchase_request_payment_transaction_item_names)
+
+각 구매 완료 거래가 포함하는 신청 품목명을 순서대로 저장하는 컬렉션 테이블입니다.
+
+| 필드명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| transaction_id | BIGINT | FOREIGN KEY, NOT NULL | 구매 완료 거래 ID |
+| sort_order | INTEGER | NOT NULL | 품목명 표시 순서 |
+| item_name | VARCHAR(255) | NOT NULL | 신청 품목명 |
+
+### 3.15.3 품의 정보 (purchase_request_proposals)
+
+구입 요청별 품의서·결의서 공통 정보를 관리합니다. 구입 요청과 1:1 관계이며, 저장 API는 결제 유형을 제한하지 않습니다. 프론트엔드는 `ACTUAL` 요청에서 이 정보를 저장하지 않고, 문서 출력은 `PREPAID` 요청에만 허용합니다.
+
+| 필드명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 품의 정보 ID |
+| purchase_request_id | BIGINT | FOREIGN KEY, UNIQUE, NOT NULL | 구입 요청 ID |
+| proposal_title | VARCHAR(255) | NULL | 품의서 제목 |
+| resolution_title | VARCHAR(255) | NULL | 결의서 제목 |
+| completion_date | DATE | NULL | 완료 요청일 |
+| overview | TEXT | NULL | 품의 개요 |
+| policy_project | VARCHAR(255) | NULL | 정책 사업 |
+| unit_project | VARCHAR(255) | NULL | 단위 사업 |
+| detail_project | VARCHAR(255) | NULL | 세부 사업 |
+| request_department_id | BIGINT | FOREIGN KEY, NULL | 요구 부서 ID |
+| proposal_date | DATE | NULL | 품의일자 |
+| proposal_amount | BIGINT | NULL, 0 이상 | 품의금액 |
+| payment_account | VARCHAR(40) | NULL | 결제 통장 |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | 생성일시 |
+| updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | 수정일시 |
+
+### 3.15.4 품의 예산 (purchase_request_proposal_budgets)
+
+| 필드명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 품의 예산 ID |
+| proposal_id | BIGINT | FOREIGN KEY, UNIQUE, NOT NULL | 품의 정보 ID |
+| item_category | VARCHAR(40) | NULL | 예산 세부항목 |
+| custom_item_category | VARCHAR(255) | NULL | 직접 입력한 세부항목 |
+| calculation_detail | VARCHAR(60) | NULL | 산출내역 |
+| custom_calculation_detail | VARCHAR(255) | NULL | 직접 입력한 산출내역 |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | 생성일시 |
+| updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | 수정일시 |
+
+### 3.15.5 품의 품목 (purchase_request_proposal_items)
+
+| 필드명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 품의 품목 ID |
+| proposal_id | BIGINT | FOREIGN KEY, NOT NULL | 품의 정보 ID |
+| content | TEXT | NULL | 품목 내용 |
+| specification | VARCHAR(255) | NULL | 규격 |
+| quantity | INTEGER | NULL, 1 이상 | 수량 |
+| estimated_unit_price | BIGINT | NULL, 0 이상 | 예상 단가 |
+| sort_order | INTEGER | NOT NULL | 표시 순서 |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | 생성일시 |
+| updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | 수정일시 |
+
+### 3.15.6 품의 단계 영수증 (purchase_request_proposal_receipts)
+
+| 필드명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 품의 영수증 ID |
+| proposal_id | BIGINT | FOREIGN KEY, NOT NULL | 품의 정보 ID |
+| file_id | UUID | FOREIGN KEY, NOT NULL | 파일 ID |
+| sort_order | INTEGER | NOT NULL | 표시 순서 |
+| is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | 삭제 여부 |
+| deleted_at | TIMESTAMP | NULL | 삭제 시각 |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | 생성일시 |
+| updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | 수정일시 |
+
+품의서에는 영수증 이미지를 첨부하지 않으며, 결의서에는 활성 품의 단계 영수증과 구매 완료 거래 영수증을 각각 한 페이지로 첨부합니다.
+
+### 3.15.7 품의·결의 결재선 (purchase_request_proposal_approval_lines)
+
+| 필드명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 결재선 ID |
+| proposal_id | BIGINT | FOREIGN KEY, NOT NULL | 품의 정보 ID |
+| line_type | VARCHAR(40) | NOT NULL | 결재선 구분 |
+| position | VARCHAR(255) | NULL | 직위 |
+| name | VARCHAR(255) | NULL | 이름 |
+| sort_order | INTEGER | NOT NULL | 표시 순서 |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | 생성일시 |
+| updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | 수정일시 |
 
 ### 3.16 거래처 잔액 이력 (vendor_balance_histories)
 
@@ -596,6 +774,7 @@ ADMIN이 특정 사용자에게 직접 권한을 부여해야 할 때 사용하�
 | content_type | VARCHAR(100) | NOT NULL | MIME 타입 |
 | file_size | BIGINT | NULL | 파일 크기 |
 | ext | VARCHAR(20) | NOT NULL | 파일 확장자 |
+| is_google_drive | BOOLEAN | NOT NULL, DEFAULT FALSE | Google Drive 파일 여부 |
 | is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | Soft delete 여부 |
 | deleted_at | TIMESTAMP | NULL | Soft delete 처리 시각 |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
@@ -604,5 +783,5 @@ ADMIN이 특정 사용자에게 직접 권한을 부여해야 할 때 사용하�
 **정책:**
 - 파일 삭제 요청 시 즉시 DB 레코드를 제거하지 않고 `is_deleted = true`, `deleted_at = now()`로 표시합니다.
 - 파일 정리 스케줄러는 보관 기간이 지난 soft deleted 파일을 스토리지와 DB에서 최종 삭제합니다.
-- `documents/purchase-items/` 경로의 영수증 파일이 일정 시간 동안 어떤 구매 완료 거래의 `receipt_file_id`에도 연결되지 않으면 스케줄러가 soft delete 처리합니다.
+- `documents/purchase-items/` 경로의 영수증 파일이 일정 시간 동안 구매 완료 거래 또는 활성 품의 단계 영수증에 연결되지 않으면 스케줄러가 soft delete 처리합니다.
 - hard delete는 storage 삭제에 성공한 파일에만 수행합니다. storage 삭제 실패 시 DB 레코드를 유지해 다음 주기에 재시도합니다.
