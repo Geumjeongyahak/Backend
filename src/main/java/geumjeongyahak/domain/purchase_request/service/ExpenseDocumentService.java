@@ -172,7 +172,9 @@ public class ExpenseDocumentService {
         ) {
             XWPFDocument document = template.getXWPFDocument();
             retainDocumentSection(document, section);
-            appendReceiptImages(document, activeReceiptFiles(purchaseRequest));
+            if (section == DocumentSection.RESOLUTION) {
+                appendReceiptImages(document, activeReceiptFiles(purchaseRequest));
+            }
             template.write(outputStream);
             return outputStream.toByteArray();
         } catch (BusinessException e) {

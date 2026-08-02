@@ -153,19 +153,26 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("품의 단계의 활성 영수증을 품의서에 첨부한다")
-    void generateProposalDocument_withProposalReceipt_containsPicture() throws Exception {
+    @DisplayName("품의서는 품의 단계와 구매 완료 거래의 영수증을 첨부하지 않는다")
+    void generateProposalDocument_withReceipts_doesNotContainPictures() throws Exception {
+        createdVendorId = createVendor();
         createdRequestId = createPrepaidPurchaseRequest();
-        String receiptFileId = uploadPurchaseReceipt(PNG_BYTES);
+        String proposalReceiptFileId = uploadPurchaseReceipt(PNG_BYTES);
 
         given()
             .basePath("/api/v1/purchase-requests")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
-            .body(Map.of("fileId", receiptFileId))
+            .body(Map.of("fileId", proposalReceiptFileId))
             .post("/{requestId}/proposal/receipts", createdRequestId)
             .then()
             .statusCode(201);
+
+        approvePurchaseRequest(createdRequestId);
+        String transactionReceiptFileId = uploadPurchaseReceipt(PNG_BYTES);
+        reportPurchase(createdRequestId, List.of(
+            transaction(createdVendorId, 10000L, List.of("거래품목"), transactionReceiptFileId)
+        ));
 
         byte[] docx = requestProposalDocument(createdRequestId, volunteerToken)
             .then()
@@ -174,7 +181,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
             .asByteArray();
 
         try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(docx))) {
-            assertThat(document.getAllPictures()).hasSize(1);
+            assertThat(document.getAllPictures()).isEmpty();
         }
     }
 
@@ -265,6 +272,7 @@ class PurchaseRequestExpenseDocumentTest extends RequestBaseTest {
                 )
                 .containsPattern("\\d{4}결-국비04-\\d{2}")
                 .doesNotContain("지출 품의서", "{{resolutionAmount}}");
+            assertThat(document.getAllPictures()).hasSize(1);
         }
         assertThat(documentXml(docx)).contains("■");
     }
