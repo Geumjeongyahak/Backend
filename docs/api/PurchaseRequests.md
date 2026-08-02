@@ -6,7 +6,7 @@
 
 ## 1. 역할과 범위
 
-- 일반 사용자는 본인이 작성한 구입 요청을 생성, 조회, 삭제, 구매 완료 보고할 수 있습니다.
+- 일반 사용자는 구입 요청 전체 목록과 상세를 조회할 수 있고, 본인이 작성한 요청을 수정·삭제·구매 완료 보고할 수 있습니다.
 - 관리자 또는 `purchase-request:read:*` 권한자는 전체 구입 요청을 조회할 수 있습니다.
 - 관리자 또는 `purchase-request:review:*` 권한자는 구입 요청을 승인/반려할 수 있습니다.
 - 관리자 또는 `purchase-request:manage:*` 권한자는 처리 전 요청 삭제와 최종 결재 확인을 수행할 수 있습니다.
@@ -35,7 +35,7 @@
 - 결제 유형은 결제 신청 단위의 `paymentType`으로 저장합니다.
 - 하나의 결제 신청에는 `PREPAID`와 `ACTUAL` 품목을 혼합할 수 없습니다.
 - `content`는 선택값이며 생략하거나 `null`로 전달할 수 있습니다.
-- 신청자의 소속 부서는 서버가 신청 시점의 사용자 정보에서 자동 저장하며, 소속 부서가 없으면 `null`입니다.
+- 요청 대상은 `classroomId`와 `departmentId` 중 정확히 하나를 지정합니다.
 - 요청 생성 시 예상 금액, 거래처, 영수증은 받지 않습니다.
 - 선금 결제는 신청의 모든 품목을 포함한 거래를 정확히 1건만 보고합니다.
 - 실 결제는 신청 품목별로 거래를 정확히 1건씩 보고하며, 각 거래는 서로 다른 거래처를 선택할 수 있습니다.
@@ -58,7 +58,7 @@
 
 - 품목 영수증 이미지는 `POST /api/v1/files/images/purchase-items`로 먼저 업로드합니다.
 - 업로드된 파일은 `documents/purchase-items/` 경로와 `files` 메타데이터로 저장됩니다.
-- 파일이 어떤 구매 완료 거래 라인의 `receiptFile`에도 연결되지 않은 상태로 `app.file.cleanup.temporary-retention-hours`를 초과하면 `FileCleanupScheduler`가 soft delete 처리합니다.
+- 파일이 구매 완료 거래 라인의 `receiptFile` 또는 활성 품의 단계 영수증에 연결되지 않은 상태로 `app.file.cleanup.temporary-retention-hours`를 초과하면 `FileCleanupScheduler`가 soft delete 처리합니다.
 - soft delete 파일은 기존 파일 정리 정책에 따라 `app.file.cleanup.retention-days`가 지난 뒤 storage 삭제에 성공한 경우에만 DB에서 hard delete 됩니다.
 - storage 삭제 실패 시 DB 레코드는 유지되어 다음 스케줄러 실행 때 재시도됩니다.
 
@@ -129,6 +129,7 @@ sequenceDiagram
     participant PostFile as PostFileRepository
     participant PostAttachment as PostAttachmentRepository
     participant TxRepo as PurchaseRequestPaymentTransactionRepository
+    participant ProposalReceiptRepo as PurchaseRequestProposalReceiptRepository
 
     Scheduler->>FileRepo: findUnlinkedPurchaseItemFilesBefore(prefix, threshold)
     Scheduler->>Scheduler: 연결 없는 purchase-items 파일 soft delete
@@ -139,6 +140,7 @@ sequenceDiagram
             Scheduler->>PostFile: deleteByFileId(fileId)
             Scheduler->>PostAttachment: deleteByFileId(fileId)
             Scheduler->>TxRepo: clearReceiptFileByFileId(fileId)
+            Scheduler->>ProposalReceiptRepo: deleteAllByFileId(fileId)
             Scheduler->>FileRepo: delete(file)
         else storage 삭제 실패
             Scheduler->>Scheduler: DB 레코드 유지
@@ -152,7 +154,7 @@ sequenceDiagram
 
 - **URL**: `/api/v1/purchase-requests`
 - **Method**: `POST`
-- **권한**: 인증 사용자
+- **권한**: `VOLUNTEER`, `MANAGER`, `ADMIN`
 
 ```json
 {
@@ -183,9 +185,11 @@ sequenceDiagram
 | 파라미터 | 타입 | 필수 | 설명 |
 |---|---|---|---|
 | `status` | `PurchaseRequestStatus` | N | 구입 요청 상태 필터. `PENDING`, `APPROVED`, `PURCHASED`, `CONFIRMED`, `REJECTED` |
+| `paymentType` | `PurchasePaymentType` | N | 결제 유형 필터. `PREPAID`, `ACTUAL` |
 | `mine` | boolean | N | `true`이면 로그인 사용자가 작성한 요청만 조회합니다. 기본값은 `false`입니다. |
-| `keyword` | string | N | 제목, 분반명, 작성자명 통합 검색어 |
+| `keyword` | string | N | 제목, 분반명, 부서명, 작성자명 통합 검색어 |
 | `classroomName` | string | N | 분반명 부분 검색어 |
+| `departmentName` | string | N | 부서명 부분 검색어 |
 | `requestedByName` | string | N | 작성자명 부분 검색어 |
 | `page` | integer | N | 페이지 번호. 기본값은 `0`입니다. |
 | `size` | integer | N | 페이지 크기. 기본값은 `10`, 최대값은 `100`입니다. |
@@ -200,8 +204,10 @@ sequenceDiagram
 | 파라미터 | 타입 | 필수 | 설명 |
 |---|---|---|---|
 | `status` | `PurchaseRequestStatus` | N | 구입 요청 상태 필터. `PENDING`, `APPROVED`, `PURCHASED`, `CONFIRMED`, `REJECTED` |
-| `keyword` | string | N | 제목, 분반명, 작성자명 통합 검색어 |
+| `paymentType` | `PurchasePaymentType` | N | 결제 유형 필터. `PREPAID`, `ACTUAL` |
+| `keyword` | string | N | 제목, 분반명, 부서명, 작성자명 통합 검색어 |
 | `classroomName` | string | N | 분반명 부분 검색어 |
+| `departmentName` | string | N | 부서명 부분 검색어 |
 | `requestedByName` | string | N | 작성자명 부분 검색어 |
 | `page` | integer | N | 페이지 번호. 기본값은 `0`입니다. |
 | `size` | integer | N | 페이지 크기. 기본값은 `10`, 최대값은 `100`입니다. |
@@ -214,6 +220,7 @@ sequenceDiagram
 | `id` | 구입 요청 ID |
 | `title` | 제목 |
 | `classroomName` | 분반명 |
+| `departmentName` | 부서명 |
 | `requestedByName` | 작성자명 |
 | `totalPrice` | 구매 완료 보고 총액 |
 | `status` | 상태 |
@@ -231,13 +238,15 @@ sequenceDiagram
       "id": 1,
       "classroomId": 1,
       "classroomName": "벚꽃반",
+      "departmentId": null,
+      "departmentName": null,
       "requestedById": 2,
       "requestedByName": "홍길동",
       "title": "교재 구입",
+      "paymentType": "PREPAID",
       "totalPrice": 100000,
       "status": "PURCHASED",
-      "createdAt": "2026-06-30T10:00:00",
-      "updatedAt": "2026-06-30T10:00:00"
+      "createdAt": "2026-06-30T10:00:00"
     }
   ],
   "page": 0,
@@ -295,7 +304,7 @@ sequenceDiagram
 
 ### 4.6 품의 정보 저장 및 DOCX 생성
 
-품의 정보와 문서 출력은 `PREPAID` 결제 신청에만 적용됩니다. 품의 정보는 먼저 저장하고, 출력 API는 별도의 요청 바디 없이 서버에 저장된 최신 정보로 DOCX 파일을 생성합니다.
+품의 정보 저장 API는 결제 유형을 제한하지 않으므로 `PREPAID`, `ACTUAL` 요청 모두 호출할 수 있습니다. 다만 프론트엔드는 결제 유형별 작성 템플릿을 분리하며, `ACTUAL` 요청에서는 품의 정보를 저장하지 않습니다. DOCX 출력은 `PREPAID` 요청에만 적용되며, 품의 정보를 먼저 저장한 뒤 별도의 요청 바디 없이 서버에 저장된 최신 정보로 문서를 생성합니다.
 
 #### 품의 정보 저장
 
@@ -397,14 +406,22 @@ GET /api/v1/admin/purchase-requests/{requestId}
 | 이미 처리된 요청 승인/반려 | 409 | `PR-003` |
 | 존재하지 않는 품목 보고 | 404 | `PR-004` |
 | 승인 후 7일 초과 구매 보고 | 409 | `PR-005` |
-| 구매 완료 거래 입력 오류 | 400/409 | `PR-006`, `PR-007` |
+| 현재 상태에서 처리할 수 없음 | 409 | `PR-006` |
+| 결제 방식과 거래처 정보 오류 | 400 | `PR-007` |
 | 지출증빙서류 템플릿 없음/읽기 실패 | 500 | `PR-008`, `PR-009` |
-| 지출증빙서류 생성 불가 상태 | 409 | `PR-010` |
 | 선금 결제가 아닌 구매 요청의 지출증빙서류 생성 | 409 | `PR-011` |
 | 지출증빙서류 생성 실패 | 500 | `PR-012` |
 | 지출증빙서류 영수증 파일 읽기 실패 | 500 | `PR-013` |
 | 지원하지 않는 영수증 이미지 형식 | 409 | `PR-014` |
-| 품목 예상금액 합계와 구매 완료 보고 총액 불일치 | 409 | `PR-015` |
+| 결제 유형과 거래·품목 구성 불일치 | 400 | `PR-016` |
+| 선금 결제 최종 승인 영수증 누락 | 409 | `PR-017` |
+| 현재 상태에서 품의 정보 수정 불가 | 409 | `PR-018` |
+| 품의 단계 영수증 없음 | 404 | `PR-019` |
+| 최종 확인에 필요한 품의 정보/필수값 누락 | 409 | `PR-020`, `PR-021` |
+| 품의금액과 품목 예상 금액 합계 불일치 | 409 | `PR-022` |
+| 품의금액과 실제 결제 금액 불일치 | 409 | `PR-023` |
+| 현재 상태에서 품의서/결의서 생성 불가 | 409 | `PR-024`, `PR-025` |
+| 결의서 완료 요청일 누락 | 409 | `PR-026` |
 | 거래처 없음 | 404 | `VEN-001` |
 | 비활성 거래처 사용 | 409 | `VEN-002` |
 | 거래처 잔액 부족 | 409 | `VEN-003` |
