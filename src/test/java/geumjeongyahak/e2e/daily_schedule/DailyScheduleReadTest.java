@@ -102,6 +102,67 @@ public class DailyScheduleReadTest extends BaseE2ETest {
     }
 
     @Test
+    @DisplayName("관리자는 월별 수업일지 시트 데이터를 조회할 수 있다")
+    void getMonthlyJournalSheetData_asAdmin_success() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .queryParam("month", "2051-01")
+            .when()
+            .get("/journal-sheet-data")
+            .then()
+            .statusCode(200);
+    }
+
+    @Test
+    @DisplayName("Apps Script Bot은 월별 수업일지 시트 데이터를 조회할 수 있다")
+    void getMonthlyJournalSheetData_asAppsScriptBot_success() {
+        String botAccessToken = loginAppsScriptBot();
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(botAccessToken))
+            .queryParam("month", "2051-01")
+            .when()
+            .get("/journal-sheet-data")
+            .then()
+            .statusCode(200);
+    }
+
+    @Test
+    @DisplayName("일반 봉사자는 월별 수업일지 시트 데이터를 조회할 수 없다")
+    void getMonthlyJournalSheetData_asVolunteer_forbidden() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
+            .queryParam("month", "2051-01")
+            .when()
+            .get("/journal-sheet-data")
+            .then()
+            .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("월 형식이 잘못되면 월별 수업일지 시트 조회를 할 수 없다")
+    void getMonthlyJournalSheetData_invalidMonth_badRequest() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .queryParam("month", "2051-13")
+            .when()
+            .get("/journal-sheet-data")
+            .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("월을 입력하지 않으면 월별 수업일지 시트 조회를 할 수 없다")
+    void getMonthlyJournalSheetData_missingMonth_badRequest() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .when()
+            .get("/journal-sheet-data")
+            .then()
+            .statusCode(400);
+    }
+
+    @Test
     @DisplayName("Apps Script Bot은 날짜와 분반 ID로 DailySchedule 상세를 조회할 수 있다")
     void getDailyScheduleByClassroomAndDate_asAppsScriptBot_success() {
         LocalDate lessonDate = nextLessonDate();

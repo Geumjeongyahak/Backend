@@ -14,8 +14,17 @@ import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleSt
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyTeacherAttendanceCorrectionRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleJournalSheetLinkResponse;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleJournalSheetRowResponse;
+import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,6 +51,49 @@ public class DailyScheduleAdminService {
             throw new DailyScheduleJournalSheetLinkNotConfiguredException();
         }
         return new DailyScheduleJournalSheetLinkResponse(journalSheetUrl.trim());
+    }
+
+    public List<DailyScheduleJournalSheetRowResponse> getMonthlyJournalSheetData(YearMonth month) {
+        LocalDate from = month.atDay(1);
+        LocalDate to = month.atEndOfMonth();
+        log.debug("DailySchedule 월별 수업일지 시트 조회 요청 (month={}, from={}, to={})", month, from, to);
+
+        List<DailySchedule> dailySchedules = dailyScheduleRepository
+            .findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(from, to);
+        if (dailySchedules.isEmpty()) {
+            return List.of();
+        }
+
+        Map<DailyScheduleLessonKey, List<Lesson>> lessonsByScheduleKey = getLessonsByScheduleKey(dailySchedules);
+        List<DailySchedule> writtenSchedules = dailySchedules.stream()
+            .filter(dailySchedule -> hasWrittenJournal(
+                lessonsByScheduleKey.getOrDefault(DailyScheduleLessonKey.from(dailySchedule), List.of())
+            ))
+            .toList();
+        if (writtenSchedules.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> dailyScheduleIds = writtenSchedules.stream()
+            .map(DailySchedule::getId)
+            .toList();
+        Map<Long, DailyTeacherAttendance> attendanceByScheduleId = dailyTeacherAttendanceRepository
+            .findAllByDailyScheduleIdInAndIsDeletedFalse(dailyScheduleIds)
+            .stream()
+            .collect(Collectors.toMap(
+                attendance -> attendance.getDailySchedule().getId(),
+                Function.identity()
+            ));
+
+        List<DailyScheduleJournalSheetRowResponse> responses = writtenSchedules.stream()
+            .map(dailySchedule -> DailyScheduleJournalSheetRowResponse.of(
+                dailySchedule,
+                attendanceByScheduleId.get(dailySchedule.getId()),
+                lessonsByScheduleKey.getOrDefault(DailyScheduleLessonKey.from(dailySchedule), List.of())
+            ))
+            .toList();
+        log.debug("DailySchedule 월별 수업일지 시트 조회 완료 (month={}, count={})", month, responses.size());
+        return responses;
     }
 
     @Transactional
@@ -127,6 +179,25 @@ public class DailyScheduleAdminService {
         };
     }
 
+    private Map<DailyScheduleLessonKey, List<Lesson>> getLessonsByScheduleKey(
+        List<DailySchedule> dailySchedules
+    ) {
+        Set<Long> classroomIds = dailySchedules.stream()
+            .map(dailySchedule -> dailySchedule.getClassroom().getId())
+            .collect(Collectors.toSet());
+        Set<LocalDate> lessonDates = dailySchedules.stream()
+            .map(DailySchedule::getLessonDate)
+            .collect(Collectors.toSet());
+
+        return lessonProxyService.getActiveLessonsByClassroomIdsAndDates(classroomIds, lessonDates)
+            .stream()
+            .collect(Collectors.groupingBy(DailyScheduleLessonKey::from));
+    }
+
+    private boolean hasWrittenJournal(List<Lesson> lessons) {
+        return lessons.stream().anyMatch(lesson -> lesson.getNote() != null && !lesson.getNote().isBlank());
+    }
+
     private void validateTeacherAttendanceCorrectionState(DailySchedule dailySchedule) {
         if (dailySchedule.getStatus() != DailyScheduleStatus.CANCELLED) {
             return;
@@ -157,6 +228,23 @@ public class DailyScheduleAdminService {
                 dailySchedule.getId(),
                 request.attendedAt(),
                 request.checkedOutAt()
+            );
+        }
+    }
+
+    private record DailyScheduleLessonKey(Long classroomId, LocalDate lessonDate) {
+
+        private static DailyScheduleLessonKey from(DailySchedule dailySchedule) {
+            return new DailyScheduleLessonKey(
+                dailySchedule.getClassroom().getId(),
+                dailySchedule.getLessonDate()
+            );
+        }
+
+        private static DailyScheduleLessonKey from(Lesson lesson) {
+            return new DailyScheduleLessonKey(
+                lesson.getSubject().getClassroom().getId(),
+                lesson.getDate()
             );
         }
     }
