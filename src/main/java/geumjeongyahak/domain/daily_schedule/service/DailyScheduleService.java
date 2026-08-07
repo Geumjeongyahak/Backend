@@ -156,13 +156,17 @@ public class DailyScheduleService {
             .filter(dailySchedule -> request.status() == null || dailySchedule.getStatus() == request.status())
             .toList();
         Map<DailyScheduleLessonKey, List<Lesson>> lessonsByScheduleKey = getLessonsByScheduleKey(dailySchedules);
+        Map<Long, DailyTeacherAttendance> attendanceByScheduleId = getTeacherAttendancesByScheduleId(dailySchedules);
         List<DailyScheduleSummaryResponse> responses = dailySchedules
             .stream()
             .map(dailySchedule -> new DailyScheduleWithLessons(
                 dailySchedule,
                 lessonsByScheduleKey.getOrDefault(DailyScheduleLessonKey.from(dailySchedule), List.of())
             ))
-            .map(this::toSummaryResponse)
+            .map(dailyScheduleWithLessons -> toSummaryResponse(
+                dailyScheduleWithLessons,
+                attendanceByScheduleId.get(dailyScheduleWithLessons.dailySchedule().getId())
+            ))
             .toList();
         log.debug("DailySchedule 목록 조회 완료 - 총 {}건", responses.size());
         return responses;
@@ -241,23 +245,31 @@ public class DailyScheduleService {
                 || dailySchedule.getTeacher().getId().equals(requesterId))
             .toList();
         Map<DailyScheduleLessonKey, List<Lesson>> lessonsByScheduleKey = getLessonsByScheduleKey(dailySchedules);
-        List<DailyScheduleSummaryResponse> responses = dailySchedules
-            .stream()
+        List<DailyScheduleWithLessons> filteredSchedules = dailySchedules.stream()
             .map(dailySchedule -> new DailyScheduleWithLessons(
                 dailySchedule,
                 lessonsByScheduleKey.getOrDefault(DailyScheduleLessonKey.from(dailySchedule), List.of())
             ))
             .filter(dailyScheduleWithLessons -> hasWrittenJournal(dailyScheduleWithLessons.lessons()))
             .filter(dailyScheduleWithLessons -> matchesKeyword(dailyScheduleWithLessons, request.getKeyword()))
-            .map(this::toSummaryResponse)
             .toList();
         PageRequest pageRequest = request.toRequest();
-        int start = Math.min((int) pageRequest.getOffset(), responses.size());
-        int end = Math.min(start + pageRequest.getPageSize(), responses.size());
+        int start = Math.min((int) pageRequest.getOffset(), filteredSchedules.size());
+        int end = Math.min(start + pageRequest.getPageSize(), filteredSchedules.size());
+        List<DailyScheduleWithLessons> pageSchedules = filteredSchedules.subList(start, end);
+        Map<Long, DailyTeacherAttendance> attendanceByScheduleId = getTeacherAttendancesByScheduleId(
+            pageSchedules.stream().map(DailyScheduleWithLessons::dailySchedule).toList()
+        );
+        List<DailyScheduleSummaryResponse> responses = pageSchedules.stream()
+            .map(dailyScheduleWithLessons -> toSummaryResponse(
+                dailyScheduleWithLessons,
+                attendanceByScheduleId.get(dailyScheduleWithLessons.dailySchedule().getId())
+            ))
+            .toList();
         return new PaginationResponse<>(new PageImpl<>(
-            responses.subList(start, end),
+            responses,
             pageRequest,
-            responses.size()
+            filteredSchedules.size()
         ));
     }
 
@@ -1035,11 +1047,28 @@ public class DailyScheduleService {
             .collect(Collectors.groupingBy(DailyScheduleLessonKey::from));
     }
 
-    private DailyScheduleSummaryResponse toSummaryResponse(DailyScheduleWithLessons dailyScheduleWithLessons) {
+    private Map<Long, DailyTeacherAttendance> getTeacherAttendancesByScheduleId(
+        List<DailySchedule> dailySchedules
+    ) {
+        if (dailySchedules.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> dailyScheduleIds = dailySchedules.stream()
+            .map(DailySchedule::getId)
+            .toList();
+        return dailyTeacherAttendanceRepository.findAllByDailyScheduleIdInAndIsDeletedFalse(dailyScheduleIds)
+            .stream()
+            .collect(toMap(
+                attendance -> attendance.getDailySchedule().getId(),
+                Function.identity()
+            ));
+    }
+
+    private DailyScheduleSummaryResponse toSummaryResponse(
+        DailyScheduleWithLessons dailyScheduleWithLessons,
+        DailyTeacherAttendance teacherAttendance
+    ) {
         DailySchedule dailySchedule = dailyScheduleWithLessons.dailySchedule();
-        DailyTeacherAttendance teacherAttendance = dailyTeacherAttendanceRepository
-            .findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId())
-            .orElse(null);
         List<DailyScheduleLessonResponse> lessons = dailyScheduleWithLessons.lessons()
             .stream()
             .map(DailyScheduleLessonResponse::from)

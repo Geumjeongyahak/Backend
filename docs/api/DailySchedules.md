@@ -14,6 +14,8 @@ DailySchedule은 같은 분반과 같은 날짜의 Lesson들을 하루 단위로
 | `GET /api/v1/daily-schedules/detail` | `VOLUNTEER`, `MANAGER`, `ADMIN` |
 | `GET /api/v1/daily-schedules/{dailyScheduleId}` | `VOLUNTEER`, `MANAGER`, `ADMIN` |
 | `GET /api/v1/daily-schedules/volunteer-hours` | `VOLUNTEER`, `MANAGER`, `ADMIN` |
+| `GET /api/v1/daily-schedules/journal-sheet-link` | `ADMIN`, `daily-schedule:manage:*` |
+| `GET /api/v1/daily-schedules/journal-sheet-data` | `ADMIN`, `daily-schedule:manage:*` |
 | `POST /api/v1/daily-schedules/journal` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
 | `PATCH /api/v1/daily-schedules/{dailyScheduleId}/journal` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
 | `DELETE /api/v1/daily-schedules/{dailyScheduleId}/journal` | 담당 교사, `ADMIN`, `daily-schedule:manage:*` |
@@ -28,6 +30,7 @@ DailySchedule은 같은 분반과 같은 날짜의 Lesson들을 하루 단위로
 - `VOLUNTEER`, `MANAGER`, `ADMIN`은 DailySchedule 목록, 상세, 봉사 시간을 조회할 수 있습니다.
 - 상세 응답의 담당 교사 연락처와 주민번호 앞자리는 담당 교사 본인, `ADMIN`, `daily-schedule:read:*`, `daily-schedule:manage:*` 권한 보유자에게만 노출됩니다.
 - 다른 교사의 봉사 시간을 조회하려면 `ADMIN`, `daily-schedule:read:*`, `daily-schedule:manage:*` 권한이 필요합니다.
+- 수업일지 관리 시트 링크와 월별 시트 데이터는 `ADMIN` 또는 `daily-schedule:manage:*` 권한 보유자만 조회할 수 있습니다.
 - 담당 교사가 아닌 사용자는 `ADMIN` 또는 `daily-schedule:manage:*` 권한이 있어야 수업 일지, 출석, 상태를 변경할 수 있습니다.
 - 상태 변경 API는 운영 보정용 관리자 API입니다. 일반 완료 처리는 교사 출석과 수업 일지 작성 완료 시 자동으로 수행됩니다.
 
@@ -131,6 +134,52 @@ GET /api/v1/daily-schedules/detail?classroomId=1&lessonDate=2026-06-20
 ```
 
 응답 구조는 `GET /api/v1/daily-schedules/{dailyScheduleId}`와 동일합니다. 해당 날짜와 분반에 연결된 활성 DailySchedule이 없으면 `404 Not Found`를 반환합니다.
+
+## Google Sheets 수업일지 연동
+
+### 관리 시트 링크 조회
+
+```http
+GET /api/v1/daily-schedules/journal-sheet-link
+```
+
+봉사시간 증빙용 수업일지 관리 Google Sheets URL을 반환합니다. 월별 시트 생성과 갱신은 반환된 시트의 Apps Script 메뉴에서 수행합니다.
+
+```json
+{
+  "url": "https://docs.google.com/spreadsheets/d/example/edit"
+}
+```
+
+### 월별 시트 데이터 조회
+
+```http
+GET /api/v1/daily-schedules/journal-sheet-data?month=2026-07
+```
+
+- `month`는 필수이며 `yyyy-MM` 형식으로 입력합니다. 형식이 잘못되거나 누락되면 `400 Bad Request`를 반환합니다.
+- 요청한 월에 속하고 삭제되지 않은 DailySchedule을 수업 날짜 오름차순, ID 오름차순으로 반환합니다.
+- 같은 분반과 날짜의 활성 Lesson note 중 하나라도 작성된 일정만 반환합니다.
+- 교사 출석 정보가 없으면 `teacherAttendanceStatus`는 `null`입니다.
+- `residentRegistrationNumberPrefix`는 수업일지에 저장한 값을 우선 사용하고, 없으면 담당 교사 정보의 주민번호 앞자리를 사용합니다.
+- 관리자용 시트 연동 데이터이므로 `personalInfoConsent` 값과 관계없이 주민번호 앞자리를 반환합니다. 이 API의 접근 권한을 일반 사용자에게 부여하면 안 됩니다.
+- `lessons`는 교시 오름차순이며 각 항목에 `lessonId`, 교시, 수업 시간, 과목명, 일지 내용을 포함합니다.
+
+주요 응답 필드:
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `dailyScheduleId` | long | 하루 일정 식별자 |
+| `classroomId`, `classroomName` | long, string | 분반 식별자와 이름 |
+| `teacherId`, `teacherName` | long, string | 담당 교사 식별자와 이름 |
+| `teacherPhoneNumber` | string, nullable | 담당 교사 연락처 |
+| `residentRegistrationNumberPrefix` | string, nullable | 주민등록번호 앞자리 |
+| `lessonDate` | date | 수업 날짜 |
+| `activityStartTime`, `activityEndTime` | time, nullable | 활동 시작·종료 시간 |
+| `status` | enum | DailySchedule 상태 |
+| `teacherAttendanceStatus` | enum, nullable | 교사 출석 상태 |
+| `personalInfoConsent` | boolean | 수업일지 개인정보 활용 동의 여부 |
+| `lessons` | array | 교시별 수업 식별자, 시간, 과목명, 일지 내용 |
 
 ## 수업 일지 정책
 

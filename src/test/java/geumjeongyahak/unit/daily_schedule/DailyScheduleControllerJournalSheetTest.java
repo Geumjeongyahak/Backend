@@ -7,6 +7,8 @@ import static org.mockito.Mockito.verify;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleAdminService;
 import geumjeongyahak.domain.daily_schedule.v1.controller.DailyScheduleAdminController;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleJournalSheetLinkResponse;
+import java.time.YearMonth;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -29,5 +31,17 @@ class DailyScheduleControllerJournalSheetTest {
 
         assertThat(response.getBody()).isEqualTo(serviceResponse);
         verify(dailyScheduleAdminService).getJournalSheetLink();
+    }
+
+    @Test
+    void getMonthlyJournalSheetData_returnsServiceResponse() {
+        DailyScheduleAdminController controller = new DailyScheduleAdminController(dailyScheduleAdminService);
+        YearMonth month = YearMonth.of(2026, 7);
+        given(dailyScheduleAdminService.getMonthlyJournalSheetData(month)).willReturn(List.of());
+
+        var response = controller.getMonthlyJournalSheetData(month);
+
+        assertThat(response.getBody()).isEmpty();
+        verify(dailyScheduleAdminService).getMonthlyJournalSheetData(month);
     }
 }

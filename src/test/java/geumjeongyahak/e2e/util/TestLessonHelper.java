@@ -16,14 +16,14 @@ import org.springframework.stereotype.Component;
  * <p>
  * - Subject: SUBJECT_SEQ(100번~)로 name·dayOfWeek·period를 자동 조합하고, 날짜 범위를
  *   2050-01-01 기준으로 seq마다 1일씩 증가시켜 classroom+dayOfWeek+period 중복 충돌 방지.
- * - Lesson: DATE_OFFSET으로 날짜를 자동 증가 → 동일 teacher+date 충돌 방지
+ * - Lesson: 실행 시점 기준 1년 후부터 날짜를 자동 증가 → 수업 시작 전 조건과 teacher+date 중복 방지
  * </p>
  */
 @Component
 public class TestLessonHelper {
 
     private static final LocalDate SUBJECT_BASE_DATE = LocalDate.of(2050, 1, 1);
-    private static final LocalDate LESSON_BASE_DATE = LocalDate.of(2026, 8, 1);
+    private static final LocalDate LESSON_BASE_DATE = LocalDate.now().plusYears(1);
     private static final AtomicLong SUBJECT_SEQUENCE = new AtomicLong();
     private static final AtomicLong LESSON_SEQUENCE = new AtomicLong();
     private final List<Long> createdSubjectIds = new ArrayList<>();
@@ -138,7 +138,7 @@ public class TestLessonHelper {
 
     /**
      * 테스트용 수업을 생성하고 lessonId를 반환한다.
-     * 날짜는 BASE_DATE(2026-08-01)에서 자동 증가하여 teacher+date 충돌을 방지한다.
+     * 날짜는 실행 시점 기준 1년 후부터 자동 증가하여 수업 시작 전 조건과 teacher+date 충돌을 방지한다.
      */
     public Long createLessonAndGetId(String authHeader, Long subjectId, Long teacherId) {
         long sequence = LESSON_SEQUENCE.incrementAndGet();

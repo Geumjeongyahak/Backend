@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.classroom.entity.Classroom;
@@ -24,6 +25,7 @@ import geumjeongyahak.domain.daily_schedule.service.DailyScheduleService;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyScheduleStatusRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.UpdateDailyTeacherAttendanceCorrectionRequest;
 import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleDetailResponse;
+import geumjeongyahak.domain.daily_schedule.v1.dto.response.DailyScheduleJournalSheetRowResponse;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.service.LessonProxyService;
@@ -35,8 +37,10 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -110,6 +114,121 @@ class DailyScheduleAdminServiceTest {
         assertThatThrownBy(dailyScheduleAdminService::getJournalSheetLink)
             .isInstanceOf(DailyScheduleJournalSheetLinkNotConfiguredException.class)
             .hasMessage("수업일지 관리 시트 링크가 설정되어 있지 않습니다.");
+    }
+
+    @Test
+    void getMonthlyJournalSheetData_returnsOnlyWrittenJournalsForRequestedMonth() {
+        YearMonth month = YearMonth.of(2026, 7);
+        LocalDate firstDay = month.atDay(1);
+        LocalDate lastDay = month.atEndOfMonth();
+        Classroom classroom = classroom(1L);
+        User teacher = teacherWithPersonalInfo(2L, "홍길동", "010-1234-5678", "010101");
+        DailySchedule writtenSchedule = dailySchedule(100L, classroom, teacher, firstDay);
+        writtenSchedule.updateJournalPersonalInfo("900101", true);
+        DailySchedule emptySchedule = dailySchedule(101L, classroom, teacher, lastDay);
+        Lesson writtenLesson = lesson(subject(classroom, teacher, firstDay), teacher, firstDay);
+        ReflectionTestUtils.setField(writtenLesson, "id", 1353L);
+        writtenLesson.updateNote("국어 수업 내용");
+        Lesson emptyLesson = lesson(subject(classroom, teacher, lastDay), teacher, lastDay);
+        DailyTeacherAttendance teacherAttendance = teacherAttendance(writtenSchedule);
+
+        given(dailyScheduleRepository.findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(
+            firstDay,
+            lastDay
+        )).willReturn(List.of(writtenSchedule, emptySchedule));
+        given(lessonProxyService.getActiveLessonsByClassroomIdsAndDates(
+            Set.of(classroom.getId()),
+            Set.of(firstDay, lastDay)
+        )).willReturn(List.of(writtenLesson, emptyLesson));
+        given(dailyTeacherAttendanceRepository.findAllByDailyScheduleIdInAndIsDeletedFalse(
+            List.of(writtenSchedule.getId())
+        )).willReturn(List.of(teacherAttendance));
+
+        List<DailyScheduleJournalSheetRowResponse> responses =
+            dailyScheduleAdminService.getMonthlyJournalSheetData(month);
+
+        assertThat(responses).hasSize(1);
+        DailyScheduleJournalSheetRowResponse response = responses.get(0);
+        assertThat(response.dailyScheduleId()).isEqualTo(writtenSchedule.getId());
+        assertThat(response.teacherPhoneNumber()).isEqualTo("010-1234-5678");
+        assertThat(response.residentRegistrationNumberPrefix()).isEqualTo("900101");
+        assertThat(response.personalInfoConsent()).isTrue();
+        assertThat(response.teacherAttendanceStatus()).isEqualTo(DailyTeacherAttendanceStatus.PRESENT);
+        assertThat(response.lessons()).hasSize(1);
+        assertThat(response.lessons().get(0).lessonId()).isEqualTo(1353L);
+        assertThat(response.lessons().get(0).period()).isEqualTo(1);
+        assertThat(response.lessons().get(0).note()).isEqualTo("국어 수업 내용");
+        verify(dailyTeacherAttendanceRepository)
+            .findAllByDailyScheduleIdInAndIsDeletedFalse(List.of(writtenSchedule.getId()));
+    }
+
+    @Test
+    void getMonthlyJournalSheetData_returnsEmptyListWhenMonthHasNoSchedules() {
+        YearMonth month = YearMonth.of(2026, 7);
+        given(dailyScheduleRepository.findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(
+            month.atDay(1),
+            month.atEndOfMonth()
+        )).willReturn(List.of());
+
+        List<DailyScheduleJournalSheetRowResponse> responses =
+            dailyScheduleAdminService.getMonthlyJournalSheetData(month);
+
+        assertThat(responses).isEmpty();
+        verifyNoInteractions(lessonProxyService, dailyTeacherAttendanceRepository);
+    }
+
+    @Test
+    void getMonthlyJournalSheetData_skipsAttendanceQueryWhenNoJournalIsWritten() {
+        YearMonth month = YearMonth.of(2026, 7);
+        LocalDate lessonDate = month.atDay(15);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Lesson lesson = lesson(subject(classroom, teacher, lessonDate), teacher, lessonDate);
+
+        given(dailyScheduleRepository.findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(
+            month.atDay(1),
+            month.atEndOfMonth()
+        )).willReturn(List.of(dailySchedule));
+        given(lessonProxyService.getActiveLessonsByClassroomIdsAndDates(
+            Set.of(classroom.getId()),
+            Set.of(lessonDate)
+        )).willReturn(List.of(lesson));
+
+        List<DailyScheduleJournalSheetRowResponse> responses =
+            dailyScheduleAdminService.getMonthlyJournalSheetData(month);
+
+        assertThat(responses).isEmpty();
+        verifyNoInteractions(dailyTeacherAttendanceRepository);
+    }
+
+    @Test
+    void getMonthlyJournalSheetData_returnsTeacherResidentNumberWithoutConsent() {
+        YearMonth month = YearMonth.of(2026, 7);
+        LocalDate lessonDate = month.atDay(15);
+        Classroom classroom = classroom(1L);
+        User teacher = teacherWithPersonalInfo(2L, "홍길동", "010-1234-5678", "000101");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Lesson lesson = lesson(subject(classroom, teacher, lessonDate), teacher, lessonDate);
+        lesson.updateNote("국어 수업 내용");
+
+        given(dailyScheduleRepository.findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(
+            month.atDay(1),
+            month.atEndOfMonth()
+        )).willReturn(List.of(dailySchedule));
+        given(lessonProxyService.getActiveLessonsByClassroomIdsAndDates(
+            Set.of(classroom.getId()),
+            Set.of(lessonDate)
+        )).willReturn(List.of(lesson));
+        given(dailyTeacherAttendanceRepository.findAllByDailyScheduleIdInAndIsDeletedFalse(
+            List.of(dailySchedule.getId())
+        )).willReturn(List.of());
+
+        DailyScheduleJournalSheetRowResponse response =
+            dailyScheduleAdminService.getMonthlyJournalSheetData(month).get(0);
+
+        assertThat(response.personalInfoConsent()).isFalse();
+        assertThat(response.residentRegistrationNumberPrefix()).isEqualTo("000101");
     }
 
     @Test
@@ -405,6 +524,22 @@ class DailyScheduleAdminServiceTest {
     private User teacher(Long id, String name) {
         User teacher = User.builder()
             .name(name)
+            .role(RoleType.VOLUNTEER)
+            .build();
+        ReflectionTestUtils.setField(teacher, "id", id);
+        return teacher;
+    }
+
+    private User teacherWithPersonalInfo(
+        Long id,
+        String name,
+        String phoneNumber,
+        String residentRegistrationNumberPrefix
+    ) {
+        User teacher = User.builder()
+            .name(name)
+            .phoneNumber(phoneNumber)
+            .residentRegistrationNumberPrefix(residentRegistrationNumberPrefix)
             .role(RoleType.VOLUNTEER)
             .build();
         ReflectionTestUtils.setField(teacher, "id", id);
