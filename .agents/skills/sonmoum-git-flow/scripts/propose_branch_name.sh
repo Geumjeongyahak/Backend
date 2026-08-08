@@ -23,7 +23,7 @@ normalized_slug="$(normalize_slug "$slug_raw")"
 
 case "$kind" in
   feat|feature)
-    prefix="feature"
+    prefix="feat"
     ;;
   fix)
     prefix="fix"
