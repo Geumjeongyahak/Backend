@@ -28,9 +28,9 @@
 
 | 화면 | 조회 API | 관리자 쓰기 API | 비고 |
 |------|----------|-----------------|------|
-| 연혁 | `GET /api/v1/site-contents/history` | `POST/PUT/DELETE /api/v1/site-contents/history` | `photos`는 배열 전체 교체 |
-| 부서/교장 | `GET /api/v1/site-contents/departments` | `POST/PUT/DELETE /api/v1/site-contents/departments` | `principal`은 null로 반환하지 않음 |
-| 반 정보 | `GET /api/v1/site-contents/classes` | `POST/PUT/DELETE /api/v1/site-contents/classes` | `groupId`는 camelCase |
+| 연혁 | `GET /api/v1/site-contents/history` | `POST /history`, `PUT/DELETE /history/{historyId}` | `photos`는 배열 전체 교체 |
+| 부서/교장 | `GET /api/v1/site-contents/departments` | `POST /departments`, `PUT/DELETE /departments/{departmentInfoId}` | `principal`은 null로 반환하지 않음 |
+| 반 정보 | `GET /api/v1/site-contents/classes` | `POST /classes`, `PUT/DELETE /classes/{classInfoId}` | `groupId`는 camelCase |
 | 연혁 이미지 | 없음 | `POST /api/v1/files/images/site-contents` | 응답 `fileId`, `url`을 `photos`에 저장 |
 
 프론트 요청 DTO에는 `contentType`, `refId`, `sortOrder`를 보내지 않습니다. 해당 값은 내부 관리자 화면에서만 운영 보정용으로 관리합니다.
