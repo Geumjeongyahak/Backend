@@ -7,7 +7,9 @@ commit_line="${2:-}"
 status=0
 
 # `feat/` 가 현행입니다. `feature/` 는 오래된 브랜치에만 남아 있습니다.
-branch_pattern='^(feat|fix|hotfix|docs|style|refactor|test|chore)/[0-9]+-[a-z0-9]+(-[a-z0-9]+)*$'
+# `hotfix/` 만 이슈 번호를 요구하지 않습니다. 프로덕션이 멈춘 자리에서 이슈를 먼저
+# 만들라고 막으면 그 규칙은 안 지켜집니다 (`hotfix/prod-health-retry`).
+branch_pattern='^((feat|fix|docs|style|refactor|test|chore)/[0-9]+|hotfix/)-?[a-z0-9]+(-[a-z0-9]+)*$'
 legacy_branch_pattern='^feature/[0-9]+-[a-z0-9]+(-[a-z0-9]+)*$'
 # scope 는 도메인 폴더 이름을 하이픈으로 바꾼 것입니다. 고정 목록을 두면 새 도메인이
 # 생길 때마다 여기가 먼저 막습니다.
