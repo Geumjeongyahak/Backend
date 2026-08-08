@@ -24,9 +24,12 @@
 
 1. `POST /drafts`: 빈 초안 생성 (ID 발급)
 2. `PUT /{postId}/draft`: 제목, 본문 등 임시 저장
-3. `POST /{postId}/draft/images`: 이미지 업로드 및 연동
-4. `POST /{postId}/draft/attachments`: 첨부파일 업로드 및 연동
+3. `POST /{postId}/images`: 이미지 업로드 및 연동
+4. `POST /{postId}/attachments`: 첨부파일 업로드 및 연동
 5. `PUT /{postId}/publish`: 최종 발행 (상태가 `PUBLISHED`로 변경됨)
+
+초안 상태에서도 발행 후에도 같은 엔드포인트를 씁니다. **경로에 `/draft/` 세그먼트는
+없습니다.**
 
 ### 2.3 썸네일 자동 설정 정책
 
@@ -73,9 +76,12 @@
   ```
 
 #### 4.1.3 초안 이미지/첨부 연동
-- **이미지**: `POST /api/v1/channels/{channelId}/posts/{postId}/draft/images` (Multipart)
-- **첨부**: `POST /api/v1/channels/{channelId}/posts/{postId}/draft/attachments` (Multipart)
+- **이미지**: `POST /api/v1/channels/{channelId}/posts/{postId}/images` (Multipart)
+- **첨부**: `POST /api/v1/channels/{channelId}/posts/{postId}/attachments` (Multipart)
 - **등록 파일 첨부**: `POST /api/v1/channels/{channelId}/posts/{postId}/attachments` (`{ "fileId": "...", "sortOrder": 0 }`)
+  - 첨부는 경로가 같고 `Content-Type`으로 갈립니다 — `multipart/form-data`는 업로드,
+    `application/json`은 이미 등록된 파일 연결입니다 (`PostFileController`).
+- **첨부 해제**: `DELETE /api/v1/channels/{channelId}/posts/{postId}/attachments/{fileId}`
   - `POST /api/v1/files/attachments`로 GCS 업로드한 파일과 `POST /api/v1/files/drive`로 등록한 Drive 파일을 동일하게 연결할 수 있습니다.
 
 ### 4.2 발행 (`PostPublishController`)

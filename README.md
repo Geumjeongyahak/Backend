@@ -366,19 +366,28 @@ public void handleSubjectCreated(SubjectCreatedEvent event) { ... }
 | VOLUNTEER | ROLE_VOLUNTEER | 봉사자 - 수업 진행, 출결 관리, 요청 생성 |
 | GUEST | ROLE_GUEST | 게스트 - 제한적 접근 |
 
-### 부서/교육 역할
+기본 역할은 위 넷이 전부입니다 (`RoleType`). **한 사용자는 역할을 하나만 갖습니다**
+(`User.role` 단일 필드). 전부 `ROLE_` prefix가 붙습니다 (`hasRole('ADMIN')`).
 
-| 역할 | Authority | 설명 |
-|------|-----------|------|
-| DEPT_FINANCE | DEPT_FINANCE | 재정 부서 |
-| DEPT_ACADEMIC | DEPT_ACADEMIC | 학사 부서 |
-| DEPT_IT | DEPT_IT | IT 부서 |
-| TEACHER | TEACHER | 교사 |
+세밀한 접근 제어는 아래 권한 코드가 담당하며, 사용자별 예외 권한은 `user_permissions`,
+부서 단위 권한은 `department_permissions`로 부여합니다.
 
-**특징:**
-- 한 사용자는 여러 역할을 동시에 가질 수 있음
-- 기본 역할은 `ROLE_` prefix 사용 (`hasRole('ADMIN')`)
-- 부서/교육 역할은 prefix 없이 사용 (`hasAuthority('TEACHER')`)
+### 세밀 권한
+
+역할과 별개로 `PermissionCode`가 `resource:action:target` 형태의 권한을 표현합니다.
+
+| 자리 | Enum | 값 |
+|------|------|-----|
+| resource | `ResourceType` | channel, subject, student, department, lesson, daily_schedule, user, absence_request, purchase_request, vendor, event, teacher_application, lesson_exchange_request |
+| action | `ActionType` | read, write, grant, manage, review |
+| target | - | `*` (global) 또는 대상 ID |
+
+```java
+@PreAuthorize("hasAuthority('user:manage:*')")
+@PreAuthorize("hasAuthority('subject:write:*')")
+```
+
+등록되지 않은 resource·action 조합은 `PermissionRegistry.validate`가 거절합니다.
 
 ## 개발 컨벤션
 
@@ -389,22 +398,35 @@ public void handleSubjectCreated(SubjectCreatedEvent event) { ... }
 ```
 
 - **Type**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
-- **Scope**: `user`, `lesson`, `subject`, `student`, `classroom`, `request`, `auth`, `global`
+- **Scope**: 도메인 폴더 이름을 하이픈으로 (`purchase_request` → `purchase-request`)
 
 ```
 feat(lesson): 수업 캘린더 조회 API 추가
 fix(auth): 로그인 시 세션 만료 오류 수정
+feat(purchase-request): 품의 단계 영수증 관리 API 추가
 ```
 
 ### 브랜치 전략
 
 ```
 main
- └── develop
-      ├── feature/{issue-number}-{feature-name}
-      ├── fix/{issue-number}-{bug-description}
-      └── hotfix/{issue-number}-{description}
+ └── dev
+      ├── feat/{issue-number}-{slug}     [FEAT] 이슈
+      ├── fix/{issue-number}-{slug}      [FIX] 이슈
+      └── docs/{issue-number}-{slug}
+
+main
+ └── hotfix/{slug}                       긴급 프로덕션 수정만
 ```
+
+통합 브랜치는 `dev`입니다. 기능 브랜치 접두사는 `feat/`입니다.
+
+### Issue · PR
+
+- 이슈 제목 `[FEAT] …` / `[FIX] …`, 라벨 `enhancement` / `bug`
+- **PR 제목은 이슈 제목을 그대로** 씁니다. base는 `dev`입니다
+
+자세한 것은 [개발 컨벤션](docs/convention/convention.md)을 봅니다.
 
 ## 문서
 

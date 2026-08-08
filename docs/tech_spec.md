@@ -297,16 +297,20 @@ public enum RoleType {
     VOLUNTEER,  // 봉사자 - 수업 진행
     GUEST;      // 게스트 - 제한적 접근
 
-    public String getAuthority() {
-        return "ROLE_" + this.name();
+    public GrantedAuthority getAuthority() {
+        return new SimpleGrantedAuthority("ROLE_" + name());
     }
 }
 ```
 
 **특징:**
-- 사용자는 하나의 기본 역할을 가짐
+- 사용자는 하나의 기본 역할을 가짐 (`User.role` 단일 필드)
 - 역할별 권한은 Spring Security의 `hasRole()`로 검증
 - 모든 역할은 `ROLE_` prefix가 붙은 권한으로 매핑됨
+
+역할만으로 못 가르는 접근은 `PermissionCode`(`resource:action:target`)로 검증합니다.
+`hasAuthority('user:manage:*')` 형태이며, 정의는 `domain/base/model/PermissionRegistry`,
+평가는 `common/security/service/PermissionCodeEvaluator`가 맡습니다.
 
 ### 4.3 권한 검증
 

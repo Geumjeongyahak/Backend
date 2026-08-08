@@ -44,7 +44,7 @@ Supported default `scope` values:
 
 The docs define:
 
-- `feature/{issue-number}-{feature-name}`
+- `feat/{issue-number}-{slug}`
 - `fix/{issue-number}-{bug-description}`
 - `hotfix/{issue-number}-{description}`
 
@@ -62,17 +62,17 @@ Recent history shows these patterns:
 ### Branches
 
 - Remote history contains `origin/feat/14-lesson`, `origin/feat/17-subject`, `origin/feat/20-lesson-cud`
-- Local history also contains `feature/18-request`
+- Local history also contains legacy `feature/18-request`
 
 ## Recommended policy for future work
 
 Use this policy unless the user directs otherwise:
 
-1. Use documented branch prefixes: `feature/`, `fix/`, `hotfix/`.
+1. Use documented branch prefixes: `feat/`, `fix/`, `hotfix/`, `docs/`.
 2. Use Conventional Commit with scope by default: `<type>(<scope>): <subject>`.
 3. Keep Korean commit subjects if the rest of the branch history is Korean.
 4. Put issue references in a footer or PR context instead of overloading the subject line when possible.
-5. Treat old `feat/` branch names and scope-less commit lines as legacy compatibility, not the preferred default.
+5. Treat old `feature/` branch names and scope-less commit lines as legacy compatibility, not the preferred default.
 
 ## Scope mapping hints
 

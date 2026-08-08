@@ -1,4 +1,9 @@
-# GJLearn 작업 자동화 하네스
+# GJLearn 작업 자동화 하네스 (v1)
+
+> **superseded.** 현행은 `harness/v2/2026-08-08/`이다. 워크플로 진입점은
+> `.claude/skills/`에 있고 절차는 [`harness/v2/2026-08-08/README.md`](harness/v2/2026-08-08/README.md)를 본다.
+> 이 문서는 v1 계약의 기록이다. `scripts/harness/`의 스크립트와 `make harness-*`
+> 타깃은 그대로 살아 있다.
 
 ## 목적
 
@@ -28,7 +33,7 @@ retry = 실패 로그를 먹인 복구 loop
    - GitHub issue에 배경, 요구사항, 수용 기준, 범위 밖을 적는다.
    - 이슈 번호는 branch/task/run artifact에 포함한다.
 2. 브랜치 생성
-   - `feature/<issue-number>-<short-topic>` 형식을 사용한다.
+   - `feat/<issue-number>-<slug>` 형식을 사용한다 (`fix/`·`docs/`는 이슈 종류에 맞춘다).
    - 기존 dirty tree는 먼저 `git diff --stat`으로 확인한다.
 3. Task packet 작성
    - `harness/tasks/*.template.md`를 복사해 작업별 task file을 만든다.

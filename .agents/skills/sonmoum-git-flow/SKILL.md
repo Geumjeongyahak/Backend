@@ -28,13 +28,13 @@ Do not force one giant commit when unrelated work is mixed together. Propose a s
 
 Default to the documented branch prefixes:
 
-- `feature/{issue-number}-{slug}` for new functionality
+- `feat/{issue-number}-{slug}` for new functionality (not `feature/` — legacy branches only)
 - `fix/{issue-number}-{slug}` for bug fixes
 - `hotfix/{issue-number}-{slug}` for urgent production fixes
 
 Use lowercase ASCII slug segments joined by hyphens.
 
-The repository history also contains `feat/{issue}-{slug}` branches. Treat that as a compatibility pattern, not the default target. Only mirror it when the user explicitly asks to follow an existing remote branch family.
+The repository history also contains older `feature/{issue}-{slug}` branches. Treat that as a compatibility pattern, not the default target. Only mirror it when the user explicitly asks to follow an existing remote branch family.
 
 Use `./scripts/propose_branch_name.sh` when you need a deterministic proposal.
 
