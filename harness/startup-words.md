@@ -103,7 +103,7 @@ scripts/harness/run-task.sh --dry-run harness/tasks/issue-<번호>-feature-task.
 ```
 
 4. 구현 전 유사 코드/문서/테스트를 읽는다.
-5. `feature/<issue-number>-<short-topic>` branch에서 최소 변경을 구현한다.
+5. `feat/<issue-number>-<slug>` branch에서 최소 변경을 구현한다.
 6. focused test → `scripts/harness/verify.sh` 순서로 검증한다.
 7. 작은 논리 단위로 stage/commit한다.
 8. PR body에는 최근 PR 양식에 맞춰 `개요`, `변경 유형`, `변경 내용`, `관련 이슈`, `스크린샷 (선택)`, `체크리스트`, `리뷰어에게`, `검증`을 채운다.

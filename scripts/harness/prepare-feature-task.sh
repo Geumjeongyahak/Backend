@@ -153,7 +153,7 @@ Allowed scope is the minimum set required by the issue:
 
 ## Constraints
 
-- 기존 도메인 패키지 구조와 API 응답 형식을 따른다: `ApiResponse.success/error`, domain event boundary, BaseEntity, DTO request/response 분리.
+- 기존 도메인 패키지 구조와 API 응답 형식을 따른다: 컨트롤러는 `ResponseEntity<XxxResponse>` 반환(공통 래퍼 없음), 도메인 간 조회는 `*ProxyService`·부수 효과는 event, BaseEntity 상속, `v1/dto/request|response` 분리.
 - 새 public API나 DB contract 변경은 docs와 테스트를 함께 갱신한다.
 - secrets, `.env`, credential 파일은 읽거나 수정하지 않는다.
 - destructive command, deploy, force push, auto merge는 실행하지 않는다.
