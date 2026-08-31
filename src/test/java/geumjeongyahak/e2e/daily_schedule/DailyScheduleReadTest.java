@@ -2,8 +2,10 @@ package geumjeongyahak.e2e.daily_schedule;
 
 import static io.restassured.RestAssured.given;
 import static java.util.Map.entry;
+import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
 import geumjeongyahak.e2e.BaseE2ETest;
@@ -125,6 +127,62 @@ public class DailyScheduleReadTest extends BaseE2ETest {
             .get("/journal-sheet-data")
             .then()
             .statusCode(200);
+    }
+
+    @Test
+    @DisplayName("월별 시트 조회는 출퇴근 미기록을 null로 반환하고 저장된 시각을 활동 시간과 구분한다")
+    void getMonthlyJournalSheetData_returnsNullOrRecordedAttendanceTimes() {
+        LocalDate lessonDate = nextLessonDate();
+        Long lessonId = createDailyScheduleSource("시트출퇴근조회-" + SEQUENCE.get(), lessonDate);
+        Long dailyScheduleId = given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "lessonDate", lessonDate.toString(),
+                "classroomId", CLASSROOM_ID,
+                "personalInfoConsent", true,
+                "residentRegistrationNumberPrefix", "900101",
+                "lessonJournals", List.of(Map.of("lessonId", lessonId, "note", "출퇴근 시각 조회용 수업 일지"))
+            ))
+            .post("/journal")
+            .then()
+            .statusCode(200)
+            .extract().jsonPath().getLong("dailyScheduleId");
+        String rowPath = "find { it.dailyScheduleId == " + dailyScheduleId + " }";
+        String month = java.time.YearMonth.from(lessonDate).toString();
+        String botAccessToken = loginAppsScriptBot();
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(botAccessToken))
+            .queryParam("month", month)
+            .get("/journal-sheet-data")
+            .then()
+            .statusCode(200)
+            .body(rowPath, hasKey("attendedAt"))
+            .body(rowPath, hasKey("checkedOutAt"))
+            .body(rowPath + ".attendedAt", nullValue())
+            .body(rowPath + ".checkedOutAt", nullValue());
+
+        String attendedAt = lessonDate + "T08:55:00";
+        String checkedOutAt = lessonDate + "T10:05:00";
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("status", "PRESENT", "attendedAt", attendedAt, "checkedOutAt", checkedOutAt))
+            .patch("/{dailyScheduleId}/teacher-attendance/adjustment", dailyScheduleId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(botAccessToken))
+            .queryParam("month", month)
+            .get("/journal-sheet-data")
+            .then()
+            .statusCode(200)
+            .body(rowPath + ".attendedAt", is(attendedAt))
+            .body(rowPath + ".checkedOutAt", is(checkedOutAt))
+            .body(rowPath + ".activityStartTime", is("09:00:00"))
+            .body(rowPath + ".activityEndTime", is("10:00:00"));
     }
 
     @Test

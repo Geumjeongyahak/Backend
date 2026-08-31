@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.classroom.entity.Classroom;
@@ -44,6 +45,8 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -175,6 +178,54 @@ class DailyScheduleAdminServiceTest {
 
         assertThat(responses).isEmpty();
         verifyNoInteractions(lessonProxyService, dailyTeacherAttendanceRepository);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "true, 2026-07-15T13:55:00, 2026-07-15T16:05:00",
+        "true, 2026-07-15T13:55:00,",
+        "true,,",
+        "false,,"
+    })
+    void getMonthlyJournalSheetData_returnsRecordedAttendanceTimes(
+        boolean hasAttendanceRecord,
+        LocalDateTime attendedAt,
+        LocalDateTime checkedOutAt
+    ) {
+        YearMonth month = YearMonth.of(2026, 7);
+        LocalDate lessonDate = month.atDay(15);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher(2L, "홍길동");
+        DailySchedule dailySchedule = dailySchedule(100L, classroom, teacher, lessonDate);
+        Lesson lesson = lesson(subject(classroom, teacher, lessonDate), teacher, lessonDate);
+        lesson.updateNote("국어 수업 내용");
+        DailyTeacherAttendance attendance = new DailyTeacherAttendance(dailySchedule, 120);
+        if (attendedAt != null) {
+            attendance.correctAttendance(DailyTeacherAttendanceStatus.PRESENT, attendedAt, checkedOutAt);
+        }
+
+        given(dailyScheduleRepository.findAllByIsDeletedFalseAndLessonDateBetweenOrderByLessonDateAscIdAsc(
+            month.atDay(1), month.atEndOfMonth()
+        )).willReturn(List.of(dailySchedule));
+        given(lessonProxyService.getActiveLessonsByClassroomIdsAndDates(
+            Set.of(classroom.getId()), Set.of(lessonDate)
+        )).willReturn(List.of(lesson));
+        given(dailyTeacherAttendanceRepository.findAllByDailyScheduleIdInAndIsDeletedFalse(
+            List.of(dailySchedule.getId())
+        )).willReturn(hasAttendanceRecord ? List.of(attendance) : List.of());
+
+        List<DailyScheduleJournalSheetRowResponse> responses =
+            dailyScheduleAdminService.getMonthlyJournalSheetData(month);
+
+        assertThat(responses).hasSize(1);
+        DailyScheduleJournalSheetRowResponse response = responses.get(0);
+        assertThat(response.attendedAt()).isEqualTo(attendedAt);
+        assertThat(response.checkedOutAt()).isEqualTo(checkedOutAt);
+        assertThat(response.activityStartTime()).isEqualTo(LocalTime.of(14, 0));
+        assertThat(response.activityEndTime()).isEqualTo(LocalTime.of(16, 0));
+        verify(dailyTeacherAttendanceRepository)
+            .findAllByDailyScheduleIdInAndIsDeletedFalse(List.of(dailySchedule.getId()));
+        verifyNoMoreInteractions(dailyTeacherAttendanceRepository);
     }
 
     @Test
