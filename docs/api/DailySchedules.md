@@ -160,7 +160,8 @@ GET /api/v1/daily-schedules/journal-sheet-data?month=2026-07
 - `month`는 필수이며 `yyyy-MM` 형식으로 입력합니다. 형식이 잘못되거나 누락되면 `400 Bad Request`를 반환합니다.
 - 요청한 월에 속하고 삭제되지 않은 DailySchedule을 수업 날짜 오름차순, ID 오름차순으로 반환합니다.
 - 같은 분반과 날짜의 활성 Lesson note 중 하나라도 작성된 일정만 반환합니다.
-- 교사 출석 정보가 없으면 `teacherAttendanceStatus`는 `null`입니다.
+- 교사 출석 정보가 없으면 `teacherAttendanceStatus`, `attendedAt`, `checkedOutAt`은 모두 `null`입니다.
+- `attendedAt`, `checkedOutAt`은 교사 출석 레코드에 저장된 출근·퇴근 시각입니다. 기록되지 않은 시각은 각각 `null`로 반환하며, 활동 시작·종료 시간이나 현재 시각으로 대체하지 않습니다.
 - `residentRegistrationNumberPrefix`는 수업일지에 저장한 값을 우선 사용하고, 없으면 담당 교사 정보의 주민번호 앞자리를 사용합니다.
 - 관리자용 시트 연동 데이터이므로 `personalInfoConsent` 값과 관계없이 주민번호 앞자리를 반환합니다. 이 API의 접근 권한을 일반 사용자에게 부여하면 안 됩니다.
 - `lessons`는 교시 오름차순이며 각 항목에 `lessonId`, 교시, 수업 시간, 과목명, 일지 내용을 포함합니다.
@@ -176,10 +177,61 @@ GET /api/v1/daily-schedules/journal-sheet-data?month=2026-07
 | `residentRegistrationNumberPrefix` | string, nullable | 주민등록번호 앞자리 |
 | `lessonDate` | date | 수업 날짜 |
 | `activityStartTime`, `activityEndTime` | time, nullable | 활동 시작·종료 시간 |
+| `attendedAt` | datetime, nullable | 저장된 출근 시각. 출근 기록이 없으면 `null` |
+| `checkedOutAt` | datetime, nullable | 저장된 퇴근 시각. 퇴근 기록이 없으면 `null` |
 | `status` | enum | DailySchedule 상태 |
 | `teacherAttendanceStatus` | enum, nullable | 교사 출석 상태 |
 | `personalInfoConsent` | boolean | 수업일지 개인정보 활용 동의 여부 |
 | `lessons` | array | 교시별 수업 식별자, 시간, 과목명, 일지 내용 |
+
+응답 예시:
+
+```json
+[
+  {
+    "dailyScheduleId": 100,
+    "classroomId": 1,
+    "classroomName": "장미반",
+    "teacherId": 2,
+    "teacherName": "홍길동",
+    "teacherPhoneNumber": "010-1234-5678",
+    "residentRegistrationNumberPrefix": "900101",
+    "lessonDate": "2026-07-15",
+    "activityStartTime": "14:00:00",
+    "activityEndTime": "16:00:00",
+    "attendedAt": "2026-07-15T13:55:00",
+    "checkedOutAt": "2026-07-15T16:05:00",
+    "status": "COMPLETED",
+    "teacherAttendanceStatus": "PRESENT",
+    "personalInfoConsent": true,
+    "lessons": [
+      {
+        "lessonId": 1353,
+        "period": 1,
+        "startTime": "14:00:00",
+        "endTime": "16:00:00",
+        "subjectName": "국어",
+        "note": "국어 읽기 활동을 진행했습니다."
+      }
+    ]
+  }
+]
+```
+
+출퇴근 시각 해석 및 시트 연동:
+
+- `activityStartTime`, `activityEndTime`은 활동 시간이며 출퇴근 체크 시각과 다를 수 있습니다. 시트에서는 기존 활동 시간 칼럼을 유지하고 출근·퇴근 칼럼을 별도로 표시합니다.
+- 출퇴근 시각은 기존 상세 조회와 동일한 `LocalDateTime`의 ISO 8601 문자열입니다. 예: `2026-07-15T13:55:00`. 소수초가 포함될 수 있으며, `Z`나 `+09:00` 같은 시간대 정보는 포함하지 않습니다.
+- 서버의 출퇴근 체크는 `Asia/Seoul` 기준입니다. Apps Script에서 날짜·시간으로 변환할 때 UTC로 간주하지 말고, 시트와 스크립트의 시간대가 `Asia/Seoul`인지 확인합니다.
+
+| 기록 상태 | `attendedAt` | `checkedOutAt` | 시트 표시 |
+|-----------|--------------|----------------|-----------|
+| 출근·퇴근 모두 기록 | 저장된 출근 시각 | 저장된 퇴근 시각 | 두 시각 표시 |
+| 출근만 기록 | 저장된 출근 시각 | `null` | 퇴근 칸은 빈칸 |
+| 두 시각 모두 미기록 | `null` | `null` | 두 칸 모두 빈칸 |
+| 출석 레코드 없음 | `null` | `null` | 두 칸 모두 빈칸 |
+
+이번 연동은 출퇴근 기록의 조회·출력만 지원합니다. 시트에서 셀을 수정해도 서버 기록에는 반영되지 않으며, 선택 행 저장·동기화 기능은 포함하지 않습니다. 기존 관리자 출퇴근 보정 API와 봉사시간 계산 방식은 변경하지 않습니다. Apps Script의 칼럼 추가와 출력 설정은 별도 작업입니다.
 
 ## 수업 일지 정책
 
