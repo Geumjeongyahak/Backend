@@ -7,6 +7,7 @@ import geumjeongyahak.domain.daily_schedule.enums.DailyTeacherAttendanceStatus;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -41,6 +42,12 @@ public record DailyScheduleJournalSheetRowResponse(
     @Schema(description = "활동 종료 시간", example = "16:00:00", nullable = true)
     LocalTime activityEndTime,
 
+    @Schema(description = "실제 출근 시각. 출근 기록이 없으면 null입니다.", example = "2026-07-15T13:55:00", nullable = true)
+    LocalDateTime attendedAt,
+
+    @Schema(description = "실제 퇴근 시각. 퇴근 기록이 없으면 null입니다.", example = "2026-07-15T16:05:00", nullable = true)
+    LocalDateTime checkedOutAt,
+
     @Schema(description = "하루 일정 상태", example = "COMPLETED")
     DailyScheduleStatus status,
 
@@ -70,6 +77,8 @@ public record DailyScheduleJournalSheetRowResponse(
             dailySchedule.getLessonDate(),
             dailySchedule.getActivityStartTime(),
             dailySchedule.getActivityEndTime(),
+            teacherAttendance != null ? teacherAttendance.getAttendedAt() : null,
+            teacherAttendance != null ? teacherAttendance.getCheckedOutAt() : null,
             dailySchedule.getStatus(),
             teacherAttendance != null ? teacherAttendance.getStatus() : null,
             dailySchedule.isPersonalInfoConsent(),
