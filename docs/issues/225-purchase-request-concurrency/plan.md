@@ -50,7 +50,7 @@ sequenceDiagram
 | 도메인 경계 | `purchase_request` 안에서 바꾼다. 거래처 잠금 순서는 `vendor`가 정한다 | 새 Proxy 메서드나 이벤트가 없다 |
 | 권한 | 바뀌지 않는다 | 새 엔드포인트가 없다 |
 | 락 순서 | 구입 요청 → 거래처(ID 오름차순) | 순서가 요청마다 다르면 교착이 난다 |
-| 락 대기 상한 | **두지 않는다** | 아래 「안 하는 것」 |
+| 락 대기 상한 | PostgreSQL `lock_timeout` 3초, `DB_LOCK_TIMEOUT_MS`로 바꿀 수 있다 | 코드가 아니라 연결 설정이라 예외 갈래가 늘지 않는다. 넘기면 락 실패로 올라와 `409 BIZ005`를 탄다 |
 
 ### 버린 대안
 
@@ -80,11 +80,28 @@ sequenceDiagram
 |---|---|---|
 | 같은 전이가 겹친다 | 나중 요청이 락을 얻은 뒤 서비스의 기존 상태 검사 | 승인·반려·삭제는 `409 PR-003`, 나머지는 `409 PR-006` |
 | 삭제가 먼저 끝났다 | 락 있는 조회가 삭제된 행을 못 찾는다 | `404 PR-001` |
-| 락을 못 얻는다 (교착 · DB의 락 대기 제한 초과) | `GlobalExceptionHandler` | `409 BIZ005` |
+| 락을 3초 안에 못 얻는다 · 교착 | PostgreSQL `lock_timeout`이 끊고 `GlobalExceptionHandler`가 받는다 | `409 BIZ005` |
 | 거래처 잔액이 부족하다 | 기존 동작 그대로. 트랜잭션이 되돌아간다 | 기존 `409` |
 
 로그에는 예외 종류만 남긴다. DB가 예외 메시지에 잠긴 행의 내용을 실어 보내기도 한다
 (H2에서 확인).
+
+## 락 대기 상한
+
+`application-dev.yml` · `application-prod.yml`의 Hikari 설정에 둔다.
+
+```yaml
+connection-init-sql: SET lock_timeout = ${DB_LOCK_TIMEOUT_MS:3000}
+```
+
+| 확인 | 결과 (PostgreSQL 18) |
+|---|---|
+| Hibernate 속성 `jakarta.persistence.lock.timeout` | 효과 없다. 10초를 그대로 기다렸다 |
+| 연결 초기화 SQL `SET lock_timeout = 3000` | 3.3초 뒤 `409 BIZ005`. 동시성 테스트 12개 통과 |
+
+- **모든 락에 걸린다.** 구입 요청만이 아니라 거래처 · 부서 락과 일반 `UPDATE`가 행을 기다리는 경우도 3초 뒤 `409 BIZ005`다
+- **Flyway 마이그레이션도 같은 연결을 쓴다.** 테이블 락을 3초 넘게 기다리는 마이그레이션은 실패한다. 배포가 멈춘 채 기다리는 것보다 낫다고 봤다. 필요하면 배포 때만 `DB_LOCK_TIMEOUT_MS=0`으로 끈다
+- 테스트(H2)는 `application-test.yml`의 `LOCK_TIMEOUT=1000`이 같은 일을 한다
 
 ## 질의
 
@@ -126,11 +143,6 @@ scripts/harness/verify.sh
 
 ## 안 하는 것
 
-- **락 대기 상한.** 앞 요청이 멈춰 있으면 뒤 요청은 끝없이 기다린다. 거래처 · 부서의 기존
-  락도 같은 상태다. 필요해지면 코드가 아니라 설정으로 푼다 — PostgreSQL 연결에
-  `lock_timeout`을 걸면 락 대기 초과가 락 실패로 올라와 위 `BIZ005`를 그대로 탄다.
-  PostgreSQL 18에서 `lock_timeout=3000`으로 확인했다. 모든 질의에 걸리는 설정이라 이
-  이슈에서 정하지 않는다
 - 기존 데이터의 조사와 보정
 - `vendor_balance_histories` 유니크 제약 추가
 - 거래처 · 부서의 락 조회를 파생 쿼리로 바꾸는 것

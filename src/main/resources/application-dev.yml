@@ -7,6 +7,9 @@ spring:
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      # 락을 이 시간(ms) 안에 못 얻으면 409 BIZ005 로 답한다. 0 이면 제한 없이 기다린다.
+      connection-init-sql: SET lock_timeout = ${DB_LOCK_TIMEOUT_MS:3000}
   jpa:
     hibernate:
       ddl-auto: validate
