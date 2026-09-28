@@ -44,14 +44,14 @@ public class PurchaseRequestProposalService {
     private final DepartmentProxyService departmentProxyService;
     private final FileProxyService fileProxyService;
 
-    @Transactional
+    @Transactional(timeout = PurchaseRequestService.TRANSITION_TIMEOUT_SECONDS)
     public PurchaseRequestProposalResponse saveProposal(
         Long actorId,
         Long requestId,
         SavePurchaseRequestProposalRequest request,
         boolean isAdmin
     ) {
-        PurchaseRequest purchaseRequest = findPurchaseRequest(requestId);
+        PurchaseRequest purchaseRequest = findPurchaseRequestForUpdate(requestId);
         checkAccess(purchaseRequest, actorId, isAdmin);
         validateEditable(purchaseRequest);
 
@@ -84,14 +84,14 @@ public class PurchaseRequestProposalService {
         return toResponse(saved);
     }
 
-    @Transactional
+    @Transactional(timeout = PurchaseRequestService.TRANSITION_TIMEOUT_SECONDS)
     public PurchaseRequestProposalResponse attachReceipt(
         Long actorId,
         Long requestId,
         UUID fileId,
         boolean isAdmin
     ) {
-        PurchaseRequest purchaseRequest = findPurchaseRequest(requestId);
+        PurchaseRequest purchaseRequest = findPurchaseRequestForUpdate(requestId);
         checkAccess(purchaseRequest, actorId, isAdmin);
         validateEditable(purchaseRequest);
 
@@ -111,14 +111,14 @@ public class PurchaseRequestProposalService {
         return toResponse(saved);
     }
 
-    @Transactional
+    @Transactional(timeout = PurchaseRequestService.TRANSITION_TIMEOUT_SECONDS)
     public void deleteReceipt(
         Long actorId,
         Long requestId,
         Long receiptId,
         boolean isAdmin
     ) {
-        PurchaseRequest purchaseRequest = findPurchaseRequest(requestId);
+        PurchaseRequest purchaseRequest = findPurchaseRequestForUpdate(requestId);
         checkAccess(purchaseRequest, actorId, isAdmin);
         validateEditable(purchaseRequest);
 
@@ -282,8 +282,8 @@ public class PurchaseRequestProposalService {
         }
     }
 
-    private PurchaseRequest findPurchaseRequest(Long requestId) {
-        return purchaseRequestRepository.findByIdAndIsDeletedFalse(requestId)
+    private PurchaseRequest findPurchaseRequestForUpdate(Long requestId) {
+        return purchaseRequestRepository.findByIdForUpdate(requestId)
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));
     }
 

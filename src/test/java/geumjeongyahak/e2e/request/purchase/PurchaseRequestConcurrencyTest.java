@@ -172,6 +172,61 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("구매 완료 보고가 겹치면 하나만 성공하고 거래 내역은 한 벌만 남는다")
+    void report_concurrently_keepsSingleTransactionSet() throws Exception {
+        Long vendorId = createVendorAndCharge(100000L);
+        Long requestId = setupPendingRequest("ACTUAL");
+        approve(requestId, "구매 보고 준비 승인").then().statusCode(200);
+
+        List<Integer> statusCodes = callConcurrently(
+            () -> report(requestId, reportBody(vendorId, 20000L, null)),
+            () -> report(requestId, reportBody(vendorId, 20000L, null))
+        );
+
+        assertSoftly(softly -> {
+            softly.assertThat(statusCodes).as("응답 코드").containsExactlyInAnyOrder(200, 409);
+            softly.assertThat(paymentTransactionCount(requestId)).as("거래 내역 수").isEqualTo(1);
+        });
+    }
+
+    @Test
+    @DisplayName("삭제와 승인이 겹치면 하나만 성공한다")
+    void deleteAndApprove_concurrently_onlyOneSucceeds() throws Exception {
+        Long requestId = setupPendingRequest("ACTUAL");
+
+        List<Integer> statusCodes = callConcurrently(
+            () -> delete(requestId),
+            () -> approve(requestId, "동시 승인")
+        );
+
+        Map<String, Object> saved = jdbcTemplate.queryForMap(
+            "SELECT status, is_deleted FROM purchase_requests WHERE id = ?", requestId);
+        boolean deleted = Boolean.TRUE.equals(saved.get("is_deleted"));
+        assertSoftly(softly -> {
+            softly.assertThat(statusCodes).as("응답 코드").containsExactlyInAnyOrder(deleted ? 204 : 200, 409);
+            softly.assertThat(saved.get("status")).as("저장된 상태").isEqualTo(deleted ? "PENDING" : "APPROVED");
+        });
+    }
+
+    @Test
+    @DisplayName("같은 영수증 첨부가 겹쳐도 품의 영수증은 한 건만 남는다")
+    void attachProposalReceipt_concurrently_keepsSingleReceipt() throws Exception {
+        Long requestId = setupPendingRequest("PREPAID");
+        String fileId = uploadReceiptFile();
+
+        List<Integer> statusCodes = callConcurrently(
+            () -> attachProposalReceipt(requestId, fileId),
+            () -> attachProposalReceipt(requestId, fileId)
+        );
+
+        assertSoftly(softly -> {
+            softly.assertThat(statusCodes).as("응답 코드").containsExactly(201, 201);
+            softly.assertThat(proposalCount(requestId)).as("품의 수").isEqualTo(1);
+            softly.assertThat(proposalReceiptCount(requestId)).as("품의 영수증 수").isEqualTo(1);
+        });
+    }
+
+    @Test
     @DisplayName("다른 트랜잭션이 구입 요청을 잠근 동안 결재 확인하면 409 BIZ005이고 잔액은 그대로다")
     void confirm_whileRowLocked_returnsResourceBusy() throws Exception {
         Long vendorId = createVendorAndCharge(100000L);
@@ -270,6 +325,36 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
         return jdbcTemplate.queryForObject("SELECT balance FROM vendors WHERE id = ?", Long.class, vendorId);
     }
 
+    private Integer paymentTransactionCount(Long requestId) {
+        return jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM purchase_request_payment_transactions WHERE purchase_request_id = ?",
+            Integer.class,
+            requestId
+        );
+    }
+
+    private Integer proposalCount(Long requestId) {
+        return jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM purchase_request_proposals WHERE purchase_request_id = ?",
+            Integer.class,
+            requestId
+        );
+    }
+
+    private Integer proposalReceiptCount(Long requestId) {
+        return jdbcTemplate.queryForObject(
+            """
+                SELECT COUNT(*)
+                FROM purchase_request_proposal_receipts r
+                JOIN purchase_request_proposals p ON p.id = r.proposal_id
+                WHERE p.purchase_request_id = ?
+                  AND r.is_deleted = FALSE
+                """,
+            Integer.class,
+            requestId
+        );
+    }
+
     private Integer balanceHistoryCount(Long requestId) {
         return jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM vendor_balance_histories WHERE purchase_request_id = ?",
@@ -363,6 +448,10 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
     }
 
     private void attachProposalReceipt(Long requestId) {
+        attachProposalReceipt(requestId, uploadReceiptFile()).then().statusCode(201);
+    }
+
+    private String uploadReceiptFile() {
         String fileId = given()
             .basePath("/api/v1/files")
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
@@ -374,15 +463,23 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
             .extract()
             .path("fileId");
         fileIds.add(UUID.fromString(fileId));
+        return fileId;
+    }
 
-        given()
+    private Response attachProposalReceipt(Long requestId, String fileId) {
+        return given()
             .basePath(USER_PATH)
             .header(AUTH_HEADER, getAuthHeader(volunteerToken))
             .contentType(ContentType.JSON)
             .body(Map.of("fileId", fileId))
-            .post("/{requestId}/proposal/receipts", requestId)
-            .then()
-            .statusCode(201);
+            .post("/{requestId}/proposal/receipts", requestId);
+    }
+
+    private Response delete(Long requestId) {
+        return given()
+            .basePath(USER_PATH)
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{requestId}", requestId);
     }
 
     private Long createVendorAndCharge(long amount) {
