@@ -190,7 +190,7 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("삭제와 승인이 겹치면 하나만 성공한다")
+    @DisplayName("삭제와 승인이 겹치면 하나만 성공하고 진 쪽은 이긴 쪽의 결과를 보고 거절된다")
     void deleteAndApprove_concurrently_onlyOneSucceeds() throws Exception {
         Long requestId = setupPendingRequest("ACTUAL");
 
@@ -202,8 +202,10 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
         Map<String, Object> saved = jdbcTemplate.queryForMap(
             "SELECT status, is_deleted FROM purchase_requests WHERE id = ?", requestId);
         boolean deleted = Boolean.TRUE.equals(saved.get("is_deleted"));
+        // 삭제가 이기면 승인은 삭제된 요청을 못 찾고(404), 승인이 이기면 삭제는 처리된 요청이라 거절된다(409).
+        List<Integer> expectedStatusCodes = deleted ? List.of(204, 404) : List.of(409, 200);
         assertSoftly(softly -> {
-            softly.assertThat(statusCodes).as("응답 코드").containsExactlyInAnyOrder(deleted ? 204 : 200, 409);
+            softly.assertThat(statusCodes).as("응답 코드").isEqualTo(expectedStatusCodes);
             softly.assertThat(saved.get("status")).as("저장된 상태").isEqualTo(deleted ? "PENDING" : "APPROVED");
         });
     }
