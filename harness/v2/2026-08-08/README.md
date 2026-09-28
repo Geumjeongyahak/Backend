@@ -49,6 +49,7 @@ v2는 **순서를 문서로 고정하고 실행은 superpowers skill에 맡긴�
 harness/
   findings-ledger.md            codex 지적 한 건이 한 행
   gates-ledger.tsv              게이트에서 무엇을 묻고 뭐라 답했나
+  mistakes-ledger.md            실수 한 건이 한 행. 같은 갈래가 두 번 나오면 rules 로 올린다
   v2/2026-08-08/
     README.md                   이 문서
     setup.md                    전제. gh · codex · verify.sh
@@ -58,6 +59,7 @@ harness/
       work-an-issue.md          이슈 하나를 설계→구현→테스트→리뷰로 끌고 간다
       land-a-pr.md              검증하고 PR을 열고 병합까지
     codex-review.md             다른 눈. codex CLI 리뷰 프로토콜
+    rules/                      무엇을 확인하나. 계획 · 수정 · 테스트 · diff 점검
     observability.md            무엇을 어디에 남기나. 못 재는 것은 무엇인가
 
 docs/issues/<번호>-<slug>/      이슈 하나가 폴더 하나 (spec.md · plan.md · review.md)

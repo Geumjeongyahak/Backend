@@ -193,7 +193,7 @@ public class PurchaseRequestService {
         Long requesterId, Long requestId, UpdatePurchaseRequestRequest request, boolean isAdmin
     ) {
         log.debug("구입 요청 수정 (requesterId={}, requestId={})", requesterId, requestId);
-        PurchaseRequest purchaseRequest = findById(requestId);
+        PurchaseRequest purchaseRequest = findByIdForUpdate(requestId);
         checkAccess(purchaseRequest, requesterId, isAdmin);
 
         if (purchaseRequest.getStatus() != PurchaseRequestStatus.PENDING) {
@@ -219,7 +219,7 @@ public class PurchaseRequestService {
     @Transactional
     public PurchaseRequestDetailResponse approvePurchaseRequest(Long approverId, Long requestId, String note) {
         log.debug("구입 요청 승인 (requestId={})", requestId);
-        PurchaseRequest purchaseRequest = findById(requestId);
+        PurchaseRequest purchaseRequest = findByIdForUpdate(requestId);
         String processedNote = requireNote(note);
 
         if (purchaseRequest.getStatus() != PurchaseRequestStatus.PENDING) {
@@ -245,7 +245,7 @@ public class PurchaseRequestService {
     @Transactional
     public PurchaseRequestDetailResponse rejectPurchaseRequest(Long approverId, Long requestId, String note) {
         log.debug("구입 요청 반려 (requestId={})", requestId);
-        PurchaseRequest purchaseRequest = findById(requestId);
+        PurchaseRequest purchaseRequest = findByIdForUpdate(requestId);
         String processedNote = requireNote(note);
 
         if (purchaseRequest.getStatus() != PurchaseRequestStatus.PENDING) {
@@ -272,7 +272,7 @@ public class PurchaseRequestService {
         Long requesterId, Long requestId, ReportPurchaseRequest request, boolean isAdmin
     ) {
         log.debug("구매 완료 보고 (requestId={})", requestId);
-        PurchaseRequest purchaseRequest = findById(requestId);
+        PurchaseRequest purchaseRequest = findByIdForUpdate(requestId);
         checkAccess(purchaseRequest, requesterId, isAdmin);
 
         if (purchaseRequest.getStatus() != PurchaseRequestStatus.APPROVED) {
@@ -295,7 +295,7 @@ public class PurchaseRequestService {
     public PurchaseRequestDetailResponse updateItemReceipts(
         Long requesterId, Long requestId, ReportPurchaseRequest request, boolean isAdmin
     ) {
-        PurchaseRequest purchaseRequest = findById(requestId);
+        PurchaseRequest purchaseRequest = findByIdForUpdate(requestId);
         checkAccess(purchaseRequest, requesterId, isAdmin);
 
         if (purchaseRequest.getStatus() != PurchaseRequestStatus.PURCHASED) {
@@ -310,7 +310,7 @@ public class PurchaseRequestService {
     @Transactional
     public PurchaseRequestDetailResponse confirmPurchase(Long confirmerId, Long requestId) {
         log.debug("구매 결재 확인 (requestId={})", requestId);
-        PurchaseRequest purchaseRequest = findById(requestId);
+        PurchaseRequest purchaseRequest = findByIdForUpdate(requestId);
 
         if (purchaseRequest.getStatus() != PurchaseRequestStatus.PURCHASED) {
             throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
@@ -333,9 +333,7 @@ public class PurchaseRequestService {
                     PurchaseRequestPaymentTransaction::getVendor,
                     Collectors.summingLong(PurchaseRequestPaymentTransaction::getAmount)
                 ));
-            amountByVendor.forEach((vendor, amount) ->
-                vendorService.deductForPurchaseRequest(vendor, purchaseRequest, amount, confirmer)
-            );
+            vendorService.deductForPurchaseRequest(amountByVendor, purchaseRequest, confirmer);
         }
 
         purchaseRequest.confirm();
@@ -355,7 +353,7 @@ public class PurchaseRequestService {
     @Transactional
     public void deletePurchaseRequest(Long requesterId, Long requestId, boolean isAdmin) {
         log.debug("구입 요청 삭제 (requesterId={}, requestId={})", requesterId, requestId);
-        PurchaseRequest purchaseRequest = findById(requestId);
+        PurchaseRequest purchaseRequest = findByIdForUpdate(requestId);
         checkAccess(purchaseRequest, requesterId, isAdmin);
 
         if (purchaseRequest.getStatus() != PurchaseRequestStatus.PENDING) {
@@ -368,6 +366,11 @@ public class PurchaseRequestService {
 
     private PurchaseRequest findById(Long requestId) {
         return purchaseRequestRepository.findByIdAndIsDeletedFalse(requestId)
+            .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));
+    }
+
+    private PurchaseRequest findByIdForUpdate(Long requestId) {
+        return purchaseRequestRepository.findForUpdateByIdAndIsDeletedFalse(requestId)
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));
     }
 

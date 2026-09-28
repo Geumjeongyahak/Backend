@@ -3,6 +3,7 @@ package geumjeongyahak.common.advice;
 import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -321,6 +322,23 @@ public class GlobalExceptionHandler {
         problemDetail.setProperty("code", CommonErrorCode.INVALID_INPUT.getCode());
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
+    @ExceptionHandler(PessimisticLockingFailureException.class)
+    public ResponseEntity<ProblemDetail> handlePessimisticLockingFailureException(
+        PessimisticLockingFailureException ex
+    ) {
+        // 예외 메시지에는 DB 가 잠긴 행의 내용을 실어 보내기도 해서 종류만 남긴다.
+        log.warn("락 획득 실패 - {}", ex.getClass().getSimpleName());
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                CommonErrorCode.RESOURCE_BUSY.getMessage()
+        );
+        problemDetail.setTitle(CommonErrorCode.RESOURCE_BUSY.getCode());
+        problemDetail.setProperty("code", CommonErrorCode.RESOURCE_BUSY.getCode());
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail);
     }
 
     @ExceptionHandler(Exception.class)

@@ -51,7 +51,7 @@ public class PurchaseRequestProposalService {
         SavePurchaseRequestProposalRequest request,
         boolean isAdmin
     ) {
-        PurchaseRequest purchaseRequest = findPurchaseRequest(requestId);
+        PurchaseRequest purchaseRequest = findPurchaseRequestForUpdate(requestId);
         checkAccess(purchaseRequest, actorId, isAdmin);
         validateEditable(purchaseRequest);
 
@@ -91,7 +91,7 @@ public class PurchaseRequestProposalService {
         UUID fileId,
         boolean isAdmin
     ) {
-        PurchaseRequest purchaseRequest = findPurchaseRequest(requestId);
+        PurchaseRequest purchaseRequest = findPurchaseRequestForUpdate(requestId);
         checkAccess(purchaseRequest, actorId, isAdmin);
         validateEditable(purchaseRequest);
 
@@ -118,7 +118,7 @@ public class PurchaseRequestProposalService {
         Long receiptId,
         boolean isAdmin
     ) {
-        PurchaseRequest purchaseRequest = findPurchaseRequest(requestId);
+        PurchaseRequest purchaseRequest = findPurchaseRequestForUpdate(requestId);
         checkAccess(purchaseRequest, actorId, isAdmin);
         validateEditable(purchaseRequest);
 
@@ -282,8 +282,8 @@ public class PurchaseRequestProposalService {
         }
     }
 
-    private PurchaseRequest findPurchaseRequest(Long requestId) {
-        return purchaseRequestRepository.findByIdAndIsDeletedFalse(requestId)
+    private PurchaseRequest findPurchaseRequestForUpdate(Long requestId) {
+        return purchaseRequestRepository.findForUpdateByIdAndIsDeletedFalse(requestId)
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));
     }
 

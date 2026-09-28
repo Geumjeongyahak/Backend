@@ -11,6 +11,8 @@ spring:
       idle-timeout: ${DB_IDLE_TIMEOUT_MS:600000}
       max-lifetime: ${DB_MAX_LIFETIME_MS:1800000}
       leak-detection-threshold: ${DB_LEAK_DETECTION_THRESHOLD_MS:0}
+      # 락을 이 시간(ms) 안에 못 얻으면 409 BIZ005 로 답한다. 0 이면 제한 없이 기다린다.
+      connection-init-sql: SET lock_timeout = ${DB_LOCK_TIMEOUT_MS:3000}
   jpa:
     open-in-view: false
     hibernate:

@@ -1,6 +1,8 @@
 package geumjeongyahak.domain.vendor.service;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import geumjeongyahak.common.exception.BusinessException;
@@ -97,6 +99,18 @@ public class VendorService {
     @Transactional
     public void deductForPurchaseRequest(Vendor vendor, PurchaseRequest purchaseRequest, User approver) {
         deductForPurchaseRequest(vendor, purchaseRequest, purchaseRequest.getTotalPrice(), approver);
+    }
+
+    // 거래처를 ID 오름차순으로 잠근다. 순서가 요청마다 다르면 서로 다른 요청 둘이 교착에 빠진다.
+    @Transactional
+    public void deductForPurchaseRequest(
+        Map<Vendor, Long> amountByVendor,
+        PurchaseRequest purchaseRequest,
+        User approver
+    ) {
+        amountByVendor.entrySet().stream()
+            .sorted(Comparator.comparing(entry -> entry.getKey().getId()))
+            .forEach(entry -> deductForPurchaseRequest(entry.getKey(), purchaseRequest, entry.getValue(), approver));
     }
 
     @Transactional
