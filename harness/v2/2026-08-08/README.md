@@ -49,6 +49,7 @@ v2는 **순서를 문서로 고정하고 실행은 superpowers skill에 맡긴�
 harness/
   findings-ledger.md            codex 지적 한 건이 한 행
   gates-ledger.tsv              게이트에서 무엇을 묻고 뭐라 답했나
+  mistakes-ledger.md            실수 한 건이 한 행. 같은 갈래가 두 번 나오면 rules 로 올린다
   v2/2026-08-08/
     README.md                   이 문서
     setup.md                    전제. gh · codex · verify.sh

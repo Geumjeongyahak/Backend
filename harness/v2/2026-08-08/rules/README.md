@@ -11,6 +11,9 @@
 | 테스트를 쓴다 | [`testing.md`](testing.md) | `work-an-issue` 30 |
 | 리뷰에 보내기 전에 diff를 훑는다 | [`diff-signals.md`](diff-signals.md) | `work-an-issue` 30과 40 사이 |
 
+실수를 알아챘으면 [`mistakes-ledger.md`](../../../mistakes-ledger.md)에 한 행을 적는다.
+**같은 갈래가 두 번째 나오면 위 규칙 중 맞는 곳에 올린다.**
+
 codex에 넘기는 리뷰 지침은 [`../codex-review-prompt.md`](../codex-review-prompt.md)에
 따로 있다. 한 파일로 넘겨야 해서 나누지 않았다.
 

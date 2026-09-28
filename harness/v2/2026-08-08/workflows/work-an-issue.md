@@ -195,5 +195,6 @@ scripts/harness/verify.sh || exit 1
 - `docs/issues/<번호>-<slug>/plan.md` · `review.md`
 - `verify.sh` 통과 기록
 - `gates-ledger.tsv`의 `plan` 행 · `findings-ledger.md`의 지적 행들
+- 실수를 알아챘으면 [`mistakes-ledger.md`](../../../mistakes-ledger.md)의 행. 리뷰가 잡기 전에 스스로 알아챈 것도 적는다
 
 다음은 [`land-a-pr`](land-a-pr.md)다.
