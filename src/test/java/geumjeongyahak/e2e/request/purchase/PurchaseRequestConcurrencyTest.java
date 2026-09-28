@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -24,10 +25,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import geumjeongyahak.domain.file.repository.FileRepository;
+import geumjeongyahak.domain.notification.event.RequestReviewedPushEvent;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
 import geumjeongyahak.domain.vendor.repository.VendorBalanceHistoryRepository;
 import geumjeongyahak.domain.vendor.repository.VendorRepository;
@@ -45,6 +50,32 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @TestConfiguration
+    static class ReviewedEventConfig {
+
+        @Bean
+        ReviewedEventRecorder reviewedEventRecorder() {
+            return new ReviewedEventRecorder();
+        }
+    }
+
+    static class ReviewedEventRecorder {
+
+        private final List<Long> reviewedRequestIds = new CopyOnWriteArrayList<>();
+
+        @EventListener
+        void record(RequestReviewedPushEvent event) {
+            reviewedRequestIds.add(event.getRequestId());
+        }
+
+        long countOf(Long requestId) {
+            return reviewedRequestIds.stream().filter(requestId::equals).count();
+        }
+    }
+
+    @Autowired
+    private ReviewedEventRecorder reviewedEventRecorder;
 
     @Autowired
     private PlatformTransactionManager transactionManager;
@@ -102,6 +133,42 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
         );
 
         assertProcessedOnce(statusCodes, vendorId, 120000L, requestId);
+    }
+
+    @Test
+    @DisplayName("승인이 겹치면 하나만 성공하고 검토 알림 이벤트는 한 번만 발행된다")
+    void approve_concurrently_publishesEventOnce() throws Exception {
+        Long requestId = setupPendingRequest("ACTUAL");
+
+        List<Integer> statusCodes = callConcurrently(
+            () -> approve(requestId, "동시 승인 1"),
+            () -> approve(requestId, "동시 승인 2")
+        );
+
+        assertSoftly(softly -> {
+            softly.assertThat(statusCodes).as("응답 코드").containsExactlyInAnyOrder(200, 409);
+            softly.assertThat(reviewedEventRecorder.countOf(requestId)).as("검토 알림 이벤트 수").isEqualTo(1);
+        });
+    }
+
+    @Test
+    @DisplayName("승인과 반려가 겹치면 하나만 성공하고 저장된 상태와 사유는 성공한 요청의 것이다")
+    void approveAndReject_concurrently_keepsWinnerOnly() throws Exception {
+        Long requestId = setupPendingRequest("ACTUAL");
+
+        List<Integer> statusCodes = callConcurrently(
+            () -> approve(requestId, "동시 승인"),
+            () -> reject(requestId, "동시 반려")
+        );
+
+        Map<String, Object> saved = jdbcTemplate.queryForMap(
+            "SELECT status, note FROM purchase_requests WHERE id = ?", requestId);
+        String expectedNote = "APPROVED".equals(saved.get("status")) ? "동시 승인" : "동시 반려";
+        assertSoftly(softly -> {
+            softly.assertThat(statusCodes).as("응답 코드").containsExactlyInAnyOrder(200, 409);
+            softly.assertThat(saved.get("note")).as("저장된 사유").isEqualTo(expectedNote);
+            softly.assertThat(reviewedEventRecorder.countOf(requestId)).as("검토 알림 이벤트 수").isEqualTo(1);
+        });
     }
 
     @Test
@@ -243,6 +310,15 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
             .contentType(ContentType.JSON)
             .body(Map.of("note", note))
             .patch("/{requestId}/approve", requestId);
+    }
+
+    private Response reject(Long requestId, String note) {
+        return given()
+            .basePath(ADMIN_PATH)
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", note))
+            .patch("/{requestId}/reject", requestId);
     }
 
     private Response report(Long requestId, Map<String, Object> body) {

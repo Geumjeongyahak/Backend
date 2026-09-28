@@ -219,10 +219,10 @@ public class PurchaseRequestService {
         return toDetailResponse(purchaseRequest);
     }
 
-    @Transactional
+    @Transactional(timeout = TRANSITION_TIMEOUT_SECONDS)
     public PurchaseRequestDetailResponse approvePurchaseRequest(Long approverId, Long requestId, String note) {
         log.debug("구입 요청 승인 (requestId={})", requestId);
-        PurchaseRequest purchaseRequest = findById(requestId);
+        PurchaseRequest purchaseRequest = findByIdForUpdate(requestId);
         String processedNote = requireNote(note);
 
         if (purchaseRequest.getStatus() != PurchaseRequestStatus.PENDING) {
@@ -245,10 +245,10 @@ public class PurchaseRequestService {
         return toDetailResponse(purchaseRequest);
     }
 
-    @Transactional
+    @Transactional(timeout = TRANSITION_TIMEOUT_SECONDS)
     public PurchaseRequestDetailResponse rejectPurchaseRequest(Long approverId, Long requestId, String note) {
         log.debug("구입 요청 반려 (requestId={})", requestId);
-        PurchaseRequest purchaseRequest = findById(requestId);
+        PurchaseRequest purchaseRequest = findByIdForUpdate(requestId);
         String processedNote = requireNote(note);
 
         if (purchaseRequest.getStatus() != PurchaseRequestStatus.PENDING) {
