@@ -78,6 +78,9 @@ scripts/harness/verify.sh
   세밀 권한은 `hasAuthority('user:manage:*')` 형태의 `PermissionCode`
   (`resource:action:target`)다. 새 조합을 쓰려면 `PermissionRegistry`에 먼저 등록한다.
 
+**실패 경로와 질의도 계획에 적는다.** 무엇을 적는지는
+[`rules/writing-a-plan.md`](../rules/writing-a-plan.md)에 있다.
+
 `plan.md`의 첫 줄은 `# <제목>`이다. 게이트가 이 제목을 이슈 제목과 나란히 놓는다.
 
 ### 게이트 `plan` — 이 계획으로 구현해도 되나
@@ -128,6 +131,9 @@ scope는 **도메인 폴더 이름을 하이픈으로 바꾼 것**이다 (`purch
 `feat` → `docs` → `fix`가 순서대로 붙는다. 한 커밋에 전부 넣으면 되돌릴 때 통째로만
 되돌아간다.
 
+**고치기 전에 호출자를 전부 찾는다.** 기준은
+[`rules/changing-code.md`](../rules/changing-code.md)에 있다.
+
 작업을 갈라서 병렬로 돌리는 자리는 **작업들이 서로의 결과를 안 볼 때**다. 같은
 파일을 두 작업이 고치면 순서대로 한다.
 
@@ -151,10 +157,16 @@ scope는 **도메인 폴더 이름을 하이픈으로 바꾼 것**이다 (`purch
 날짜가 들어가는 테스트는 **미래 기준으로 만든다.** 고정 날짜로 짜면 그날이 지나는
 순간 깨진다. `#217`에서 실제로 그렇게 깨졌다.
 
+테스트를 어떻게 쓰는지는 [`rules/testing.md`](../rules/testing.md)에 있다.
+
 ```bash
 ./gradlew test --tests '*<바뀐 것>*'    # 먼저 좁게
 scripts/harness/verify.sh              # 그다음 전체
 ```
+
+**리뷰에 보내기 전에 diff를 한 번 훑는다.** 볼 목록은
+[`rules/diff-signals.md`](../rules/diff-signals.md)에 있다. 걸린 자리는 왜 괜찮은지를
+PR의 `리뷰어에게`에 적는다.
 
 ### 40 — 리뷰
 
