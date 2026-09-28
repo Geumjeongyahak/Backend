@@ -229,7 +229,7 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("구입 요청의 락을 얻지 못하면 결재 확인은 409 BIZ005이고 잔액은 그대로다")
+    @DisplayName("구입 요청의 락을 얻지 못하면 결재 확인은 409 PR-027이고 잔액은 그대로다")
     void confirm_whenLockNotAcquired_returnsResourceBusy() throws Exception {
         Long vendorId = createVendorAndCharge(100000L);
         Long requestId = setupPurchasedActualRequest(vendorId, 20000L);
@@ -247,7 +247,7 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
             lockHolder.get(10, TimeUnit.SECONDS);
             assertSoftly(softly -> {
                 softly.assertThat(response.statusCode()).as("응답 코드").isEqualTo(409);
-                softly.assertThat(response.jsonPath().getString("code")).as("오류 코드").isEqualTo("BIZ005");
+                softly.assertThat(response.jsonPath().getString("code")).as("오류 코드").isEqualTo("PR-027");
                 softly.assertThat(vendorBalance(vendorId)).as("거래처 잔액").isEqualTo(100000L);
                 softly.assertThat(balanceHistoryCount(requestId)).as("구입 요청의 잔액 이력 수").isZero();
             });

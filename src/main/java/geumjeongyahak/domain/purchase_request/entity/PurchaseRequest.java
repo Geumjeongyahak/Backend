@@ -2,11 +2,7 @@ package geumjeongyahak.domain.purchase_request.entity;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import geumjeongyahak.domain.base.entity.BaseEntity;
 import geumjeongyahak.domain.classroom.entity.Classroom;
@@ -14,7 +10,6 @@ import geumjeongyahak.domain.department.entity.Department;
 import geumjeongyahak.domain.purchase_request.enums.PurchasePaymentType;
 import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.users.entity.User;
-import geumjeongyahak.domain.vendor.entity.Vendor;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -164,17 +159,6 @@ public class PurchaseRequest extends BaseEntity {
         this.items.clear();
         items.forEach(item -> item.assignRequest(this));
         this.items.addAll(items);
-    }
-
-    // 결재 확인이 이 순서로 거래처를 잠근다. 순서가 요청마다 다르면 교착이 난다.
-    public Map<Vendor, Long> sumAmountByVendorInIdOrder() {
-        return transactions.stream()
-            .sorted(Comparator.comparing(transaction -> transaction.getVendor().getId()))
-            .collect(Collectors.groupingBy(
-                PurchaseRequestPaymentTransaction::getVendor,
-                LinkedHashMap::new,
-                Collectors.summingLong(PurchaseRequestPaymentTransaction::getAmount)
-            ));
     }
 
     public void replaceTransactions(List<PurchaseRequestPaymentTransaction> transactions) {

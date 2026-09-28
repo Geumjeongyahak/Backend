@@ -9,7 +9,8 @@ spring:
 
   datasource:
     driver-class-name: org.h2.Driver
-    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    # LOCK_TIMEOUT: 락 실패 경로를 검증하는 테스트가 이 값(ms)에 기댄다. H2 기본값과 같지만 드러내 둔다.
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=1000
     username: sa
     password:
 

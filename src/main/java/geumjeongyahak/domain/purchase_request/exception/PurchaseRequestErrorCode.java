@@ -100,6 +100,11 @@ public enum PurchaseRequestErrorCode implements ErrorCode {
         HttpStatus.CONFLICT,
         "PR-026",
         "결의서 생성에는 완료 요청일이 필요합니다."
+    ),
+    LOCK_NOT_ACQUIRED(
+        HttpStatus.CONFLICT,
+        "PR-027",
+        "다른 요청이 이 구입 요청을 처리하고 있습니다. 잠시 후 다시 시도해주세요."
     );
 
     private final HttpStatus status;
