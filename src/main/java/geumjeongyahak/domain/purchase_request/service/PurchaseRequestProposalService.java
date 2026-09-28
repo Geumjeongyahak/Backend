@@ -17,6 +17,7 @@ import geumjeongyahak.domain.purchase_request.enums.PurchaseRequestStatus;
 import geumjeongyahak.domain.purchase_request.exception.PurchaseRequestErrorCode;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestProposalRepository;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestProposalReceiptRepository;
+import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.SavePurchaseRequestProposalRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.SavePurchaseRequestProposalRequest.ApprovalLineRequest;
 import geumjeongyahak.domain.purchase_request.v1.dto.request.SavePurchaseRequestProposalRequest.BudgetRequest;
@@ -37,20 +38,20 @@ import org.springframework.util.StringUtils;
 @Transactional(readOnly = true)
 public class PurchaseRequestProposalService {
 
-    private final PurchaseRequestLockReader purchaseRequestLockReader;
+    private final PurchaseRequestRepository purchaseRequestRepository;
     private final PurchaseRequestProposalRepository proposalRepository;
     private final PurchaseRequestProposalReceiptRepository receiptRepository;
     private final DepartmentProxyService departmentProxyService;
     private final FileProxyService fileProxyService;
 
-    @PurchaseRequestWriteTransactional
+    @Transactional
     public PurchaseRequestProposalResponse saveProposal(
         Long actorId,
         Long requestId,
         SavePurchaseRequestProposalRequest request,
         boolean isAdmin
     ) {
-        PurchaseRequest purchaseRequest = purchaseRequestLockReader.getForUpdate(requestId);
+        PurchaseRequest purchaseRequest = findPurchaseRequestForUpdate(requestId);
         checkAccess(purchaseRequest, actorId, isAdmin);
         validateEditable(purchaseRequest);
 
@@ -83,14 +84,14 @@ public class PurchaseRequestProposalService {
         return toResponse(saved);
     }
 
-    @PurchaseRequestWriteTransactional
+    @Transactional
     public PurchaseRequestProposalResponse attachReceipt(
         Long actorId,
         Long requestId,
         UUID fileId,
         boolean isAdmin
     ) {
-        PurchaseRequest purchaseRequest = purchaseRequestLockReader.getForUpdate(requestId);
+        PurchaseRequest purchaseRequest = findPurchaseRequestForUpdate(requestId);
         checkAccess(purchaseRequest, actorId, isAdmin);
         validateEditable(purchaseRequest);
 
@@ -110,14 +111,14 @@ public class PurchaseRequestProposalService {
         return toResponse(saved);
     }
 
-    @PurchaseRequestWriteTransactional
+    @Transactional
     public void deleteReceipt(
         Long actorId,
         Long requestId,
         Long receiptId,
         boolean isAdmin
     ) {
-        PurchaseRequest purchaseRequest = purchaseRequestLockReader.getForUpdate(requestId);
+        PurchaseRequest purchaseRequest = findPurchaseRequestForUpdate(requestId);
         checkAccess(purchaseRequest, actorId, isAdmin);
         validateEditable(purchaseRequest);
 
@@ -279,6 +280,11 @@ public class PurchaseRequestProposalService {
                 index
             ));
         }
+    }
+
+    private PurchaseRequest findPurchaseRequestForUpdate(Long requestId) {
+        return purchaseRequestRepository.findForUpdateByIdAndIsDeletedFalse(requestId)
+            .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));
     }
 
     private void checkAccess(PurchaseRequest purchaseRequest, Long actorId, boolean isAdmin) {

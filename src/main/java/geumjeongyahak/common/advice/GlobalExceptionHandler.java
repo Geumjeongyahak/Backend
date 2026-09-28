@@ -4,7 +4,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
-import org.springframework.dao.QueryTimeoutException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -13,7 +12,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.transaction.TransactionTimedOutException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
@@ -326,22 +324,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
-    // 도메인이 자기 오류 코드로 바꾸지 않은 락 실패가 여기로 온다.
     @ExceptionHandler(PessimisticLockingFailureException.class)
     public ResponseEntity<ProblemDetail> handlePessimisticLockingFailureException(
         PessimisticLockingFailureException ex
     ) {
-        log.warn("락 획득 실패 - {} (SQLState: {})", ex.getClass().getSimpleName(), findSqlState(ex));
+        // 예외 메시지에는 DB 가 잠긴 행의 내용을 실어 보내기도 해서 종류만 남긴다.
+        log.warn("락 획득 실패 - {}", ex.getClass().getSimpleName());
 
-        return toResponse(CommonErrorCode.RESOURCE_BUSY);
-    }
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                CommonErrorCode.RESOURCE_BUSY.getMessage()
+        );
+        problemDetail.setTitle(CommonErrorCode.RESOURCE_BUSY.getCode());
+        problemDetail.setProperty("code", CommonErrorCode.RESOURCE_BUSY.getCode());
 
-    // 락 대기였는지 DB 지연이었는지 가릴 수 없어 서버 오류(5xx)로 답한다.
-    @ExceptionHandler({QueryTimeoutException.class, TransactionTimedOutException.class})
-    public ResponseEntity<ProblemDetail> handleProcessingTimeout(Exception ex) {
-        log.error("처리 시간 초과 - {} (SQLState: {})", ex.getClass().getSimpleName(), findSqlState(ex));
-
-        return toResponse(CommonErrorCode.PROCESSING_TIMEOUT);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail);
     }
 
     @ExceptionHandler(Exception.class)
@@ -359,26 +356,6 @@ public class GlobalExceptionHandler {
     }
 
     // ============ 내부 클래스 ============
-
-    private ResponseEntity<ProblemDetail> toResponse(CommonErrorCode errorCode) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(errorCode.getStatus(), errorCode.getMessage());
-        problemDetail.setTitle(errorCode.getCode());
-        problemDetail.setProperty("code", errorCode.getCode());
-
-        return ResponseEntity.status(errorCode.getStatus()).body(problemDetail);
-    }
-
-    // 예외 메시지에는 DB 가 행 내용을 실어 보내기도 한다. 로그에는 SQLState 만 남긴다.
-    private String findSqlState(Throwable throwable) {
-        Throwable current = throwable;
-        while (current != null) {
-            if (current instanceof java.sql.SQLException sqlException) {
-                return sqlException.getSQLState();
-            }
-            current = current.getCause();
-        }
-        return null;
-    }
 
     private String getMissingRequestValueName(Exception ex) {
         if (ex instanceof MissingServletRequestParameterException missingParameter) {

@@ -229,7 +229,7 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("구입 요청의 락을 얻지 못하면 결재 확인은 409 PR-027이고 잔액은 그대로다")
+    @DisplayName("구입 요청의 락을 얻지 못하면 결재 확인은 409 BIZ005이고 잔액은 그대로다")
     void confirm_whenLockNotAcquired_returnsResourceBusy() throws Exception {
         Long vendorId = createVendorAndCharge(100000L);
         Long requestId = setupPurchasedActualRequest(vendorId, 20000L);
@@ -247,9 +247,39 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
             lockHolder.get(10, TimeUnit.SECONDS);
             assertSoftly(softly -> {
                 softly.assertThat(response.statusCode()).as("응답 코드").isEqualTo(409);
-                softly.assertThat(response.jsonPath().getString("code")).as("오류 코드").isEqualTo("PR-027");
+                softly.assertThat(response.jsonPath().getString("code")).as("오류 코드").isEqualTo("BIZ005");
                 softly.assertThat(vendorBalance(vendorId)).as("거래처 잔액").isEqualTo(100000L);
                 softly.assertThat(balanceHistoryCount(requestId)).as("구입 요청의 잔액 이력 수").isZero();
+            });
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName("거래처의 락을 얻지 못하면 결재 확인은 409 BIZ005이고 구입 요청 상태는 그대로다")
+    void confirm_whenVendorLockNotAcquired_returnsResourceBusy() throws Exception {
+        Long vendorId = createVendorAndCharge(100000L);
+        Long requestId = setupPurchasedActualRequest(vendorId, 20000L);
+        CountDownLatch locked = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        try {
+            Future<?> lockHolder = executor.submit(() -> holdLock(
+                () -> vendorRepository.findByIdForUpdate(vendorId).orElseThrow(), locked, release));
+            assertThat(locked.await(5, TimeUnit.SECONDS)).isTrue();
+
+            Response response = confirm(requestId);
+
+            release.countDown();
+            lockHolder.get(10, TimeUnit.SECONDS);
+            assertSoftly(softly -> {
+                softly.assertThat(response.statusCode()).as("응답 코드").isEqualTo(409);
+                softly.assertThat(response.jsonPath().getString("code")).as("오류 코드").isEqualTo("BIZ005");
+                softly.assertThat(vendorBalance(vendorId)).as("거래처 잔액").isEqualTo(100000L);
+                softly.assertThat(requestStatus(requestId)).as("구입 요청 상태").isEqualTo("PURCHASED");
             });
         } finally {
             release.countDown();
@@ -260,8 +290,16 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
     // ── 동시 호출 ────────────────────────────────────────
 
     private void holdRowLock(Long requestId, CountDownLatch locked, CountDownLatch release) {
+        holdLock(
+            () -> purchaseRequestRepository.findForUpdateByIdAndIsDeletedFalse(requestId).orElseThrow(),
+            locked,
+            release
+        );
+    }
+
+    private void holdLock(Runnable lock, CountDownLatch locked, CountDownLatch release) {
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            purchaseRequestRepository.findForUpdateByIdAndIsDeletedFalse(requestId).orElseThrow();
+            lock.run();
             locked.countDown();
             try {
                 release.await(10, TimeUnit.SECONDS);
@@ -321,6 +359,10 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
             softly.assertThat(vendorBalance(vendorId)).as("거래처 잔액").isEqualTo(expectedBalance);
             softly.assertThat(balanceHistoryCount(requestId)).as("구입 요청의 잔액 이력 수").isEqualTo(1);
         });
+    }
+
+    private String requestStatus(Long requestId) {
+        return jdbcTemplate.queryForObject("SELECT status FROM purchase_requests WHERE id = ?", String.class, requestId);
     }
 
     private Long vendorBalance(Long vendorId) {
