@@ -283,7 +283,7 @@ public class PurchaseRequestProposalService {
     }
 
     private PurchaseRequest findPurchaseRequestForUpdate(Long requestId) {
-        return purchaseRequestRepository.findByIdForUpdate(requestId)
+        return purchaseRequestRepository.findForUpdateByIdAndIsDeletedFalse(requestId)
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));
     }
 

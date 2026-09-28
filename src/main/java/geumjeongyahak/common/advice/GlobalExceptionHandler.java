@@ -329,7 +329,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> handlePessimisticLockingFailureException(
         PessimisticLockingFailureException ex
     ) {
-        log.warn("락 획득 실패 - {}", ex.getClass().getSimpleName(), ex);
+        log.warn("락 획득 실패 - {} (SQLState: {})", ex.getClass().getSimpleName(), findSqlState(ex));
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.CONFLICT,
@@ -356,6 +356,18 @@ public class GlobalExceptionHandler {
     }
 
     // ============ 내부 클래스 ============
+
+    // 예외 메시지에는 DB 가 행 내용을 실어 보내기도 한다. 로그에는 SQLState 만 남긴다.
+    private String findSqlState(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof java.sql.SQLException sqlException) {
+                return sqlException.getSQLState();
+            }
+            current = current.getCause();
+        }
+        return null;
+    }
 
     private String getMissingRequestValueName(Exception ex) {
         if (ex instanceof MissingServletRequestParameterException missingParameter) {

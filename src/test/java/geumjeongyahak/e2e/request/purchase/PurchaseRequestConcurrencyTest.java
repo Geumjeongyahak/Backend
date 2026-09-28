@@ -261,7 +261,7 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
 
     private void holdRowLock(Long requestId, CountDownLatch locked, CountDownLatch release) {
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            purchaseRequestRepository.findByIdForUpdate(requestId).orElseThrow();
+            purchaseRequestRepository.findForUpdateByIdAndIsDeletedFalse(requestId).orElseThrow();
             locked.countDown();
             try {
                 release.await(10, TimeUnit.SECONDS);
