@@ -1,0 +1,292 @@
+package geumjeongyahak.e2e.request.purchase;
+
+import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.SoftAssertions.assertSoftly;
+import static org.hamcrest.Matchers.equalTo;
+
+import io.restassured.http.ContentType;
+import io.restassured.response.Response;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import geumjeongyahak.domain.file.repository.FileRepository;
+import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
+import geumjeongyahak.domain.vendor.repository.VendorBalanceHistoryRepository;
+import geumjeongyahak.domain.vendor.repository.VendorRepository;
+import geumjeongyahak.e2e.request.RequestBaseTest;
+
+/**
+ * 같은 구입 요청에 대한 상태 전이가 겹칠 때 한 번만 처리되는지 검증한다.
+ */
+@Tag("purchase-request")
+@DisplayName("E2E: 기자재 구입 요청 상태 전이 동시 요청 테스트")
+class PurchaseRequestConcurrencyTest extends RequestBaseTest {
+
+    private static final String ADMIN_PATH = "/api/v1/admin/purchase-requests";
+    private static final String USER_PATH = "/api/v1/purchase-requests";
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private PurchaseRequestRepository purchaseRequestRepository;
+
+    @Autowired
+    private VendorRepository vendorRepository;
+
+    @Autowired
+    private VendorBalanceHistoryRepository vendorBalanceHistoryRepository;
+
+    @Autowired
+    private FileRepository fileRepository;
+
+    private final List<Long> requestIds = new ArrayList<>();
+    private final List<Long> vendorIds = new ArrayList<>();
+    private final List<UUID> fileIds = new ArrayList<>();
+
+    @AfterEach
+    void cleanup() {
+        vendorIds.forEach(vendorBalanceHistoryRepository::deleteAllByVendor_Id);
+        requestIds.stream().filter(purchaseRequestRepository::existsById).forEach(purchaseRequestRepository::deleteById);
+        fileIds.stream().filter(fileRepository::existsById).forEach(fileRepository::deleteById);
+        vendorIds.stream().filter(vendorRepository::existsById).forEach(vendorRepository::deleteById);
+        requestIds.clear();
+        vendorIds.clear();
+        fileIds.clear();
+    }
+
+    @Test
+    @DisplayName("실 결제 결재 확인이 겹치면 하나만 성공하고 거래처 잔액은 한 번만 차감된다")
+    void confirm_actualConcurrently_deductsOnce() throws Exception {
+        Long vendorId = createVendorAndCharge(100000L);
+        Long requestId = setupPurchasedActualRequest(vendorId, 20000L);
+
+        List<Integer> statusCodes = callConcurrently(
+            () -> confirm(requestId),
+            () -> confirm(requestId)
+        );
+
+        assertProcessedOnce(statusCodes, vendorId, 80000L, requestId);
+    }
+
+    @Test
+    @DisplayName("선금 결제 결재 확인이 겹치면 하나만 성공하고 거래처 잔액은 한 번만 충전된다")
+    void confirm_prepaidConcurrently_chargesOnce() throws Exception {
+        Long vendorId = createVendorAndCharge(100000L);
+        Long requestId = setupPurchasedPrepaidRequest(vendorId, 20000L);
+
+        List<Integer> statusCodes = callConcurrently(
+            () -> confirm(requestId),
+            () -> confirm(requestId)
+        );
+
+        assertProcessedOnce(statusCodes, vendorId, 120000L, requestId);
+    }
+
+    // ── 동시 호출 ────────────────────────────────────────
+
+    @SafeVarargs
+    private List<Integer> callConcurrently(Supplier<Response>... calls) throws Exception {
+        CountDownLatch ready = new CountDownLatch(calls.length);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(calls.length);
+
+        try {
+            List<Future<Integer>> futures = new ArrayList<>();
+            for (Supplier<Response> call : calls) {
+                futures.add(executor.submit(waitThenCall(call, ready, start)));
+            }
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            List<Integer> statusCodes = new ArrayList<>();
+            for (Future<Integer> future : futures) {
+                statusCodes.add(future.get(30, TimeUnit.SECONDS));
+            }
+            return statusCodes;
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private Callable<Integer> waitThenCall(Supplier<Response> call, CountDownLatch ready, CountDownLatch start) {
+        return () -> {
+            ready.countDown();
+            if (!start.await(5, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("동시 호출 시작 신호를 받지 못했습니다.");
+            }
+            return call.get().statusCode();
+        };
+    }
+
+    private Response confirm(Long requestId) {
+        return given()
+            .basePath(ADMIN_PATH)
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{requestId}/confirm", requestId);
+    }
+
+    // ── 검증 ────────────────────────────────────────────
+
+    private void assertProcessedOnce(List<Integer> statusCodes, Long vendorId, long expectedBalance, Long requestId) {
+        assertSoftly(softly -> {
+            softly.assertThat(statusCodes).as("응답 코드").containsExactlyInAnyOrder(200, 409);
+            softly.assertThat(vendorBalance(vendorId)).as("거래처 잔액").isEqualTo(expectedBalance);
+            softly.assertThat(balanceHistoryCount(requestId)).as("구입 요청의 잔액 이력 수").isEqualTo(1);
+        });
+    }
+
+    private Long vendorBalance(Long vendorId) {
+        return jdbcTemplate.queryForObject("SELECT balance FROM vendors WHERE id = ?", Long.class, vendorId);
+    }
+
+    private Integer balanceHistoryCount(Long requestId) {
+        return jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM vendor_balance_histories WHERE purchase_request_id = ?",
+            Integer.class,
+            requestId
+        );
+    }
+
+    // ── 준비 ────────────────────────────────────────────
+
+    private Long setupPendingRequest(String paymentType) {
+        Long requestId = createPurchaseRequest(
+            getAuthHeader(volunteerToken), CLASSROOM_ID, "동시 요청 검증", "동시 요청 검증용 구입", 20000L, paymentType);
+        requestIds.add(requestId);
+        return requestId;
+    }
+
+    private Long setupPurchasedActualRequest(Long vendorId, long amount) {
+        Long requestId = setupPendingRequest("ACTUAL");
+        approve(requestId, "구매 보고 준비 승인").then().statusCode(200);
+        report(requestId, reportBody(vendorId, amount, null)).then().statusCode(200);
+        return requestId;
+    }
+
+    private Long setupPurchasedPrepaidRequest(Long vendorId, long amount) {
+        Long requestId = setupPendingRequest("PREPAID");
+        approve(requestId, "구매 보고 준비 승인").then().statusCode(200);
+        report(requestId, reportBody(vendorId, amount, "CARD")).then().statusCode(200);
+        saveProposal(requestId, amount);
+        attachProposalReceipt(requestId);
+        return requestId;
+    }
+
+    private Response approve(Long requestId, String note) {
+        return given()
+            .basePath(ADMIN_PATH)
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("note", note))
+            .patch("/{requestId}/approve", requestId);
+    }
+
+    private Response report(Long requestId, Map<String, Object> body) {
+        return given()
+            .basePath(USER_PATH)
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(body)
+            .post("/{requestId}/report", requestId);
+    }
+
+    private Map<String, Object> reportBody(Long vendorId, long amount, String paymentMethod) {
+        Map<String, Object> transaction = new java.util.LinkedHashMap<>();
+        transaction.put("vendorId", vendorId);
+        transaction.put("itemNames", List.of("동시 요청 검증 품목"));
+        transaction.put("amount", amount);
+        if (paymentMethod != null) {
+            transaction.put("paymentMethod", paymentMethod);
+        }
+        return Map.of("transactions", List.of(transaction));
+    }
+
+    private void saveProposal(Long requestId, long amount) {
+        given()
+            .basePath(USER_PATH)
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "proposalDate", LocalDate.now().toString(),
+                "completionDate", LocalDate.now().toString(),
+                "proposalAmount", amount,
+                "paymentAccount", "NATIONAL_SUBSIDY_04",
+                "items", List.of(Map.of(
+                    "content", "동시 요청 검증 품목",
+                    "quantity", 1,
+                    "estimatedUnitPrice", amount
+                ))
+            ))
+            .put("/{requestId}/proposal", requestId)
+            .then()
+            .statusCode(200);
+    }
+
+    private void attachProposalReceipt(Long requestId) {
+        String fileId = given()
+            .basePath("/api/v1/files")
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.MULTIPART)
+            .multiPart("file", "receipt.png", "receipt".getBytes(), "image/png")
+            .post("/images/purchase-items")
+            .then()
+            .statusCode(201)
+            .extract()
+            .path("fileId");
+        fileIds.add(UUID.fromString(fileId));
+
+        given()
+            .basePath(USER_PATH)
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("fileId", fileId))
+            .post("/{requestId}/proposal/receipts", requestId)
+            .then()
+            .statusCode(201);
+    }
+
+    private Long createVendorAndCharge(long amount) {
+        Long vendorId = given()
+            .basePath("/api/v1/admin/vendors")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("name", "동시 요청 테스트 거래처 " + System.nanoTime()))
+            .post()
+            .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
+        vendorIds.add(vendorId);
+
+        given()
+            .basePath("/api/v1/admin/vendors")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("amount", amount, "memo", "테스트 충전"))
+            .post("/{vendorId}/charges", vendorId)
+            .then()
+            .statusCode(200)
+            .body("balance", equalTo((int) amount));
+
+        return vendorId;
+    }
+}
