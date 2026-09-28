@@ -32,10 +32,10 @@ sequenceDiagram
 | 항목 | 결정 | 이유 |
 |---|---|---|
 | 잠금 방식 | 비관적 락 (`PESSIMISTIC_WRITE`) | `VendorRepository.findByIdForUpdate`, `DepartmentRepository.findByIdForUpdate`와 같은 방식이다. 스키마가 안 바뀐다 |
-| 전이 한 건의 상한 | 트랜잭션 제한 시간 5초 | 아래 「실패 경로」 |
+| 전이 한 건의 상한 | 트랜잭션 제한 시간 5초 (`@PurchaseRequestWriteTransactional`) | 아래 「실패 경로」 |
 | 스키마 변경 | 없음 | Flyway 마이그레이션과 `init_scheme.sql` 수정이 없다 |
 | 동시성 테스트 환경 | 기존 H2 E2E | `UserUpdateTest`의 부서장 동시 생성 테스트가 같은 락을 H2에서 검증하고 있다 |
-| 도메인 경계 | `purchase_request` 안에서 바꾼다. 예외 변환만 `common/advice` | 새 Proxy 메서드나 이벤트가 없다 |
+| 도메인 경계 | `purchase_request` 안에서 바꾼다. 거래처 잠금 순서는 `vendor`가 정한다. 공통 예외 변환은 `common/advice` | 새 Proxy 메서드나 이벤트가 없다 |
 | 권한 | 바뀌지 않는다 | 새 엔드포인트가 없다 |
 | 락 순서 | 구입 요청 → 거래처(ID 오름차순) | 모든 전이가 같은 순서로 잡는다 |
 
@@ -46,32 +46,41 @@ sequenceDiagram
 | `@Version` 낙관적 락 | 컬럼 추가 마이그레이션이 필요하다. 결재 확인은 거래처 잔액을 먼저 바꾸므로, 충돌을 커밋 때 알면 이미 한 일을 되돌려야 한다 |
 | 조건부 `UPDATE ... WHERE status = ?` | 전이마다 쿼리를 따로 써야 하고, 엔티티의 변경 감지와 섞이면 읽기 어렵다 |
 | 락 힌트(`jakarta.persistence.lock.timeout`) | Hibernate 6.6의 PostgreSQL 방언은 `NOWAIT` 외의 값을 SQL로 옮기지 않는다. 운영 DB에서 듣지 않는 설정이다 |
+| DB 이름 락 (PostgreSQL advisory lock) | 잠글 대상이 구입 요청 행 하나로 정해져 있다. 행 락이 같은 일을 하고 트랜잭션이 끝나면 저절로 풀린다. 이름 락은 PostgreSQL 전용 SQL이라 H2 테스트가 못 돈다 |
+| 분산 락 (Redis 등) | 앱 서버가 한 대이고 Redis가 없다. 락을 위해 운영할 것이 하나 늘어난다 |
+| 큐로 순서대로 처리 | 요청을 받아 두고 나중에 처리하면 응답이 「접수됨」으로 바뀐다. 화면은 승인 결과를 바로 보여 줘야 해서 API 계약이 달라진다 |
 
 ## 실패 경로
 
-| 상황 | 어디서 처리하나 | 돌려주는 것 |
-|---|---|---|
-| 같은 전이가 겹친다 | 나중 요청이 락을 얻은 뒤 서비스의 기존 상태 검사 | 승인·반려·삭제는 `409 PR-003`, 나머지는 `409 PR-006` |
-| DB가 락을 내주지 않는다 (DB의 락 대기 제한 초과 · 교착) | `GlobalExceptionHandler`가 `PessimisticLockingFailureException`을 변환 | `409 BIZ005` "다른 요청이 처리 중입니다" |
-| 전이가 5초 안에 안 끝난다 | `@Transactional(timeout = 5)`가 질의를 끊고 트랜잭션을 되돌린다 | `500 SYS001` |
-| 거래처 잔액이 부족하다 | 기존 동작 그대로. 트랜잭션이 되돌아가고 구입 요청 상태는 안 바뀐다 | 기존 `409` |
+| 상황 | 어디서 처리하나 | 돌려주는 것 | 로그 |
+|---|---|---|---|
+| 같은 전이가 겹친다 | 나중 요청이 락을 얻은 뒤 서비스의 기존 상태 검사 | 승인·반려·삭제는 `409 PR-003`, 나머지는 `409 PR-006` | WARN, 오류 코드 |
+| 삭제가 먼저 끝났다 | 락 있는 조회가 삭제된 행을 못 찾는다 | `404 PR-001` | WARN, 오류 코드 |
+| 구입 요청의 락을 못 얻는다 (DB의 락 대기 제한 초과 · 교착) | `PurchaseRequestLockReader`가 `PessimisticLockingFailureException`을 도메인 오류로 바꾼다 | `409 PR-027` | WARN, 구입 요청 ID와 예외 종류 |
+| 거래처의 락을 못 얻는다 | 도메인이 안 바꾼 락 실패는 `GlobalExceptionHandler`가 받는다 | `409 BIZ005` | WARN, 예외 종류와 SQLState |
+| 전이가 5초 안에 안 끝난다 | `@PurchaseRequestWriteTransactional`의 제한 시간이 질의를 끊는다. `GlobalExceptionHandler`가 받는다 | `503 SYS006` | ERROR, 예외 종류와 SQLState |
+| 거래처 잔액이 부족하다 | 기존 동작 그대로. 트랜잭션이 되돌아가고 구입 요청 상태는 안 바뀐다 | 기존 `409` | 기존 |
+
+**로그에 예외 메시지를 싣지 않는다.** DB가 메시지에 잠긴 행의 내용을 실어 보내기도 한다
+(H2에서 확인). 락 실패와 시간 초과는 예외 종류와 SQLState, 그리고 알 수 있으면 구입 요청
+ID만 남긴다.
 
 **대기 상한 5초의 근거.** 전이 하나는 질의 몇 개라 정상일 때 1초 안에 끝난다. 5초를
 넘겼다면 앞 요청이 멈춘 것이고, 그동안 나중 요청은 DB 연결을 쥐고 있다(운영 풀 최대
 10개). 5초 뒤에는 연결을 놓는다.
 
-**시간 초과를 409로 바꾸지 않는다.** 처음 계획은 질의·트랜잭션 시간 초과도 `BIZ005`로
-바꿨다. codex 리뷰 1회차가 짚었다 — 락을 바로 얻고도 뒤의 조회가 느려 5초를 넘기면
-DB 지연이 「다른 요청이 처리 중」으로 나간다. 시간 초과만 보고는 락 대기였는지 알 수
-없으므로 서버 오류로 남긴다.
+**시간 초과를 409로 바꾸지 않는다.** 처음 계획은 질의·트랜잭션 시간 초과도 락 실패와
+같은 409로 바꿨다. codex 리뷰 1회차가 짚었다 — 락을 바로 얻고도 뒤의 조회가 느려 5초를
+넘기면 DB 지연이 「다른 요청이 처리 중」으로 나간다. 시간 초과만 보고는 락 대기였는지 알
+수 없으므로 서버 오류(503)로 답하고, 뜻이 드러나는 오류 코드를 따로 둔다.
 
 DB마다 다르게 보인다.
 
 | DB | 다른 트랜잭션이 행을 오래 잡고 있을 때 | 응답 |
 |---|---|---|
-| H2 (테스트) | H2의 기본 락 대기 시간(1초)이 끊는다. `PessimisticLockingFailureException` | `409 BIZ005` |
-| PostgreSQL (운영) | 락 대기에 제한이 없어 5초 뒤 트랜잭션 제한 시간이 끊는다. `QueryTimeoutException` | `500 SYS001` |
-| PostgreSQL (운영), 교착 | DB가 한쪽을 끊는다. `CannotAcquireLockException` | `409 BIZ005` |
+| H2 (테스트) | 락 대기 시간(1초, `application-test.yml`의 `LOCK_TIMEOUT`)이 끊는다 | `409 PR-027` |
+| PostgreSQL (운영) | 락 대기에 제한이 없어 5초 뒤 트랜잭션 제한 시간이 끊는다 | `503 SYS006` |
+| PostgreSQL (운영), 교착 | DB가 한쪽을 끊는다 | `409 PR-027` |
 
 **테스트와 운영이 같은 상황에서 다른 응답을 낸다.** 운영에서도 `409`가 나가게 하려면
 PostgreSQL 연결에 `lock_timeout`을 걸어야 한다(`connection-init-sql`). 모든 락에 걸리는
@@ -124,11 +133,13 @@ flowchart LR
 ### 2. 결재 확인에 락과 대기 상한 적용
 
 - 파일
-  - `domain/purchase_request/repository/PurchaseRequestRepository.java`: `findByIdForUpdate` 추가
-  - `domain/purchase_request/service/PurchaseRequestService.java`: 사설 `findByIdForUpdate` 추가, `confirmPurchase`가 사용, `@Transactional(timeout = 5)`
-  - `common/exception/CommonErrorCode.java`: `RESOURCE_BUSY(409, "BIZ005")` 추가
-  - `common/advice/GlobalExceptionHandler.java`: 락 획득 실패(`PessimisticLockingFailureException`)를 `BIZ005`로 변환
-- 검증 추가: 구입 요청 행의 락을 얻지 못하면 결재 확인은 `409 BIZ005`이고 잔액이 안 변한다
+  - `domain/purchase_request/repository/PurchaseRequestRepository.java`: `findForUpdateByIdAndIsDeletedFalse` 추가 (파생 쿼리 + `@Lock`)
+  - `domain/purchase_request/service/PurchaseRequestLockReader.java`: 락 있는 조회. 락 실패를 `PR-027`로 바꾼다
+  - `domain/purchase_request/service/PurchaseRequestWriteTransactional.java`: 제한 시간 5초를 가진 트랜잭션 애너테이션
+  - `domain/purchase_request/service/PurchaseRequestService.java`: `confirmPurchase`가 위 둘을 쓴다
+  - `PurchaseRequestErrorCode`: `LOCK_NOT_ACQUIRED(409, "PR-027")`. `CommonErrorCode`: `RESOURCE_BUSY(409, "BIZ005")`, `PROCESSING_TIMEOUT(503, "SYS006")`
+  - `common/advice/GlobalExceptionHandler.java`: 도메인이 안 바꾼 락 실패는 `BIZ005`, 질의·트랜잭션 시간 초과는 `SYS006`
+- 검증 추가: 구입 요청 행의 락을 얻지 못하면 결재 확인은 `409 PR-027`이고 잔액이 안 변한다
 - 끝난 기준: 작업 1의 테스트와 위 테스트가 통과한다
 - 커밋: `fix(purchase-request): 결재 확인 시 구입 요청 행 잠금 (#225)`
 
@@ -155,12 +166,12 @@ flowchart LR
 
 ### 5. 거래처 락 순서 고정
 
-- 파일: `domain/purchase_request/entity/PurchaseRequest.java`, `PurchaseRequestService.java` (`confirmPurchase`),
-  `src/test/java/geumjeongyahak/unit/purchase_request/PurchaseRequestEntityTest.java`
+- 파일: `domain/vendor/service/VendorService.java`, `PurchaseRequestService.java` (`confirmPurchase`),
+  `src/test/java/geumjeongyahak/unit/vendor/VendorServiceDeductOrderTest.java`
 - 실 결제는 거래처별 금액을 `HashMap`으로 모아 순회한다. 순회 순서가 정해져 있지 않아, 서로 다른 구입 요청 두 건이 같은 거래처 둘을 반대 순서로 잠그면 교착이 날 수 있다
-- 거래처별 합계를 거래처 ID 오름차순으로 내놓는 메서드를 엔티티에 두고 서비스가 그 순서로 잠근다.
-  서비스에 두면 대역 여섯을 세워야 순서 하나를 볼 수 있어서 엔티티에 둔다
-- 끝난 기준: 거래처 다섯을 섞어 넣은 요청의 합계가 ID 오름차순으로 나오고, 같은 거래처의 금액이 합쳐짐을 단위 테스트가 확인한다
+- 거래처를 어떤 순서로 잠그는지는 거래처 도메인이 정한다. `VendorService`가 거래처별 금액을 한 번에 받아 ID 오름차순으로 잠근다
+- 처음에는 순서를 `PurchaseRequest` 엔티티에 뒀다. 테스트하기 쉬워서였는데, 엔티티가 자신을 부르는 쪽의 잠금 전략을 알게 돼서 옮겼다
+- 끝난 기준: 거래처 다섯을 섞어 넣었을 때 잠그는 순서가 ID 오름차순임을 단위 테스트가 확인한다. 정렬을 빼면 실패한다
 - 커밋: `fix(purchase-request): 결재 확인 시 거래처 잠금 순서 고정 (#225)`
 
 ### 6. 서비스 단위 테스트 — 하지 않는다
@@ -205,5 +216,5 @@ scripts/harness/verify.sh
 |---|---|
 | 대기 상한이 PostgreSQL에서 기대대로 끊기는지 테스트로 확인하지 못한다 | 테스트는 H2에서 락 획득 실패 경로만 확인한다. dev 배포 뒤 수동으로 한 번 확인한다 |
 | 동시성 테스트가 간헐적으로 실패 | 두 스레드가 준비된 뒤 동시에 출발시킨다. 새 테스트를 10회 반복 실행해 확인한다 |
-| `BIZ005` 변환이 다른 도메인의 락 실패에도 적용된다 | 의도한 것이다. 거래처·부서 락이 실패해도 지금은 500이 나간다 |
+| `BIZ005`·`SYS006` 변환이 다른 도메인에도 적용된다 | 의도한 것이다. 지금까지는 둘 다 `500 SYS001`이었고 로그에 스택트레이스가 통째로 남았다 |
 | 락을 잡은 채 응답 조립에서 거래처 전체를 조회 | 기존 동작이다. #230에서 다룬다 |
