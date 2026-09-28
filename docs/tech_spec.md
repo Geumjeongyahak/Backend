@@ -414,6 +414,10 @@ public abstract class BaseEntity {
 }
 ```
 
+시각 칼럼은 시간대 없는 `LocalDateTime`이고 **한국 시간(`Asia/Seoul`)**으로 저장한다. 서버 OS 시간대와
+상관없이 `GeumjeongyahakApiApplication`의 초기화 블록이 JVM 기본 시간대를 한국 시간으로 정한다.
+테스트 JVM도 `build.gradle`에서 한국 시간으로 띄운다.
+
 ---
 
 ## 7. 테스트 전략
