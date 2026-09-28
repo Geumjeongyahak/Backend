@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.file.service;
 
 import geumjeongyahak.common.exception.BadRequestException;
+import geumjeongyahak.common.config.AppConfig;
 import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.validation.FileValidationSupport;
 import geumjeongyahak.domain.classroom.entity.Classroom;
@@ -23,7 +24,6 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.YearMonth;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -40,7 +40,6 @@ public class DriveFileService {
     private static final String DEFAULT_EXTENSION = "drive";
     private static final String SCOPE_CLASSROOM = "classroom";
     private static final String SCOPE_DEPARTMENT = "department";
-    private static final ZoneId DRIVE_FOLDER_ZONE = ZoneId.of("Asia/Seoul");
     private static final Pattern DRIVE_FILE_PATH_PATTERN = Pattern.compile("/(?:file/d|document/d|spreadsheets/d|presentation/d|folders)/([^/?#]+)");
 
     private final FileRepository fileRepository;
@@ -124,7 +123,7 @@ public class DriveFileService {
             throw new BadRequestException(CommonErrorCode.INVALID_INPUT, "scopeType과 scopeId는 함께 전달해야 합니다.");
         }
 
-        YearMonth now = YearMonth.now(DRIVE_FOLDER_ZONE);
+        YearMonth now = YearMonth.now(AppConfig.ZONE_ID);
         String year = Integer.toString(now.getYear());
         String month = String.format("%02d", now.getMonthValue());
 
