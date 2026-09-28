@@ -21,7 +21,7 @@ sequenceDiagram
     B->>S: 같은 상태 전이
     S->>DB: A: 구입 요청 조회 (FOR UPDATE)
     S->>DB: B: 구입 요청 조회 (FOR UPDATE)
-    Note over S,DB: B는 A가 끝날 때까지 기다린다 (최대 5초)
+    Note over S,DB: B는 A가 끝날 때까지 기다린다
     S->>DB: A: 처리 후 상태 변경, COMMIT
     DB-->>S: B: 바뀐 상태를 읽는다
     S-->>B: 상태 검사에서 거절 (409)
@@ -32,7 +32,7 @@ sequenceDiagram
 | 항목 | 결정 | 이유 |
 |---|---|---|
 | 잠금 방식 | 비관적 락 (`PESSIMISTIC_WRITE`) | `VendorRepository.findByIdForUpdate`, `DepartmentRepository.findByIdForUpdate`와 같은 방식이다. 스키마가 안 바뀐다 |
-| 대기 상한 | 트랜잭션 제한 시간 5초 | 아래 「실패 경로」 |
+| 전이 한 건의 상한 | 트랜잭션 제한 시간 5초 | 아래 「실패 경로」 |
 | 스키마 변경 | 없음 | Flyway 마이그레이션과 `init_scheme.sql` 수정이 없다 |
 | 동시성 테스트 환경 | 기존 H2 E2E | `UserUpdateTest`의 부서장 동시 생성 테스트가 같은 락을 H2에서 검증하고 있다 |
 | 도메인 경계 | `purchase_request` 안에서 바꾼다. 예외 변환만 `common/advice` | 새 Proxy 메서드나 이벤트가 없다 |
@@ -52,22 +52,30 @@ sequenceDiagram
 | 상황 | 어디서 처리하나 | 돌려주는 것 |
 |---|---|---|
 | 같은 전이가 겹친다 | 나중 요청이 락을 얻은 뒤 서비스의 기존 상태 검사 | 승인·반려·삭제는 `409 PR-003`, 나머지는 `409 PR-006` |
-| 락을 5초 넘게 기다린다 | `@Transactional(timeout = 5)`가 질의를 끊는다. `GlobalExceptionHandler`가 변환 | `409 BIZ005` "다른 요청이 처리 중입니다" |
-| 교착이 난다 | DB가 한쪽을 끊는다. 위와 같은 변환을 탄다 | `409 BIZ005` |
+| DB가 락을 내주지 않는다 (DB의 락 대기 제한 초과 · 교착) | `GlobalExceptionHandler`가 `PessimisticLockingFailureException`을 변환 | `409 BIZ005` "다른 요청이 처리 중입니다" |
+| 전이가 5초 안에 안 끝난다 | `@Transactional(timeout = 5)`가 질의를 끊고 트랜잭션을 되돌린다 | `500 SYS001` |
 | 거래처 잔액이 부족하다 | 기존 동작 그대로. 트랜잭션이 되돌아가고 구입 요청 상태는 안 바뀐다 | 기존 `409` |
 
 **대기 상한 5초의 근거.** 전이 하나는 질의 몇 개라 정상일 때 1초 안에 끝난다. 5초를
 넘겼다면 앞 요청이 멈춘 것이고, 그동안 나중 요청은 DB 연결을 쥐고 있다(운영 풀 최대
-10개). 5초 뒤에는 연결을 놓고 사용자에게 다시 시도하라고 알린다.
+10개). 5초 뒤에는 연결을 놓는다.
 
-대기 상한이 실제로 듣는 방식은 DB마다 다르다.
+**시간 초과를 409로 바꾸지 않는다.** 처음 계획은 질의·트랜잭션 시간 초과도 `BIZ005`로
+바꿨다. codex 리뷰 1회차가 짚었다 — 락을 바로 얻고도 뒤의 조회가 느려 5초를 넘기면
+DB 지연이 「다른 요청이 처리 중」으로 나간다. 시간 초과만 보고는 락 대기였는지 알 수
+없으므로 서버 오류로 남긴다.
 
-| DB | 무엇이 끊나 | 올라오는 예외 |
+DB마다 다르게 보인다.
+
+| DB | 다른 트랜잭션이 행을 오래 잡고 있을 때 | 응답 |
 |---|---|---|
-| PostgreSQL (운영) | 트랜잭션 제한 시간이 질의 제한 시간으로 전달되어 드라이버가 질의를 취소한다 | `QueryTimeoutException` 또는 `TransactionTimedOutException` |
-| H2 (테스트) | H2의 기본 락 대기 시간(1초)이 먼저 끊는다 | `PessimisticLockingFailureException` 계열 |
+| H2 (테스트) | H2의 기본 락 대기 시간(1초)이 끊는다. `PessimisticLockingFailureException` | `409 BIZ005` |
+| PostgreSQL (운영) | 락 대기에 제한이 없어 5초 뒤 트랜잭션 제한 시간이 끊는다. `QueryTimeoutException` | `500 SYS001` |
+| PostgreSQL (운영), 교착 | DB가 한쪽을 끊는다. `CannotAcquireLockException` | `409 BIZ005` |
 
-셋 다 같은 응답으로 변환한다.
+**테스트와 운영이 같은 상황에서 다른 응답을 낸다.** 운영에서도 `409`가 나가게 하려면
+PostgreSQL 연결에 `lock_timeout`을 걸어야 한다(`connection-init-sql`). 모든 락에 걸리는
+설정이라 이 이슈에서 정하지 않고 아래 「안 하는 것」에 둔다.
 
 ## 질의
 
@@ -119,8 +127,8 @@ flowchart LR
   - `domain/purchase_request/repository/PurchaseRequestRepository.java`: `findByIdForUpdate` 추가
   - `domain/purchase_request/service/PurchaseRequestService.java`: 사설 `findByIdForUpdate` 추가, `confirmPurchase`가 사용, `@Transactional(timeout = 5)`
   - `common/exception/CommonErrorCode.java`: `RESOURCE_BUSY(409, "BIZ005")` 추가
-  - `common/advice/GlobalExceptionHandler.java`: 락 실패와 시간 초과 예외를 `BIZ005`로 변환
-- 검증 추가: 다른 트랜잭션이 구입 요청 행을 잠근 동안 결재 확인을 호출하면 `409 BIZ005`이고 잔액이 안 변한다
+  - `common/advice/GlobalExceptionHandler.java`: 락 획득 실패(`PessimisticLockingFailureException`)를 `BIZ005`로 변환
+- 검증 추가: 구입 요청 행의 락을 얻지 못하면 결재 확인은 `409 BIZ005`이고 잔액이 안 변한다
 - 끝난 기준: 작업 1의 테스트와 위 테스트가 통과한다
 - 커밋: `fix(purchase-request): 결재 확인 시 구입 요청 행 잠금 (#225)`
 
@@ -189,12 +197,13 @@ scripts/harness/verify.sh
 - `vendor_balance_histories` 유니크 제약 추가
 - 엔티티(`PurchaseRequest`)에 상태 검사를 넣는 것. 지금은 서비스가 검사하고, 옮기면 예외 종류가 바뀐다
 - 거래처·부서의 기존 락에 대기 상한을 넣는 것. 이 이슈의 범위 밖이다
+- PostgreSQL 연결에 `lock_timeout`을 거는 것. 락 대기 초과를 운영에서도 `409`로 내려면 필요하지만 모든 질의에 걸리는 설정이라 따로 정한다
 
 ## 위험
 
 | 위험 | 대응 |
 |---|---|
-| 대기 상한이 PostgreSQL에서 기대대로 끊기는지 테스트로 확인하지 못한다 | 테스트는 H2의 락 대기 시간으로 같은 응답 경로를 확인한다. dev 배포 뒤 수동으로 한 번 확인한다 |
+| 대기 상한이 PostgreSQL에서 기대대로 끊기는지 테스트로 확인하지 못한다 | 테스트는 H2에서 락 획득 실패 경로만 확인한다. dev 배포 뒤 수동으로 한 번 확인한다 |
 | 동시성 테스트가 간헐적으로 실패 | 두 스레드가 준비된 뒤 동시에 출발시킨다. 새 테스트를 10회 반복 실행해 확인한다 |
 | `BIZ005` 변환이 다른 도메인의 락 실패에도 적용된다 | 의도한 것이다. 거래처·부서 락이 실패해도 지금은 500이 나간다 |
 | 락을 잡은 채 응답 조립에서 거래처 전체를 조회 | 기존 동작이다. #230에서 다룬다 |

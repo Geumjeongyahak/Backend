@@ -52,7 +52,7 @@ import geumjeongyahak.domain.vendor.service.VendorService;
 @Transactional(readOnly = true)
 public class PurchaseRequestService {
 
-    // 락 대기를 포함한 상태 전이 한 건의 상한. 넘기면 DB 연결을 놓고 BIZ005 로 응답한다.
+    // 락 대기를 포함한 상태 전이 한 건의 상한. 넘기면 트랜잭션을 되돌리고 DB 연결을 놓는다.
     static final int TRANSITION_TIMEOUT_SECONDS = 5;
 
     private final PurchaseRequestRepository purchaseRequestRepository;

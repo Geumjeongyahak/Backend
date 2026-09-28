@@ -229,8 +229,8 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
     }
 
     @Test
-    @DisplayName("다른 트랜잭션이 구입 요청을 잠근 동안 결재 확인하면 409 BIZ005이고 잔액은 그대로다")
-    void confirm_whileRowLocked_returnsResourceBusy() throws Exception {
+    @DisplayName("구입 요청의 락을 얻지 못하면 결재 확인은 409 BIZ005이고 잔액은 그대로다")
+    void confirm_whenLockNotAcquired_returnsResourceBusy() throws Exception {
         Long vendorId = createVendorAndCharge(100000L);
         Long requestId = setupPurchasedActualRequest(vendorId, 20000L);
         CountDownLatch locked = new CountDownLatch(1);

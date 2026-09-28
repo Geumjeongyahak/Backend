@@ -4,7 +4,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
-import org.springframework.dao.QueryTimeoutException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -13,7 +12,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.transaction.TransactionTimedOutException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
@@ -326,13 +324,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
-    @ExceptionHandler({
-        PessimisticLockingFailureException.class,
-        QueryTimeoutException.class,
-        TransactionTimedOutException.class
-    })
-    public ResponseEntity<ProblemDetail> handleLockWaitFailure(Exception ex) {
-        log.warn("락 대기 실패 - {}", ex.getClass().getSimpleName(), ex);
+    // 질의·트랜잭션 시간 초과는 여기서 받지 않는다. 락과 무관한 DB 지연일 수 있어 5xx 로 남긴다.
+    @ExceptionHandler(PessimisticLockingFailureException.class)
+    public ResponseEntity<ProblemDetail> handlePessimisticLockingFailureException(
+        PessimisticLockingFailureException ex
+    ) {
+        log.warn("락 획득 실패 - {}", ex.getClass().getSimpleName(), ex);
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.CONFLICT,
