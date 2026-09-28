@@ -53,6 +53,9 @@ import geumjeongyahak.domain.vendor.service.VendorService;
 @Transactional(readOnly = true)
 public class PurchaseRequestService {
 
+    // 락 대기를 포함한 상태 전이 한 건의 상한. 넘기면 DB 연결을 놓고 BIZ005 로 응답한다.
+    private static final int TRANSITION_TIMEOUT_SECONDS = 5;
+
     private final PurchaseRequestRepository purchaseRequestRepository;
     private final FileProxyService fileProxyService;
     private final ClassroomProxyService classroomProxyService;
@@ -307,10 +310,10 @@ public class PurchaseRequestService {
         return toDetailResponse(purchaseRequest);
     }
 
-    @Transactional
+    @Transactional(timeout = TRANSITION_TIMEOUT_SECONDS)
     public PurchaseRequestDetailResponse confirmPurchase(Long confirmerId, Long requestId) {
         log.debug("구매 결재 확인 (requestId={})", requestId);
-        PurchaseRequest purchaseRequest = findById(requestId);
+        PurchaseRequest purchaseRequest = findByIdForUpdate(requestId);
 
         if (purchaseRequest.getStatus() != PurchaseRequestStatus.PURCHASED) {
             throw new BusinessException(PurchaseRequestErrorCode.INVALID_STATUS);
@@ -368,6 +371,11 @@ public class PurchaseRequestService {
 
     private PurchaseRequest findById(Long requestId) {
         return purchaseRequestRepository.findByIdAndIsDeletedFalse(requestId)
+            .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));
+    }
+
+    private PurchaseRequest findByIdForUpdate(Long requestId) {
+        return purchaseRequestRepository.findByIdForUpdate(requestId)
             .orElseThrow(() -> new ResourceNotFoundException(PurchaseRequestErrorCode.NOT_FOUND, requestId));
     }
 

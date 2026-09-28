@@ -3,6 +3,8 @@ package geumjeongyahak.common.advice;
 import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -11,6 +13,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.transaction.TransactionTimedOutException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
@@ -321,6 +324,24 @@ public class GlobalExceptionHandler {
         problemDetail.setProperty("code", CommonErrorCode.INVALID_INPUT.getCode());
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
+    @ExceptionHandler({
+        PessimisticLockingFailureException.class,
+        QueryTimeoutException.class,
+        TransactionTimedOutException.class
+    })
+    public ResponseEntity<ProblemDetail> handleLockWaitFailure(Exception ex) {
+        log.warn("락 대기 실패 - {}", ex.getClass().getSimpleName(), ex);
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                CommonErrorCode.RESOURCE_BUSY.getMessage()
+        );
+        problemDetail.setTitle(CommonErrorCode.RESOURCE_BUSY.getCode());
+        problemDetail.setProperty("code", CommonErrorCode.RESOURCE_BUSY.getCode());
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail);
     }
 
     @ExceptionHandler(Exception.class)

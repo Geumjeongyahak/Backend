@@ -25,6 +25,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import geumjeongyahak.domain.file.repository.FileRepository;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
 import geumjeongyahak.domain.vendor.repository.VendorBalanceHistoryRepository;
@@ -43,6 +45,9 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     @Autowired
     private PurchaseRequestRepository purchaseRequestRepository;
@@ -99,7 +104,48 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
         assertProcessedOnce(statusCodes, vendorId, 120000L, requestId);
     }
 
+    @Test
+    @DisplayName("다른 트랜잭션이 구입 요청을 잠근 동안 결재 확인하면 409 BIZ005이고 잔액은 그대로다")
+    void confirm_whileRowLocked_returnsResourceBusy() throws Exception {
+        Long vendorId = createVendorAndCharge(100000L);
+        Long requestId = setupPurchasedActualRequest(vendorId, 20000L);
+        CountDownLatch locked = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        try {
+            Future<?> lockHolder = executor.submit(() -> holdRowLock(requestId, locked, release));
+            assertThat(locked.await(5, TimeUnit.SECONDS)).isTrue();
+
+            Response response = confirm(requestId);
+
+            release.countDown();
+            lockHolder.get(10, TimeUnit.SECONDS);
+            assertSoftly(softly -> {
+                softly.assertThat(response.statusCode()).as("응답 코드").isEqualTo(409);
+                softly.assertThat(response.jsonPath().getString("code")).as("오류 코드").isEqualTo("BIZ005");
+                softly.assertThat(vendorBalance(vendorId)).as("거래처 잔액").isEqualTo(100000L);
+                softly.assertThat(balanceHistoryCount(requestId)).as("구입 요청의 잔액 이력 수").isZero();
+            });
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+    }
+
     // ── 동시 호출 ────────────────────────────────────────
+
+    private void holdRowLock(Long requestId, CountDownLatch locked, CountDownLatch release) {
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            purchaseRequestRepository.findByIdForUpdate(requestId).orElseThrow();
+            locked.countDown();
+            try {
+                release.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+    }
 
     @SafeVarargs
     private List<Integer> callConcurrently(Supplier<Response>... calls) throws Exception {
