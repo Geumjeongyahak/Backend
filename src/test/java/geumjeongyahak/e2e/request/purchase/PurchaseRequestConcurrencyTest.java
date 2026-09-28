@@ -229,6 +229,78 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("수정과 승인이 겹쳐도 승인은 되돌아가지 않는다")
+    void updateAndApprove_concurrently_keepsApproval() throws Exception {
+        Long requestId = setupPendingRequest("ACTUAL");
+
+        List<Integer> statusCodes = callConcurrently(
+            () -> update(requestId, "동시 수정 제목"),
+            () -> approve(requestId, "동시 승인")
+        );
+
+        Map<String, Object> saved = jdbcTemplate.queryForMap(
+            "SELECT status, title FROM purchase_requests WHERE id = ?", requestId);
+        boolean updated = statusCodes.get(0) == 200;
+        assertSoftly(softly -> {
+            softly.assertThat(statusCodes.get(0)).as("수정 응답 코드").isIn(200, 409);
+            softly.assertThat(statusCodes.get(1)).as("승인 응답 코드").isEqualTo(200);
+            softly.assertThat(saved.get("status")).as("저장된 상태").isEqualTo("APPROVED");
+            softly.assertThat(saved.get("title")).as("저장된 제목").isEqualTo(updated ? "동시 수정 제목" : "동시 요청 검증");
+        });
+    }
+
+    @Test
+    @DisplayName("거래 수정과 결재 확인이 겹쳐도 차감액은 저장된 거래 금액과 같다")
+    void updateItemReceiptsAndConfirm_concurrently_deductsSavedAmount() throws Exception {
+        Long vendorId = createVendorAndCharge(100000L);
+        Long requestId = setupPurchasedActualRequest(vendorId, 20000L);
+
+        List<Integer> statusCodes = callConcurrently(
+            () -> updateItemReceipts(requestId, reportBody(vendorId, 25000L, null)),
+            () -> confirm(requestId)
+        );
+
+        Long savedAmount = jdbcTemplate.queryForObject(
+            "SELECT SUM(amount) FROM purchase_request_payment_transactions WHERE purchase_request_id = ?",
+            Long.class,
+            requestId
+        );
+        assertSoftly(softly -> {
+            softly.assertThat(statusCodes.get(0)).as("거래 수정 응답 코드").isIn(200, 409);
+            softly.assertThat(statusCodes.get(1)).as("결재 확인 응답 코드").isEqualTo(200);
+            softly.assertThat(requestStatus(requestId)).as("구입 요청 상태").isEqualTo("CONFIRMED");
+            softly.assertThat(vendorBalance(vendorId)).as("거래처 잔액").isEqualTo(100000L - savedAmount);
+            softly.assertThat(balanceHistoryCount(requestId)).as("구입 요청의 잔액 이력 수").isEqualTo(1);
+        });
+    }
+
+    @Test
+    @DisplayName("선금 결제의 마지막 영수증 삭제와 결재 확인이 겹치면 하나만 성공한다")
+    void deleteLastReceiptAndConfirm_concurrently_onlyOneSucceeds() throws Exception {
+        Long vendorId = createVendorAndCharge(100000L);
+        Long requestId = setupPendingRequest("PREPAID");
+        approve(requestId, "구매 보고 준비 승인").then().statusCode(200);
+        report(requestId, reportBody(vendorId, 20000L, "CARD")).then().statusCode(200);
+        saveProposal(requestId, 20000L);
+        Long receiptId = attachProposalReceipt(requestId, uploadReceiptFile())
+            .then().statusCode(201).extract().jsonPath().getLong("receipts[0].id");
+
+        List<Integer> statusCodes = callConcurrently(
+            () -> deleteProposalReceipt(requestId, receiptId),
+            () -> confirm(requestId)
+        );
+
+        boolean confirmed = "CONFIRMED".equals(requestStatus(requestId));
+        // 확인이 이기면 삭제는 수정할 수 없는 상태라 거절되고, 삭제가 이기면 확인은 영수증이 없어 거절된다.
+        List<Integer> expectedStatusCodes = confirmed ? List.of(409, 200) : List.of(204, 409);
+        assertSoftly(softly -> {
+            softly.assertThat(statusCodes).as("응답 코드").isEqualTo(expectedStatusCodes);
+            softly.assertThat(proposalReceiptCount(requestId)).as("남은 품의 영수증 수").isEqualTo(confirmed ? 1 : 0);
+            softly.assertThat(vendorBalance(vendorId)).as("거래처 잔액").isEqualTo(confirmed ? 120000L : 100000L);
+        });
+    }
+
+    @Test
     @DisplayName("구입 요청의 락을 얻지 못하면 결재 확인은 409 BIZ005이고 잔액은 그대로다")
     void confirm_whenLockNotAcquired_returnsResourceBusy() throws Exception {
         Long vendorId = createVendorAndCharge(100000L);
@@ -517,6 +589,36 @@ class PurchaseRequestConcurrencyTest extends RequestBaseTest {
             .contentType(ContentType.JSON)
             .body(Map.of("fileId", fileId))
             .post("/{requestId}/proposal/receipts", requestId);
+    }
+
+    private Response update(Long requestId, String title) {
+        return given()
+            .basePath(USER_PATH)
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "classroomId", CLASSROOM_ID,
+                "title", title,
+                "content", "동시 요청 검증용 구입",
+                "items", List.of(Map.of("name", "동시 요청 검증 품목", "reason", "동시 요청 검증", "quantity", 1))
+            ))
+            .put("/{requestId}", requestId);
+    }
+
+    private Response updateItemReceipts(Long requestId, Map<String, Object> body) {
+        return given()
+            .basePath(USER_PATH)
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .contentType(ContentType.JSON)
+            .body(body)
+            .post("/{requestId}/item-receipts", requestId);
+    }
+
+    private Response deleteProposalReceipt(Long requestId, Long receiptId) {
+        return given()
+            .basePath(USER_PATH)
+            .header(AUTH_HEADER, getAuthHeader(volunteerToken))
+            .delete("/{requestId}/proposal/receipts/{receiptId}", requestId, receiptId);
     }
 
     private Response delete(Long requestId) {

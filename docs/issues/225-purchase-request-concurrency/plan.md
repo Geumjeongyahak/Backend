@@ -98,7 +98,7 @@ sequenceDiagram
 
 | 층 | 파일 | 무엇 |
 |---|---|---|
-| E2E | `PurchaseRequestConcurrencyTest` | 겹친 요청 일곱 갈래, 락을 못 얻은 경우 둘 |
+| E2E | `PurchaseRequestConcurrencyTest` | 겹친 요청 열 갈래, 락을 못 얻은 경우 둘 |
 | 단위 | `VendorServiceDeductOrderTest` | 거래처를 ID 오름차순으로 잠근다 |
 
 허용되지 않은 상태에서의 거절은 기존 E2E(`PurchaseRequestStatusTest` ·
@@ -107,8 +107,14 @@ sequenceDiagram
 | 확인 | 결과 |
 |---|---|
 | 고치기 전에 새 테스트가 실패하는가 | 실패한다. 결재 확인이 겹치면 둘 다 `200`, 잔액이 두 번 바뀌고 이력이 2건이었다 |
+| 고치기 전 서비스 코드로 돌리면 | 열둘 중 아홉에서 열이 실패한다. 통과하는 둘은 락을 못 얻는 경우로, 락이 아니라 예외 변환을 본다 |
 | 반복 실행 | 20회 모두 통과 |
-| 실제 PostgreSQL 18 | 겹친 요청 테스트 모두 통과 |
+| 실제 PostgreSQL 18 (`lock_timeout=3000`) | 3회 모두 통과 |
+| 실제 PostgreSQL 18 (기본 설정) | 겹친 요청 열은 통과. 락을 못 얻는 둘은 상한이 없어 기다렸다가 정상 처리된다 |
+
+쓰기 메서드 열 중 동시성 테스트가 없는 것은 품의 저장(`saveProposal`) 하나다. 품의 저장과
+결재 확인은 어느 쪽이 먼저여도 둘 다 성공할 수 있어, 바깥에서 순서를 가릴 방법이 없다.
+확인된 뒤의 품의 저장이 거절되는 것은 기존 `PurchaseRequestProposalTest`가 본다.
 
 ## 확인 방법
 
