@@ -87,9 +87,8 @@ flowchart LR
     T2 --> T3[3 승인·반려 테스트와 락]
     T2 --> T5[5 거래처 락 순서]
     T3 --> T4[4 나머지 전이 락]
-    T4 --> T6[6 서비스 단위 테스트]
-    T5 --> T6
-    T6 --> T7[7 API 문서]
+    T4 --> T7[7 API 문서]
+    T5 --> T7
 ```
 
 ## 작업
@@ -148,19 +147,26 @@ flowchart LR
 
 ### 5. 거래처 락 순서 고정
 
-- 파일: `PurchaseRequestService.java` (`confirmPurchase`), 단위 테스트
+- 파일: `domain/purchase_request/entity/PurchaseRequest.java`, `PurchaseRequestService.java` (`confirmPurchase`),
+  `src/test/java/geumjeongyahak/unit/purchase_request/PurchaseRequestEntityTest.java`
 - 실 결제는 거래처별 금액을 `HashMap`으로 모아 순회한다. 순회 순서가 정해져 있지 않아, 서로 다른 구입 요청 두 건이 같은 거래처 둘을 반대 순서로 잠그면 교착이 날 수 있다
-- 거래처 ID 오름차순으로 잠그게 바꾼다
-- 끝난 기준: 거래처가 둘인 요청의 차감 호출 순서가 ID 오름차순임을 단위 테스트가 확인한다
+- 거래처별 합계를 거래처 ID 오름차순으로 내놓는 메서드를 엔티티에 두고 서비스가 그 순서로 잠근다.
+  서비스에 두면 대역 여섯을 세워야 순서 하나를 볼 수 있어서 엔티티에 둔다
+- 끝난 기준: 거래처 다섯을 섞어 넣은 요청의 합계가 ID 오름차순으로 나오고, 같은 거래처의 금액이 합쳐짐을 단위 테스트가 확인한다
 - 커밋: `fix(purchase-request): 결재 확인 시 거래처 잠금 순서 고정 (#225)`
 
-### 6. 서비스 단위 테스트
+### 6. 서비스 단위 테스트 — 하지 않는다
 
-- 파일: `src/test/java/geumjeongyahak/unit/purchase_request/PurchaseRequestServiceTransitionTest.java` (새 파일)
-- 검증: 각 전이 메서드가 허용되지 않은 상태에서 `ALREADY_PROCESSED` 또는 `INVALID_STATUS`를 던진다
-- 대역에 넣은 값을 되읽는 단언은 쓰지 않는다. 「락 있는 조회를 불렀는가」는 단위 테스트로 보지 않고 작업 1·3·4의 동시성 테스트가 본다
-- 끝난 기준: 상태 검사 한 줄을 지우면 해당 테스트가 실패한다
-- 커밋: `test(purchase-request): 상태 전이 단위 테스트 추가 (#225)`
+구현 중에 계획을 고쳤다. 전이마다 허용되지 않은 상태에서의 거절은 기존 E2E가 이미 덮고 있다.
+
+| 전이 | 거절을 확인하는 기존 테스트 |
+|---|---|
+| 승인 · 반려 · 삭제 · 수정 | `PurchaseRequestStatusTest` (재승인 409, 처리된 요청 반려·삭제 409, APPROVED 수정 409) |
+| 결재 확인 · 거래 수정 | `PurchaseRequestStatusTest` (PURCHASED 아님 409, CONFIRMED 거래 수정 409) |
+| 품의 저장 · 영수증 첨부·삭제 | `PurchaseRequestProposalTest` (CONFIRMED 409) |
+| 구매 완료 보고 | 이번에 더한 `PurchaseRequestConcurrencyTest` (겹친 보고 409) |
+
+같은 갈래를 대역으로 한 번 더 덮으면 하나가 깨질 때 둘이 같이 깨질 뿐이다.
 
 ### 7. 문서
 

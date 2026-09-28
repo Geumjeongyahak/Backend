@@ -44,7 +44,6 @@ import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestDet
 import geumjeongyahak.domain.purchase_request.v1.dto.response.PurchaseRequestSummaryResponse;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
-import geumjeongyahak.domain.vendor.entity.Vendor;
 import geumjeongyahak.domain.vendor.service.VendorService;
 
 @Slf4j
@@ -331,12 +330,7 @@ public class PurchaseRequestService {
                 confirmer
             );
         } else {
-            Map<Vendor, Long> amountByVendor = purchaseRequest.getTransactions().stream()
-                .collect(Collectors.groupingBy(
-                    PurchaseRequestPaymentTransaction::getVendor,
-                    Collectors.summingLong(PurchaseRequestPaymentTransaction::getAmount)
-                ));
-            amountByVendor.forEach((vendor, amount) ->
+            purchaseRequest.sumAmountByVendorInIdOrder().forEach((vendor, amount) ->
                 vendorService.deductForPurchaseRequest(vendor, purchaseRequest, amount, confirmer)
             );
         }
