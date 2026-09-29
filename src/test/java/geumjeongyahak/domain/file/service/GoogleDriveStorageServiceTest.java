@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -54,6 +55,14 @@ class GoogleDriveStorageServiceTest {
         server.createContext("/drive/v3/files/missing-file", exchange -> respond(exchange, 404, "{}"));
         server.createContext("/drive/v3/files/broken-file", exchange -> respond(exchange, 500, "{}"));
         server.createContext("/drive/v3/files/rate-limited-file", exchange -> respond(exchange, 403, "{}"));
+        server.createContext("/drive/v3/files/hanging-file", exchange -> {
+            try {
+                Thread.sleep(5_000);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+            respond(exchange, 200, "{}");
+        });
         server.start();
     }
 
@@ -141,9 +150,21 @@ class GoogleDriveStorageServiceTest {
         }
     }
 
+    @Test
+    void getMetadata_driveDoesNotAnswer_failsWithinMetadataTimeout() {
+        long startedAt = System.nanoTime();
+
+        assertThatThrownBy(() -> metadataService().getMetadata("hanging-file"))
+            .isInstanceOf(BusinessException.class)
+            .extracting("code")
+            .isEqualTo("SYS004");
+        assertThat(Duration.ofNanos(System.nanoTime() - startedAt)).isLessThan(Duration.ofSeconds(3));
+    }
+
     private GoogleDriveStorageService metadataService() {
         DriveUploadProperties properties = new DriveUploadProperties();
         properties.setApiBaseUrl(baseUrl() + "/drive/v3");
+        properties.setMetadataTimeout(Duration.ofMillis(300));
         GoogleCredentials credentials = GoogleCredentials.create(new AccessToken(
             "test-token",
             Date.from(Instant.now().plusSeconds(3600))

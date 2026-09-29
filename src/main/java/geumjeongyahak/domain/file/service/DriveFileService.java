@@ -38,6 +38,10 @@ public class DriveFileService {
 
     private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
     private static final String DEFAULT_EXTENSION = "drive";
+    // files 테이블 컬럼 길이. Drive 가 준 값이 넘으면 DB 오류(500) 대신 400 으로 거절한다
+    private static final int MAX_ORIGINAL_NAME_LENGTH = 255;
+    private static final int MAX_CONTENT_TYPE_LENGTH = 100;
+    private static final int MAX_EXTENSION_LENGTH = 20;
     private static final String SCOPE_CLASSROOM = "classroom";
     private static final String SCOPE_DEPARTMENT = "department";
     private static final Pattern DRIVE_FILE_PATH_PATTERN = Pattern.compile("/(?:file/d|document/d|spreadsheets/d|presentation/d|folders)/([^/?#]+)");
@@ -63,6 +67,9 @@ public class DriveFileService {
         DriveStorageService.StoredDriveFile driveFile = driveStorageService.getMetadata(storageKey);
         String originalName = driveFile.name();
         String contentType = normalizeContentType(driveFile.mimeType());
+        if (originalName.length() > MAX_ORIGINAL_NAME_LENGTH || contentType.length() > MAX_CONTENT_TYPE_LENGTH) {
+            throw new BadRequestException(CommonErrorCode.INVALID_INPUT, "Google Drive 파일 정보가 너무 깁니다. 파일명은 255자 이하여야 합니다.");
+        }
         String ext = resolveExtension(originalName);
 
         // 지웠던 링크를 다시 등록하면 Drive 값으로 되살린다
@@ -174,7 +181,7 @@ public class DriveFileService {
         }
 
         String extension = originalName.substring(originalName.lastIndexOf('.') + 1).trim();
-        if (extension.isBlank()) {
+        if (extension.isBlank() || extension.length() > MAX_EXTENSION_LENGTH) {
             return DEFAULT_EXTENSION;
         }
         return extension.toLowerCase(Locale.ROOT);

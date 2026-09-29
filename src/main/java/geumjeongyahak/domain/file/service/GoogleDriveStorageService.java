@@ -144,6 +144,7 @@ public class GoogleDriveStorageService implements DriveStorageService {
     public StoredDriveFile getMetadata(String fileId) {
         try {
             HttpRequest request = HttpRequest.newBuilder(fileMetadataUri(fileId))
+                .timeout(properties.getMetadataTimeout())
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken())
                 .GET()
                 .build();

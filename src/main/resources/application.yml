@@ -92,6 +92,7 @@ app:
     drive:
       shared-drive-id: ${GOOGLE_DRIVE_SHARED_DRIVE_ID:}
       make-link-public: ${GOOGLE_DRIVE_MAKE_LINK_PUBLIC:true}
+      metadata-timeout: ${GOOGLE_DRIVE_METADATA_TIMEOUT:10s}
       oauth:
         client-id: ${GOOGLE_DRIVE_OAUTH_CLIENT_ID:}
         client-secret: ${GOOGLE_DRIVE_OAUTH_CLIENT_SECRET:}

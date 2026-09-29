@@ -1,5 +1,7 @@
 package geumjeongyahak.domain.file.config;
 
+import java.time.Duration;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.StringUtils;
 
@@ -20,6 +22,8 @@ public class DriveUploadProperties {
     private boolean makeLinkPublic = false;
     private String uploadBaseUrl = "https://www.googleapis.com/upload/drive/v3";
     private String apiBaseUrl = "https://www.googleapis.com/drive/v3";
+    // 파일 정보 조회는 DB 트랜잭션 안에서 불린다. 없으면 Drive 가 멈췄을 때 DB 연결이 끝없이 묶인다
+    private Duration metadataTimeout = Duration.ofSeconds(10);
 
     public String folderIdFor(DriveUploadTarget target) {
         String folderId = switch (target) {

@@ -284,6 +284,41 @@ public class FileUploadTest extends BaseFileTest {
     }
 
     @Test
+    @DisplayName("Drive 파일명이 저장할 수 있는 길이를 넘으면 400으로 거절한다")
+    void registerDriveFile_tooLongDriveName_rejected() {
+        String driveUrl = "https://drive.google.com/file/d/drive-file-long-name/view";
+        driveStorageService.putFile("drive-file-long-name", "가".repeat(256) + ".pdf", "application/pdf", 100L);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("driveUrl", driveUrl))
+        .when()
+            .post("/drive")
+        .then()
+            .statusCode(400)
+            .body("code", equalTo("VAL002"));
+
+        assertThat(fileRepository.findByPublicUrlAndIsGoogleDriveTrue(driveUrl)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Drive 파일명의 확장자가 너무 길면 drive 확장자로 등록된다")
+    void registerDriveFile_tooLongExtension_usesDriveExtension() {
+        driveStorageService.putFile("drive-file-long-ext", "자료." + "x".repeat(21), "application/octet-stream", 100L);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("driveUrl", "https://drive.google.com/file/d/drive-file-long-ext/view"))
+        .when()
+            .post("/drive")
+        .then()
+            .statusCode(201)
+            .body("ext", equalTo("drive"));
+    }
+
+    @Test
     @DisplayName("인증 없이 Google Drive 파일 등록을 호출하면 실패한다")
     void registerDriveFile_unauthorized() {
         given()
