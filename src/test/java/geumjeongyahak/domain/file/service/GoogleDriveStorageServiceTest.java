@@ -9,6 +9,7 @@ import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -52,6 +53,7 @@ class GoogleDriveStorageServiceTest {
         });
         server.createContext("/drive/v3/files/missing-file", exchange -> respond(exchange, 404, "{}"));
         server.createContext("/drive/v3/files/broken-file", exchange -> respond(exchange, 500, "{}"));
+        server.createContext("/drive/v3/files/rate-limited-file", exchange -> respond(exchange, 403, "{}"));
         server.start();
     }
 
@@ -130,11 +132,13 @@ class GoogleDriveStorageServiceTest {
 
     @Test
     void getMetadata_driveError_failsWithoutBlamingTheLink() {
-        assertThatThrownBy(() -> metadataService().getMetadata("broken-file"))
-            .isInstanceOf(BusinessException.class)
-            .isNotInstanceOf(BadRequestException.class)
-            .extracting("code")
-            .isEqualTo("SYS004");
+        for (String fileId : List.of("broken-file", "rate-limited-file")) {
+            assertThatThrownBy(() -> metadataService().getMetadata(fileId))
+                .isInstanceOf(BusinessException.class)
+                .isNotInstanceOf(BadRequestException.class)
+                .extracting("code")
+                .isEqualTo("SYS004");
+        }
     }
 
     private GoogleDriveStorageService metadataService() {

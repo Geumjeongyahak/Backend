@@ -48,26 +48,35 @@ public class DriveFileService {
     private final ClassroomProxyService classroomProxyService;
     private final DepartmentProxyService departmentProxyService;
 
+    // 이름 · 형식 · 크기는 요청 값이 아니라 Drive 조회 결과로 저장한다. 서버가 읽을 수 없는 파일은 거절한다
     @Transactional
     public FileUploadResponse registerDriveFile(RegisterDriveFileRequest request) {
         String driveUrl = request.driveUrl().trim();
-        String originalName = request.originalName().trim();
-        String contentType = normalizeContentType(request.mimeType());
         String storageKey = extractDriveFileId(driveUrl)
             .orElseThrow(() -> new BadRequestException(CommonErrorCode.INVALID_INPUT, "Google Drive 파일 URL만 등록할 수 있습니다."));
+
+        Optional<File> existing = fileRepository.findByPublicUrlAndIsGoogleDriveTrue(driveUrl);
+        if (existing.isPresent() && !existing.get().isDeleted()) {
+            return FileUploadResponse.from(existing.get(), driveUrl);
+        }
+
+        DriveStorageService.StoredDriveFile driveFile = driveStorageService.getMetadata(storageKey);
+        String originalName = driveFile.name();
+        String contentType = normalizeContentType(driveFile.mimeType());
         String ext = resolveExtension(originalName);
 
-        File file = fileRepository.findByPublicUrlAndIsGoogleDriveTrue(driveUrl)
-                .map(existingFile -> {
-                    existingFile.updateDriveMetadata(storageKey, originalName, contentType, request.fileSize(), ext, driveUrl);
-                    return existingFile;
+        // 지웠던 링크를 다시 등록하면 Drive 값으로 되살린다
+        File file = existing
+                .map(deletedFile -> {
+                    deletedFile.updateDriveMetadata(storageKey, originalName, contentType, driveFile.size(), ext, driveUrl);
+                    return deletedFile;
                 })
                 .orElseGet(() -> fileRepository.save(File.builder()
                         .storageKey(storageKey)
                         .bucket(File.GOOGLE_DRIVE_BUCKET)
                         .originalName(originalName)
                         .contentType(contentType)
-                        .fileSize(request.fileSize())
+                        .fileSize(driveFile.size())
                         .ext(ext)
                         .publicUrl(driveUrl)
                         .isGoogleDrive(true)

@@ -264,6 +264,26 @@ public class FileUploadTest extends BaseFileTest {
     }
 
     @Test
+    @DisplayName("삭제된 Drive 파일의 링크를 다시 등록하면 같은 파일을 Drive 값으로 되살린다")
+    void registerDriveFile_deletedLink_restoresFileWithDriveValues() {
+        String driveUrl = "https://drive.google.com/file/d/drive-file-restored/view";
+        driveStorageService.putFile("drive-file-restored", "처음.pdf", "application/pdf", 100L);
+        String fileId = registerDriveFileAs(userAccessToken, driveUrl, "처음.pdf");
+        File deleted = fileRepository.findById(UUID.fromString(fileId)).orElseThrow();
+        deleted.delete();
+        fileRepository.save(deleted);
+        driveStorageService.putFile("drive-file-restored", "바뀐 이름.pdf", "application/pdf", 200L);
+
+        String restoredFileId = registerDriveFileAs(userAccessToken, driveUrl, "요청 이름.pdf");
+
+        assertThat(restoredFileId).isEqualTo(fileId);
+        File restored = fileRepository.findById(UUID.fromString(fileId)).orElseThrow();
+        assertThat(restored.isDeleted()).isFalse();
+        assertThat(restored.getOriginalName()).isEqualTo("바뀐 이름.pdf");
+        assertThat(restored.getFileSize()).isEqualTo(200L);
+    }
+
+    @Test
     @DisplayName("인증 없이 Google Drive 파일 등록을 호출하면 실패한다")
     void registerDriveFile_unauthorized() {
         given()
