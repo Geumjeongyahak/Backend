@@ -79,6 +79,7 @@ public class MeetingRecordService {
     public MeetingRecordDetailResponse getMeetingRecord(Long requesterId, Long recordId) {
         getStaffUser(requesterId);
         MeetingRecord record = getActiveRecord(recordId);
+        meetingRecordRepository.incrementViewCount(record.getId());
         record.incrementViewCount();
         return MeetingRecordDetailResponse.from(record);
     }

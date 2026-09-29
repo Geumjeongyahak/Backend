@@ -50,7 +50,8 @@ public class MeetingRecord extends BaseEntity {
     @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted;
 
-    @Column(name = "view_count", nullable = false)
+    // 증가는 MeetingRecordRepository.incrementViewCount 한 문장으로만 한다. 엔티티 변경은 저장되지 않는다
+    @Column(name = "view_count", nullable = false, updatable = false)
     private long viewCount;
 
     @OneToMany(mappedBy = "meetingRecord", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -103,6 +104,7 @@ public class MeetingRecord extends BaseEntity {
         this.isDeleted = true;
     }
 
+    // 응답에 이번 조회를 반영하는 메모리 값. DB 는 MeetingRecordRepository.incrementViewCount 가 올린다
     public void incrementViewCount() {
         this.viewCount++;
     }

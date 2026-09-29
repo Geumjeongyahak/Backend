@@ -134,6 +134,7 @@ public class PostCrudService {
             throw new AccessDeniedException("미발행 게시글 상세 조회 권한이 없습니다.");
         }
 
+        postRepository.incrementViewCount(post.getId());
         post.incrementViewCount();
         return PostDetailResponse.from(post);
     }

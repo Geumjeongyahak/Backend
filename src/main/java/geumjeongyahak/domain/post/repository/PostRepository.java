@@ -6,6 +6,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -35,6 +36,11 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     // 내 초안 목록 조회
     @EntityGraph(attributePaths = {"channel", "author"})
     Page<Post> findAllByChannelIdAndAuthorIdAndStatusAndIsDeletedFalse(Long channelId, Long authorId, PostStatus status, Pageable pageable);
+
+    // 동시 조회에도 증가분이 사라지지 않고, 글 전체 저장과 updated_at 변경이 없다
+    @Modifying
+    @Query("update Post p set p.viewCount = p.viewCount + 1 where p.id = :id")
+    void incrementViewCount(@Param("id") Long id);
 
     @Query("select p.author.id from Post p where p.id = :id and p.isDeleted = false")
     Optional<Long> findAuthorIdById(@org.springframework.data.repository.query.Param("id") Long id);
