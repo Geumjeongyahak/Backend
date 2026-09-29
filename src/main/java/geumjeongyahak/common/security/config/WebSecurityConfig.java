@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import geumjeongyahak.common.security.handler.CustomAccessDeniedHandler;
 import geumjeongyahak.common.security.handler.CustomAuthenticationEntryPoint;
+import geumjeongyahak.common.logging.RequestLogContextFilter;
 import geumjeongyahak.common.security.jwt.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -43,6 +44,7 @@ public class WebSecurityConfig {
     private final CustomAccessDeniedHandler accessDeniedHandler;
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RequestLogContextFilter requestLogContextFilter;
 
     @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173}")
     private String corsAllowedOrigins;
@@ -129,6 +131,7 @@ public class WebSecurityConfig {
 
             // JWT 인증 필터: UsernamePasswordAuthenticationFilter 전에 둠
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(requestLogContextFilter, JwtAuthenticationFilter.class)
 
             .build();
     }
