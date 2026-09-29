@@ -8,6 +8,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 
 import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.meeting_record.entity.MeetingRecord;
 import geumjeongyahak.domain.meeting_record.repository.MeetingAbsenceReportRepository;
 import geumjeongyahak.domain.meeting_record.repository.MeetingRecordRepository;
 import geumjeongyahak.domain.meeting_record.v1.dto.request.CreateAbsenceReportRequest;
@@ -91,6 +92,35 @@ class MeetingRecordApiTest extends BaseE2ETest {
             .body("viewCount", equalTo(0))
             .body("agenda", equalTo("안건"))
             .body("absenceReports", hasSize(0));
+    }
+
+    @Test
+    @DisplayName("회의록을 열면 조회수만 오르고 수정 시각은 바뀌지 않는다")
+    void getMeetingRecord_incrementsViewCountWithoutTouchingUpdatedAt() {
+        Long recordId = given()
+            .header(AUTH_HEADER, getAuthHeader(authorToken))
+            .contentType(ContentType.JSON)
+            .body(new CreateMeetingRecordRequest("조회수 회의", "안건"))
+        .when()
+            .post("/api/v1/meeting-records")
+        .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
+        MeetingRecord before = meetingRecordRepository.findById(recordId).orElseThrow();
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(otherToken))
+        .when()
+            .get("/api/v1/meeting-records/{recordId}", recordId)
+        .then()
+            .statusCode(200)
+            .body("viewCount", equalTo(1));
+
+        MeetingRecord after = meetingRecordRepository.findById(recordId).orElseThrow();
+        assertThat(after.getViewCount()).isEqualTo(1);
+        assertThat(after.getUpdatedAt()).isEqualTo(before.getUpdatedAt());
     }
 
     @Test
