@@ -23,8 +23,8 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Build Spring Boot jar
-        run: ./gradlew bootJar -x test
+      - name: Test and build Spring Boot jar
+        run: ./gradlew test bootJar
 
       - name: Deploy jar over SSH
         env:
