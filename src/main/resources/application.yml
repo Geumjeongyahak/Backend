@@ -16,6 +16,10 @@ spring:
           auth: ${MAIL_SMTP_AUTH:true}
           starttls:
             enable: ${MAIL_SMTP_STARTTLS_ENABLE:true}
+          # 없으면 SMTP 가 멈췄을 때 요청과 DB 연결이 끝없이 묶인다
+          connectiontimeout: ${MAIL_SMTP_CONNECTION_TIMEOUT_MS:5000}
+          timeout: ${MAIL_SMTP_TIMEOUT_MS:10000}
+          writetimeout: ${MAIL_SMTP_WRITE_TIMEOUT_MS:10000}
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:prod}
   jpa:
