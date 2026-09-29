@@ -22,6 +22,7 @@ import geumjeongyahak.domain.file.repository.FileRepository;
 import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestRepository;
 import geumjeongyahak.domain.vendor.repository.VendorBalanceHistoryRepository;
 import geumjeongyahak.domain.vendor.repository.VendorRepository;
+import geumjeongyahak.e2e.TestStorageConfig;
 import geumjeongyahak.e2e.request.RequestBaseTest;
 
 /**
@@ -43,6 +44,9 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
 
     @Autowired
     private VendorRepository vendorRepository;
+
+    @Autowired
+    private TestStorageConfig.ControlledDriveStorageService driveStorageService;
 
     @Autowired
     private VendorBalanceHistoryRepository vendorBalanceHistoryRepository;
@@ -1591,6 +1595,8 @@ class PurchaseRequestStatusTest extends RequestBaseTest {
     }
 
     private String registerDriveReceipt(String accessToken) {
+        // 봇이 올린 영수증을 서버 Drive 계정이 읽을 수 있어야 한다. 결의서도 같은 계정으로 이 파일을 내려받는다
+        driveStorageService.putFile("apps-script-receipt", "apps-script-receipt.png", "image/png", 1024L);
         String fileId = given()
             .basePath("/api/v1/files")
             .header(AUTH_HEADER, getAuthHeader(accessToken))

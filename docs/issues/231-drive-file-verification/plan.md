@@ -9,6 +9,7 @@
 |---|---|
 | Drive 파일 행 | 1개 (7월 8일). URL 형태가 서버 업로드가 남기는 것과 달라 등록 API로 들어온 것으로 보인다 |
 | 서버 업로드(`POST /api/v1/files/drive/{target}`) | 6월 27일에 생겼다. 이쪽은 이미 Drive 응답 값으로 저장한다 |
+| Apps Script 봇 | 구매 완료 보고 때 이 등록 API로 Drive 영수증을 등록한다(`PurchaseRequestStatusTest`). 봇은 별도 Gmail 계정이다. 영수증은 결의서 생성 때 서버 Drive 계정으로 내려받으므로, 서버가 봇의 파일을 읽을 수 있어야 한다는 전제는 이미 있었다. dev에는 봇이 등록한 Drive 영수증이 없다 |
 | 서버의 Drive 인증 | OAuth 사용자 계정(조직 Google 계정의 refresh token)이 있으면 그것, 없으면 GCP 서비스 계정. dev는 OAuth 계정이 설정돼 있다. 그 계정이 읽을 수 있는 파일(소유 · 공유받음 · 링크 공개)만 조회된다 |
 
 등록 API는 드물게 쓰이지만, 등록된 파일은 영수증으로 붙일 수 있고 결의서를 만들 때 **서버 계정으로
