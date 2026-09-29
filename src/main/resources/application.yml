@@ -37,8 +37,9 @@ management:
     tags:
       application: gjlearn-api
     distribution:
-      percentiles-histogram:
-        http.server.requests: true
+      # 버킷(시계열 30여 개) 대신 p95 값 하나만 낸다. 지표 비용이 시계열 수에 비례한다.
+      percentiles:
+        http.server.requests: 0.95
 
 app:
   cors:

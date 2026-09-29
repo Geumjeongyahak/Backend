@@ -20,7 +20,7 @@
       "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
       "id": 5,
-      "targets": [{"datasource": {"type": "stackdriver", "uid": "gcp-monitoring"}, "queryType": "metrics", "refId": "A", "metricQuery": {"projectName": "__PROJECT_ID__", "editorMode": "visual", "metricType": "prometheus.googleapis.com/hikaricp_connections/gauge", "metricKind": "GAUGE", "valueType": "DOUBLE", "alignmentPeriod": "cloud-monitoring-auto", "perSeriesAligner": "ALIGN_MEAN", "crossSeriesReducer": "REDUCE_SUM", "groupBys": [], "filters": ["metric.label.env", "=", "__ENVIRONMENT__"]}}],
+      "targets": [{"datasource": {"type": "stackdriver", "uid": "gcp-monitoring"}, "queryType": "metrics", "refId": "A", "metricQuery": {"projectName": "__PROJECT_ID__", "editorMode": "visual", "metricType": "prometheus.googleapis.com/hikaricp_connections_active/gauge", "metricKind": "GAUGE", "valueType": "DOUBLE", "alignmentPeriod": "cloud-monitoring-auto", "perSeriesAligner": "ALIGN_MEAN", "crossSeriesReducer": "REDUCE_SUM", "groupBys": [], "filters": ["metric.label.env", "=", "__ENVIRONMENT__"]}}],
       "title": "Hikari Connections",
       "type": "timeseries"
     },

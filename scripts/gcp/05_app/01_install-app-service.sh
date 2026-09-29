@@ -143,7 +143,7 @@ metrics:
                   role: app-actuator
             metric_relabel_configs:
               - source_labels: [__name__]
-                regex: 'up|http_server_requests_seconds_(count|bucket)|hikaricp_connections|jvm_memory_used_bytes|jvm_threads_live_threads'
+                regex: 'up|http_server_requests_seconds(_count|_sum)?|hikaricp_connections_(active|pending)|jvm_memory_used_bytes'
                 action: keep
   processors:
     metrics_filter:
