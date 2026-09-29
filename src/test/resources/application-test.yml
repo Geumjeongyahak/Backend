@@ -20,6 +20,8 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
+        # 목록 테스트가 쿼리 · 컬렉션 조회 수를 센다.
+        generate_statistics: true
   sql:
     init:
       mode: always
