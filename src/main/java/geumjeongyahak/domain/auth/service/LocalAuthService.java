@@ -14,6 +14,7 @@ import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.auth.exception.AuthErrorCode;
 import geumjeongyahak.domain.auth.exception.DuplicateCredentialException;
+import geumjeongyahak.domain.auth.exception.CredentialNotFoundException;
 import geumjeongyahak.domain.auth.exception.InvalidRefreshTokenException;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalLoginRequest;
 import geumjeongyahak.domain.auth.v1.dto.request.LocalSignupRequest;
@@ -154,8 +155,8 @@ public class LocalAuthService {
         UserCredential credential;
         try {
             credential = userCredentialService.getById(credentialId);
-        } catch (Exception e) {
-            log.warn("토큰 재발급 실패 - 자격 증명 조회 실패: credentialId={}", credentialId);
+        } catch (CredentialNotFoundException e) {
+            log.warn("토큰 재발급 실패 - 자격 증명 없음: credentialId={}", credentialId);
             throw new InvalidRefreshTokenException();
         }
 
