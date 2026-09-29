@@ -16,6 +16,7 @@ import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -52,8 +53,9 @@ public class DriveFileService {
     private final ClassroomProxyService classroomProxyService;
     private final DepartmentProxyService departmentProxyService;
 
-    // 이름 · 형식 · 크기는 요청 값이 아니라 Drive 조회 결과로 저장한다. 서버가 읽을 수 없는 파일은 거절한다
-    @Transactional
+    // 이름 · 형식 · 크기는 요청 값이 아니라 Drive 조회 결과로 저장한다. 서버가 읽을 수 없는 파일은 거절한다.
+    // Drive 조회(토큰 갱신 포함)가 DB 연결을 잡지 않도록 트랜잭션 밖에서 돌고, 조회 · 저장은 저장소 호출마다 짧게 끝난다
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public FileUploadResponse registerDriveFile(RegisterDriveFileRequest request) {
         String driveUrl = request.driveUrl().trim();
         String storageKey = extractDriveFileId(driveUrl)
@@ -76,7 +78,7 @@ public class DriveFileService {
         File file = existing
                 .map(deletedFile -> {
                     deletedFile.updateDriveMetadata(storageKey, originalName, contentType, driveFile.size(), ext, driveUrl);
-                    return deletedFile;
+                    return fileRepository.save(deletedFile);
                 })
                 .orElseGet(() -> fileRepository.save(File.builder()
                         .storageKey(storageKey)

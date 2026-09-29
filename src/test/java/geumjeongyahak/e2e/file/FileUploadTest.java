@@ -178,6 +178,9 @@ public class FileUploadTest extends BaseFileTest {
                 .path("fileId")
         );
 
+        // Drive 조회 동안 DB 트랜잭션(연결)을 잡지 않는다
+        assertThat(driveStorageService.metadataCalledInTransaction()).isFalse();
+
         File file = fileRepository.findById(fileId).orElseThrow();
         assertThat(file.getBucket()).isEqualTo(File.GOOGLE_DRIVE_BUCKET);
         assertThat(file.isGoogleDrive()).isTrue();

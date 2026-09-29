@@ -22,6 +22,8 @@
 | `DriveStorageService` | `StoredDriveFile getMetadata(String fileId)` 추가 |
 | `GoogleDriveStorageService` | `GET files/{id}?supportsAllDrives=true&fields=id,name,mimeType,size,webViewLink`. 404 → 「확인할 수 없는 파일」(400), 그 밖의 실패(403 포함) → `FILE_UPLOAD_FAILED`(500). Drive는 권한이 없는 파일에 404를 주고, 403은 요청 한도 초과 등에도 온다. 기존 `download`와 같은 모양 |
 | `DriveFileService.registerDriveFile` | 링크에서 ID를 뽑고 → Drive에 조회 → 이름 · 형식 · 크기를 **조회 결과로** 저장. 같은 링크가 살아 있으면 **기존 행을 그대로** 돌려준다. 지워진 행이면 Drive에 다시 조회해 그 값으로 되살린다(`File.updateDriveMetadata`, 지금도 되살리는 데 쓰인다) |
+| 트랜잭션 | 등록 메서드는 `Propagation.NOT_SUPPORTED`. Drive 조회와 OAuth 토큰 갱신이 DB 연결을 잡지 않는다. 기존 행 조회 · 저장은 저장소 호출마다 짧은 트랜잭션이다 (codex 1 · 2회차 지적) |
+| `DriveUploadProperties` | `metadata-timeout`(기본 10초, `GOOGLE_DRIVE_METADATA_TIMEOUT`). DB 연결은 안 잡지만 요청 스레드가 끝없이 기다리지 않게 둔다 |
 | `RegisterDriveFileRequest` | `originalName` · `mimeType` · `fileSize`는 받되 무시한다. `originalName`의 `@NotBlank`를 푼다(프론트가 안 보내도 되게). Swagger 설명을 고친다 |
 | `FileController` | 등록 API 설명의 「백엔드는 Drive 클라이언트를 사용하지 않고」를 고친다 |
 | `TestStorageConfig` (테스트) | Drive 대역에 `getMetadata`를 더한다. 모르는 ID는 「확인할 수 없음」 |
@@ -44,7 +46,6 @@
 
 - 공유 드라이브 소속 확인(Should). 서비스 계정은 원래 공유된 파일만 읽는다
 - 이미 등록된 행 재검증 (이슈 Out of scope)
-- Drive 조회를 트랜잭션 밖으로 빼기. 등록은 dev 전체에 1건이고 조회는 1회다
 - 서버 계정이 읽을 수 있는 파일이면 누구의 파일이든 등록되고, 등록 응답에 그 파일의 이름 · 형식 · 크기가 실린다. 파일 ID를 알아야 하므로 추측으로는 어렵다. 제한하려면 폴더 · 공유 드라이브 소속을 봐야 하고, 그건 위 Should다
 
 ## 테스트 (먼저 쓰고 실패를 본다)
