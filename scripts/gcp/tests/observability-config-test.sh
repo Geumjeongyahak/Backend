@@ -82,4 +82,28 @@ grep -Fq 'job_name: app-actuator' infra/monitoring/prometheus/prometheus.yml && 
   exit 1
 }
 
+# 알림·대시보드가 쓰는 지표는 앱 또는 DB 수집 설정이 남겨야 한다.
+# 히스토그램(_bucket)·요약(quantile)은 _sum·_count 가 같이 있어야 Cloud Monitoring 에 만들어진다.
+python3 - "${APP_INSTALL}" "${DB_INSTALL}" "${MONITORING_SCRIPT}" <<'PY'
+import re
+import sys
+
+app_install, db_install, monitoring = (open(path).read() for path in sys.argv[1:])
+kept = [re.search(r"regex: '([^']+)'", text).group(1) for text in (app_install, db_install)]
+
+def is_kept(name):
+    return any(re.fullmatch(pattern, name) for pattern in kept)
+
+queried = set(re.findall(r"\b([a-z_]+)\{\{env=", monitoring))
+missing = sorted(name for name in queried if not is_kept(name))
+
+families = {name[: -len("_bucket")] for name in queried if name.endswith("_bucket")}
+families |= set(re.findall(r"\b([a-z_]+)\{\{env=\"\{env\}\",quantile=", monitoring))
+for family in sorted(families):
+    missing += [f"{family}{suffix}" for suffix in ("_sum", "_count") if not is_kept(family + suffix)]
+
+if missing:
+    sys.exit("metrics queried but not collected: " + ", ".join(missing))
+PY
+
 echo 'observability configuration contract passed'
