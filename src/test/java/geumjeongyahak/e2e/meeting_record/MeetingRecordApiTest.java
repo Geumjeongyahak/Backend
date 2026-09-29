@@ -52,6 +52,9 @@ class MeetingRecordApiTest extends BaseE2ETest {
     @Autowired
     private TestStorageConfig.ControlledStorageService storageService;
 
+    @Autowired
+    private TestStorageConfig.ControlledDriveStorageService driveStorageService;
+
     @BeforeEach
     @Override
     protected void setUp() {
@@ -343,6 +346,7 @@ class MeetingRecordApiTest extends BaseE2ETest {
     void meetingRecordAttachment_ownerOrAdminOnly() {
         Long recordId = createRecord(authorToken, "첨부 회의록", "안건");
         String driveUrl = "https://drive.google.com/file/d/meeting-record-file-123/view?usp=sharing";
+        driveStorageService.putFile("meeting-record-file-123", "회의 자료.pdf", "application/pdf", 1024L);
         String fileId = registerDriveFile(driveUrl, "회의 자료.pdf");
 
         given()

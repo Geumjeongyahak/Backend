@@ -155,8 +155,9 @@ public class FileController {
     @PreAuthorize("hasAnyRole('VOLUNTEER', 'MANAGER', 'ADMIN')")
     @Operation(
         summary = "Google Drive 파일 등록",
-        description = "프론트가 Google Drive API로 직접 업로드한 파일의 URL과 메타데이터만 files 테이블에 기록합니다. "
-            + "백엔드는 Drive 클라이언트를 사용하지 않고, 응답의 fileId는 기존 게시글 첨부 연결 API에서 그대로 사용할 수 있습니다."
+        description = "Google Drive 파일 URL을 files 테이블에 등록합니다. 서버가 Drive에서 파일을 조회해 이름 · 형식 · 크기를 저장하고, "
+            + "서버 계정이 읽을 수 없는 파일은 400으로 거절합니다. 같은 URL이 이미 등록돼 있으면 기존 파일을 그대로 돌려줍니다. "
+            + "응답의 fileId는 기존 게시글 첨부 연결 API에서 그대로 사용할 수 있습니다."
     )
     @PostMapping("/drive")
     public ResponseEntity<FileUploadResponse> registerDriveFile(

@@ -19,6 +19,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -30,6 +31,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.UserCredentials;
 
+import geumjeongyahak.common.exception.BadRequestException;
 import geumjeongyahak.common.exception.BusinessException;
 import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.domain.file.config.DriveUploadProperties;
@@ -138,6 +140,40 @@ public class GoogleDriveStorageService implements DriveStorageService {
         }
     }
 
+    @Override
+    public StoredDriveFile getMetadata(String fileId) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder(fileMetadataUri(fileId))
+                .timeout(properties.getMetadataTimeout())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken())
+                .GET()
+                .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            // Drive 는 권한이 없는 파일에도 404 를 준다. 403 은 요청 한도 초과 등 Drive 쪽 사정이라 링크 탓으로 돌리지 않는다
+            if (response.statusCode() == HttpStatus.NOT_FOUND.value()) {
+                throw new BadRequestException(CommonErrorCode.INVALID_INPUT, "확인할 수 없는 Google Drive 파일입니다.");
+            }
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                log.warn("Google Drive 파일 정보 조회 실패: status={}, fileId={}", response.statusCode(), fileId);
+                throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED, "Google Drive 파일 정보 조회에 실패했습니다.");
+            }
+
+            JsonNode file = objectMapper.readTree(response.body());
+            String viewUrl = textOrDefault(file.path("webViewLink"), "https://drive.google.com/file/d/" + fileId + "/view");
+            String downloadUrl = "https://drive.google.com/uc?export=download&id=" + fileId;
+            String name = textOrDefault(file.path("name"), fileId);
+            String mimeType = textOrDefault(file.path("mimeType"), DEFAULT_CONTENT_TYPE);
+            Long size = file.hasNonNull("size") ? file.path("size").asLong() : null;
+            return new StoredDriveFile(fileId, viewUrl, downloadUrl, name, mimeType, size);
+        } catch (IOException exception) {
+            log.error("Google Drive 파일 정보 조회 실패: fileId={}", fileId, exception);
+            throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED, "Google Drive 파일 정보 조회에 실패했습니다.");
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED, "Google Drive 파일 정보 조회가 중단되었습니다.");
+        }
+    }
+
     public String findOrCreateFolder(String parentId, String folderName) throws IOException, InterruptedException {
         JsonNode files = sendJson(HttpRequest.newBuilder(folderSearchUri(parentId, folderName))
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken())
@@ -240,6 +276,12 @@ public class GoogleDriveStorageService implements DriveStorageService {
         return URI.create(properties.getApiBaseUrl()
             + "/files/" + URLEncoder.encode(fileId, StandardCharsets.UTF_8)
             + "/permissions?supportsAllDrives=true");
+    }
+
+    private URI fileMetadataUri(String fileId) {
+        return URI.create(properties.getApiBaseUrl()
+            + "/files/" + URLEncoder.encode(fileId, StandardCharsets.UTF_8)
+            + "?supportsAllDrives=true&fields=id,name,mimeType,size,webViewLink");
     }
 
     private URI fileDownloadUri(String fileId) {

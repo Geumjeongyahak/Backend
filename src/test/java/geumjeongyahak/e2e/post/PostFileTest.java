@@ -23,6 +23,7 @@ import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.file.repository.FileRepository;
 import geumjeongyahak.domain.post.v1.dto.request.PublishPostRequest;
 import geumjeongyahak.domain.post.v1.dto.request.SaveDraftRequest;
+import geumjeongyahak.e2e.TestStorageConfig;
 
 @DisplayName("E2E: Post 파일 및 썸네일 테스트")
 @ResourceLock("post-e2e-shared-state")
@@ -30,6 +31,9 @@ class PostFileTest extends BasePostTest {
 
     @Autowired
     private FileRepository fileRepository;
+
+    @Autowired
+    private TestStorageConfig.ControlledDriveStorageService driveStorageService;
 
     @Test
     @DisplayName("이미지를 업로드하면 발행 시 첫 번째 이미지가 자동으로 썸네일이 된다")
@@ -127,6 +131,7 @@ class PostFileTest extends BasePostTest {
     void attachRegisteredDriveFile_Success() {
         Long postId = testPostHelper.createDraftAndRegister(noticeChannelId, adminAccessToken);
         String driveUrl = "https://drive.google.com/file/d/post-drive-file-123/view?usp=sharing";
+        driveStorageService.putFile("post-drive-file-123", "자료실 첨부.pdf", "application/pdf", 1024L);
 
         String fileId = given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -175,6 +180,7 @@ class PostFileTest extends BasePostTest {
         String volunteerToken = userTestHelper.generateAccessTokenByUserKey(volunteer);
         Long postId = testPostHelper.createDraftAndRegister(noticeChannelId, adminAccessToken);
         String driveUrl = "https://drive.google.com/file/d/readable-drive-file/view?usp=sharing";
+        driveStorageService.putFile("readable-drive-file", "자료실 첨부.pdf", "application/pdf", 1024L);
         String fileId = registerDriveFile(driveUrl);
         attachRegisteredFile(noticeChannelId, postId, fileId);
         publishDraft(noticeChannelId, postId, "다운로드 가능한 첨부");
@@ -204,6 +210,7 @@ class PostFileTest extends BasePostTest {
             .build());
         testChannelHelper.registerChannel(closedChannel.getId());
         Long postId = testPostHelper.createDraftAndRegister(closedChannel.getId(), adminAccessToken);
+        driveStorageService.putFile("closed-drive-file", "자료실 첨부.pdf", "application/pdf", 1024L);
         String fileId = registerDriveFile("https://drive.google.com/file/d/closed-drive-file/view?usp=sharing");
         attachRegisteredFile(closedChannel.getId(), postId, fileId);
         publishDraft(closedChannel.getId(), postId, "비공개 첨부");

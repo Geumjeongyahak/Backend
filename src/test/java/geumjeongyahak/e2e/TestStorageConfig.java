@@ -12,10 +12,13 @@ import java.util.UUID;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.google.cloud.storage.Storage;
 
+import geumjeongyahak.common.exception.BadRequestException;
+import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.domain.file.service.StorageService;
 import geumjeongyahak.domain.file.enums.DriveUploadTarget;
 import geumjeongyahak.domain.file.service.DriveStorageService;
@@ -41,7 +44,7 @@ public class TestStorageConfig {
 
     @Bean
     @Primary
-    DriveStorageService testDriveStorageService() {
+    ControlledDriveStorageService testDriveStorageService() {
         return new ControlledDriveStorageService();
     }
 
@@ -111,6 +114,28 @@ public class TestStorageConfig {
 
     public static class ControlledDriveStorageService implements DriveStorageService {
         private final Map<String, byte[]> files = new HashMap<>();
+        private final Map<String, StoredDriveFile> metadata = new HashMap<>();
+        private boolean metadataCalledInTransaction;
+
+        public boolean metadataCalledInTransaction() {
+            return metadataCalledInTransaction;
+        }
+
+        // 서버 계정이 읽을 수 있는 Drive 파일을 만든다. 없는 ID 는 getMetadata 가 거절한다
+        public void putFile(String fileId, String name, String mimeType, Long size) {
+            String viewUrl = "https://drive.google.com/file/d/" + fileId + "/view";
+            metadata.put(fileId, new StoredDriveFile(fileId, viewUrl, viewUrl, name, mimeType, size));
+        }
+
+        @Override
+        public StoredDriveFile getMetadata(String fileId) {
+            metadataCalledInTransaction = TransactionSynchronizationManager.isActualTransactionActive();
+            StoredDriveFile file = metadata.get(fileId);
+            if (file == null) {
+                throw new BadRequestException(CommonErrorCode.INVALID_INPUT, "확인할 수 없는 Google Drive 파일입니다.");
+            }
+            return file;
+        }
 
         @Override
         public StoredDriveFile upload(DriveUploadTarget target, List<String> folderPath, MultipartFile file) {

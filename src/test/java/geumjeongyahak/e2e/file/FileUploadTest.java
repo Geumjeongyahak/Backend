@@ -15,12 +15,17 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.restassured.http.ContentType;
 import geumjeongyahak.domain.file.entity.File;
+import geumjeongyahak.e2e.TestStorageConfig;
 
 @DisplayName("E2E: File 업로드 테스트")
 public class FileUploadTest extends BaseFileTest {
+
+    @Autowired
+    private TestStorageConfig.ControlledDriveStorageService driveStorageService;
 
     @Test
     @DisplayName("인증된 사용자는 프로필 이미지를 업로드할 수 있다")
@@ -143,9 +148,10 @@ public class FileUploadTest extends BaseFileTest {
     }
 
     @Test
-    @DisplayName("인증된 사용자는 Google Drive 파일 메타데이터를 등록하고 다운로드 URL로 Drive 링크를 조회할 수 있다")
+    @DisplayName("Drive 파일을 등록하면 요청 값이 아니라 Drive 가 알려 준 이름·형식·크기로 저장되고, 다운로드 URL로 Drive 링크를 조회할 수 있다")
     void registerDriveFile_andGetDownloadUrl_success() {
         String driveUrl = "https://drive.google.com/file/d/drive-file-123/view?usp=sharing";
+        driveStorageService.putFile("drive-file-123", "자료집.pdf", "application/pdf", 204800L);
 
         UUID fileId = UUID.fromString(
             given()
@@ -153,9 +159,9 @@ public class FileUploadTest extends BaseFileTest {
                 .contentType(ContentType.JSON)
                 .body(Map.of(
                     "driveUrl", driveUrl,
-                    "originalName", "자료집.pdf",
-                    "mimeType", "application/pdf",
-                    "fileSize", 204800
+                    "originalName", "위조.exe",
+                    "mimeType", "application/x-msdownload",
+                    "fileSize", 1
                 ))
             .when()
                 .post("/drive")
@@ -171,6 +177,9 @@ public class FileUploadTest extends BaseFileTest {
                 .extract()
                 .path("fileId")
         );
+
+        // Drive 조회 동안 DB 트랜잭션(연결)을 잡지 않는다
+        assertThat(driveStorageService.metadataCalledInTransaction()).isFalse();
 
         File file = fileRepository.findById(fileId).orElseThrow();
         assertThat(file.getBucket()).isEqualTo(File.GOOGLE_DRIVE_BUCKET);
@@ -206,6 +215,7 @@ public class FileUploadTest extends BaseFileTest {
     @Test
     @DisplayName("확장자가 없는 Google Drive 파일명은 drive 확장자로 등록된다")
     void registerDriveFile_withoutExtension_usesDriveExtension() {
+        driveStorageService.putFile("document-123", "운영 회의록", "application/vnd.google-apps.document", null);
         given()
             .header(AUTH_HEADER, getAuthHeader(userAccessToken))
             .contentType(ContentType.JSON)
@@ -220,6 +230,94 @@ public class FileUploadTest extends BaseFileTest {
             .statusCode(201)
             .body("originalName", equalTo("운영 회의록"))
             .body("contentType", equalTo("application/vnd.google-apps.document"))
+            .body("ext", equalTo("drive"));
+    }
+
+    @Test
+    @DisplayName("서버가 확인할 수 없는 Drive 파일은 등록을 거절하고 저장하지 않는다")
+    void registerDriveFile_unverifiableFile_rejected() {
+        String driveUrl = "https://drive.google.com/file/d/unknown-drive-file/view";
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("driveUrl", driveUrl, "originalName", "자료집.pdf"))
+        .when()
+            .post("/drive")
+        .then()
+            .statusCode(400)
+            .body("code", equalTo("VAL002"));
+
+        assertThat(fileRepository.findByPublicUrlAndIsGoogleDriveTrue(driveUrl)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("이미 등록된 Drive 링크를 다시 등록해도 기존 파일 정보가 바뀌지 않는다")
+    void registerDriveFile_sameLinkTwice_keepsExistingFile() {
+        String driveUrl = "https://drive.google.com/file/d/drive-file-again/view";
+        driveStorageService.putFile("drive-file-again", "원본.pdf", "application/pdf", 100L);
+        String firstFileId = registerDriveFileAs(userAccessToken, driveUrl, "원본.pdf");
+
+        String secondFileId = registerDriveFileAs(adminAccessToken, driveUrl, "덮어쓰기.hwp");
+
+        assertThat(secondFileId).isEqualTo(firstFileId);
+        File file = fileRepository.findById(UUID.fromString(firstFileId)).orElseThrow();
+        assertThat(file.getOriginalName()).isEqualTo("원본.pdf");
+        assertThat(file.getContentType()).isEqualTo("application/pdf");
+    }
+
+    @Test
+    @DisplayName("삭제된 Drive 파일의 링크를 다시 등록하면 같은 파일을 Drive 값으로 되살린다")
+    void registerDriveFile_deletedLink_restoresFileWithDriveValues() {
+        String driveUrl = "https://drive.google.com/file/d/drive-file-restored/view";
+        driveStorageService.putFile("drive-file-restored", "처음.pdf", "application/pdf", 100L);
+        String fileId = registerDriveFileAs(userAccessToken, driveUrl, "처음.pdf");
+        File deleted = fileRepository.findById(UUID.fromString(fileId)).orElseThrow();
+        deleted.delete();
+        fileRepository.save(deleted);
+        driveStorageService.putFile("drive-file-restored", "바뀐 이름.pdf", "application/pdf", 200L);
+
+        String restoredFileId = registerDriveFileAs(userAccessToken, driveUrl, "요청 이름.pdf");
+
+        assertThat(restoredFileId).isEqualTo(fileId);
+        File restored = fileRepository.findById(UUID.fromString(fileId)).orElseThrow();
+        assertThat(restored.isDeleted()).isFalse();
+        assertThat(restored.getOriginalName()).isEqualTo("바뀐 이름.pdf");
+        assertThat(restored.getFileSize()).isEqualTo(200L);
+    }
+
+    @Test
+    @DisplayName("Drive 파일명이 저장할 수 있는 길이를 넘으면 400으로 거절한다")
+    void registerDriveFile_tooLongDriveName_rejected() {
+        String driveUrl = "https://drive.google.com/file/d/drive-file-long-name/view";
+        driveStorageService.putFile("drive-file-long-name", "가".repeat(256) + ".pdf", "application/pdf", 100L);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("driveUrl", driveUrl))
+        .when()
+            .post("/drive")
+        .then()
+            .statusCode(400)
+            .body("code", equalTo("VAL002"));
+
+        assertThat(fileRepository.findByPublicUrlAndIsGoogleDriveTrue(driveUrl)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Drive 파일명의 확장자가 너무 길면 drive 확장자로 등록된다")
+    void registerDriveFile_tooLongExtension_usesDriveExtension() {
+        driveStorageService.putFile("drive-file-long-ext", "자료." + "x".repeat(21), "application/octet-stream", 100L);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(userAccessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("driveUrl", "https://drive.google.com/file/d/drive-file-long-ext/view"))
+        .when()
+            .post("/drive")
+        .then()
+            .statusCode(201)
             .body("ext", equalTo("drive"));
     }
 
@@ -537,5 +635,18 @@ public class FileUploadTest extends BaseFileTest {
             javax.imageio.ImageIO.write(image, "jpg", outputStream);
             return outputStream.toByteArray();
         }
+    }
+
+    private String registerDriveFileAs(String accessToken, String driveUrl, String originalName) {
+        return given()
+            .header(AUTH_HEADER, getAuthHeader(accessToken))
+            .contentType(ContentType.JSON)
+            .body(Map.of("driveUrl", driveUrl, "originalName", originalName, "mimeType", "application/x-hwp"))
+        .when()
+            .post("/drive")
+        .then()
+            .statusCode(201)
+            .extract()
+            .path("fileId");
     }
 }

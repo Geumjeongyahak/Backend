@@ -16,6 +16,9 @@ public interface DriveStorageService {
 
     byte[] download(String fileId);
 
+    // 서버 계정이 읽을 수 없는 파일이면 BadRequestException
+    StoredDriveFile getMetadata(String fileId);
+
     record StoredDriveFile(
         String fileId,
         String viewUrl,
