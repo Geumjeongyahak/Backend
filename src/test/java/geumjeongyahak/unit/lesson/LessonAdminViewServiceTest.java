@@ -3,6 +3,7 @@ package geumjeongyahak.unit.lesson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
+import geumjeongyahak.common.config.AppConfig;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.base.dto.response.AdminPage;
 import geumjeongyahak.domain.lesson.entity.Lesson;
@@ -13,14 +14,16 @@ import geumjeongyahak.domain.lesson.service.LessonAdminViewService.AdminLessonRo
 import geumjeongyahak.domain.lesson.service.LessonAdminViewService.LessonFilter;
 import geumjeongyahak.domain.subject.entity.Subject;
 import geumjeongyahak.domain.users.entity.User;
+import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -30,8 +33,15 @@ class LessonAdminViewServiceTest {
     @Mock
     private LessonRepository lessonRepository;
 
-    @InjectMocks
+    // 2026-05-20 12:00 KST
+    private final Clock clock = Clock.fixed(Instant.parse("2026-05-20T03:00:00Z"), AppConfig.ZONE_ID);
+
     private LessonAdminViewService lessonAdminViewService;
+
+    @BeforeEach
+    void setUp() {
+        lessonAdminViewService = new LessonAdminViewService(lessonRepository, clock);
+    }
 
     @Test
     void getLessons_filtersByDateAndStatus() {
@@ -49,15 +59,9 @@ class LessonAdminViewServiceTest {
             2,
             LessonStatus.COMPLETED
         );
-        Lesson outsideDateLesson = lesson(
-            "이교사",
-            "영어",
-            LocalDate.of(2026, 5, 18),
-            1,
-            LessonStatus.SCHEDULED
-        );
-        given(lessonRepository.findAllByIsDeletedFalseOrderByDateAscPeriodAsc())
-            .willReturn(List.of(matchingLesson, completedLesson, outsideDateLesson));
+        given(lessonRepository.findAllByIsDeletedFalseAndDateBetweenOrderByDateAscPeriodAsc(
+            LocalDate.of(2026, 5, 10), LocalDate.of(2026, 5, 12)))
+            .willReturn(List.of(matchingLesson, completedLesson));
 
         AdminPage<AdminLessonRow> page = lessonAdminViewService.getLessons(new LessonFilter(
             LocalDate.of(2026, 5, 10),
@@ -89,7 +93,9 @@ class LessonAdminViewServiceTest {
             1,
             LessonStatus.SCHEDULED
         );
-        given(lessonRepository.findAllByIsDeletedFalseOrderByDateAscPeriodAsc())
+        // 기간을 안 주면 이번 달만 읽는다
+        given(lessonRepository.findAllByIsDeletedFalseAndDateBetweenOrderByDateAscPeriodAsc(
+            LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31)))
             .willReturn(List.of(secondTeacherLesson, firstTeacherLesson));
 
         AdminPage<AdminLessonRow> page = lessonAdminViewService.getLessons(new LessonFilter(
@@ -102,6 +108,30 @@ class LessonAdminViewServiceTest {
         ));
 
         assertThat(page.content()).extracting(AdminLessonRow::teacherName).containsExactly("김교사", "최교사");
+    }
+
+    @Test
+    void getLessons_readsOneMonthFromStartDateWhenEndDateIsMissing() {
+        given(lessonRepository.findAllByIsDeletedFalseAndDateBetweenOrderByDateAscPeriodAsc(
+            LocalDate.of(2026, 7, 15), LocalDate.of(2026, 8, 14)))
+            .willReturn(List.of());
+
+        AdminPage<AdminLessonRow> page = lessonAdminViewService.getLessons(new LessonFilter(
+            LocalDate.of(2026, 7, 15), null, null, null, null, null));
+
+        assertThat(page.totalElements()).isZero();
+    }
+
+    @Test
+    void getLessons_readsOneMonthUntilEndDateWhenStartDateIsMissing() {
+        given(lessonRepository.findAllByIsDeletedFalseAndDateBetweenOrderByDateAscPeriodAsc(
+            LocalDate.of(2026, 6, 16), LocalDate.of(2026, 7, 15)))
+            .willReturn(List.of());
+
+        AdminPage<AdminLessonRow> page = lessonAdminViewService.getLessons(new LessonFilter(
+            null, LocalDate.of(2026, 7, 15), null, null, null, null));
+
+        assertThat(page.totalElements()).isZero();
     }
 
     private Lesson lesson(

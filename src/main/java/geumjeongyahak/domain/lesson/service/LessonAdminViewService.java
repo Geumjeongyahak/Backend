@@ -5,8 +5,10 @@ import geumjeongyahak.domain.base.dto.response.AdminSorts;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -20,11 +22,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class LessonAdminViewService {
 
     private final LessonRepository lessonRepository;
+    private final Clock clock;
 
     public AdminPage<AdminLessonRow> getLessons(LessonFilter filter) {
-        List<AdminLessonRow> rows = lessonRepository.findAllByIsDeletedFalseOrderByDateAscPeriodAsc()
+        LocalDate[] range = resolveRange(filter.startDate(), filter.endDate());
+        List<AdminLessonRow> rows = lessonRepository.findAllByIsDeletedFalseAndDateBetweenOrderByDateAscPeriodAsc(range[0], range[1])
             .stream()
-            .filter(lesson -> matchesDateRange(lesson, filter.startDate(), filter.endDate()))
             .filter(lesson -> filter.status() == null || lesson.getStatus() == filter.status())
             .map(AdminLessonRow::from)
             .toList();
@@ -32,12 +35,19 @@ public class LessonAdminViewService {
         return AdminPage.from(sortLessons(rows, filter.sort()), filter.page(), filter.size());
     }
 
-    private boolean matchesDateRange(Lesson lesson, LocalDate startDate, LocalDate endDate) {
-        LocalDate lessonDate = lesson.getDate();
-        if (startDate != null && lessonDate.isBefore(startDate)) {
-            return false;
+    // 수업은 달마다 수백 건씩 쌓인다. 기간을 안 주면 이번 달, 한쪽만 주면 그 날부터(까지) 한 달을 읽는다.
+    private LocalDate[] resolveRange(LocalDate startDate, LocalDate endDate) {
+        if (startDate != null && endDate != null) {
+            return new LocalDate[] {startDate, endDate};
         }
-        return endDate == null || !lessonDate.isAfter(endDate);
+        if (startDate != null) {
+            return new LocalDate[] {startDate, startDate.plusMonths(1).minusDays(1)};
+        }
+        if (endDate != null) {
+            return new LocalDate[] {endDate.minusMonths(1).plusDays(1), endDate};
+        }
+        YearMonth thisMonth = YearMonth.now(clock);
+        return new LocalDate[] {thisMonth.atDay(1), thisMonth.atEndOfMonth()};
     }
 
     private List<AdminLessonRow> sortLessons(List<AdminLessonRow> rows, String sort) {
