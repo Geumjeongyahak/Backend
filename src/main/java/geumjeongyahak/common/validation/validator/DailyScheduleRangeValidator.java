@@ -9,7 +9,7 @@ import java.time.temporal.ChronoUnit;
 
 public class DailyScheduleRangeValidator implements ConstraintValidator<ValidDailyScheduleRange, DailyScheduleListRequest> {
 
-    private static final long MAX_RANGE_DAYS = 42;
+    public static final long MAX_RANGE_DAYS = 42;
 
     @Override
     public boolean isValid(DailyScheduleListRequest value, ConstraintValidatorContext context) {

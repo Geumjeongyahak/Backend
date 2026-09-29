@@ -1,5 +1,7 @@
 package geumjeongyahak.domain.daily_schedule.service;
 
+import geumjeongyahak.common.validation.validator.DailyScheduleRangeValidator;
+
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
 import geumjeongyahak.domain.daily_schedule.entity.DailyStudentAttendance;
@@ -184,7 +186,9 @@ public class DailyScheduleAdminViewService {
 
     private DateRange resolveDateRange(LocalDate from, LocalDate to) {
         if (from != null && to != null) {
-            return new DateRange(from, to);
+            // 관리자 화면도 일반 API 와 같은 기간 상한을 둔다. 화면이라 거절하지 않고 줄인다.
+            LocalDate maxTo = from.plusDays(DailyScheduleRangeValidator.MAX_RANGE_DAYS - 1);
+            return new DateRange(from, to.isAfter(maxTo) ? maxTo : to);
         }
         LocalDate baseDate = from != null ? from : LocalDate.now();
         LocalDate weekStart = baseDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
