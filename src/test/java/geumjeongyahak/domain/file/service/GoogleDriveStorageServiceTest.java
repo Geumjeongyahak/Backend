@@ -26,6 +26,7 @@ import com.sun.net.httpserver.HttpServer;
 
 import geumjeongyahak.domain.file.config.DriveUploadProperties;
 import geumjeongyahak.domain.file.enums.DriveUploadTarget;
+import geumjeongyahak.common.exception.BadRequestException;
 import geumjeongyahak.common.exception.BusinessException;
 
 class GoogleDriveStorageServiceTest {
@@ -44,6 +45,13 @@ class GoogleDriveStorageServiceTest {
         server.createContext("/upload/drive/v3/files", this::handleUpload);
         server.createContext("/drive/v3/files", this::handleDriveFiles);
         server.createContext("/drive/v3/files/drive-file-123/permissions", this::handlePermission);
+        server.createContext("/drive/v3/files/known-file", exchange -> {
+            assertThat(exchange.getRequestURI().getQuery()).contains("supportsAllDrives=true", "fields=");
+            respond(exchange, 200, "{\"id\":\"known-file\",\"name\":\"영수증.png\",\"mimeType\":\"image/png\","
+                + "\"size\":\"2048\",\"webViewLink\":\"https://drive.google.com/file/d/known-file/view\"}");
+        });
+        server.createContext("/drive/v3/files/missing-file", exchange -> respond(exchange, 404, "{}"));
+        server.createContext("/drive/v3/files/broken-file", exchange -> respond(exchange, 500, "{}"));
         server.start();
     }
 
@@ -102,6 +110,41 @@ class GoogleDriveStorageServiceTest {
             new MockMultipartFile("file", "board.txt", "text/plain", "hello".getBytes(StandardCharsets.UTF_8))
         )).isInstanceOf(BusinessException.class)
             .hasMessageContaining("Google Drive OAuth 인증 정보가 완전하지 않습니다.");
+    }
+
+    @Test
+    void getMetadata_returnsNameTypeAndSizeFromDrive() {
+        DriveStorageService.StoredDriveFile file = metadataService().getMetadata("known-file");
+
+        assertThat(file.fileId()).isEqualTo("known-file");
+        assertThat(file.name()).isEqualTo("영수증.png");
+        assertThat(file.mimeType()).isEqualTo("image/png");
+        assertThat(file.size()).isEqualTo(2048L);
+    }
+
+    @Test
+    void getMetadata_fileServerCannotRead_rejectsAsBadRequest() {
+        assertThatThrownBy(() -> metadataService().getMetadata("missing-file"))
+            .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void getMetadata_driveError_failsWithoutBlamingTheLink() {
+        assertThatThrownBy(() -> metadataService().getMetadata("broken-file"))
+            .isInstanceOf(BusinessException.class)
+            .isNotInstanceOf(BadRequestException.class)
+            .extracting("code")
+            .isEqualTo("SYS004");
+    }
+
+    private GoogleDriveStorageService metadataService() {
+        DriveUploadProperties properties = new DriveUploadProperties();
+        properties.setApiBaseUrl(baseUrl() + "/drive/v3");
+        GoogleCredentials credentials = GoogleCredentials.create(new AccessToken(
+            "test-token",
+            Date.from(Instant.now().plusSeconds(3600))
+        ));
+        return new GoogleDriveStorageService(properties, new ObjectMapper(), credentials, HttpClient.newHttpClient());
     }
 
     private void handleUpload(HttpExchange exchange) throws IOException {

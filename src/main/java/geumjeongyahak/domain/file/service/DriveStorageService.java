@@ -16,6 +16,10 @@ public interface DriveStorageService {
 
     byte[] download(String fileId);
 
+    default StoredDriveFile getMetadata(String fileId) {
+        throw new UnsupportedOperationException();
+    }
+
     record StoredDriveFile(
         String fileId,
         String viewUrl,
