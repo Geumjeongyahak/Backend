@@ -43,7 +43,9 @@ POST /api/v1/subjects/copy                 권한: hasRole('ADMIN') or hasAuthor
 | 담당 교사의 기존 수업과 시간이 겹침 | `LessonProxyService.existsTeacherConflictForSubjectSchedule` (반열린 구간, #240) |
 
 검증 메서드는 예외를 던지는 모양이라, 복사에서는 과목마다 `try { 검증 } catch (BusinessException e) { 실패 목록에 사유 추가 }`로 모은다.
-새 검증 규칙은 만들지 않는다 — 과목 생성과 판정이 갈리지 않게.
+새 검증 규칙은 만들지 않는다 — 과목 생성과 판정이 갈리지 않게. 복사는 «과목 생성 + 교사 배정»이라, 교사가 있는 과목에는
+교사 배정 규칙(#199 하루치 일정 하나, 교사 수업 겹침)도 건다. 과목 생성 API(`createSubject`)는 교사를 함께 지정해도 #199를
+보지 않는데, 이것은 기존 동작의 빈틈이라 이번에 바꾸지 않는다(codex 2회차 지적 반려, PR `리뷰어에게`).
 
 ## 설계
 
