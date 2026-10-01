@@ -1,10 +1,13 @@
 package geumjeongyahak.domain.subject.v1.controller;
 
+import geumjeongyahak.domain.subject.service.SubjectCopyService;
 import geumjeongyahak.domain.subject.service.SubjectService;
 import geumjeongyahak.domain.subject.v1.dto.request.AssignSubjectTeacherRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.CreateSubjectRequest;
+import geumjeongyahak.domain.subject.v1.dto.request.SubjectCopyRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectBasicRequest;
 import geumjeongyahak.domain.subject.v1.dto.request.UpdateSubjectScheduleRequest;
+import geumjeongyahak.domain.subject.v1.dto.response.SubjectCopyResponse;
 import geumjeongyahak.domain.subject.v1.dto.response.SubjectDetailResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -41,6 +44,7 @@ public class SubjectAdminController {
     private static final String SUBJECT_MANAGE_ACCESS = "hasRole('ADMIN') or hasAuthority('subject:manage:*')";
 
     private final SubjectService subjectService;
+    private final SubjectCopyService subjectCopyService;
 
     @PreAuthorize(SUBJECT_WRITE_ACCESS)
     @Operation(
@@ -82,6 +86,27 @@ public class SubjectAdminController {
         log.debug("POST /api/v1/subjects - 과목 등록 요청");
         SubjectDetailResponse response = subjectService.createSubject(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PreAuthorize(SUBJECT_WRITE_ACCESS)
+    @Operation(
+        summary = "시간표 기간 복사",
+        description = """
+            보낸 과목들을 새 기간으로 한 번에 복사합니다. 원본 과목은 바꾸지 않습니다.
+
+            - 분반·요일·교시·과목명·시간·담당 교사·설명은 그대로, 기간만 startAt~endAt으로 만듭니다.
+            - 담당 교사가 있으면 새 기간의 수업을 만듭니다(지난 날짜 제외).
+            - 판정은 과목 생성과 같습니다: 같은 칸 중복, 교사의 다른 하루치 일정, 교사 수업 시간 겹침.
+            - 하나라도 실패하면 아무것도 저장하지 않고 409 BIZ-05-003과 failures(원본 과목·분반·요일·교시·과목명·이유)를 돌려줍니다.
+            - subjectIds가 비었거나 중복, 없거나 삭제된 과목이면 400입니다.
+
+            권한: 관리자 또는 subject:write:* (과목 생성과 같음)
+            """
+    )
+    @PostMapping("/copy")
+    public ResponseEntity<SubjectCopyResponse> copySubjects(@RequestBody @Valid SubjectCopyRequest request) {
+        log.debug("POST /api/v1/subjects/copy - 시간표 기간 복사 요청 (과목={}건)", request.subjectIds().size());
+        return ResponseEntity.status(HttpStatus.CREATED).body(subjectCopyService.copy(request));
     }
 
     @PreAuthorize(SUBJECT_MANAGE_ACCESS)

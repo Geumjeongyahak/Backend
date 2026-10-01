@@ -28,6 +28,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import lombok.extern.slf4j.Slf4j;
 import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.BusinessException;
+import geumjeongyahak.common.exception.ProblemDetailProperties;
 import geumjeongyahak.common.exception.DuplicateResourceException;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.auth.exception.AuthErrorCode;
@@ -50,6 +51,9 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(ex.getStatus(), ex.getMessage());
         problemDetail.setTitle(ex.getCode());
         problemDetail.setProperty("code", ex.getCode());
+        if (ex instanceof ProblemDetailProperties extra) {
+            extra.problemProperties().forEach(problemDetail::setProperty);
+        }
 
         return ResponseEntity.status(ex.getStatus()).body(problemDetail);
     }
