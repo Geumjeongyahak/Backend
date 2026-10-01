@@ -1,5 +1,6 @@
 package geumjeongyahak.domain.subject.service;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -42,6 +43,7 @@ public class SubjectService {
     private final LessonProxyService lessonProxyService;
     private final SubjectScheduleValidator validator;
     private final EventPublisher eventPublisher;
+    private final Clock clock;
 
     @Transactional
     public SubjectDetailResponse createSubject(CreateSubjectRequest request) {
@@ -79,7 +81,7 @@ public class SubjectService {
             request.startTime(),
             request.endTime(),
             request.period(),
-            teacher != null ? LocalDateTime.now() : null,
+            teacher != null ? LocalDateTime.now(clock) : null,
             request.description()
         );
 
@@ -91,9 +93,9 @@ public class SubjectService {
                 savedSubject.getId(),
                 savedSubject.getClassroom().getId(),
                 savedSubject.getTeacher().getId(),
-                LocalDate.now()
+                LocalDate.now(clock)
             ));
-            LocalDate lessonStartAt = max(LocalDate.now(), savedSubject.getStartAt());
+            LocalDate lessonStartAt = max(LocalDate.now(clock), savedSubject.getStartAt());
             if (!lessonStartAt.isAfter(savedSubject.getEndAt())) {
                 eventPublisher.publish(new SubjectCreatedEvent(
                     savedSubject.getId(),
@@ -192,9 +194,9 @@ public class SubjectService {
                 log.info("과목 담당 교사 배정 실패 - 과목을 찾을 수 없습니다. ID: {}", subjectId);
                 return new SubjectNotFoundException(subjectId);
             });
-        LocalDate today = LocalDate.now();
+        LocalDate changeFrom = lessonChangeFrom();
         if (request.teacherId() == null) {
-            validator.validateFutureLessonsChangeable(subjectId, today);
+            validator.validateFutureLessonsChangeable(subjectId, changeFrom);
             Long classroomId = subject.getClassroom().getId();
             Long previousTeacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
             subject.assignTeacher(null, null);
@@ -202,7 +204,7 @@ public class SubjectService {
                 subject.getId(),
                 classroomId,
                 previousTeacherId,
-                today
+                changeFrom
             ));
             log.debug("과목 담당 교사 해제 완료 (subjectId={})", subject.getId());
             return SubjectDetailResponse.from(subject);
@@ -212,20 +214,20 @@ public class SubjectService {
         teacher.validateCanTeach();
         validator.validateTeacherScheduleAssignable(teacher.getId(), subject);
 
-        validator.validateFutureLessonsChangeable(subjectId, today);
-        validator.validateNoTeacherConflict(subjectId, teacher.getId(), today);
+        validator.validateFutureLessonsChangeable(subjectId, changeFrom);
+        validator.validateNoTeacherConflict(subjectId, teacher.getId(), changeFrom);
 
-        subject.assignTeacher(teacher, LocalDateTime.now());
+        subject.assignTeacher(teacher, LocalDateTime.now(clock));
 
-        if (lessonProxyService.existsFutureActiveLessonBySubjectId(subjectId, today)) {
+        if (lessonProxyService.existsFutureActiveLessonBySubjectId(subjectId, changeFrom)) {
             eventPublisher.publish(new SubjectTeacherAssignedEvent(
                 subject.getId(),
                 subject.getClassroom().getId(),
                 teacher.getId(),
-                today
+                changeFrom
             ));
         } else {
-            LocalDate lessonStartAt = max(today, subject.getStartAt());
+            LocalDate lessonStartAt = max(changeFrom, subject.getStartAt());
             if (!lessonStartAt.isAfter(subject.getEndAt())) {
                 eventPublisher.publish(new SubjectCreatedEvent(
                     subject.getId(),
@@ -281,9 +283,9 @@ public class SubjectService {
             || isChanged(subject.getEndTime(), newEndTime)
             || isChanged(subject.getPeriod(), newPeriod);
 
-        LocalDate today = LocalDate.now();
-        // 수업을 다시 만드는 변경은 내일부터 적용한다. 당일 수업·DailySchedule·출석을 지우지 않는다 (#241)
-        LocalDate changeFrom = recreateLessons ? today.plusDays(1) : today;
+        LocalDate today = LocalDate.now(clock);
+        // 수업을 지우고 다시 만드는 변경은 내일부터, 시간만 바꾸는 변경은 오늘 수업부터 (#241)
+        LocalDate changeFrom = recreateLessons ? lessonChangeFrom() : today;
         LocalDate lessonStartAt = max(changeFrom, newStartAt);
         Long teacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
         if (updateLessons && teacherId != null) {
@@ -354,19 +356,24 @@ public class SubjectService {
             return;
         }
 
-        LocalDate today = LocalDate.now();
-        validator.validateFutureLessonsChangeable(subjectId, today);
+        LocalDate changeFrom = lessonChangeFrom();
+        validator.validateFutureLessonsChangeable(subjectId, changeFrom);
         Long classroomId = subject.getClassroom().getId();
         Long teacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
         subject.deactivate();
         subjectRepository.save(subject);
-        eventPublisher.publish(new SubjectDeletedEvent(subject.getId(), classroomId, teacherId, today));
+        eventPublisher.publish(new SubjectDeletedEvent(subject.getId(), classroomId, teacherId, changeFrom));
 
         log.debug("과목 삭제(비활성화) 완료 (id={})", subjectId);
     }
 
     private boolean isChanged(Object before, Object after) {
         return !Objects.equals(before, after);
+    }
+
+    /** 과목 수정이 수업을 지우거나 바꾸기 시작하는 날. 당일 수업·DailySchedule·출석은 건드리지 않는다 (#241). */
+    private LocalDate lessonChangeFrom() {
+        return LocalDate.now(clock).plusDays(1);
     }
 
     private LocalDate max(LocalDate left, LocalDate right) {
