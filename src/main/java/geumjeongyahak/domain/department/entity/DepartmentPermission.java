@@ -1,5 +1,7 @@
 package geumjeongyahak.domain.department.entity;
 
+import geumjeongyahak.common.security.service.UserDetailsCacheEvictor;
+import jakarta.persistence.EntityListeners;
 import geumjeongyahak.domain.base.entity.BaseEntity;
 import geumjeongyahak.domain.department.enums.DepartmentRoleType;
 import jakarta.persistence.Column;
@@ -27,6 +29,7 @@ import java.util.Objects;
         )
     }
 )
+@EntityListeners(UserDetailsCacheEvictor.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DepartmentPermission extends BaseEntity {

@@ -1,5 +1,7 @@
 package geumjeongyahak.domain.users.entity;
 
+import geumjeongyahak.common.security.service.UserDetailsCacheEvictor;
+import jakarta.persistence.EntityListeners;
 import geumjeongyahak.domain.base.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -24,6 +26,7 @@ import java.util.Objects;
         )
     }
 )
+@EntityListeners(UserDetailsCacheEvictor.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserPermission extends BaseEntity {

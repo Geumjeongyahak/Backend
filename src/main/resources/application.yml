@@ -28,6 +28,13 @@ spring:
       hibernate:
         # 지연 연관을 행마다 읽지 않고 IN 으로 묶어 읽는다 (#240)
         default_batch_fetch_size: 100
+  # 인증 필터의 사용자·권한 조회 (#221). 바뀌면 UserDetailsCacheEvictor 가 커밋 뒤 지운다.
+  # cache-names 를 미리 적어야 시작할 때 Micrometer cache.* 지표가 붙는다.
+  cache:
+    type: caffeine
+    cache-names: userDetails
+    caffeine:
+      spec: maximumSize=${USER_DETAILS_CACHE_MAX:1000},expireAfterWrite=${USER_DETAILS_CACHE_TTL:5m},recordStats
   flyway:
     enabled: ${FLYWAY_ENABLED:true}
     locations: classpath:db/migration

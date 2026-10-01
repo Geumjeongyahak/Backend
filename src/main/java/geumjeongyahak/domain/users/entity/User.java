@@ -1,5 +1,7 @@
 package geumjeongyahak.domain.users.entity;
 
+import geumjeongyahak.common.security.service.UserDetailsCacheEvictor;
+import jakarta.persistence.EntityListeners;
 import geumjeongyahak.domain.auth.entity.UserCredential;
 import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.enums.RoleType;
@@ -33,6 +35,7 @@ import java.util.Set;
 
 @Entity
 @Table(name = "users")
+@EntityListeners(UserDetailsCacheEvictor.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseEntity {

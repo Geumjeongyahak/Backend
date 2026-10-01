@@ -1,5 +1,7 @@
 package geumjeongyahak.domain.auth.entity;
 
+import geumjeongyahak.common.security.service.UserDetailsCacheEvictor;
+import jakarta.persistence.EntityListeners;
 import java.time.LocalDateTime;
 
 import org.springframework.lang.NonNull;
@@ -31,6 +33,7 @@ import lombok.Setter;
         @UniqueConstraint(name = "uq_user_credentials_provider_user_id", columnNames = {"provider", "provider_user_id"})
     }
 )
+@EntityListeners(UserDetailsCacheEvictor.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserCredential extends BaseEntity {
