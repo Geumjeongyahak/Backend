@@ -13,6 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.users.entity.User;
+import geumjeongyahak.domain.users.entity.UserPermission;
+import geumjeongyahak.domain.users.repository.UserPermissionRepository;
 import io.restassured.http.ContentType;
 
 @DisplayName("E2E: 첨부파일 다운로드 권한 — 파일이 붙은 리소스를 읽을 수 있으면 받을 수 있다")
@@ -20,6 +23,10 @@ class AttachmentDownloadAuthorizationTest extends BaseFileTest {
 
     private static final long NOTICE_CHANNEL_ID = 1L;
     private static final String OTHER_VOLUNTEER = "fileOtherVolunteer1234";
+    private static final String VENDOR_READER = "fileVendorReader1234";
+
+    @Autowired
+    private UserPermissionRepository userPermissionRepository;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -32,11 +39,14 @@ class AttachmentDownloadAuthorizationTest extends BaseFileTest {
         jdbcTemplate.update("DELETE FROM meeting_record_attachments");
         jdbcTemplate.update("DELETE FROM meeting_records WHERE title = 'attachment-auth'");
         jdbcTemplate.update("DELETE FROM purchase_request_proposal_receipts");
+        jdbcTemplate.update("DELETE FROM purchase_request_payment_transactions");
+        jdbcTemplate.update("DELETE FROM vendor_balance_histories");
         jdbcTemplate.update("""
             DELETE FROM purchase_request_proposals WHERE purchase_request_id IN
               (SELECT id FROM purchase_requests WHERE title = 'attachment-auth')""");
         jdbcTemplate.update("DELETE FROM purchase_requests WHERE title = 'attachment-auth'");
         jdbcTemplate.update("DELETE FROM site_histories WHERE title = 'attachment-auth'");
+        jdbcTemplate.update("DELETE FROM vendors WHERE name = 'attachment-auth'");
         super.tearDown();
     }
 
@@ -114,6 +124,29 @@ class AttachmentDownloadAuthorizationTest extends BaseFileTest {
         expectDownload(userAccessToken, fileId, 200);
     }
 
+    @Test
+    @DisplayName("⑨ 봉사자는 구매 결제 영수증을 받을 수 있다")
+    void paymentTransactionReceipt_volunteer_ok() {
+        UUID fileId = uploadAttachment();
+        attachToPaymentTransaction(fileId);
+
+        expectDownload(userAccessToken, fileId, 200);
+        expectDownload(guestAccessToken, fileId, 403);
+    }
+
+    @Test
+    @DisplayName("⑩ 거래처 잔액 이력 영수증은 거래처 이력을 볼 수 있는 사람(vendor:read:*)만 받는다")
+    void vendorBalanceReceipt_onlyVendorReaders() {
+        UUID fileId = uploadAttachment();
+        attachToVendorBalanceHistory(fileId);
+        User vendorReader = userTestHelper.createTestUser(VENDOR_READER, RoleType.GUEST);
+        userPermissionRepository.save(new UserPermission(vendorReader, "vendor:read:*"));
+
+        expectDownload(userAccessToken, fileId, 403);
+        expectDownload(userTestHelper.generateAccessTokenByUserKey(VENDOR_READER), fileId, 200);
+        expectDownload(adminAccessToken, fileId, 200);
+    }
+
     private UUID uploadAttachment() {
         return UUID.fromString(
             given()
@@ -170,6 +203,27 @@ class AttachmentDownloadAuthorizationTest extends BaseFileTest {
         jdbcTemplate.update(
             "INSERT INTO purchase_request_proposal_receipts (proposal_id, file_id, sort_order) VALUES (?, ?, 0)",
             proposalId, fileId);
+    }
+
+    private Long createVendor() {
+        jdbcTemplate.update("INSERT INTO vendors (name) VALUES ('attachment-auth')");
+        return jdbcTemplate.queryForObject("SELECT MAX(id) FROM vendors", Long.class);
+    }
+
+    private void attachToPaymentTransaction(UUID fileId) {
+        jdbcTemplate.update("""
+            INSERT INTO purchase_requests (requested_by, payment_type, title, total_price, status)
+            VALUES (?, 'PREPAID', 'attachment-auth', 1000, 'PENDING')""", adminId());
+        Long requestId = jdbcTemplate.queryForObject("SELECT MAX(id) FROM purchase_requests", Long.class);
+        jdbcTemplate.update(
+            "INSERT INTO purchase_request_payment_transactions (purchase_request_id, vendor_id, amount, receipt_file_id) VALUES (?, ?, 1000, ?)",
+            requestId, createVendor(), fileId);
+    }
+
+    private void attachToVendorBalanceHistory(UUID fileId) {
+        jdbcTemplate.update("""
+            INSERT INTO vendor_balance_histories (vendor_id, type, amount, balance_after, receipt_file_id, created_by, occurred_at)
+            VALUES (?, 'CHARGE', 1000, 1000, ?, ?, CURRENT_TIMESTAMP)""", createVendor(), fileId, adminId());
     }
 
     private void attachToSiteHistory(UUID fileId) {

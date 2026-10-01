@@ -21,7 +21,8 @@
 |---|---|---|
 | `post_attachments`, `post_files` | 게시글: 게시됨 + 채널 `read` / 임시저장: 작성자(`PostAccessChecker`) | 같은 규칙 |
 | `meeting_record_attachments` | `hasAnyRole('ADMIN','MANAGER','VOLUNTEER')` (`MeetingRecordController.STAFF_ONLY`) | 같은 규칙 |
-| `purchase_request_proposal_receipts`, `purchase_request_payment_transactions.receipt_file_id`, `vendor_balance_histories.receipt_file_id` | 교사 이상 (`PurchaseRequestController.TEACHER_OR_HIGHER_ACCESS`, 상세 조회에 소유자 검사 없음) | 같은 규칙 |
+| `purchase_request_proposal_receipts`, `purchase_request_payment_transactions.receipt_file_id` | 교사 이상 (`PurchaseRequestController.TEACHER_OR_HIGHER_ACCESS`, 상세 조회에 소유자 검사 없음) | 같은 규칙 |
+| `vendor_balance_histories.receipt_file_id` | 관리자 또는 `vendor:read:*` (`VendorAdminController` 이력 조회) | 같은 규칙 — 구현 중 고침: 처음 계획은 구매 영수증과 묶어 교사 이상으로 적었는데, 그러면 이력을 못 보는 교사가 영수증은 받는다 |
 | `site_history_photos` | 공개 사이트 연혁 | 누구나 |
 
 이슈의 «행사 첨부»는 `events`에 파일 연관이 없다(스키마 확인). 행사 공지는 게시글 첨부로 덮인다.
@@ -155,3 +156,10 @@ sequenceDiagram
 - 2번 → #241
 - 비밀번호 변경 시 다른 기기 토큰 무효화: 지금도 안 한다. 필요하면 별 이슈
 - 만료 토큰 일괄 정리 스케줄러(`deleteExpiredRefreshTokens`는 호출자가 없다): 로그인 때 계정별로 정리하므로 이번에는 안 둔다
+
+## 구현 중 바뀐 것
+
+| 계획 | 실제 | 이유 |
+|---|---|---|
+| 6번: 방향 없는 `sort`는 ASC로 본다 | API 동작은 그대로(400). 공통 파서만 형식 오류를 400으로 던지고, `ChannelListRequest`의 복사본 파서를 `SortOrders`로 합침 | dev에서 확인하니 `sort=createdAt`은 이미 400 `VAL001`이다. 정렬을 받는 네 엔드포인트 모두 `@Valid` + `@ValidSortField`가 먼저 거른다. 이슈의 500은 검증이 빠진 엔드포인트에서만 나는 잠재 결함이라, 응답을 바꾸지 않고 파서만 단단하게 했다 |
+| 3번: 거래처 잔액 이력 영수증은 교사 이상 | 관리자 또는 `vendor:read:*` | 위 표 참고. 테스트 ⑩으로 재현(봉사자 200 → 403) |
