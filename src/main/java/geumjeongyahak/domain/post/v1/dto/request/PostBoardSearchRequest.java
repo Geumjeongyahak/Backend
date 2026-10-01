@@ -1,8 +1,11 @@
 package geumjeongyahak.domain.post.v1.dto.request;
 
+import geumjeongyahak.domain.channel.enums.ChannelType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -25,6 +28,23 @@ public class PostBoardSearchRequest extends PostSearchRequest {
             example = "CLASSROOM"
     )
     private String channelType;
+
+    @Schema(
+            description = """
+                    이 채널 유형들 중 하나인 채널의 게시글만 조회합니다. 쉼표로 잇거나 파라미터를 반복해 보냅니다.
+                    예: channelTypes=NOTICE,CLASSROOM,DEPARTMENT
+                    """,
+            example = "NOTICE,CLASSROOM,DEPARTMENT"
+    )
+    private List<ChannelType> channelTypes;
+
+    @Schema(
+            description = """
+                    이 채널 유형들의 게시글은 빼고 조회합니다. 쉼표로 잇거나 파라미터를 반복해 보냅니다.
+                    """,
+            example = "EVENT"
+    )
+    private List<ChannelType> excludedChannelTypes;
 
     @Schema(
             description = """

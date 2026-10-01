@@ -28,6 +28,12 @@ public class PostSearchSpecificationBuilder {
                 && !"ALL".equalsIgnoreCase(request.getChannelType())) {
             spec = spec.and(PostSpecs.hasChannelType(ChannelType.valueOf(request.getChannelType())));
         }
+        if (request.getChannelTypes() != null && !request.getChannelTypes().isEmpty()) {
+            spec = spec.and(PostSpecs.hasChannelTypeIn(request.getChannelTypes()));
+        }
+        if (request.getExcludedChannelTypes() != null && !request.getExcludedChannelTypes().isEmpty()) {
+            spec = spec.and(PostSpecs.hasChannelTypeNotIn(request.getExcludedChannelTypes()));
+        }
         if (request.getClassroomId() != null) {
             spec = spec.and(PostSpecs.hasChannelType(ChannelType.CLASSROOM))
                     .and(PostSpecs.hasChannelRefId(request.getClassroomId()));
