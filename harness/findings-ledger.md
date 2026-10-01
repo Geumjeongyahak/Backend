@@ -29,3 +29,4 @@ codex 리뷰 지적 한 건이 한 행이다. **반려한 것도 적는다** —
 | 2026-10-01 | #244 | P2 | local | 임시저장 글 첨부를 작성자 여부만 보고 허용해, 채널을 읽을 수 없게 된 작성자도 받는다. 글 조회(`PostCrudService#getPost`)는 채널 read를 먼저 본다 (`PostAttachmentReadPolicy`) | 수용 | 게시 여부와 무관하게 채널 read를 요구하고, 게시 전 글은 작성자만. E2E ⑪로 재현 후 수정 |
 | 2026-10-01 | #244 | P2 | local | 지운 구매 요청의 품의·결제 영수증이 계속 내려받아진다. 구매 요청 조회는 `findByIdAndIsDeletedFalse`다 (`PurchaseReceiptReadPolicy`) | 수용 | 존재 확인 질의에 `purchaseRequest.isDeleted = false` 조건. E2E ⑫로 재현 후 수정 |
 | 2026-10-01 | #244 | P2 | local | post 정책이 channel 도메인 내부 `ChannelAccessChecker`를 직접 주입한다 (`PostAttachmentReadPolicy`) | 수용 | `ChannelProxyService.canRead` 추가(없거나 지운 채널은 false). 기존 `PostCrudService`의 직접 주입은 범위 밖으로 남김 |
+| 2026-10-01 | #244 | P2 | blocking | 구매 영수증 정책이 역할만 봐서, 관리자 상세 조회(`purchase-request:read:*`)로 영수증 id를 보는 세밀 권한 사용자가 다운로드는 403 (`PurchaseReceiptReadPolicy`) | 수용 (3회차) | 열람 권한을 두 상세 API의 합(VOLUNTEER·MANAGER·ADMIN 또는 `purchase-request:read:*`)으로. E2E ⑬ |

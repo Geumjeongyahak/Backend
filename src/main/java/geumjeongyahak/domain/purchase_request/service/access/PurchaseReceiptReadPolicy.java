@@ -13,16 +13,17 @@ import geumjeongyahak.domain.purchase_request.repository.PurchaseRequestProposal
 import lombok.RequiredArgsConstructor;
 
 /**
- * 구매 영수증(품의 영수증·결제 영수증): 교사 이상(VOLUNTEER·MANAGER·ADMIN).
- * {@code PurchaseRequestController.TEACHER_OR_HIGHER_ACCESS}
- * ({@code hasRole('VOLUNTEER') or hasRole('MANAGER') or hasRole('ADMIN')})와 같아야 한다.
+ * 구매 영수증(품의 영수증·결제 영수증): 그 구매 요청을 열람할 수 있는 사람.
+ * 두 상세 조회 API의 권한을 합친 것과 같아야 한다 —
+ * {@code PurchaseRequestController.TEACHER_OR_HIGHER_ACCESS}(VOLUNTEER·MANAGER·ADMIN)와
+ * {@code PurchaseRequestAdminController} 상세({@code purchase-request:read:*}).
  */
 @Component
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PurchaseReceiptReadPolicy implements AttachmentReadPolicy {
 
-    private static final Set<String> TEACHER_OR_HIGHER_ROLES = Set.of("ROLE_VOLUNTEER", "ROLE_MANAGER", "ROLE_ADMIN");
+    private static final Set<String> READERS = Set.of("ROLE_VOLUNTEER", "ROLE_MANAGER", "ROLE_ADMIN", "purchase-request:read:*");
 
     private final PurchaseRequestProposalReceiptRepository proposalReceiptRepository;
     private final PurchaseRequestPaymentTransactionRepository paymentTransactionRepository;
@@ -30,7 +31,7 @@ public class PurchaseReceiptReadPolicy implements AttachmentReadPolicy {
     @Override
     public boolean canRead(UUID fileId, CustomUserDetails user) {
         return user != null
-            && user.getAuthorities().stream().anyMatch(a -> TEACHER_OR_HIGHER_ROLES.contains(a.getAuthority()))
+            && user.getAuthorities().stream().anyMatch(a -> READERS.contains(a.getAuthority()))
             && (proposalReceiptRepository.existsByFileIdAndIsDeletedFalseAndProposalPurchaseRequestIsDeletedFalse(fileId)
                 || paymentTransactionRepository.existsByReceiptFileIdAndPurchaseRequestIsDeletedFalse(fileId));
     }

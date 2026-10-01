@@ -24,6 +24,7 @@ class AttachmentDownloadAuthorizationTest extends BaseFileTest {
     private static final long NOTICE_CHANNEL_ID = 1L;
     private static final String OTHER_VOLUNTEER = "fileOtherVolunteer1234";
     private static final String VENDOR_READER = "fileVendorReader1234";
+    private static final String PURCHASE_READER = "filePurchaseReader1234";
 
     @Autowired
     private UserPermissionRepository userPermissionRepository;
@@ -169,6 +170,17 @@ class AttachmentDownloadAuthorizationTest extends BaseFileTest {
 
         expectDownload(userAccessToken, proposalReceipt, 403);
         expectDownload(userAccessToken, paymentReceipt, 403);
+    }
+
+    @Test
+    @DisplayName("⑬ 구매 요청 열람 세밀 권한(purchase-request:read:*)을 받은 게스트는 영수증을 받을 수 있다")
+    void purchaseReceipt_guestWithReadPermission_ok() {
+        UUID fileId = uploadAttachment();
+        attachToPurchaseProposal(fileId);
+        User purchaseReader = userTestHelper.createTestUser(PURCHASE_READER, RoleType.GUEST);
+        userPermissionRepository.save(new UserPermission(purchaseReader, "purchase-request:read:*"));
+
+        expectDownload(userTestHelper.generateAccessTokenByUserKey(PURCHASE_READER), fileId, 200);
     }
 
     private UUID uploadAttachment() {
