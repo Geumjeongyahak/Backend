@@ -18,8 +18,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 
 /**
- * 과목 수정이 수업을 지우거나 바꾸는 것은 내일부터다. 당일 수업·DailySchedule·출석은 그대로 남는다 (#241).
+ * 과목 수정은 오늘 수업이 시작 전이면 오늘부터, 시작했으면 내일부터 수업에 반영된다 (#241).
  * 테스트와 서버가 같은 시각을 보도록 오늘 정오로 고정한 Clock을 쓴다.
+ * 06:00 수업은 「이미 시작한 수업」, 18:00 수업은 「아직 시작 전인 수업」이다.
  */
 @DisplayName("E2E: 과목 수정 시 당일 수업 보존 (#241)")
 public class SubjectTodayLessonTest extends SubjectBaseTest {
@@ -28,6 +29,8 @@ public class SubjectTodayLessonTest extends SubjectBaseTest {
     private static final long TEACHER_ID = DEFAULT_TEACHER_ID;
     private static final long NEW_TEACHER_ID = 3L;
     private static final int SEED_CLASSROOM_1_STUDENTS = 2;
+    private static final String STARTED = "06:00:00";
+    private static final String NOT_STARTED = "18:00:00";
 
     @TestConfiguration
     static class FixedClockConfig {
@@ -44,10 +47,10 @@ public class SubjectTodayLessonTest extends SubjectBaseTest {
     private Clock clock;
 
     @Test
-    @DisplayName("PATCH /schedule: 기간을 미래로 옮겨도 당일 수업과 DailySchedule·출석은 남는다")
+    @DisplayName("수업 시작 뒤 PATCH /schedule: 기간을 미래로 옮겨도 당일 수업과 DailySchedule·출석은 남는다")
     void updateSchedule_KeepsTodayLesson_WhenPeriodMovesToFuture() {
         LocalDate today = LocalDate.now(clock);
-        long subjectId = createTodaySubject(today);
+        long subjectId = createTodaySubject(today, STARTED);
         long todayLessonId = activeLessonId(subjectId, today);
         long dailyScheduleId = activeDailyScheduleId(today);
 
@@ -60,10 +63,10 @@ public class SubjectTodayLessonTest extends SubjectBaseTest {
     }
 
     @Test
-    @DisplayName("PATCH /schedule: 종료일만 연장하면 당일 수업을 다시 만들지 않는다")
+    @DisplayName("수업 시작 뒤 PATCH /schedule: 종료일만 연장하면 당일 수업을 다시 만들지 않는다")
     void updateSchedule_KeepsTodayLesson_WhenEndAtExtended() {
         LocalDate today = LocalDate.now(clock);
-        long subjectId = createTodaySubject(today);
+        long subjectId = createTodaySubject(today, STARTED);
         long todayLessonId = activeLessonId(subjectId, today);
         long dailyScheduleId = activeDailyScheduleId(today);
 
@@ -74,10 +77,10 @@ public class SubjectTodayLessonTest extends SubjectBaseTest {
     }
 
     @Test
-    @DisplayName("PATCH /teacher: 담당 교사를 해제해도 당일 수업은 남고 내일부터 지운다")
+    @DisplayName("수업 시작 뒤 PATCH /teacher: 담당 교사를 해제해도 당일 수업은 남고 내일부터 지운다")
     void unassignTeacher_KeepsTodayLesson() {
         LocalDate today = LocalDate.now(clock);
-        long subjectId = createTodaySubject(today);
+        long subjectId = createTodaySubject(today, STARTED);
         long todayLessonId = activeLessonId(subjectId, today);
         long dailyScheduleId = activeDailyScheduleId(today);
 
@@ -90,10 +93,10 @@ public class SubjectTodayLessonTest extends SubjectBaseTest {
     }
 
     @Test
-    @DisplayName("DELETE: 과목을 삭제해도 당일 수업은 남고 내일부터 지운다")
+    @DisplayName("수업 시작 뒤 DELETE: 과목을 삭제해도 당일 수업은 남고 내일부터 지운다")
     void deleteSubject_KeepsTodayLesson() {
         LocalDate today = LocalDate.now(clock);
-        long subjectId = createTodaySubject(today);
+        long subjectId = createTodaySubject(today, STARTED);
         long todayLessonId = activeLessonId(subjectId, today);
         long dailyScheduleId = activeDailyScheduleId(today);
 
@@ -110,10 +113,10 @@ public class SubjectTodayLessonTest extends SubjectBaseTest {
     }
 
     @Test
-    @DisplayName("PATCH /teacher: 담당 교사를 바꾸면 당일 수업은 옛 교사로 두고 내일부터 바꾼다")
+    @DisplayName("수업 시작 뒤 PATCH /teacher: 담당 교사를 바꾸면 당일 수업은 옛 교사로 두고 내일부터 바꾼다")
     void replaceTeacher_KeepsTodayLessonTeacher() {
         LocalDate today = LocalDate.now(clock);
-        long subjectId = createTodaySubject(today);
+        long subjectId = createTodaySubject(today, STARTED);
         long todayLessonId = activeLessonId(subjectId, today);
         long dailyScheduleId = activeDailyScheduleId(today);
 
@@ -126,10 +129,10 @@ public class SubjectTodayLessonTest extends SubjectBaseTest {
     }
 
     @Test
-    @DisplayName("PATCH /teacher: 해제한 날 다시 배정하면 당일 수업은 하나로 두고 내일부터 새로 만든다")
+    @DisplayName("수업 시작 뒤 PATCH /teacher: 해제한 날 다시 배정하면 당일 수업은 하나로 두고 내일부터 새로 만든다")
     void reassignTeacherSameDay_CreatesLessonsFromTomorrow() {
         LocalDate today = LocalDate.now(clock);
-        long subjectId = createTodaySubject(today);
+        long subjectId = createTodaySubject(today, STARTED);
         long todayLessonId = activeLessonId(subjectId, today);
 
         patch("/{subjectId}/teacher", subjectId, teacherRequest(null));
@@ -140,13 +143,67 @@ public class SubjectTodayLessonTest extends SubjectBaseTest {
         assertThat(lessonTeacherId(activeLessonId(subjectId, today.plusDays(7)))).isEqualTo(NEW_TEACHER_ID);
     }
 
+    @Test
+    @DisplayName("수업 시작 전 PATCH /schedule: 기간을 미래로 옮기면 오늘 수업도 지운다")
+    void updateSchedule_DeletesTodayLesson_WhenNotStarted() {
+        LocalDate today = LocalDate.now(clock);
+        long subjectId = createTodaySubject(today, NOT_STARTED);
+
+        patch("/{subjectId}/schedule", subjectId,
+            Map.of("startAt", today.plusDays(1).toString(), "endAt", today.plusDays(30).toString()));
+
+        assertThat(activeLessonDates(subjectId)).first().isEqualTo(today.plusDays(7));
+    }
+
+    @Test
+    @DisplayName("수업 시작 전 PATCH /teacher: 담당 교사를 바꾸면 오늘 수업 교사도 바꾼다")
+    void replaceTeacher_ChangesTodayLessonTeacher_WhenNotStarted() {
+        LocalDate today = LocalDate.now(clock);
+        long subjectId = createTodaySubject(today, NOT_STARTED);
+        long todayLessonId = activeLessonId(subjectId, today);
+
+        patch("/{subjectId}/teacher", subjectId, teacherRequest(NEW_TEACHER_ID));
+
+        assertThat(lessonTeacherId(todayLessonId)).isEqualTo(NEW_TEACHER_ID);
+    }
+
+    @Test
+    @DisplayName("수업 시작 전 PATCH /schedule: 요일을 오늘 요일로 바꾸면 오늘 수업을 만든다")
+    void updateSchedule_CreatesTodayLesson_WhenDayOfWeekBecomesTodayBeforeStart() {
+        LocalDate today = LocalDate.now(clock);
+        long subjectId = createSubject(today, today.plusDays(1).getDayOfWeek().name(), NOT_STARTED);
+        assertThat(activeLessonDates(subjectId)).doesNotContain(today);
+
+        patch("/{subjectId}/schedule", subjectId, Map.of("dayOfWeek", today.getDayOfWeek().name()));
+
+        activeLessonId(subjectId, today);
+    }
+
+    @Test
+    @DisplayName("수업 시작 뒤 PATCH /schedule: 시간만 바꾸면 오늘 수업 시간은 그대로 두고 다음 수업부터 바꾼다")
+    void updateScheduleTime_KeepsTodayLessonTime_WhenStarted() {
+        LocalDate today = LocalDate.now(clock);
+        long subjectId = createTodaySubject(today, STARTED);
+        long todayLessonId = activeLessonId(subjectId, today);
+
+        patch("/{subjectId}/schedule", subjectId, Map.of("startTime", "07:00:00", "endTime", "07:40:00"));
+
+        assertThat(lessonStartTime(todayLessonId)).isEqualTo(LocalTime.of(6, 0));
+        assertThat(lessonStartTime(activeLessonId(subjectId, today.plusDays(7)))).isEqualTo(LocalTime.of(7, 0));
+    }
+
     /** 오늘 시작, 요일 = 오늘 요일인 과목. 만들 때 오늘 수업과 DailySchedule·출석이 생긴다. */
-    private long createTodaySubject(LocalDate today) {
-        Map<String, Object> request = new HashMap<>(createRequest(CLASSROOM_1, "오늘 과목", today.getDayOfWeek().name(), 1));
+    private long createTodaySubject(LocalDate today, String startTime) {
+        return createSubject(today, today.getDayOfWeek().name(), startTime);
+    }
+
+    /** 오늘부터 30일, 수업 40분인 과목. */
+    private long createSubject(LocalDate today, String dayOfWeek, String startTime) {
+        Map<String, Object> request = new HashMap<>(createRequest(CLASSROOM_1, "오늘 과목", dayOfWeek, 1));
         request.put("startAt", today.toString());
         request.put("endAt", today.plusDays(30).toString());
-        request.put("startTime", "06:00:00");
-        request.put("endTime", "06:40:00");
+        request.put("startTime", startTime);
+        request.put("endTime", LocalTime.parse(startTime).plusMinutes(40).toString() + ":00");
 
         return given()
             .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
@@ -198,6 +255,10 @@ public class SubjectTodayLessonTest extends SubjectBaseTest {
 
     private long lessonTeacherId(long lessonId) {
         return jdbcTemplate.queryForObject("SELECT teacher_id FROM lessons WHERE id = ?", Long.class, lessonId);
+    }
+
+    private LocalTime lessonStartTime(long lessonId) {
+        return jdbcTemplate.queryForObject("SELECT start_time FROM lessons WHERE id = ?", LocalTime.class, lessonId);
     }
 
     private long dailyScheduleTeacherId(long dailyScheduleId) {
