@@ -141,6 +141,19 @@ class SubjectCopyTest extends SubjectBaseTest {
     }
 
     @Test
+    @DisplayName("같은 교사가 다른 기간에 맡던 두 분반을 같은 새 기간으로 보내면 둘 다 실패한다 (#199, 같이 보낸 과목끼리)")
+    void copy_SameTeacherDifferentClassroomsInRequest_BothFail() {
+        long spring = createMondaySubject(CLASSROOM_1, TEACHER_ID, "상반기 1반", "2099-02-02", "2099-02-23", "19:20:00", "20:00:00", 1);
+        long march = createMondaySubject(CLASSROOM_2, TEACHER_ID, "3월 2반", SOURCE_START, SOURCE_END, "19:20:00", "20:00:00", 1);
+
+        copy(adminAccessToken, copyRequest(List.of(spring, march)))
+            .statusCode(409)
+            .body("failures", hasSize(2))
+            .body("failures.sourceSubjectId", containsInAnyOrder((int) spring, (int) march));
+        assertThat(countSubjectsStartingAt(TARGET_START)).isZero();
+    }
+
+    @Test
     @DisplayName("같은 교사의 맞닿은 교시도 그대로 복사된다 (#240)")
     void copy_AdjacentPeriodsOfSameTeacher() {
         long second = createMondaySubject(CLASSROOM_1, TEACHER_ID, "2교시", SOURCE_START, SOURCE_END, "12:20:00", "13:00:00", 2);

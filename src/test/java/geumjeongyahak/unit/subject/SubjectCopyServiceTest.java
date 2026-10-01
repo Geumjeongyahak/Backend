@@ -134,4 +134,29 @@ class SubjectCopyServiceTest {
             .isInstanceOf(SubjectNotCopyableException.class)
             .hasMessageContaining("[1, 2]");
     }
+
+    @Test
+    void sameCellCollisions_collectEveryParticipant_notOnlyNeighbours() {
+        Subject long1 = subject(1L, 1L, LocalTime.of(9, 0), LocalTime.of(12, 0), 1);
+        Subject inner = subject(2L, 1L, LocalTime.of(10, 0), LocalTime.of(11, 0), 2);
+        Subject late = subject(3L, 1L, LocalTime.of(11, 30), LocalTime.of(13, 0), 3);
+        given(subjectRepository.findAllByIdIn(any())).willReturn(List.of(long1, inner, late));
+
+        assertThatThrownBy(() -> service.copy(new SubjectCopyRequest(List.of(1L, 2L, 3L), START, END)))
+            .isInstanceOf(SubjectCopyConflictException.class)
+            .extracting(e -> ((SubjectCopyConflictException) e).problemProperties().get("failures"), list(Object.class))
+            .extracting("sourceSubjectId")
+            .containsExactlyInAnyOrder(1L, 2L, 3L);
+    }
+
+    @Test
+    void sameCellOverlap_isNotACollision_whenTargetPeriodHasNoSuchWeekday() {
+        Subject first = subject(1L, 1L, LocalTime.of(19, 20), LocalTime.of(20, 0), 1);
+        Subject overlapping = subject(2L, 1L, LocalTime.of(19, 30), LocalTime.of(20, 10), 2);
+        given(subjectRepository.findAllByIdIn(any())).willReturn(List.of(first, overlapping));
+        given(subjectRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
+        LocalDate tuesday = LocalDate.of(2099, 4, 7);
+
+        assertThat(service.copy(new SubjectCopyRequest(List.of(1L, 2L), tuesday, tuesday)).copiedCount()).isEqualTo(2);
+    }
 }

@@ -17,16 +17,16 @@ import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -42,6 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SubjectCopyService {
 
     private static final String COLLIDES_WITH_REQUESTED = "같이 보낸 과목과 같은 분반·요일·시간이 겹칩니다.";
+    private static final String TEACHER_SPLIT_IN_REQUEST = "같이 보낸 과목에서 같은 담당 교사가 다른 분반·요일을 맡습니다.";
 
     private final SubjectRepository subjectRepository;
     private final SubjectScheduleValidator validator;
@@ -57,7 +58,7 @@ public class SubjectCopyService {
             validator.validateCreateSchedule(startAt, endAt, source.getStartTime(), source.getEndTime())
         );
 
-        List<SubjectCopyFailure> failures = new ArrayList<>(collidingWithEachOther(sources));
+        List<SubjectCopyFailure> failures = new ArrayList<>(conflictsWithinRequest(sources, startAt, endAt));
         Set<Long> collided = failures.stream().map(SubjectCopyFailure::sourceSubjectId).collect(Collectors.toSet());
         sources.stream()
             .filter(source -> !collided.contains(source.getId()))
@@ -92,20 +93,53 @@ public class SubjectCopyService {
         return subjectIds.stream().map(found::get).toList();
     }
 
-    /** 보낸 과목끼리 복사본이 같은 칸·시간에서 겹치는지. DB 검사로는 안 보인다(아직 저장 전). */
-    private List<SubjectCopyFailure> collidingWithEachOther(List<Subject> sources) {
-        return sources.stream()
+    /**
+     * 보낸 과목끼리의 충돌. 복사본은 아직 저장 전이라 DB 검증으로는 서로가 안 보인다.
+     * 판정은 과목 생성 검증과 같게 맞춘다 — 같은 칸은 새 기간에 그 요일이 있을 때만, 교사는 하루치 일정 하나(#199).
+     */
+    private List<SubjectCopyFailure> conflictsWithinRequest(List<Subject> sources, LocalDate startAt, LocalDate endAt) {
+        Map<Subject, String> reasons = new LinkedHashMap<>();
+
+        sources.stream()
             .collect(Collectors.groupingBy(source -> new Cell(source.getClassroom().getId(), source.getDayOfWeek())))
+            .forEach((cell, sameCell) -> {
+                if (!hasWeekday(startAt, endAt, cell.dayOfWeek())) {
+                    return;
+                }
+                // 모든 쌍을 본다 — 이웃끼리만 보면 09–12와 11:30–13 같은 충돌 참여자를 놓친다
+                for (int i = 0; i < sameCell.size(); i++) {
+                    for (int j = i + 1; j < sameCell.size(); j++) {
+                        if (timesOverlap(sameCell.get(i), sameCell.get(j))) {
+                            reasons.putIfAbsent(sameCell.get(i), COLLIDES_WITH_REQUESTED);
+                            reasons.putIfAbsent(sameCell.get(j), COLLIDES_WITH_REQUESTED);
+                        }
+                    }
+                }
+            });
+
+        sources.stream()
+            .filter(source -> source.getTeacher() != null)
+            .collect(Collectors.groupingBy(source -> source.getTeacher().getId()))
             .values()
             .stream()
-            .map(sameCell -> sameCell.stream().sorted(Comparator.comparing(Subject::getStartTime)).toList())
-            .flatMap(sorted -> IntStream.range(1, sorted.size())
-                .filter(i -> sorted.get(i - 1).getEndTime().isAfter(sorted.get(i).getStartTime()))
-                .boxed()
-                .flatMap(i -> java.util.stream.Stream.of(sorted.get(i - 1), sorted.get(i))))
-            .distinct()
-            .map(source -> SubjectCopyFailure.of(source, COLLIDES_WITH_REQUESTED))
+            .filter(sameTeacher -> sameTeacher.stream()
+                .map(source -> new Cell(source.getClassroom().getId(), source.getDayOfWeek()))
+                .distinct()
+                .count() > 1)
+            .flatMap(List::stream)
+            .forEach(source -> reasons.putIfAbsent(source, TEACHER_SPLIT_IN_REQUEST));
+
+        return reasons.entrySet().stream()
+            .map(entry -> SubjectCopyFailure.of(entry.getKey(), entry.getValue()))
             .toList();
+    }
+
+    private static boolean timesOverlap(Subject left, Subject right) {
+        return left.getStartTime().isBefore(right.getEndTime()) && right.getStartTime().isBefore(left.getEndTime());
+    }
+
+    private static boolean hasWeekday(LocalDate startAt, LocalDate endAt, DayOfWeek dayOfWeek) {
+        return !startAt.with(TemporalAdjusters.nextOrSame(dayOfWeek)).isAfter(endAt);
     }
 
     /** 과목 생성과 같은 검증. 실패하면 사유를 돌려준다. */
