@@ -24,6 +24,7 @@ import geumjeongyahak.domain.daily_schedule.exception.InvalidDailySchedulePerson
 import geumjeongyahak.domain.daily_schedule.exception.LessonNotInDailyScheduleException;
 import geumjeongyahak.domain.daily_schedule.exception.StudentNotInDailyScheduleException;
 import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleRepository;
+import geumjeongyahak.domain.daily_schedule.repository.DailyScheduleSpecs;
 import geumjeongyahak.domain.daily_schedule.repository.DailyStudentAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.repository.DailyTeacherAttendanceRepository;
 import geumjeongyahak.domain.daily_schedule.v1.dto.request.CreateDailyScheduleJournalRequest;
@@ -65,8 +66,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -189,38 +192,26 @@ public class DailyScheduleService {
         DailySchedulePaginationRequest request,
         Long requesterId
     ) {
-        List<DailySchedule> dailySchedules = dailyScheduleRepository
-            .findAllByIsDeletedFalseOrderByLessonDateDescIdDesc()
-            .stream()
-            .filter(dailySchedule -> !Boolean.TRUE.equals(request.getMine())
-                || dailySchedule.getTeacher().getId().equals(requesterId))
-            .toList();
-        Map<DailyScheduleLessonKey, List<Lesson>> lessonsByScheduleKey = getLessonsByScheduleKey(dailySchedules);
-        List<DailyScheduleWithLessons> filteredSchedules = dailySchedules.stream()
-            .map(dailySchedule -> new DailyScheduleWithLessons(
+        Specification<DailySchedule> spec = DailyScheduleSpecs.notDeleted()
+            .and(DailyScheduleSpecs.hasWrittenJournal());
+        if (Boolean.TRUE.equals(request.getMine())) {
+            spec = spec.and(DailyScheduleSpecs.hasTeacherId(requesterId));
+        }
+        if (hasText(request.getKeyword())) {
+            spec = spec.and(DailyScheduleSpecs.containsKeyword(request.getKeyword()));
+        }
+        PageRequest pageRequest = request.toRequest()
+            .withSort(Sort.by(Sort.Order.desc("lessonDate"), Sort.Order.desc("id")));
+        Page<DailySchedule> page = dailyScheduleRepository.findAll(spec, pageRequest);
+
+        Map<DailyScheduleLessonKey, List<Lesson>> lessonsByScheduleKey = getLessonsByScheduleKey(page.getContent());
+        Map<Long, DailyTeacherAttendance> attendanceByScheduleId = getTeacherAttendancesByScheduleId(page.getContent());
+        return PaginationResponse.from(page, dailySchedule -> toSummaryResponse(
+            new DailyScheduleWithLessons(
                 dailySchedule,
                 lessonsByScheduleKey.getOrDefault(DailyScheduleLessonKey.from(dailySchedule), List.of())
-            ))
-            .filter(dailyScheduleWithLessons -> hasWrittenJournal(dailyScheduleWithLessons.lessons()))
-            .filter(dailyScheduleWithLessons -> matchesKeyword(dailyScheduleWithLessons, request.getKeyword()))
-            .toList();
-        PageRequest pageRequest = request.toRequest();
-        int start = Math.min((int) pageRequest.getOffset(), filteredSchedules.size());
-        int end = Math.min(start + pageRequest.getPageSize(), filteredSchedules.size());
-        List<DailyScheduleWithLessons> pageSchedules = filteredSchedules.subList(start, end);
-        Map<Long, DailyTeacherAttendance> attendanceByScheduleId = getTeacherAttendancesByScheduleId(
-            pageSchedules.stream().map(DailyScheduleWithLessons::dailySchedule).toList()
-        );
-        List<DailyScheduleSummaryResponse> responses = pageSchedules.stream()
-            .map(dailyScheduleWithLessons -> toSummaryResponse(
-                dailyScheduleWithLessons,
-                attendanceByScheduleId.get(dailyScheduleWithLessons.dailySchedule().getId())
-            ))
-            .toList();
-        return new PaginationResponse<>(new PageImpl<>(
-            responses,
-            pageRequest,
-            filteredSchedules.size()
+            ),
+            attendanceByScheduleId.get(dailySchedule.getId())
         ));
     }
 

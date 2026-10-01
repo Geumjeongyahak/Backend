@@ -2,6 +2,7 @@ package geumjeongyahak.unit.daily_schedule;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -65,6 +66,11 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 @ExtendWith(MockitoExtension.class)
 class DailyScheduleServiceReadTest {
@@ -142,41 +148,41 @@ class DailyScheduleServiceReadTest {
     }
 
     @Test
-    void getJournalDailySchedules_returnsPagedWrittenJournals() {
+    void getJournalDailySchedules_loadsLessonsAndAttendancesOnlyForQueriedPage() {
         LocalDate lessonDate = LocalDate.of(2026, 5, 20);
         Classroom classroom = classroom(1L);
         User teacher = teacher(2L, "홍길동");
         DailySchedule writtenSchedule = dailySchedule(100L, classroom, teacher, lessonDate);
-        DailySchedule emptySchedule = dailySchedule(101L, classroom, teacher, lessonDate.plusDays(1));
         Subject subject = subject(classroom, teacher, lessonDate);
         Lesson writtenLesson = lesson(subject, teacher, lessonDate, 1);
         writtenLesson.updateNote("수학 수업 내용");
-        Lesson emptyLesson = lesson(subject, teacher, lessonDate.plusDays(1), 1);
 
-        given(dailyScheduleRepository.findAllByIsDeletedFalseOrderByLessonDateDescIdDesc())
-            .willReturn(List.of(writtenSchedule, emptySchedule));
-        given(lessonProxyService.getActiveLessonsByClassroomIdsAndDates(
-            Set.of(classroom.getId()),
-            Set.of(lessonDate, lessonDate.plusDays(1))
-        )).willReturn(List.of(writtenLesson, emptyLesson));
+        given(dailyScheduleRepository.findAll(any(Specification.class), any(Pageable.class)))
+            .willAnswer(invocation -> new PageImpl<>(
+                List.of(writtenSchedule), invocation.getArgument(1, Pageable.class), 3
+            ));
+        given(lessonProxyService.getActiveLessonsByClassroomIdsAndDates(Set.of(classroom.getId()), Set.of(lessonDate)))
+            .willReturn(List.of(writtenLesson));
         given(dailyTeacherAttendanceRepository.findAllByDailyScheduleIdInAndIsDeletedFalse(
             List.of(writtenSchedule.getId())
         )).willReturn(List.of());
 
         PaginationResponse<DailyScheduleSummaryResponse> response = dailyScheduleService.getJournalDailySchedules(
-            journalPaginationRequest("수학", true, 0, 1),
+            journalPaginationRequest("수학", true, 1, 1),
             teacher.getId()
         );
 
         assertThat(response.getContent()).hasSize(1);
-        assertThat(response.getTotalElements()).isEqualTo(1);
-        assertThat(response.getTotalPages()).isEqualTo(1);
+        assertThat(response.getTotalElements()).isEqualTo(3);
+        assertThat(response.getTotalPages()).isEqualTo(3);
         assertThat(response.getContent().get(0).dailyScheduleId()).isEqualTo(writtenSchedule.getId());
-        assertThat(response.getContent().get(0).lessons()).hasSize(1);
         assertThat(response.getContent().get(0).lessons().get(0).note()).isEqualTo("수학 수업 내용");
-        verify(dailyTeacherAttendanceRepository).findAllByDailyScheduleIdInAndIsDeletedFalse(
-            List.of(writtenSchedule.getId())
-        );
+
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(dailyScheduleRepository).findAll(any(Specification.class), pageable.capture());
+        assertThat(pageable.getValue().getPageNumber()).isEqualTo(1);
+        assertThat(pageable.getValue().getSort())
+            .isEqualTo(Sort.by(Sort.Order.desc("lessonDate"), Sort.Order.desc("id")));
         verify(dailyTeacherAttendanceRepository, never())
             .findByDailyScheduleIdAndIsDeletedFalse(anyLong());
     }
