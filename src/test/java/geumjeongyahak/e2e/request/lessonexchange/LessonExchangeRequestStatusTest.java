@@ -313,6 +313,67 @@ class LessonExchangeRequestStatusTest extends RequestBaseTest {
     }
 
     @Test
+    @DisplayName("자동 만료 처리는 만료되지 않은 요청의 ACTIVE 제안을 건드리지 않는다")
+    void expireExpiredRequests_keepsProposalsOfNotExpiredRequestActive() {
+        Long expiredRequestId = createApprovedRequestWithProposal(LocalDate.now().plusDays(31));
+        Long liveRequestId = createApprovedRequestWithProposal(LocalDate.now().plusDays(32));
+        Long expiredProposalId = proposalIds.get(proposalIds.size() - 2);
+        Long liveProposalId = proposalIds.getLast();
+        setRequestExpiresAt(expiredRequestId, LocalDateTime.now().minusMinutes(1));
+
+        int expiredCount = lessonExchangeRequestService.expireExpiredLessonExchangeRequests();
+
+        assertThat(expiredCount).isEqualTo(1);
+        assertThat(lessonExchangeProposalRepository.findById(expiredProposalId).orElseThrow().getStatus().name())
+            .isEqualTo("CLOSED");
+        assertThat(lessonExchangeRequestRepository.findById(liveRequestId).orElseThrow().getStatus())
+            .isEqualTo(LessonExchangeRequestStatus.APPROVED);
+        var liveProposal = lessonExchangeProposalRepository.findById(liveProposalId).orElseThrow();
+        assertThat(liveProposal.getStatus().name()).isEqualTo("ACTIVE");
+        assertThat(liveProposal.getClosedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("자동 만료된 요청을 승인하면 -> 409")
+    void approve_afterExpire_returns409() {
+        Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(33));
+        setRequestExpiresAt(requestId, LocalDateTime.now().minusMinutes(1));
+        lessonExchangeRequestService.expireExpiredLessonExchangeRequests();
+
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{id}/approve", requestId)
+            .then()
+            .statusCode(409);
+        assertThat(lessonExchangeRequestRepository.findById(requestId).orElseThrow().getStatus())
+            .isEqualTo(LessonExchangeRequestStatus.EXPIRED);
+    }
+
+    private Long createApprovedRequestWithProposal(LocalDate lessonDate) {
+        Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, lessonDate);
+        given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(adminToken))
+            .patch("/{id}/approve", requestId)
+            .then()
+            .statusCode(200);
+        Long proposalId = given()
+            .basePath("/api/v1/lesson-exchange-requests")
+            .header(AUTH_HEADER, getAuthHeader(volunteer2Token))
+            .contentType(ContentType.JSON)
+            .body(Map.of("content", "제안"))
+            .post("/{requestId}/proposals", requestId)
+            .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
+        proposalIds.add(proposalId);
+        return requestId;
+    }
+
+    @Test
     @DisplayName("자동 만료 처리 시 아직 만료되지 않은 요청은 그대로 유지된다")
     void expireExpiredRequests_keepsNotExpiredRequestUntouched() {
         Long requestId = createPendingFullRequest(VOLUNTEER_USERNAME, TEACHER_ID, LocalDate.now().plusDays(14));

@@ -6,14 +6,13 @@ import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleProxyService;
 import geumjeongyahak.domain.notification.enums.PushRequestType;
 import geumjeongyahak.domain.notification.event.RequestReviewedPushEvent;
-import geumjeongyahak.domain.request.entity.LessonExchangeProposal;
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
-import geumjeongyahak.domain.request.enums.LessonExchangeProposalStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import geumjeongyahak.domain.request.exception.LessonExchangeRequest.*;
 import geumjeongyahak.domain.request.exception.RequestAlreadyProcessedException;
 import geumjeongyahak.domain.request.exception.RequestForbiddenException;
 import geumjeongyahak.domain.request.exception.RequestNotFoundException;
+import geumjeongyahak.domain.request.repository.LessonExchangeProposalRepository;
 import geumjeongyahak.domain.request.repository.LessonExchangeRequestRepository;
 import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeRequestRequest;
 import geumjeongyahak.domain.request.v1.dto.request.LessonExchangeRequestListRequest;
@@ -43,6 +42,7 @@ import java.util.List;
 public class LessonExchangeRequestService {
 
     private final LessonExchangeRequestRepository lessonExchangeRequestRepository;
+    private final LessonExchangeProposalRepository lessonExchangeProposalRepository;
     private final DailyScheduleProxyService dailyScheduleProxyService;
     private final UserProxyService userProxyService;
     private final EventPublisher eventPublisher;
@@ -254,19 +254,15 @@ public class LessonExchangeRequestService {
     @Transactional
     public int expireExpiredLessonExchangeRequests() {
         LocalDateTime now = LocalDateTime.now(clock);
-        List<LessonExchangeRequest> expiredRequests =
-            lessonExchangeRequestRepository.findAllByStatusInAndExpiresAtLessThanEqual(
-                List.of(LessonExchangeRequestStatus.PENDING, LessonExchangeRequestStatus.APPROVED),
-                now
-            );
+        // 요청을 먼저 만료시키면 제안을 고를 조건(요청 상태)이 사라지므로 제안부터 닫는다
+        lessonExchangeProposalRepository.closeActiveProposalsOfExpiredRequests(now);
+        int expiredCount = lessonExchangeRequestRepository.expireActiveRequests(now);
 
-        expiredRequests.forEach(this::expireRequest);
-
-        if (!expiredRequests.isEmpty()) {
-            log.info("수업 교환 요청 자동 만료 처리 완료 (count={}, expiredAt={})", expiredRequests.size(), now);
+        if (expiredCount > 0) {
+            log.info("수업 교환 요청 자동 만료 처리 완료 (count={}, expiredAt={})", expiredCount, now);
         }
 
-        return expiredRequests.size();
+        return expiredCount;
     }
 
     private LocalDateTime getLessonStartAt(DailySchedule dailySchedule) {
@@ -351,17 +347,6 @@ public class LessonExchangeRequestService {
         if (hasDuplicate) {
             throw new DuplicateActiveRequestException();
         }
-    }
-
-    private void expireRequest(LessonExchangeRequest request) {
-        request.expire();
-        closeActiveProposals(request);
-    }
-
-    private void closeActiveProposals(LessonExchangeRequest request) {
-        request.getProposals().stream()
-            .filter(proposal -> proposal.getStatus() == LessonExchangeProposalStatus.ACTIVE)
-            .forEach(LessonExchangeProposal::close);
     }
 
     private DailySchedule getTargetDailySchedule(

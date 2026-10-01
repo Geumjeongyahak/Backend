@@ -61,6 +61,10 @@ public class LessonExchangeRequest extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String rejectionNote;
 
+    // 만료 스케줄러와 승인·반려가 동시에 바꾸면 나중 쪽이 409 로 끝난다
+    @Version
+    private Long version;
+
     @OneToMany(mappedBy = "request", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LessonExchangeProposal> proposals = new ArrayList<>();
 
@@ -118,10 +122,6 @@ public class LessonExchangeRequest extends BaseEntity {
     public void cancel() {
         this.status = LessonExchangeRequestStatus.CANCELLED;
         this.cancelledAt = LocalDateTime.now();
-    }
-
-    public void expire() {
-        this.status = LessonExchangeRequestStatus.EXPIRED;
     }
 }
 

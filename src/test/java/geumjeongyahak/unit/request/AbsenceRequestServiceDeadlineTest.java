@@ -3,7 +3,6 @@ package geumjeongyahak.unit.request;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
@@ -27,12 +26,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -205,23 +202,13 @@ class AbsenceRequestServiceDeadlineTest {
     }
 
     @Test
-    void expire_atExactExpiresAt_marksPendingRequestExpired() {
-        AbsenceRequest request = pendingRequest(NOW);
-        given(absenceRequestRepository.findAllByStatusInAndExpiresAtLessThanEqual(
-            List.of(RequestStatus.PENDING),
-            NOW
-        )).willReturn(List.of(request));
+    void expire_returnsBulkUpdateCountAtCurrentTime() {
+        given(absenceRequestRepository.expirePendingRequests(NOW)).willReturn(3);
 
         int expiredCount = service.expireExpiredAbsenceRequests();
 
-        assertThat(expiredCount).isOne();
-        assertThat(request.getStatus()).isEqualTo(RequestStatus.EXPIRED);
-        ArgumentCaptor<LocalDateTime> expiresAtCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
-        then(absenceRequestRepository).should().findAllByStatusInAndExpiresAtLessThanEqual(
-            eq(List.of(RequestStatus.PENDING)),
-            expiresAtCaptor.capture()
-        );
-        assertThat(expiresAtCaptor.getValue()).isEqualTo(NOW);
+        assertThat(expiredCount).isEqualTo(3);
+        then(absenceRequestRepository).should().expirePendingRequests(NOW);
     }
 
     private void prepareCreate() {
