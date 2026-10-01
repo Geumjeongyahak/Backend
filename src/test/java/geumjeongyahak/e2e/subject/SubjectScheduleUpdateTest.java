@@ -3,12 +3,14 @@ package geumjeongyahak.e2e.subject;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.hamcrest.Matchers.notNullValue;
 
 import io.restassured.path.json.JsonPath;
 import java.sql.Date;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -347,7 +349,7 @@ public class SubjectScheduleUpdateTest extends SubjectBaseTest {
     @Test
     @DisplayName("PATCH /schedule: 기간을 미래로 옮겨도 당일 수업과 DailySchedule·출석은 남는다 (#241)")
     void updateSchedule_KeepsTodayLesson_WhenPeriodMovesToFuture() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = todayAwayFromMidnight();
         long subjectId = createTodaySubject(today);
         long todayLessonId = activeLessonId(subjectId, today);
         long dailyScheduleId = activeDailyScheduleId(today);
@@ -368,7 +370,7 @@ public class SubjectScheduleUpdateTest extends SubjectBaseTest {
     @Test
     @DisplayName("PATCH /schedule: 종료일만 연장하면 당일 수업을 다시 만들지 않고 DailySchedule·출석을 그대로 둔다 (#241)")
     void updateSchedule_KeepsTodayLesson_WhenEndAtExtended() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = todayAwayFromMidnight();
         long subjectId = createTodaySubject(today);
         long todayLessonId = activeLessonId(subjectId, today);
         long dailyScheduleId = activeDailyScheduleId(today);
@@ -377,6 +379,15 @@ public class SubjectScheduleUpdateTest extends SubjectBaseTest {
 
         assertThat(activeLessonId(subjectId, today)).isEqualTo(todayLessonId);
         assertTodayRecordsKept(dailyScheduleId, today);
+    }
+
+    /**
+     * 테스트와 서버가 각자 오늘 날짜를 읽으므로 자정을 사이에 두면 날짜가 갈린다. 자정 직전 1분은 건너뛴다.
+     * ponytail: 서버가 Clock 빈을 쓰고 E2E가 고정 Clock을 주입하면 이 가정이 필요 없다
+     */
+    private LocalDate todayAwayFromMidnight() {
+        assumeTrue(LocalTime.now().isBefore(LocalTime.of(23, 59)), "자정 직전에는 날짜가 바뀔 수 있어 건너뛴다");
+        return LocalDate.now();
     }
 
     /** 오늘 시작, 요일 = 오늘 요일인 과목. 만들 때 오늘 수업과 DailySchedule·교사 출석이 생긴다. */
