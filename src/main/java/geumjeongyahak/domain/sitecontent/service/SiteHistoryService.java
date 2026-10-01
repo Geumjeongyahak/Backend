@@ -197,10 +197,12 @@ public class SiteHistoryService {
             return fileRepository.findByIdAndIsDeletedFalse(photo.fileId())
                 .orElseThrow(() -> new ResourceNotFoundException(CommonErrorCode.RESOURCE_NOT_FOUND, "파일을 찾을 수 없습니다."));
         }
-        if (photo.id() != null) {
+        if (photo.id() != null && existingPhotoFiles.containsKey(photo.id())) {
             return existingPhotoFiles.get(photo.id());
         }
-        return null;
+        // 프론트가 fileId를 안 보내도 업로드 응답의 공개 URL(src)로 파일을 찾아 연결한다.
+        // 그래야 사진을 빼거나 연혁을 지울 때 파일도 정리된다 (#244). 외부 이미지 URL이면 파일 없이 둔다
+        return photo.src() == null ? null : fileRepository.findFirstByPublicUrlAndIsDeletedFalse(photo.src()).orElse(null);
     }
 
     private Map<Long, File> toPhotoMap(SiteHistory history) {
