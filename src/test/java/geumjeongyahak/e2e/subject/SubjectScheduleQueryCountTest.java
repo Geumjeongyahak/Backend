@@ -24,27 +24,9 @@ class SubjectScheduleQueryCountTest extends SubjectBaseTest {
     }
 
     private long createSubject(String startAt, String endAt) {
-        return given()
-            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
-            .contentType("application/json")
-            .body(Map.ofEntries(
-                Map.entry("classroomId", 1L),
-                Map.entry("teacherId", 2L),
-                Map.entry("name", "질의 수 측정"),
-                Map.entry("startAt", startAt),
-                Map.entry("endAt", endAt),
-                Map.entry("dayOfWeek", "MONDAY"),
-                Map.entry("startTime", "19:20:00"),
-                Map.entry("endTime", "20:00:00"),
-                Map.entry("period", 1)
-            ))
-        .when()
-            .post()
-        .then()
-            .statusCode(201)
-            .extract()
-            .jsonPath()
-            .getLong("id");
+        return createMondaySubject(
+            DEFAULT_CLASSROOM_ID, DEFAULT_TEACHER_ID, "질의 수 측정", startAt, endAt, "19:20:00", "20:00:00", 1
+        );
     }
 
     private static final int LESSON_DATES = 18;
