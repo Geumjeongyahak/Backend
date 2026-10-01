@@ -39,3 +39,13 @@
 Flyway V1–V9 적용 후 `SubjectCopyTest`·`SubjectScheduleUpdateTest`·`SubjectTeacherAssignTest`·`SubjectCreateTest` 51건 중 50건 통과.
 실패 1건(`SubjectTeacherAssignTest` 교사 해제)은 `users` 기본키 100 충돌 — 다른 테스트가 id를 직접 넣은 뒤 시퀀스가 그 값에 닿는 순서 의존이다.
 새 DB에서 그 클래스만 돌리면 9건 모두 통과. #242 변경과 무관한 기존 테스트 격리 문제라 기록만 한다.
+
+## codex 리뷰
+
+| 회차 | 범위 | P1 | P2 | 수용 | 반려 | 남은 P1·P2 |
+|---|---|---|---|---|---|---|
+| 1 | `dev` 대비 전체 | 1 | 2 | 3 (보낸 과목끼리 교사 하루치 일정, 같은 칸 모든 쌍, 새 기간 요일 유무) | 0 | 0 |
+| 2 | `dev` 대비 전체 | 0 | 1 | 0 | 1 (생성 API와 #199 판정 차이 — 복사는 생성+배정, 생성 API의 빈틈은 범위 밖) | 0 |
+| 확인 | `dev` 대비 전체 | 0 | 0 | — | — | **0** |
+
+지적 원문과 사유는 `harness/findings-ledger.md` 2026-10-01 #242 행.
