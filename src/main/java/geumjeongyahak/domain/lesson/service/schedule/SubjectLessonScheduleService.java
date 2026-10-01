@@ -3,6 +3,7 @@ package geumjeongyahak.domain.lesson.service.schedule;
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
+import geumjeongyahak.domain.subject.event.SubjectsCopiedEvent;
 import geumjeongyahak.domain.subject.service.SubjectProxyService;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
@@ -51,6 +52,28 @@ public class SubjectLessonScheduleService {
         );
         syncPublisher.publishFor(created);
         log.debug("과목 수업 자동 생성 완료 (subjectId={}, 생성={}건)", subjectId, created.size());
+    }
+
+    /** 시간표 복사로 생긴 과목들의 수업을 만들고, 바뀐 (분반, 날짜)는 모두 모아 한 번씩만 동기화한다 (#242). */
+    public void createLessonsForAll(List<SubjectsCopiedEvent.CopiedSubject> subjects) {
+        List<Lesson> created = subjects.stream()
+            .flatMap(copied -> {
+                User teacher = userProxyService.getById(copied.teacherId());
+                teacher.validateCanTeach();
+                return lessonGenerator.generate(
+                    subjectProxyService.getById(copied.subjectId()),
+                    teacher,
+                    copied.startAt(),
+                    copied.endAt(),
+                    copied.dayOfWeek(),
+                    copied.startTime(),
+                    copied.endTime(),
+                    copied.period()
+                ).stream();
+            })
+            .toList();
+        syncPublisher.publishFor(created);
+        log.debug("복사 과목 수업 생성 완료 (과목={}건, 수업={}건)", subjects.size(), created.size());
     }
 
     public void assignTeacher(Long subjectId, Long teacherId, LocalDate from) {

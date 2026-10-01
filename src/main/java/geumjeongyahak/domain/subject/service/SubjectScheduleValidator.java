@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 /** 과목 생성·일정 변경·교사 배정 전에 거는 검증. 실패하면 예외를 던진다. */
 @Component
 @RequiredArgsConstructor
-class SubjectScheduleValidator {
+public class SubjectScheduleValidator {
 
     private static final long MAX_SUBJECT_OPERATION_DAYS = 365;
 
@@ -30,7 +30,7 @@ class SubjectScheduleValidator {
     private final AbsenceRequestProxyService absenceRequestProxyService;
     private final LessonExchangeRequestProxyService lessonExchangeRequestProxyService;
 
-    void validateSchedule(LocalDate startAt, LocalDate endAt, LocalTime startTime, LocalTime endTime) {
+    public void validateSchedule(LocalDate startAt, LocalDate endAt, LocalTime startTime, LocalTime endTime) {
         if (startAt.isAfter(endAt)) {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT, "startAt은 endAt보다 늦을 수 없습니다.");
         }
@@ -39,7 +39,7 @@ class SubjectScheduleValidator {
         }
     }
 
-    void validateCreateSchedule(LocalDate startAt, LocalDate endAt, LocalTime startTime, LocalTime endTime) {
+    public void validateCreateSchedule(LocalDate startAt, LocalDate endAt, LocalTime startTime, LocalTime endTime) {
         validateSchedule(startAt, endAt, startTime, endTime);
 
         long operationDays = ChronoUnit.DAYS.between(startAt, endAt) + 1;
@@ -49,7 +49,7 @@ class SubjectScheduleValidator {
     }
 
     /** 같은 분반에 실제 수업 날짜와 시간이 겹치는 다른 과목이 있으면 거절한다. subjectId는 자기 자신 제외용(신규면 null). */
-    void validateSubjectDuplicate(
+    public void validateSubjectDuplicate(
         Long subjectId,
         Long classroomId,
         DayOfWeek dayOfWeek,
@@ -75,7 +75,7 @@ class SubjectScheduleValidator {
     }
 
     /** 운영 기록·결석 요청·교환 요청이 걸린 미래 수업이 있으면 자동 변경하지 않는다. */
-    void validateFutureLessonsChangeable(Long subjectId, LocalDate today) {
+    public void validateFutureLessonsChangeable(Long subjectId, LocalDate today) {
         if (lessonProxyService.existsUnchangeableFutureActiveLessonBySubjectId(subjectId, today)) {
             throw new SubjectTeacherAssignmentConflictException("운영 기록이 있는 미래 수업은 자동 변경할 수 없습니다.");
         }
@@ -92,7 +92,7 @@ class SubjectScheduleValidator {
     }
 
     /** 새 담당 교사가 과목의 미래 수업을 지금 시간 그대로 맡을 수 있는지. */
-    void validateNoTeacherConflict(Long subjectId, Long teacherId, LocalDate today) {
+    public void validateNoTeacherConflict(Long subjectId, Long teacherId, LocalDate today) {
         if (lessonProxyService.existsTeacherConflictForFutureSubjectScheduledLessons(subjectId, teacherId, today, null, null)) {
             throw new SubjectTeacherAssignmentConflictException("새 담당 교사의 기존 수업과 시간이 겹쳐 자동 변경할 수 없습니다.");
         }
@@ -102,7 +102,7 @@ class SubjectScheduleValidator {
      * 담당 교사가 바뀐 일정을 맡을 수 있는지.
      * 수업을 다시 만드는 변경이면 새 기간의 날짜로, 시간만 바꾸면 지금 미래 수업의 날짜로 본다.
      */
-    void validateNoTeacherConflictForSchedule(
+    public void validateNoTeacherConflictForSchedule(
         Long subjectId,
         Long teacherId,
         LocalDate today,
@@ -127,7 +127,7 @@ class SubjectScheduleValidator {
     }
 
     /** 교사는 운영기간이 겹치는 동안 하루치 일정(분반·요일·기간) 하나만 맡는다 (#199). */
-    void validateTeacherScheduleAssignable(Long teacherId, Subject subject) {
+    public void validateTeacherScheduleAssignable(Long teacherId, Subject subject) {
         if (subjectRepository.existsOverlappingDifferentScheduleByTeacherId(
             teacherId,
             subject.getClassroom().getId(),

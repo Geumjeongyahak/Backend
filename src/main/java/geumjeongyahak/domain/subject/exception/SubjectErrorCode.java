@@ -15,7 +15,9 @@ public enum SubjectErrorCode implements ErrorCode {
         HttpStatus.CONFLICT,
         "BIZ-05-002",
         "담당 교사를 자동 배정할 수 없습니다."
-    );
+    ),
+    SUBJECT_COPY_CONFLICT(HttpStatus.CONFLICT, "BIZ-05-003", "복사할 수 없는 과목이 있어 아무것도 복사하지 않았습니다."),
+    SUBJECT_NOT_COPYABLE(HttpStatus.BAD_REQUEST, "VAL-05-002", "복사할 수 없는 과목입니다.");
 
     private final HttpStatus status;
     private final String code;
