@@ -52,4 +52,9 @@ class BasePaginationRequestSortTest {
     void blankFieldIsBadRequest() {
         assertThatThrownBy(() -> probe.parse(",ASC")).isInstanceOf(BadRequestException.class);
     }
+
+    @Test
+    void extraPartIsBadRequest() {
+        assertThatThrownBy(() -> probe.parse("createdAt,ASC,more")).isInstanceOf(BadRequestException.class);
+    }
 }
