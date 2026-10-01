@@ -4,8 +4,10 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -201,7 +203,7 @@ public class SubjectService {
             log.debug("과목 담당 교사 변경 없음 (subjectId={}, teacherId={})", subjectId, currentTeacherId);
             return SubjectDetailResponse.from(subject);
         }
-        LocalDate changeFrom = lessonChangeFrom(subject.getStartTime());
+        LocalDate changeFrom = lessonChangeFrom(subjectId, subject.getStartTime());
         if (request.teacherId() == null) {
             validator.validateFutureLessonsChangeable(subjectId, changeFrom);
             Long classroomId = subject.getClassroom().getId();
@@ -289,9 +291,7 @@ public class SubjectService {
             || isChanged(subject.getEndTime(), newEndTime)
             || isChanged(subject.getPeriod(), newPeriod);
 
-        LocalDate changeFrom = lessonChangeFrom(
-            newStartTime.isBefore(subject.getStartTime()) ? newStartTime : subject.getStartTime()
-        );
+        LocalDate changeFrom = lessonChangeFrom(subjectId, subject.getStartTime(), newStartTime);
         LocalDate lessonStartAt = max(changeFrom, newStartAt);
         Long teacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
         if (updateLessons && teacherId != null) {
@@ -362,7 +362,7 @@ public class SubjectService {
             return;
         }
 
-        LocalDate changeFrom = lessonChangeFrom(subject.getStartTime());
+        LocalDate changeFrom = lessonChangeFrom(subjectId, subject.getStartTime());
         validator.validateFutureLessonsChangeable(subjectId, changeFrom);
         Long classroomId = subject.getClassroom().getId();
         Long teacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
@@ -380,10 +380,17 @@ public class SubjectService {
     /**
      * 과목 수정이 수업에 반영되기 시작하는 날. 오늘 수업이 아직 시작 전이면 오늘, 시작했거나 끝났으면 내일이다.
      * 진행 중이거나 끝난 당일 수업·DailySchedule·출석을 건드리지 않는다 (#241).
+     * 과목 시각(옛·새)과 함께 오늘 실제로 남아 있는 수업의 시각도 본다. 앞선 수정으로 과목 시각만 늦춰졌을 수 있다.
      */
-    private LocalDate lessonChangeFrom(LocalTime lessonStartTime) {
+    private LocalDate lessonChangeFrom(Long subjectId, LocalTime... subjectStartTimes) {
         LocalDateTime now = LocalDateTime.now(clock);
-        return now.toLocalTime().isBefore(lessonStartTime) ? now.toLocalDate() : now.toLocalDate().plusDays(1);
+        LocalDate today = now.toLocalDate();
+        boolean started = Stream.concat(
+                Arrays.stream(subjectStartTimes),
+                lessonProxyService.getActiveLessonStartTimesBySubjectIdAndDate(subjectId, today).stream()
+            )
+            .anyMatch(startTime -> !now.toLocalTime().isBefore(startTime));
+        return started ? today.plusDays(1) : today;
     }
 
     private LocalDate max(LocalDate left, LocalDate right) {

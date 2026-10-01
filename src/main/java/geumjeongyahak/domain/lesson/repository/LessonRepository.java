@@ -75,6 +75,8 @@ public interface LessonRepository extends JpaRepository<Lesson, Long>, JpaSpecif
         LocalTime endTime
     );
 
+    List<Lesson> findAllBySubjectIdAndDateAndIsDeletedFalse(Long subjectId, LocalDate date);
+
     @EntityGraph(attributePaths = {"teacher", "subject"})
     List<Lesson> findAllBySubjectIdAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(
         Long subjectId,
