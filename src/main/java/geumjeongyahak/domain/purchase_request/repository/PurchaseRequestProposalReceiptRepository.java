@@ -16,6 +16,8 @@ public interface PurchaseRequestProposalReceiptRepository
         Long requestId
     );
 
+    boolean existsByFileIdAndIsDeletedFalse(UUID fileId);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete from PurchaseRequestProposalReceipt receipt where receipt.file.id = :fileId")
     void deleteAllByFileId(@Param("fileId") UUID fileId);

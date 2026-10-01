@@ -11,6 +11,8 @@ import geumjeongyahak.domain.purchase_request.entity.PurchaseRequestPaymentTrans
 
 public interface PurchaseRequestPaymentTransactionRepository extends JpaRepository<PurchaseRequestPaymentTransaction, Long> {
 
+    boolean existsByReceiptFileId(UUID fileId);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update PurchaseRequestPaymentTransaction tx set tx.receiptFile = null where tx.receiptFile.id = :fileId")
     void clearReceiptFileByFileId(@Param("fileId") UUID fileId);
