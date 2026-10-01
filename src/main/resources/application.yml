@@ -24,6 +24,10 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:prod}
   jpa:
     open-in-view: false
+    properties:
+      hibernate:
+        # 지연 연관을 행마다 읽지 않고 IN 으로 묶어 읽는다 (#240)
+        default_batch_fetch_size: 100
   flyway:
     enabled: ${FLYWAY_ENABLED:true}
     locations: classpath:db/migration

@@ -7,6 +7,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface LessonExchangeProposalRepository
     extends JpaRepository<LessonExchangeProposal, Long> {
@@ -37,7 +39,11 @@ public interface LessonExchangeProposalRepository
 
     long countByStatus(LessonExchangeProposalStatus status);
 
-    long countByRequest_Id(Long requestId);
-
-    long countByRequest_IdAndStatus(Long requestId, LessonExchangeProposalStatus status);
+    @Query("""
+        select new geumjeongyahak.domain.request.repository.ProposalStatusCount(p.request.id, p.status, count(p))
+        from LessonExchangeProposal p
+        where p.request.id in :requestIds
+        group by p.request.id, p.status
+        """)
+    List<ProposalStatusCount> countByRequestIdsGroupByStatus(@Param("requestIds") Collection<Long> requestIds);
 }

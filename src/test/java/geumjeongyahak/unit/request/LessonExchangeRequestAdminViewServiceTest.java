@@ -13,6 +13,7 @@ import geumjeongyahak.domain.request.enums.LessonExchangeProposalStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import geumjeongyahak.domain.request.repository.LessonExchangeProposalRepository;
 import geumjeongyahak.domain.request.repository.LessonExchangeRequestRepository;
+import geumjeongyahak.domain.request.repository.ProposalStatusCount;
 import geumjeongyahak.domain.request.service.LessonExchangeRequestAdminViewService;
 import geumjeongyahak.domain.request.service.LessonExchangeRequestService;
 import geumjeongyahak.domain.request.service.LessonExchangeRequestAdminViewService.LessonExchangeDashboard;
@@ -86,9 +87,10 @@ class LessonExchangeRequestAdminViewServiceTest {
         );
         given(lessonExchangeRequestRepository.findTop10ByStatusOrderByCreatedAtAsc(LessonExchangeRequestStatus.PENDING))
             .willReturn(List.of(request));
-        given(lessonExchangeProposalRepository.countByRequest_Id(10L)).willReturn(4L);
-        given(lessonExchangeProposalRepository.countByRequest_IdAndStatus(10L, LessonExchangeProposalStatus.ACTIVE))
-            .willReturn(2L);
+        given(lessonExchangeProposalRepository.countByRequestIdsGroupByStatus(List.of(10L))).willReturn(List.of(
+            new ProposalStatusCount(10L, LessonExchangeProposalStatus.ACTIVE, 2L),
+            new ProposalStatusCount(10L, LessonExchangeProposalStatus.WITHDRAWN, 2L)
+        ));
 
         LessonExchangeDashboard dashboard = lessonExchangeRequestAdminViewService.getDashboard();
 

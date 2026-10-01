@@ -5,10 +5,13 @@ import geumjeongyahak.domain.request.enums.LessonExchangeProposalStatus;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
 import geumjeongyahak.domain.request.repository.LessonExchangeProposalRepository;
 import geumjeongyahak.domain.request.repository.LessonExchangeRequestRepository;
+import geumjeongyahak.domain.request.repository.ProposalStatusCount;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,19 +51,34 @@ public class LessonExchangeRequestAdminViewService {
     }
 
     private List<ReviewRequiredRequestRow> getReviewRequiredRequests() {
-        return lessonExchangeRequestRepository
-            .findTop10ByStatusOrderByCreatedAtAsc(LessonExchangeRequestStatus.PENDING)
+        List<LessonExchangeRequest> requests = lessonExchangeRequestRepository
+            .findTop10ByStatusOrderByCreatedAtAsc(LessonExchangeRequestStatus.PENDING);
+        if (requests.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, List<ProposalStatusCount>> countsByRequestId = lessonExchangeProposalRepository
+            .countByRequestIdsGroupByStatus(requests.stream().map(LessonExchangeRequest::getId).toList())
             .stream()
-            .map(this::toReviewRequiredRequestRow)
+            .collect(Collectors.groupingBy(ProposalStatusCount::requestId));
+
+        return requests.stream()
+            .map(request -> toReviewRequiredRequestRow(
+                request,
+                countsByRequestId.getOrDefault(request.getId(), List.of())
+            ))
             .toList();
     }
 
-    private ReviewRequiredRequestRow toReviewRequiredRequestRow(LessonExchangeRequest request) {
-        long proposalCount = lessonExchangeProposalRepository.countByRequest_Id(request.getId());
-        long activeProposalCount = lessonExchangeProposalRepository.countByRequest_IdAndStatus(
-            request.getId(),
-            LessonExchangeProposalStatus.ACTIVE
-        );
+    private ReviewRequiredRequestRow toReviewRequiredRequestRow(
+        LessonExchangeRequest request,
+        List<ProposalStatusCount> counts
+    ) {
+        long proposalCount = counts.stream().mapToLong(ProposalStatusCount::count).sum();
+        long activeProposalCount = counts.stream()
+            .filter(count -> count.status() == LessonExchangeProposalStatus.ACTIVE)
+            .mapToLong(ProposalStatusCount::count)
+            .sum();
 
         return new ReviewRequiredRequestRow(
             request.getId(),
