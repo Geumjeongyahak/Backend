@@ -27,9 +27,14 @@ public class FileProxyService {
             .orElseThrow(() -> new ResourceNotFoundException(CommonErrorCode.RESOURCE_NOT_FOUND, "파일을 찾을 수 없습니다."));
     }
 
-    /** 업로드 응답의 공개 URL로 살아 있는 파일을 찾는다. 외부 URL이면 비어 있다. */
+    /**
+     * 사이트 콘텐츠 이미지 업로드(`/images/site-contents`)로 올라간 살아 있는 파일을 공개 URL로 찾는다.
+     * 게시글 등 다른 곳에 올린 파일은 찾지 않는다 — 연결되면 연혁에서 사진을 뺄 때 남의 파일이 지워진다.
+     */
     @Transactional(readOnly = true)
-    public Optional<File> findActiveByPublicUrl(String publicUrl) {
-        return fileRepository.findFirstByPublicUrlAndIsDeletedFalse(publicUrl);
+    public Optional<File> findActiveSiteContentImageByPublicUrl(String publicUrl) {
+        return fileRepository.findFirstByPublicUrlAndStorageKeyStartingWithAndIsDeletedFalse(
+            publicUrl, ImageUploadService.SITE_CONTENT_DIRECTORY + "/"
+        );
     }
 }

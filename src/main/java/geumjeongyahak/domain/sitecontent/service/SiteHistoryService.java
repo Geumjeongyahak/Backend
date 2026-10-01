@@ -202,9 +202,9 @@ public class SiteHistoryService {
         if (photo.id() != null && existingPhotoFiles.containsKey(photo.id())) {
             return existingPhotoFiles.get(photo.id());
         }
-        // 프론트가 fileId를 안 보내도 업로드 응답의 공개 URL(src)로 파일을 찾아 연결한다.
-        // 그래야 사진을 빼거나 연혁을 지울 때 파일도 정리된다 (#244). 외부 이미지 URL이면 파일 없이 둔다
-        return photo.src() == null ? null : fileProxyService.findActiveByPublicUrl(photo.src()).orElse(null);
+        // 프론트가 fileId를 안 보내도 사이트 콘텐츠 이미지 업로드의 공개 URL(src)로 파일을 찾아 연결한다.
+        // 그래야 사진을 빼거나 연혁을 지울 때 파일도 정리된다 (#244). 외부 URL·다른 곳에 올린 파일이면 파일 없이 둔다
+        return photo.src() == null ? null : fileProxyService.findActiveSiteContentImageByPublicUrl(photo.src()).orElse(null);
     }
 
     private Map<Long, File> toPhotoMap(SiteHistory history) {

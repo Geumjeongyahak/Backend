@@ -322,6 +322,38 @@ class SiteContentAdminTest extends SiteContentBaseTest {
     }
 
     @Test
+    @DisplayName("다른 곳(게시글 등)에 올린 파일의 URL을 연혁 사진으로 써도 그 파일은 연결·삭제되지 않는다 (#244)")
+    void updateHistory_OtherResourceFileUrl_NotLinkedNorDeleted() {
+        File postImage = fileRepository.save(File.builder()
+            .storageKey("posts/" + UUID.randomUUID() + ".png")
+            .bucket("test-bucket")
+            .originalName("post.png")
+            .contentType("image/png")
+            .fileSize(10L)
+            .ext("png")
+            .publicUrl("https://example.com/post-" + UUID.randomUUID() + ".png")
+            .build());
+        Integer id = createHistoryWithPhotoSrcOnly(postImage.getPublicUrl());
+
+        Map<String, Object> updateRequest = new HashMap<>();
+        updateRequest.put("title", "금정열린배움터 시작");
+        updateRequest.put("historyDate", "1997-01-01");
+        updateRequest.put("photos", List.of());
+
+        given()
+            .contentType(ContentType.JSON)
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .body(updateRequest)
+        .when()
+            .put("/history/{id}", id)
+        .then()
+            .statusCode(200);
+
+        org.assertj.core.api.Assertions.assertThat(fileRepository.findById(postImage.getId()).orElseThrow().isDeleted())
+            .isFalse();
+    }
+
+    @Test
     @DisplayName("업로드 파일이 아닌 외부 이미지 URL 사진은 파일 없이 저장된다 (#244)")
     void createHistory_ExternalPhotoUrl_StaysWithoutFile() {
         Integer id = createHistoryWithPhotoSrcOnly("https://external.example.org/photo-" + UUID.randomUUID() + ".jpg");
