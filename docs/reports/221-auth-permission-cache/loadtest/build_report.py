@@ -13,7 +13,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 RAW = ROOT / "raw"
-LABELS = ["before", "after", "before-run1", "before-db-standard"]
+# 2부: 닫힌 모델 (동시 사용자). 3부: rate-<before|after>-<회차> — 같은 VM 에서 번갈아 돈 고정 도착률
+LABELS = ["before", "before-run1", "before-db-standard"]
+METRICS = ["p50", "p95", "p99", "rps", "queries_per_req", "tx_per_req", "app_cpu", "db_cpu",
+           "hikari_active_avg", "fail_rate"]
 
 
 def vmstat_cpu(path: Path):
@@ -78,7 +81,8 @@ def load(label: str):
     runs = []
     for k6 in sorted(d.glob("*.k6.json")):
         name = k6.name.removesuffix(".k6.json")
-        scenario, c = name.rsplit("-c", 1)
+        scenario, level = name.rsplit("-", 1)
+        mode, c = ("rate" if level[0] == "r" else "vus"), level[1:]
         m = json.loads(k6.read_text())["metrics"]
         dur = m["http_req_duration"]
         reqs = int(m["http_reqs"]["count"])
@@ -87,7 +91,7 @@ def load(label: str):
         db_cpu, db_st = vmstat_cpu(d / f"{name}.db-vmstat.txt")
         hikari = hikari_stats(d / f"{name}.hikari.txt")
         runs.append({
-            "scenario": scenario, "vus": int(c),
+            "scenario": scenario, "vus": int(c), "mode": mode,
             "requests": reqs, "rps": round(m["http_reqs"]["rate"], 1),
             "avg": round(dur["avg"], 2), "p50": round(dur["med"], 2), "p90": round(dur["p(90)"], 2),
             "p95": round(dur["p(95)"], 2), "p99": round(dur["p(99)"], 2), "max": round(dur["max"], 2),
@@ -103,14 +107,38 @@ def load(label: str):
     return {"runs": runs, "env": env}
 
 
+def compare():
+    """rate-before-N · rate-after-N 을 시나리오 × 도착률별로 묶어 회차 평균과 회차별 값을 낸다."""
+    rounds = {}
+    for d in sorted(RAW.glob("rate-*-*")):
+        _, side, n = d.name.split("-")
+        rounds.setdefault(side, {})[n] = load(d.name)
+    if "before" not in rounds or "after" not in rounds:
+        return None
+    rows = []
+    keys = sorted({(r["scenario"], r["vus"]) for side in rounds.values() for x in side.values() for r in x["runs"]})
+    for scenario, rate in keys:
+        row = {"scenario": scenario, "rate": rate}
+        for side in ("before", "after"):
+            runs = [r for x in rounds[side].values() for r in x["runs"] if r["scenario"] == scenario and r["vus"] == rate]
+            row[side] = {m: round(statistics.mean(r[m] for r in runs), 3) for m in METRICS if all(r[m] is not None for r in runs)}
+            row[side]["rounds"] = [{m: r[m] for m in ("p50", "p95", "queries_per_req", "app_cpu")} for r in runs]
+        rows.append(row)
+    env = {side: next(iter(v.values()))["env"] for side, v in rounds.items()}
+    return {"rows": rows, "env": env, "rounds": {k: sorted(v) for k, v in rounds.items()}}
+
+
 def main():
     data = {label: load(label) for label in LABELS}
     data = {k: v for k, v in data.items() if v}
+    cmp = compare()
+    if cmp:
+        data["compare"] = cmp
     (ROOT / "data.json").write_text(json.dumps(data, ensure_ascii=False, indent=1))
     html = (HERE / "report.template.html").read_text()
     html = html.replace("/*__DATA__*/{}", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
     (ROOT / "index.html").write_text(html)
-    print("wrote", ROOT / "index.html", {k: len(v["runs"]) for k, v in data.items()})
+    print("wrote", ROOT / "index.html", {k: len(v.get("runs", v.get("rows", []))) for k, v in data.items()})
 
 
 if __name__ == "__main__":

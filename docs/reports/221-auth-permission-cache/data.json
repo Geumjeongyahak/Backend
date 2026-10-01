@@ -4,6 +4,7 @@
    {
     "scenario": "dept-anon",
     "vus": 1,
+    "mode": "vus",
     "requests": 4989,
     "rps": 83.1,
     "avg": 11.64,
@@ -34,6 +35,7 @@
    {
     "scenario": "dept-anon",
     "vus": 10,
+    "mode": "vus",
     "requests": 51449,
     "rps": 857.4,
     "avg": 11.43,
@@ -64,6 +66,7 @@
    {
     "scenario": "dept-anon",
     "vus": 30,
+    "mode": "vus",
     "requests": 62163,
     "rps": 1032.4,
     "avg": 28.77,
@@ -94,6 +97,7 @@
    {
     "scenario": "dept-auth",
     "vus": 1,
+    "mode": "vus",
     "requests": 7649,
     "rps": 127.5,
     "avg": 7.5,
@@ -144,6 +148,7 @@
    {
     "scenario": "dept-auth",
     "vus": 10,
+    "mode": "vus",
     "requests": 29120,
     "rps": 483.8,
     "avg": 20.4,
@@ -199,6 +204,7 @@
    {
     "scenario": "dept-auth",
     "vus": 30,
+    "mode": "vus",
     "requests": 21210,
     "rps": 353.4,
     "avg": 84.63,
@@ -254,6 +260,7 @@
    {
     "scenario": "me",
     "vus": 1,
+    "mode": "vus",
     "requests": 5578,
     "rps": 93.0,
     "avg": 10.44,
@@ -314,6 +321,7 @@
    {
     "scenario": "me",
     "vus": 10,
+    "mode": "vus",
     "requests": 10621,
     "rps": 177.0,
     "avg": 56.25,
@@ -379,6 +387,7 @@
    {
     "scenario": "me",
     "vus": 30,
+    "mode": "vus",
     "requests": 10270,
     "rps": 170.6,
     "avg": 175.57,
@@ -449,6 +458,7 @@
    {
     "scenario": "dept-anon",
     "vus": 1,
+    "mode": "vus",
     "requests": 6637,
     "rps": 110.5,
     "avg": 8.75,
@@ -479,6 +489,7 @@
    {
     "scenario": "dept-anon",
     "vus": 10,
+    "mode": "vus",
     "requests": 65695,
     "rps": 1094.6,
     "avg": 8.95,
@@ -509,6 +520,7 @@
    {
     "scenario": "dept-anon",
     "vus": 30,
+    "mode": "vus",
     "requests": 61286,
     "rps": 1019.6,
     "avg": 29.25,
@@ -539,6 +551,7 @@
    {
     "scenario": "dept-auth",
     "vus": 1,
+    "mode": "vus",
     "requests": 6900,
     "rps": 115.0,
     "avg": 8.37,
@@ -589,6 +602,7 @@
    {
     "scenario": "dept-auth",
     "vus": 10,
+    "mode": "vus",
     "requests": 26693,
     "rps": 444.8,
     "avg": 22.27,
@@ -644,6 +658,7 @@
    {
     "scenario": "dept-auth",
     "vus": 30,
+    "mode": "vus",
     "requests": 16997,
     "rps": 282.4,
     "avg": 105.99,
@@ -699,6 +714,7 @@
    {
     "scenario": "me",
     "vus": 1,
+    "mode": "vus",
     "requests": 4831,
     "rps": 80.4,
     "avg": 12.13,
@@ -759,6 +775,7 @@
    {
     "scenario": "me",
     "vus": 10,
+    "mode": "vus",
     "requests": 11907,
     "rps": 198.2,
     "avg": 50.23,
@@ -824,6 +841,7 @@
    {
     "scenario": "me",
     "vus": 30,
+    "mode": "vus",
     "requests": 11265,
     "rps": 187.5,
     "avg": 159.71,
@@ -894,6 +912,7 @@
    {
     "scenario": "dept-anon",
     "vus": 10,
+    "mode": "vus",
     "requests": 19388,
     "rps": 322.1,
     "avg": 30.79,
@@ -924,6 +943,7 @@
    {
     "scenario": "dept-anon",
     "vus": 30,
+    "mode": "vus",
     "requests": 31216,
     "rps": 520.1,
     "avg": 57.44,
@@ -954,6 +974,7 @@
    {
     "scenario": "dept-auth",
     "vus": 10,
+    "mode": "vus",
     "requests": 13225,
     "rps": 220.3,
     "avg": 45.12,
@@ -1009,6 +1030,7 @@
    {
     "scenario": "dept-auth",
     "vus": 30,
+    "mode": "vus",
     "requests": 17322,
     "rps": 287.6,
     "avg": 103.9,
@@ -1064,6 +1086,7 @@
    {
     "scenario": "me",
     "vus": 10,
+    "mode": "vus",
     "requests": 11286,
     "rps": 187.5,
     "avg": 53.03,
@@ -1129,6 +1152,7 @@
    {
     "scenario": "me",
     "vus": 30,
+    "mode": "vus",
     "requests": 14316,
     "rps": 237.7,
     "avg": 125.86,
