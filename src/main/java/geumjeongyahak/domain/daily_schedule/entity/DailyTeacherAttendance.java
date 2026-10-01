@@ -11,7 +11,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -106,5 +108,13 @@ public class DailyTeacherAttendance extends BaseEntity {
 
     public void softDelete() {
         this.isDeleted = true;
+    }
+
+    /** 활동 시작~종료 시각 사이의 봉사 시간(분). 둘 중 하나라도 없으면 null. */
+    public static Integer volunteerMinutesBetween(LocalTime activityStartTime, LocalTime activityEndTime) {
+        if (activityStartTime == null || activityEndTime == null) {
+            return null;
+        }
+        return Math.toIntExact(Duration.between(activityStartTime, activityEndTime).toMinutes());
     }
 }
