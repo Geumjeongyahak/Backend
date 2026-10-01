@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.vendor.repository;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -13,6 +14,8 @@ import geumjeongyahak.domain.vendor.entity.VendorBalanceHistory;
 public interface VendorBalanceHistoryRepository extends JpaRepository<VendorBalanceHistory, Long> {
 
     List<VendorBalanceHistory> findAllByVendor_IdAndIsDeletedFalseOrderByOccurredAtDesc(Long vendorId);
+
+    boolean existsByReceiptFileIdAndIsDeletedFalse(UUID fileId);
 
     @Transactional
     @Modifying(clearAutomatically = true, flushAutomatically = true)

@@ -174,6 +174,42 @@ public class ClassroomPaginationReadTest extends BaseClassroomTest {
 
 
     @Test
+    @DisplayName("정렬 방향이 없으면 400 Bad Request — 500이 아니다 (#244)")
+    void getAllClassrooms_SortWithoutDirection_BadRequest() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .queryParam("sort", "id")
+        .when()
+            .get()
+        .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("정렬 방향이 ASC·DESC가 아니면 400 Bad Request (#244)")
+    void getAllClassrooms_InvalidSortDirection_BadRequest() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .queryParam("sort", "id,up")
+        .when()
+            .get()
+        .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("없는 필드로 정렬하면 400 Bad Request (#244)")
+    void getAllClassrooms_UnknownSortField_BadRequest() {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .queryParam("sort", "nope,ASC")
+        .when()
+            .get()
+        .then()
+            .statusCode(400);
+    }
+
+    @Test
     @DisplayName("범위를 벗어난 페이지 조회 시 빈 결과 반환(200 OK)")
     void getAllClassrooms_OutOfRangePage() {
         given()

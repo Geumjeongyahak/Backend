@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import geumjeongyahak.domain.daily_schedule.entity.DailyTeacherAttendance;
 import geumjeongyahak.domain.lesson.entity.Lesson;
+import geumjeongyahak.domain.lesson.enums.LessonStatus;
 
 public record LessonSummaryResponse(
     @Schema(description = "수업 식별자", example = "1")
@@ -21,6 +22,9 @@ public record LessonSummaryResponse(
 
     @Schema(description = "수업 종료 시간", example = "10:00")
     LocalTime endTime,
+
+    @Schema(description = "수업 상태. 결석 승인 등으로 취소된 수업은 CANCELED이고 목록에 그대로 포함됩니다.", example = "SCHEDULED")
+    LessonStatus status,
 
     @Schema(description = "강사 이름", example = "홍길동")
     String teacherName,
@@ -68,6 +72,7 @@ public record LessonSummaryResponse(
             lesson.getPeriod(),
             lesson.getStartTime(),
             lesson.getEndTime(),
+            lesson.getStatus(),
             lesson.getTeacher().getName(),
             lesson.getSubject().getName(),
             lesson.getSubject().getClassroom().getId(),
