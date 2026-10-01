@@ -194,16 +194,21 @@ public class SubjectService {
                 log.info("과목 담당 교사 배정 실패 - 과목을 찾을 수 없습니다. ID: {}", subjectId);
                 return new SubjectNotFoundException(subjectId);
             });
+        Long currentTeacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
+        if (!isChanged(currentTeacherId, request.teacherId())) {
+            // 시간표 칸 저장은 교사가 그대로여도 매번 보낸다. 수업을 안 바꾸므로 검증·이벤트를 건너뛴다 (#244)
+            log.debug("과목 담당 교사 변경 없음 (subjectId={}, teacherId={})", subjectId, currentTeacherId);
+            return SubjectDetailResponse.from(subject);
+        }
         LocalDate changeFrom = lessonChangeFrom();
         if (request.teacherId() == null) {
             validator.validateFutureLessonsChangeable(subjectId, changeFrom);
             Long classroomId = subject.getClassroom().getId();
-            Long previousTeacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
             subject.assignTeacher(null, null);
             eventPublisher.publish(new SubjectTeacherUnassignedEvent(
                 subject.getId(),
                 classroomId,
-                previousTeacherId,
+                currentTeacherId,
                 changeFrom
             ));
             log.debug("과목 담당 교사 해제 완료 (subjectId={})", subject.getId());
