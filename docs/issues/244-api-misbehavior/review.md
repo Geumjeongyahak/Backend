@@ -45,8 +45,10 @@
 
 ## 실제 PostgreSQL 18 검증
 
-Flyway V1–V9 적용 후 바뀐 E2E(수업 조회 · 연혁 · 분반 정렬 · 첨부 권한 · 게시글 파일 · 업로드 · 인증 · 채널) 165건 통과
-(`stringtype=unspecified`, 테스트 실행에만).
+- 1차 (`0bb87e7b`, codex 전): Flyway V1–V9 적용 후 바뀐 E2E(수업 조회 · 연혁 · 분반 정렬 · 첨부 권한 · 게시글 파일 · 업로드 · 인증 · 채널) 165건 통과
+- 2차 (`origin/dev`(#248) 병합 뒤 `9d122615`, codex 수정 반영): PostgreSQL 18.4, 같은 범위를 패키지 단위로 넓혀(e2e `auth`·`file`·`sitecontent`·`channel`·`post` 전체 + `LessonReadTest`·`ClassroomPaginationReadTest`) 223건 통과
+
+`stringtype=unspecified`는 테스트 실행에만 쓴다.
 
 ## codex 리뷰
 
@@ -62,4 +64,4 @@ codex 지적으로 다시 나오지 않았다.
 
 ## 검사
 
-`scripts/harness/verify.sh` 통과 (H2). 첨부 권한 E2E는 ①–⑬.
+`scripts/harness/verify.sh` 통과 (H2). `origin/dev` 병합 뒤 다시 돌려 1226건 통과. 첨부 권한 E2E는 ①–⑬.
