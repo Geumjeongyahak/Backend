@@ -7,8 +7,11 @@ import org.springframework.data.repository.query.Param;
 import geumjeongyahak.domain.auth.entity.RefreshToken;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, String> {
+
+    List<RefreshToken> findByCredentialId(Long credentialId);
 
     void deleteByCredentialId(Long credentialId);
 
