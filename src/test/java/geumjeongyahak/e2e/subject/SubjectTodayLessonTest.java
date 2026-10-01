@@ -192,6 +192,21 @@ public class SubjectTodayLessonTest extends SubjectBaseTest {
         assertThat(lessonStartTime(activeLessonId(subjectId, today.plusDays(7)))).isEqualTo(LocalTime.of(7, 0));
     }
 
+    @Test
+    @DisplayName("수업 시작 뒤 시간을 늦춘 같은 날 교사를 바꿔도 이미 시작한 오늘 수업은 그대로다")
+    void replaceTeacher_KeepsStartedTodayLesson_AfterTimeMovedLater() {
+        LocalDate today = LocalDate.now(clock);
+        long subjectId = createTodaySubject(today, STARTED);
+        long todayLessonId = activeLessonId(subjectId, today);
+
+        // 과목 시각은 18:00(시작 전)이 되지만 오늘 수업은 06:00 그대로 남는다
+        patch("/{subjectId}/schedule", subjectId, Map.of("startTime", NOT_STARTED, "endTime", "18:40:00"));
+        patch("/{subjectId}/teacher", subjectId, teacherRequest(NEW_TEACHER_ID));
+
+        assertThat(lessonTeacherId(todayLessonId)).isEqualTo(TEACHER_ID);
+        assertThat(lessonStartTime(todayLessonId)).isEqualTo(LocalTime.of(6, 0));
+    }
+
     /** 오늘 시작, 요일 = 오늘 요일인 과목. 만들 때 오늘 수업과 DailySchedule·출석이 생긴다. */
     private long createTodaySubject(LocalDate today, String startTime) {
         return createSubject(today, today.getDayOfWeek().name(), startTime);
