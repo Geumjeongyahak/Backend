@@ -5,6 +5,7 @@ import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.file.repository.FileRepository;
+import geumjeongyahak.domain.file.service.FileProxyService;
 import geumjeongyahak.domain.sitecontent.entity.SiteHistory;
 import geumjeongyahak.domain.sitecontent.entity.SiteHistory.LinkValue;
 import geumjeongyahak.domain.sitecontent.entity.SiteHistory.PhotoValue;
@@ -41,6 +42,7 @@ public class SiteHistoryService {
 
     private final SiteHistoryRepository siteHistoryRepository;
     private final FileRepository fileRepository;
+    private final FileProxyService fileProxyService;
 
     public SiteHistoriesResponse getHistories() {
         return new SiteHistoriesResponse(siteHistoryRepository.findAllByOrderByHistoryDateAscSortOrderAscIdAsc()
@@ -202,7 +204,7 @@ public class SiteHistoryService {
         }
         // 프론트가 fileId를 안 보내도 업로드 응답의 공개 URL(src)로 파일을 찾아 연결한다.
         // 그래야 사진을 빼거나 연혁을 지울 때 파일도 정리된다 (#244). 외부 이미지 URL이면 파일 없이 둔다
-        return photo.src() == null ? null : fileRepository.findFirstByPublicUrlAndIsDeletedFalse(photo.src()).orElse(null);
+        return photo.src() == null ? null : fileProxyService.findActiveByPublicUrl(photo.src()).orElse(null);
     }
 
     private Map<Long, File> toPhotoMap(SiteHistory history) {
