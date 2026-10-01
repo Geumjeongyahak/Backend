@@ -15,6 +15,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -55,6 +56,10 @@ public class AbsenceRequest extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String note;
 
+    // 만료 스케줄러와 승인·반려가 동시에 바꾸면 나중 쪽이 409 로 끝난다
+    @Version
+    private Long version;
+
     public AbsenceRequest(
         DailySchedule dailySchedule,
         User requestedBy,
@@ -85,10 +90,6 @@ public class AbsenceRequest extends BaseEntity {
 
     public void cancel() {
         this.status = RequestStatus.CANCELLED;
-    }
-
-    public void expire() {
-        this.status = RequestStatus.EXPIRED;
     }
 
     public void update(String title, String reason) {

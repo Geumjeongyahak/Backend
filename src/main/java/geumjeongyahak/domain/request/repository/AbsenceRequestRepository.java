@@ -1,12 +1,12 @@
 package geumjeongyahak.domain.request.repository;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import geumjeongyahak.domain.request.entity.AbsenceRequest;
@@ -58,8 +58,14 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
         @Param("statuses") List<RequestStatus> statuses
     );
 
-    List<AbsenceRequest> findAllByStatusInAndExpiresAtLessThanEqual(
-        Collection<RequestStatus> statuses,
-        LocalDateTime expiresAt
-    );
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+        update AbsenceRequest r
+        set r.status = geumjeongyahak.domain.request.enums.RequestStatus.EXPIRED,
+            r.version = r.version + 1,
+            r.updatedAt = :now
+        where r.status = geumjeongyahak.domain.request.enums.RequestStatus.PENDING
+            and r.expiresAt <= :now
+        """)
+    int expirePendingRequests(@Param("now") LocalDateTime now);
 }

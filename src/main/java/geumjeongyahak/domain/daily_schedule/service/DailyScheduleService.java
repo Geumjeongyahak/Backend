@@ -52,7 +52,6 @@ import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
 import java.time.Clock;
 import java.time.DayOfWeek;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -87,54 +86,6 @@ public class DailyScheduleService {
     private final ClassroomProxyService classroomProxyService;
     private final UserProxyService userProxyService;
     private final Clock clock;
-
-    @Transactional
-    public void synchronizeByLesson(Lesson lesson) {
-        Long classroomId = lesson.getSubject().getClassroom().getId();
-        synchronizeByClassroomAndDate(classroomId, lesson.getDate());
-    }
-
-    @Transactional
-    public void synchronizeByClassroomAndDate(Long classroomId, LocalDate lessonDate) {
-        List<Lesson> lessons = lessonProxyService.getActiveLessonsByClassroomAndDate(classroomId, lessonDate);
-        if (lessons.isEmpty()) {
-            deleteOrphanDailySchedule(classroomId, lessonDate);
-            log.debug("DailySchedule 동기화 스킵 - 활성 수업 없음 (classroomId={}, lessonDate={})", classroomId, lessonDate);
-            return;
-        }
-
-        Lesson representativeLesson = lessons.get(0);
-        Classroom classroom = representativeLesson.getSubject().getClassroom();
-        User teacher = representativeLesson.getTeacher();
-        LocalTime activityStartTime = lessons.stream()
-            .map(Lesson::getStartTime)
-            .min(LocalTime::compareTo)
-            .orElse(null);
-        LocalTime activityEndTime = lessons.stream()
-            .map(Lesson::getEndTime)
-            .max(LocalTime::compareTo)
-            .orElse(null);
-        Integer volunteerServiceMinutes = calculateVolunteerServiceMinutes(activityStartTime, activityEndTime);
-
-        DailySchedule dailySchedule = dailyScheduleRepository
-            .findByClassroomIdAndLessonDate(classroomId, lessonDate)
-            .map(existing -> {
-                existing.restore();
-                return existing;
-            })
-            .orElseGet(() -> dailyScheduleRepository.save(new DailySchedule(
-                classroom,
-                teacher,
-                lessonDate,
-                activityStartTime,
-                activityEndTime
-            )));
-
-        dailySchedule.updateTeacher(teacher);
-        dailySchedule.updateActivityTime(activityStartTime, activityEndTime);
-        initializeTeacherAttendance(dailySchedule, volunteerServiceMinutes);
-        initializeStudentAttendances(dailySchedule, classroomId);
-    }
 
     public List<DailyScheduleSummaryResponse> getDailySchedules(DailyScheduleListRequest request) {
         log.debug(
@@ -581,7 +532,7 @@ public class DailyScheduleService {
             .findByDailyScheduleIdAndIsDeletedFalse(dailyScheduleId)
             .orElseGet(() -> dailyTeacherAttendanceRepository.save(new DailyTeacherAttendance(
                 dailySchedule,
-                calculateVolunteerServiceMinutes(dailySchedule.getActivityStartTime(), dailySchedule.getActivityEndTime())
+                DailyTeacherAttendance.volunteerMinutesBetween(dailySchedule.getActivityStartTime(), dailySchedule.getActivityEndTime())
             )));
         LocalDateTime attendedAt = request.status().isActualAttendance()
             ? LocalDateTime.now(clock)
@@ -656,7 +607,7 @@ public class DailyScheduleService {
             .findByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId())
             .orElseGet(() -> dailyTeacherAttendanceRepository.save(new DailyTeacherAttendance(
                 dailySchedule,
-                calculateVolunteerServiceMinutes(dailySchedule.getActivityStartTime(), dailySchedule.getActivityEndTime())
+                DailyTeacherAttendance.volunteerMinutesBetween(dailySchedule.getActivityStartTime(), dailySchedule.getActivityEndTime())
             )));
 
         teacherAttendance.updateAttendance(DailyTeacherAttendanceStatus.EXCUSED, null, null, null);
@@ -951,45 +902,6 @@ public class DailyScheduleService {
             authorId
         );
         throw new DailyScheduleForbiddenException(dailySchedule.getId(), authorId);
-    }
-
-    private Integer calculateVolunteerServiceMinutes(LocalTime activityStartTime, LocalTime activityEndTime) {
-        if (activityStartTime == null || activityEndTime == null) {
-            return null;
-        }
-        return Math.toIntExact(Duration.between(activityStartTime, activityEndTime).toMinutes());
-    }
-
-    private void initializeTeacherAttendance(DailySchedule dailySchedule, Integer volunteerServiceMinutes) {
-        DailyTeacherAttendance attendance = dailyTeacherAttendanceRepository
-            .findByDailyScheduleId(dailySchedule.getId())
-            .orElseGet(() -> dailyTeacherAttendanceRepository.save(new DailyTeacherAttendance(
-                dailySchedule,
-                volunteerServiceMinutes
-            )));
-        attendance.restore();
-        attendance.updateVolunteerServiceMinutes(volunteerServiceMinutes);
-    }
-
-    private void initializeStudentAttendances(DailySchedule dailySchedule, Long classroomId) {
-        List<Student> activeStudents = studentProxyService.getActiveStudentsByClassroomId(classroomId);
-        for (Student student : activeStudents) {
-            DailyStudentAttendance attendance = dailyStudentAttendanceRepository
-                .findByDailyScheduleIdAndStudentId(dailySchedule.getId(), student.getId())
-                .orElseGet(() -> dailyStudentAttendanceRepository.save(new DailyStudentAttendance(dailySchedule, student)));
-            attendance.restore();
-        }
-    }
-
-    private void deleteOrphanDailySchedule(Long classroomId, LocalDate lessonDate) {
-        dailyScheduleRepository.findByClassroomIdAndLessonDateAndIsDeletedFalse(classroomId, lessonDate)
-            .ifPresent(dailySchedule -> {
-                dailyTeacherAttendanceRepository.findAllByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId())
-                    .forEach(DailyTeacherAttendance::softDelete);
-                dailyStudentAttendanceRepository.findAllByDailyScheduleIdAndIsDeletedFalse(dailySchedule.getId())
-                    .forEach(DailyStudentAttendance::softDelete);
-                dailySchedule.softDelete();
-            });
     }
 
     private boolean hasWrittenJournal(List<Lesson> lessons) {

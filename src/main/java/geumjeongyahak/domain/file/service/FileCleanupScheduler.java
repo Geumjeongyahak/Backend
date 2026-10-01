@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,13 +30,15 @@ public class FileCleanupScheduler {
     private final PurchaseRequestProposalReceiptRepository purchaseRequestProposalReceiptRepository;
     private final StorageService storageService;
     private final FileCleanupProperties fileCleanupProperties;
+    private final TransactionTemplate transactionTemplate;
 
+    // ponytail: 여러 서버 동시 실행을 막는 락(ShedLock)이 없다. 앱 서버가 1대라서다. 2대 이상이 되면 ShedLock 을 붙인다.
     @Scheduled(cron = "${app.file.cleanup.cron}")
-    @Transactional
     public void cleanupDeletedFiles() {
-        markStaleUnlinkedPurchaseItemFiles();
+        transactionTemplate.executeWithoutResult(status -> markStaleUnlinkedPurchaseItemFiles());
 
         LocalDateTime threshold = LocalDateTime.now().minusDays(fileCleanupProperties.getRetentionDays());
+        // 리포지토리 조회 메서드는 자체 읽기 트랜잭션으로 짧게 끝난다
         List<File> candidates = fileRepository.findByIsDeletedTrueAndDeletedAtBefore(threshold);
 
         if (candidates.isEmpty()) {
@@ -65,20 +67,29 @@ public class FileCleanupScheduler {
         }
     }
 
+    // 저장소 삭제는 트랜잭션 밖에서 먼저 한다. DB 정리가 실패해도 다음 실행에서
+    // 없는 객체 삭제가 성공(true)으로 통과하므로 다시 정리된다.
     private int processChunk(List<File> files) {
-        int count = 0;
-        for (File file : files) {
-            if (!deleteStorageObject(file)) {
-                continue;
-            }
-            postFileRepository.deleteByFileId(file.getId());
-            postAttachmentRepository.deleteByFileId(file.getId());
-            purchaseRequestPaymentTransactionRepository.clearReceiptFileByFileId(file.getId());
-            purchaseRequestProposalReceiptRepository.deleteAllByFileId(file.getId());
-            fileRepository.delete(file);
-            count++;
+        List<File> storageDeleted = files.stream().filter(this::deleteStorageObject).toList();
+        if (storageDeleted.isEmpty()) {
+            return 0;
         }
-        return count;
+
+        try {
+            transactionTemplate.executeWithoutResult(status -> storageDeleted.forEach(this::deleteFileRows));
+            return storageDeleted.size();
+        } catch (RuntimeException e) {
+            log.error("파일 DB 정리 실패, 다음 실행에서 다시 시도 (count={})", storageDeleted.size(), e);
+            return 0;
+        }
+    }
+
+    private void deleteFileRows(File file) {
+        postFileRepository.deleteByFileId(file.getId());
+        postAttachmentRepository.deleteByFileId(file.getId());
+        purchaseRequestPaymentTransactionRepository.clearReceiptFileByFileId(file.getId());
+        purchaseRequestProposalReceiptRepository.deleteAllByFileId(file.getId());
+        fileRepository.deleteById(file.getId());
     }
 
     private boolean deleteStorageObject(File file) {

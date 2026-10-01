@@ -1,0 +1,69 @@
+name: Roll back (SSH)
+# 서버에 남아 있는 커밋 jar(releases/<sha>.jar)로 바꿔 끼운다. 배포와 같은 02_switch-release.sh 를 쓴다.
+# 서버에는 최근 10개 릴리스가 남는다. 남은 목록은 sha 칸에 `--list` 를 넣어 본다.
+# DB 마이그레이션은 되돌리지 않는다 — 마이그레이션은 옛 코드가 견디는 모양으로만 쓴다.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 되돌릴 서버
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+      sha:
+        description: "되돌릴 커밋 SHA 40자, legacy(릴리스 도입 전 jar), 또는 --list"
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Validate input
+        env:
+          TARGET: ${{ inputs.sha }}
+        run: |
+          if ! printf '%s' "${TARGET}" | grep -Eq '^([0-9a-f]{40}|legacy|--list)$'; then
+            echo "::error::커밋 SHA 40자(소문자 hex), legacy, --list 중 하나여야 합니다: ${TARGET}"
+            exit 1
+          fi
+
+      - name: Switch release over SSH
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          TARGET: ${{ inputs.sha }}
+          PROD_HOST: ${{ secrets.PROD_GCE_HOST }}
+          PROD_USER: ${{ secrets.PROD_GCE_USER }}
+          PROD_KEY: ${{ secrets.PROD_GCE_SSH_KEY }}
+          DEV_HOST: ${{ secrets.DEV_GCE_HOST || secrets.GCE_HOST }}
+          DEV_USER: ${{ secrets.DEV_GCE_USER || secrets.GCE_USER }}
+          DEV_KEY: ${{ secrets.DEV_GCE_SSH_KEY || secrets.GCE_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          # 환경을 식(&&/||)으로 고르면 prod 시크릿이 비었을 때 dev 로 떨어진다. 명시적으로 고른다
+          case "${TARGET_ENV}" in
+            prod) SSH_HOST="${PROD_HOST}"; SSH_USER="${PROD_USER}"; SSH_KEY="${PROD_KEY}" ;;
+            dev)  SSH_HOST="${DEV_HOST}";  SSH_USER="${DEV_USER}";  SSH_KEY="${DEV_KEY}" ;;
+            *) echo "::error::unknown environment ${TARGET_ENV}"; exit 1 ;;
+          esac
+          test -n "${SSH_HOST}"
+          test -n "${SSH_USER}"
+          test -n "${SSH_KEY}"
+
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" \
+            "cd ~/app-dev && test -x 02_switch-release.sh && ./02_switch-release.sh '${TARGET}'"

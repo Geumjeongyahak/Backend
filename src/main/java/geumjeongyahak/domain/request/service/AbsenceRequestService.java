@@ -211,19 +211,13 @@ public class AbsenceRequestService {
     @Transactional
     public int expireExpiredAbsenceRequests() {
         LocalDateTime now = LocalDateTime.now(clock);
-        List<AbsenceRequest> expiredRequests =
-            absenceRequestRepository.findAllByStatusInAndExpiresAtLessThanEqual(
-                List.of(RequestStatus.PENDING),
-                now
-            );
+        int expiredCount = absenceRequestRepository.expirePendingRequests(now);
 
-        expiredRequests.forEach(AbsenceRequest::expire);
-
-        if (!expiredRequests.isEmpty()) {
-            log.info("결석 요청 자동 만료 처리 완료 (count={}, expiredAt={})", expiredRequests.size(), now);
+        if (expiredCount > 0) {
+            log.info("결석 요청 자동 만료 처리 완료 (count={}, expiredAt={})", expiredCount, now);
         }
 
-        return expiredRequests.size();
+        return expiredCount;
     }
 
     private void validateRequesterIsDailyScheduleTeacher(DailySchedule dailySchedule, Long requesterId) {

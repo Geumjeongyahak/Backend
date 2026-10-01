@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.BDDMockito.then;
 
 import geumjeongyahak.common.event.EventPublisher;
@@ -15,6 +16,7 @@ import geumjeongyahak.domain.daily_schedule.entity.DailySchedule;
 import geumjeongyahak.domain.daily_schedule.service.DailyScheduleProxyService;
 import geumjeongyahak.domain.request.entity.LessonExchangeRequest;
 import geumjeongyahak.domain.request.enums.LessonExchangeRequestStatus;
+import geumjeongyahak.domain.request.repository.LessonExchangeProposalRepository;
 import geumjeongyahak.domain.request.repository.LessonExchangeRequestRepository;
 import geumjeongyahak.domain.request.service.LessonExchangeRequestService;
 import geumjeongyahak.domain.request.v1.dto.request.CreateLessonExchangeRequestRequest;
@@ -26,11 +28,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -45,6 +47,8 @@ class LessonExchangeRequestServiceDeadlineTest {
 
     @Mock
     private LessonExchangeRequestRepository requestRepository;
+    @Mock
+    private LessonExchangeProposalRepository proposalRepository;
     @Mock
     private DailyScheduleProxyService dailyScheduleProxyService;
     @Mock
@@ -333,17 +337,16 @@ class LessonExchangeRequestServiceDeadlineTest {
     }
 
     @Test
-    void expire_atExactExpiresAt_marksPendingRequestExpired() {
-        LessonExchangeRequest request = pendingRequest(NOW);
-        given(requestRepository.findAllByStatusInAndExpiresAtLessThanEqual(
-            List.of(LessonExchangeRequestStatus.PENDING, LessonExchangeRequestStatus.APPROVED),
-            NOW
-        )).willReturn(List.of(request));
+    void expire_closesActiveProposalsThenReturnsExpiredRequestCount() {
+        given(proposalRepository.closeActiveProposalsOfExpiredRequests(NOW)).willReturn(5);
+        given(requestRepository.expireActiveRequests(NOW)).willReturn(2);
 
         int expiredCount = service.expireExpiredLessonExchangeRequests();
 
-        assertThat(expiredCount).isOne();
-        assertThat(request.getStatus()).isEqualTo(LessonExchangeRequestStatus.EXPIRED);
+        assertThat(expiredCount).isEqualTo(2);
+        InOrder inOrder = inOrder(proposalRepository, requestRepository);
+        inOrder.verify(proposalRepository).closeActiveProposalsOfExpiredRequests(NOW);
+        inOrder.verify(requestRepository).expireActiveRequests(NOW);
     }
 
     private void prepareCreate() {
@@ -379,6 +382,7 @@ class LessonExchangeRequestServiceDeadlineTest {
         Clock clock = Clock.fixed(dateTime.atZone(SEOUL).toInstant(), SEOUL);
         return new LessonExchangeRequestService(
             requestRepository,
+            proposalRepository,
             dailyScheduleProxyService,
             userProxyService,
             eventPublisher,

@@ -1,6 +1,6 @@
 package geumjeongyahak.domain.daily_schedule.service.event;
 
-import geumjeongyahak.domain.daily_schedule.service.DailyScheduleService;
+import geumjeongyahak.domain.daily_schedule.service.DailyScheduleSynchronizer;
 import geumjeongyahak.domain.lesson.event.LessonDailyScheduleSyncRequestedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class LessonEventHandler {
 
-    private final DailyScheduleService dailyScheduleService;
+    private final DailyScheduleSynchronizer synchronizer;
 
     @EventListener
     public void handleLessonDailyScheduleSyncRequested(LessonDailyScheduleSyncRequestedEvent event) {
@@ -21,6 +21,6 @@ public class LessonEventHandler {
             event.getClassroomId(),
             event.getLessonDate()
         );
-        dailyScheduleService.synchronizeByClassroomAndDate(event.getClassroomId(), event.getLessonDate());
+        synchronizer.synchronize(event.getClassroomId(), event.getLessonDate());
     }
 }

@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static geumjeongyahak.unit.daily_schedule.DailyScheduleFixtures.*;
 
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.classroom.entity.Classroom;
@@ -149,58 +150,6 @@ class DailyScheduleServiceTest {
     }
 
     @Test
-    void synchronizeByClassroomAndDate_createsScheduleAndInitialAttendances() {
-        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
-        Classroom classroom = classroom(1L);
-        User teacher = teacher("홍길동");
-        Subject subject = subject(classroom, teacher, lessonDate);
-        Lesson firstLesson = lesson(subject, teacher, lessonDate, LocalTime.of(14, 0), LocalTime.of(15, 0), 1);
-        Lesson secondLesson = lesson(subject, teacher, lessonDate, LocalTime.of(15, 10), LocalTime.of(16, 0), 2);
-        Student student = student(10L, classroom);
-
-        given(lessonProxyService.getActiveLessonsByClassroomAndDate(
-            classroom.getId(),
-            lessonDate
-        )).willReturn(List.of(firstLesson, secondLesson));
-        given(dailyScheduleRepository.findByClassroomIdAndLessonDate(classroom.getId(), lessonDate))
-            .willReturn(Optional.empty());
-        given(dailyScheduleRepository.save(any(DailySchedule.class))).willAnswer(invocation -> {
-            DailySchedule dailySchedule = invocation.getArgument(0);
-            ReflectionTestUtils.setField(dailySchedule, "id", 100L);
-            return dailySchedule;
-        });
-        given(dailyTeacherAttendanceRepository.findByDailyScheduleId(100L)).willReturn(Optional.empty());
-        given(dailyTeacherAttendanceRepository.save(any(DailyTeacherAttendance.class)))
-            .willAnswer(invocation -> invocation.getArgument(0));
-        given(studentProxyService.getActiveStudentsByClassroomId(classroom.getId()))
-            .willReturn(List.of(student));
-        given(dailyStudentAttendanceRepository.findByDailyScheduleIdAndStudentId(100L, student.getId()))
-            .willReturn(Optional.empty());
-        given(dailyStudentAttendanceRepository.save(any(DailyStudentAttendance.class)))
-            .willAnswer(invocation -> invocation.getArgument(0));
-
-        dailyScheduleService.synchronizeByClassroomAndDate(classroom.getId(), lessonDate);
-
-        ArgumentCaptor<DailySchedule> dailyScheduleCaptor = ArgumentCaptor.forClass(DailySchedule.class);
-        verify(dailyScheduleRepository).save(dailyScheduleCaptor.capture());
-        DailySchedule dailySchedule = dailyScheduleCaptor.getValue();
-        assertThat(dailySchedule.getClassroom()).isEqualTo(classroom);
-        assertThat(dailySchedule.getTeacher()).isEqualTo(teacher);
-        assertThat(dailySchedule.getActivityStartTime()).isEqualTo(LocalTime.of(14, 0));
-        assertThat(dailySchedule.getActivityEndTime()).isEqualTo(LocalTime.of(16, 0));
-
-        ArgumentCaptor<DailyTeacherAttendance> teacherAttendanceCaptor =
-            ArgumentCaptor.forClass(DailyTeacherAttendance.class);
-        verify(dailyTeacherAttendanceRepository).save(teacherAttendanceCaptor.capture());
-        assertThat(teacherAttendanceCaptor.getValue().getVolunteerServiceMinutes()).isEqualTo(120);
-
-        ArgumentCaptor<DailyStudentAttendance> studentAttendanceCaptor =
-            ArgumentCaptor.forClass(DailyStudentAttendance.class);
-        verify(dailyStudentAttendanceRepository).save(studentAttendanceCaptor.capture());
-        assertThat(studentAttendanceCaptor.getValue().getStudent()).isEqualTo(student);
-    }
-
-    @Test
     void updateAndCheckOutTeacherAttendance_usesConfiguredSeoulClock() {
         Clock seoulClock = Clock.fixed(Instant.parse("2026-07-01T10:15:30Z"), ZoneId.of("Asia/Seoul"));
         DailyScheduleService service = new DailyScheduleService(
@@ -250,92 +199,5 @@ class DailyScheduleServiceTest {
         service.checkOutTeacherAttendance(dailySchedule.getId(), teacher.getId(), false, true);
 
         assertThat(teacherAttendance.getCheckedOutAt()).isEqualTo(LocalDateTime.of(2026, 7, 1, 19, 15, 30));
-    }
-
-    private Classroom classroom(Long id) {
-        return classroom(id, "장미반");
-    }
-
-    private Classroom classroom(Long id, String name) {
-        Classroom classroom = Classroom.builder()
-            .name(name)
-            .type(ClassroomType.WEEKDAY)
-            .build();
-        ReflectionTestUtils.setField(classroom, "id", id);
-        return classroom;
-    }
-
-    private User teacher(String name) {
-        return User.builder()
-            .name(name)
-            .role(RoleType.VOLUNTEER)
-            .build();
-    }
-
-    private User teacher(Long id, String name) {
-        User teacher = teacher(name);
-        ReflectionTestUtils.setField(teacher, "id", id);
-        return teacher;
-    }
-
-    private DailySchedule dailySchedule(Long id, Classroom classroom, User teacher, LocalDate lessonDate) {
-        DailySchedule dailySchedule = new DailySchedule(
-            classroom,
-            teacher,
-            lessonDate,
-            LocalTime.of(19, 20),
-            LocalTime.of(21, 40)
-        );
-        ReflectionTestUtils.setField(dailySchedule, "id", id);
-        return dailySchedule;
-    }
-
-    private Subject subject(Classroom classroom, User teacher, LocalDate lessonDate) {
-        return new Subject(
-            classroom,
-            teacher,
-            "국어",
-            lessonDate,
-            lessonDate.plusMonths(1),
-            DayOfWeek.WEDNESDAY,
-            LocalTime.of(14, 0),
-            LocalTime.of(16, 0),
-            1,
-            LocalDateTime.now(),
-            null
-        );
-    }
-
-    private Lesson lesson(
-        Subject subject,
-        User teacher,
-        LocalDate lessonDate,
-        LocalTime startTime,
-        LocalTime endTime,
-        int period
-    ) {
-        return new Lesson(subject, teacher, lessonDate, startTime, endTime, period);
-    }
-
-    private Student student(Long id, Classroom classroom) {
-        return student(id, "최양지", classroom);
-    }
-
-    private Student student(Long id, String name, Classroom classroom) {
-        Student student = new Student(name, null, null, classroom);
-        ReflectionTestUtils.setField(student, "id", id);
-        return student;
-    }
-
-    private DailyStudentAttendance studentAttendance(
-        Long id,
-        DailySchedule dailySchedule,
-        Student student,
-        DailyStudentAttendanceStatus status
-    ) {
-        DailyStudentAttendance attendance = new DailyStudentAttendance(dailySchedule, student);
-        ReflectionTestUtils.setField(attendance, "id", id);
-        attendance.updateStatus(status);
-        return attendance;
     }
 }

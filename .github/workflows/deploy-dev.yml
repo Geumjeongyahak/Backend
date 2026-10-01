@@ -6,6 +6,11 @@ on:
       - dev
   workflow_dispatch:
 
+# 배포와 되돌리기(rollback.yml)가 겹치지 않게 한다. 진행 중인 것을 끊지 않는다
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -48,10 +53,13 @@ jobs:
           fi
 
           ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts
-          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" "mkdir -p ~/app-dev"
-          scp -i ~/.ssh/deploy_key "${APP_JAR}" scripts/gcp/05_app/01_install-app-service.sh \
+          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" "mkdir -p ~/app-dev/releases"
+          # 커밋마다 jar 를 남긴다 (releases/<sha>.jar). 되돌리기는 rollback.yml 에 옛 SHA 를 넣는다
+          scp -i ~/.ssh/deploy_key "${APP_JAR}" "${SSH_USER}@${SSH_HOST}:~/app-dev/releases/${GITHUB_SHA}.jar"
+          scp -i ~/.ssh/deploy_key scripts/gcp/05_app/01_install-app-service.sh scripts/gcp/05_app/02_switch-release.sh \
             "${SSH_USER}@${SSH_HOST}:~/app-dev/"
           scp -r -i ~/.ssh/deploy_key scripts/gcp/05_app/grafana \
             "${SSH_USER}@${SSH_HOST}:~/app-dev/"
+          # 전환 뒤 헬스 체크가 실패하면 스크립트가 이전 릴리스로 되돌리고 이 단계를 실패시킨다
           ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" \
-            "cd ~/app-dev && test -f .env && mv \"$(basename "${APP_JAR}")\" app.jar && chmod +x 01_install-app-service.sh && ./01_install-app-service.sh"
+            "cd ~/app-dev && test -f .env && chmod +x 01_install-app-service.sh 02_switch-release.sh && ./02_switch-release.sh ${GITHUB_SHA}"
