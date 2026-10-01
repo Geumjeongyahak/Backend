@@ -13,8 +13,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Stri
 
     List<RefreshToken> findByCredentialId(Long credentialId);
 
-    void deleteByCredentialId(Long credentialId);
-
     void deleteByCredentialIdIn(Iterable<Long> credentialIds);
 
     @Modifying

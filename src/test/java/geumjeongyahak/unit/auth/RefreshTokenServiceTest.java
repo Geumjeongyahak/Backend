@@ -100,6 +100,5 @@ class RefreshTokenServiceTest {
         refreshTokenService.createRefreshToken(CREDENTIAL_ID);
 
         verify(refreshTokenRepository, never()).deleteAllByIdInBatch(anyList());
-        verify(refreshTokenRepository, never()).deleteByCredentialId(any());
     }
 }
