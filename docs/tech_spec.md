@@ -349,6 +349,20 @@ public LessonResponse createLesson() { ... }
 - 본인 계정, 마지막 활성 관리자, 활성 과목 담당자, 처리 대기 중인 신청·요청 보유자는 비활성화할 수 없습니다.
 - 비활성화 시 사용자 도메인 이벤트를 발행하고 인증 도메인이 Refresh Token을 폐기하며 알림 도메인이 활성 Push 구독을 해제합니다.
 
+### 4.6 인증 사용자 캐시
+
+JWT 필터가 요청마다 부르는 `CustomUserDetailsService.loadUserByUserId`의 결과를 로컬 Caffeine 캐시
+`userDetails`에 올립니다 (#221). 캐시가 없으면 인증 한 번에 `user_credentials` · `users` ·
+`user_permissions` · `department_permissions` 조회가 나갑니다.
+
+- 키는 사용자 id, 값은 `CustomUserDetails`입니다. id · 이메일 · 부서 id · 권한 문자열만 담고 엔티티는 담지 않습니다.
+- 크기와 수명은 `USER_DETAILS_CACHE_MAX`(기본 1,000) · `USER_DETAILS_CACHE_TTL`(기본 `5m`)로 바꿉니다.
+- **무효화는 엔티티 리스너가 합니다.** `User` · `UserPermission` · `UserCredential` · `DepartmentPermission`이 저장 · 수정 · 삭제되면 `UserDetailsCacheEvictor`가 트랜잭션이 끝난 뒤 그 사용자 항목을 지웁니다. 부서 권한이 바뀌면 캐시 전체를 비웁니다. 권한 회수 · 역할 강등 · 삭제는 다음 요청부터 반영됩니다.
+- **벌크 JPQL · 네이티브 UPDATE/DELETE는 리스너를 우회합니다.** 위 네 테이블을 그렇게 고치는 코드를 더하면 그 자리에서 캐시를 직접 지워야 합니다.
+- 인스턴스마다 따로 가지는 캐시입니다. 앱을 여러 대로 늘리면 다른 인스턴스의 무효화가 TTL만큼 늦게 반영되므로, 그때는 외부 캐시나 이벤트 기반 무효화로 옮깁니다.
+- 적중률은 `/actuator/prometheus`의 `cache_gets_total{cache="userDetails",result="hit|miss"}`로 봅니다.
+- 도입 전후 측정: [`docs/reports/221-auth-permission-cache/`](reports/221-auth-permission-cache/index.html)
+
 ---
 
 ## 5. API 설계 원칙
