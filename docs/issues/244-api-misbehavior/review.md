@@ -23,3 +23,27 @@
 | diff-signals · 반복문 안 질의 | 해당 없음 | 정책 순회는 최대 5번, 각 1질의. 토큰 정리는 조회 1 + 삭제 1 |
 | diff-signals · 인자 없는 `now()` | 해당 없음 | 추가된 줄에 없음 (`grep` 0건) |
 | diff-signals · 트랜잭션 안 외부 호출 · 원인 버리는 catch · 락 없는 확인 후 변경 | 해당 없음 | 추가된 줄에 없음. 동시 재발급은 계획대로 둘 다 성공 허용 |
+
+## 커버리지 (JaCoCo, `verify.sh` 전체 1204건 뒤)
+
+| 클래스 | 줄 | 분기 |
+|---|---|---|
+| `AttachmentUploadService` | 40/40 (100%) | 12/14 (85%) |
+| `PostAttachmentReadPolicy` | 4/4 (100%) | 5/6 (83%) |
+| `MeetingRecordAttachmentReadPolicy` | 4/4 (100%) | 5/6 (83%) |
+| `PurchaseReceiptReadPolicy` | 5/5 (100%) | 7/8 (87%) |
+| `VendorReceiptReadPolicy` | 3/3 (100%) | 4/6 (66%) |
+| `SiteHistoryPhotoReadPolicy` | 1/1 (100%) | - |
+| `RefreshTokenService` | 54/61 (88%) | 13/18 (72%) |
+| `LocalAuthService` | 85/92 (92%) | 24/34 (70%) |
+| `SortOrders` | 15/15 (100%) | 12/13 → 13/13 (단위 1건 추가) |
+| `LessonSummaryResponse` | 13/14 (92%) | - |
+| `SiteHistoryService` | 90/134 (67%) | 24/40 (60%) |
+
+못 덮은 새 갈래: 정책들의 «로그인 안 한 사용자(null)» 갈래. 다운로드 API는 인증이 필요해 E2E로 닿지 않는다(기존 동작).
+`SiteHistoryService`·`LocalAuthService`의 나머지는 이번에 안 바꾼 기존 갈래다.
+
+## 실제 PostgreSQL 18 검증
+
+Flyway V1–V9 적용 후 바뀐 E2E(수업 조회 · 연혁 · 분반 정렬 · 첨부 권한 · 게시글 파일 · 업로드 · 인증 · 채널) 165건 통과
+(`stringtype=unspecified`, 테스트 실행에만).
