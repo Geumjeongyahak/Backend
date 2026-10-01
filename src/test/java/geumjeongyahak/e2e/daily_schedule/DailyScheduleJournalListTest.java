@@ -32,7 +32,7 @@ public class DailyScheduleJournalListTest extends BaseE2ETest {
     private static final long TEACHER_ID = 2L;
     private static final String APPS_SCRIPT_BOT_EMAIL = "geumjeongyahak-apps-script-bot@gmail.com";
     private static final String APPS_SCRIPT_BOT_PASSWORD = "apps-script-bot123!";
-    private static final LocalDate BASE_DATE = LocalDate.of(2061, 1, 1);
+    private static final LocalDate BASE_DATE = LocalDate.of(2081, 1, 1);
     private static final AtomicLong SEQUENCE = new AtomicLong();
 
     private String adminAccessToken;
