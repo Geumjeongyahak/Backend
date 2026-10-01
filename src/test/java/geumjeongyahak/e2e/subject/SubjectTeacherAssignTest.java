@@ -343,4 +343,38 @@ public class SubjectTeacherAssignTest extends SubjectBaseTest {
             .statusCode(200)
             .body("teacherId", is((int) NEW_TEACHER_ID));
     }
+
+    @Test
+    @DisplayName("PATCH /teacher: 교사가 그대로면 결석 요청이 걸린 과목도 200이다 (#244 2번)")
+    void assignTeacher_Success_WhenTeacherUnchangedAndFutureLessonHasAbsenceRequest() {
+        long subjectId = createSubject(CLASSROOM_1, "국어", "MONDAY", 2);
+        jdbcTemplate.update(
+            """
+            INSERT INTO absence_requests (daily_schedule_id, requested_by, title, reason, expires_at, status)
+            VALUES (?, ?, '결강 요청', '테스트', TIMESTAMP '2099-03-01 00:00:00', 'PENDING')
+            """,
+            findOrCreateDailySchedule(TEACHER_ID, "2099-03-02"),
+            TEACHER_ID
+        );
+
+        // 교사를 바꾸는 요청은 결석 요청 때문에 막힌다
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(Map.of("teacherId", NEW_TEACHER_ID))
+            .when()
+            .patch("/{subjectId}/teacher", subjectId)
+            .then()
+            .statusCode(409);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(Map.of("teacherId", TEACHER_ID))
+            .when()
+            .patch("/{subjectId}/teacher", subjectId)
+            .then()
+            .statusCode(200)
+            .body("teacherId", is((int) TEACHER_ID));
+    }
 }
