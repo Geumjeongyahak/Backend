@@ -55,6 +55,11 @@
 ### `UserDetailsCacheEvictor` (새 파일, `common/security/service/`)
 
 ```java
+/**
+ * 사용자·권한 엔티티가 바뀌면 커밋 뒤 userDetails 캐시를 지운다.
+ * 벌크 JPQL·네이티브 UPDATE/DELETE 는 엔티티 콜백을 우회하므로 여기서 안 지워진다 —
+ * 그런 코드를 더하면 그 자리에서 직접 지운다.
+ */
 @Component
 @RequiredArgsConstructor
 public class UserDetailsCacheEvictor {
@@ -183,6 +188,24 @@ public class UserDetailsCacheEvictor {
 - `scripts/harness/verify.sh` 초록
 - `docs/tech_spec.md`에 캐시 한 단락 (무엇을 · TTL · 무효화 방식 · 다중 인스턴스 한계).
   해당 절이 없으면 보안 절 끝에 붙인다
+
+## 알려진 한계
+
+- **벌크 JPQL·네이티브 UPDATE/DELETE는 리스너를 우회한다.** `users` · `user_permissions` ·
+  `user_credentials` · `department_permissions`를 `@Modifying` 질의나 `JdbcTemplate`으로
+  고치면 엔티티 콜백이 안 돌아 캐시가 안 지워진다. 그런 코드를 더하면 같은 트랜잭션에서
+  `UserDetailsCacheEvictor`로 직접 지워야 한다. 같은 문장을 `UserDetailsCacheEvictor`
+  클래스 주석에도 둔다.
+- 커밋 직전에 옛 값을 읽은 요청이 `afterCompletion` 뒤에 캐시에 쓰면 옛 권한이 최대 TTL 5분 남는다 (실패 경로 표).
+- 다중 인스턴스에서는 인스턴스마다 따로 논다 (이슈의 「알려진 한계」).
+
+## 부하 측정
+
+`docs/reports/221-auth-permission-cache/`에 재현 스크립트와 HTML 리포트를 둔다.
+dev와 같은 사양의 임시 GCP VM(라벨 `purpose=loadtest-221`)에 합성 데이터만 넣어 잰다 —
+dev의 디스크·스냅샷·행 데이터는 복사하지 않는다(가져온 것은 설정값과 테이블별 행 수뿐).
+측정이 끝나면 `teardown.sh`로 VM·디스크를 지우고 남은 디스크·스냅샷이 없음을 확인해
+PR `리뷰어에게`에 «삭제 완료»를 적는다.
 
 ## 안 하는 것
 
