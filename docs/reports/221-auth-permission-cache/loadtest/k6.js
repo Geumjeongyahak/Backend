@@ -11,9 +11,17 @@ const BASE = __ENV.BASE;
 const SCENARIO = __ENV.SCENARIO;
 const TOKENS = SCENARIO === 'dept-anon' ? [] : JSON.parse(open('./tokens.json'));
 
+if (SCENARIO !== 'dept-anon' && TOKENS.length === 0) throw new Error('tokens.json is empty');
+
+// MODE=vus: 동시 사용자 VUS 명이 쉬지 않고 보낸다 (최대 처리량)
+// MODE=rate: 초당 RATE 건을 일정하게 보낸다 (같은 부하에서 지연 비교)
+const DURATION = __ENV.DURATION || '60s';
 export const options = {
   scenarios: {
-    s: { executor: 'constant-vus', vus: Number(__ENV.VUS), duration: __ENV.DURATION || '60s' },
+    s: __ENV.MODE === 'rate'
+      ? { executor: 'constant-arrival-rate', rate: Number(__ENV.RATE), timeUnit: '1s', duration: DURATION,
+          preAllocatedVUs: 50, maxVUs: 300 }
+      : { executor: 'constant-vus', vus: Number(__ENV.VUS), duration: DURATION },
   },
   summaryTrendStats: ['avg', 'min', 'med', 'p(90)', 'p(95)', 'p(99)', 'max'],
 };
