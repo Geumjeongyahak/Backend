@@ -1,0 +1,7 @@
+6750	227.59	0.0337	select d1_0.id,d1_0.created_at,d1_0.description,d1_0.name,d1_0.updated_at from departments d1_0
+6750	97.33	0.0144	BEGIN READ ONLY
+2	0.00	0.0018	BEGIN
+1	0.01	0.0129	update lesson_exchange_proposals lep1_0 set status=$4,closed_at=$1,updated_at=$2 where lep1_0.status=$5 and lep1_0.request_id in (select ler1_0.id from lesson_exchange_requests ler1_0 where ler1_0.status in ($6,$7) and ler1_0.expires_at<=$3)
+1	0.01	0.0070	update absence_requests ar1_0 set status=$3,version=(ar1_0.version+$4),updated_at=$1 where ar1_0.status=$5 and ar1_0.expires_at<=$2
+1	0.12	0.1204	select pg_stat_statements_reset()
+1	0.01	0.0073	update lesson_exchange_requests ler1_0 set status=$3,version=(ler1_0.version+$4),updated_at=$1 where ler1_0.status in ($5,$6) and ler1_0.expires_at<=$2

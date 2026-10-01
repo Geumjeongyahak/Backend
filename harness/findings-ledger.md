@@ -24,3 +24,5 @@ codex 리뷰 지적 한 건이 한 행이다. **반려한 것도 적는다** —
 | 2026-10-01 | #241 | P3 | local | (#240 창 리뷰) 요일을 오늘 요일로 바꾸면 오늘 수업이 생기지 않는다 | 수용 (문서) | 의도. plan 개정 2와 PR `리뷰어에게`에 적는다 |
 | 2026-10-01 | #241 | P3 | local | (#240 창 리뷰) 자정 직전 건너뛰기 대신 `SubjectService`에 `Clock` 빈을 주입해 테스트가 시각을 고정하게 하라 | 수용 | `SubjectService`의 `now()`를 모두 `clock`으로, E2E는 `@Primary` 고정 Clock 클래스(`SubjectTodayLessonTest`)로 옮기고 `assumeTrue`를 지웠다. 날짜 경계는 자정 유지(사람 결정) |
 | 2026-10-01 | #241 | P2 | local | 수업 시작 뒤 과목 시각을 늦추면 오늘 수업은 옛 시각으로 남는데, 같은 날 이어지는 교사 교체·해제·삭제가 과목 시각만 보고 오늘을 적용일로 잡아 시작한 수업을 바꾼다 (`SubjectService.lessonChangeFrom`) | 수용 | 오늘 남아 있는 그 과목 수업의 실제 시작 시각도 함께 본다(`LessonProxyService.getActiveLessonStartTimesBySubjectIdAndDate`). E2E로 재현 후 수정 |
+| 2026-10-01 | #221 | P2 | local | 로그인 토큰 수를 출력만 하고 확인하지 않아, 로그인이 실패하면 인증 시나리오가 익명 경로로 측정된다 (`loadtest/run.sh`) | 수용 | 58개가 아니면 멈추고, k6 스크립트도 인증 시나리오에서 토큰이 비면 시작하지 않는다. 기존 측정은 인증 시나리오 요청당 SQL 5회로 실제 인증을 거쳤음을 확인 |
+| 2026-10-01 | #221 | P2 | local | 환경 스냅샷이 측정한 jar 대신 저장소 HEAD 를 남겨 전·후 jar 를 구분할 수 없다 (`loadtest/run.sh`) | 수용 | jar 의 sha256 과 빌드 커밋(`JAR_COMMIT`)을 남긴다. VM 에도 해시 이름으로 올린다 |
