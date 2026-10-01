@@ -10,6 +10,7 @@
 | 있는 코드를 고친다 | [`changing-code.md`](changing-code.md) | `work-an-issue` 20 |
 | 테스트를 쓴다 | [`testing.md`](testing.md) | `work-an-issue` 30 |
 | 리뷰에 보내기 전에 diff를 훑는다 | [`diff-signals.md`](diff-signals.md) | `work-an-issue` 30과 40 사이 |
+| codex 전에 규칙 전체로 1차 검증한다 | 위 넷 + `CLAUDE.md` | `work-an-issue` 35 |
 
 실수를 알아챘으면 [`mistakes-ledger.md`](../../../mistakes-ledger.md)에 한 행을 적는다.
 **같은 갈래가 두 번째 나오면 위 규칙 중 맞는 곳에 올린다.**
