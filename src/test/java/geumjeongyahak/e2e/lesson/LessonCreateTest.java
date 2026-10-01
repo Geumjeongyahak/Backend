@@ -156,6 +156,35 @@ public class LessonCreateTest extends LessonBaseTest {
     }
 
     @Test
+    @DisplayName("같은 teacher + 같은 date에 앞 수업 종료 시각에 맞닿으면 201")
+    void createLesson_success_touchingPreviousLessonEnd() {
+        Long subjectId = createTrackedSubjectAndGetId("과학");
+        String date = LocalDate.of(2026, 2, 25).toString();
+        createTrackedLessonAndGetId(subjectId, TEACHER_ID, date, "12:20:00", "13:00:00", 2);
+
+        Long adjacentLessonId = createTrackedLessonAndGetId(subjectId, TEACHER_ID, date, "13:00:00", "13:30:00", 3);
+
+        assertThat(adjacentLessonId).isNotNull();
+    }
+
+    @Test
+    @DisplayName("같은 teacher + 같은 date에 1분이라도 겹치면 409")
+    void createLesson_conflict_overlappingByOneMinute() {
+        Long subjectId = createTrackedSubjectAndGetId("과학");
+        String date = LocalDate.of(2026, 2, 25).toString();
+        createTrackedLessonAndGetId(subjectId, TEACHER_ID, date, "12:20:00", "13:00:00", 2);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(createLessonRequest(subjectId, TEACHER_ID, date, "12:59:00", "13:30:00", 3))
+            .when()
+            .post()
+            .then()
+            .statusCode(409);
+    }
+
+    @Test
     @DisplayName("봉사자가 아닌 사용자를 교사로 지정하면 수업 생성 실패(400)")
     void createLesson_badRequest_whenTeacherIsNotVolunteer() {
         Long subjectId = createTrackedSubjectAndGetId("비정상 교사 배정");

@@ -160,6 +160,40 @@ public class LessonUpdateTest extends LessonBaseTest {
     }
 
     @Test
+    @DisplayName("관리자: 앞 수업 종료 시각에 맞닿게 부분 수정하면 200")
+    void patchLesson_success_whenTouchingPreviousLessonEnd() {
+        Long subjectId = createTrackedSubjectAndGetId("영어");
+        createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-24", "12:20:00", "13:00:00", 2);
+        Long lessonB = createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-24", "14:00:00", "14:30:00", 3);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(Map.of("startTime", "13:00:00", "endTime", "13:30:00"))
+            .when()
+            .patch("/{lessonId}", lessonB)
+            .then()
+            .statusCode(200);
+    }
+
+    @Test
+    @DisplayName("관리자: 뒤 수업 시작 시각에 맞닿게 부분 수정하면 200")
+    void patchLesson_success_whenTouchingNextLessonStart() {
+        Long subjectId = createTrackedSubjectAndGetId("영어");
+        createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-24", "13:00:00", "13:30:00", 3);
+        Long lessonA = createTrackedLessonAndGetId(subjectId, TEACHER_ID, "2026-02-24", "10:00:00", "10:40:00", 1);
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(Map.of("startTime", "12:20:00", "endTime", "13:00:00"))
+            .when()
+            .patch("/{lessonId}", lessonA)
+            .then()
+            .statusCode(200);
+    }
+
+    @Test
     @DisplayName("봉사자: 부분 수정 실패(403)")
     void patchLesson_forbidden_403() {
         Long subjectId = createTrackedSubjectAndGetId("사회");
