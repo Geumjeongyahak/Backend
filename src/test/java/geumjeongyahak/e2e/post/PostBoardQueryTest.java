@@ -247,6 +247,71 @@ public class PostBoardQueryTest extends BasePostTest {
                 .body("content.id", hasItem(postId.intValue()));
     }
 
+    @Test
+    @DisplayName("통합 게시판은 채널 유형 여러 개를 포함하거나 제외해 서버에서 페이징한다")
+    void getBoardPosts_WithMultipleChannelTypes_FiltersOnServer() {
+        Long classroomChannelId = saveChannel("다중필터 반", ChannelType.CLASSROOM, 301L);
+        Long eventChannelId = saveChannel("다중필터 행사", ChannelType.EVENT, null);
+
+        createPost(noticeChannelId, "다중필터 공지");
+        createPost(classroomChannelId, "다중필터 반 글");
+        createPost(eventChannelId, "다중필터 행사 글");
+
+        given()
+                .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+                .queryParam("channelTypes", "NOTICE,CLASSROOM")
+                .queryParam("size", 1)
+                .when()
+                .get("/api/v1/posts")
+                .then()
+                .statusCode(200)
+                .body("content", hasSize(1))
+                .body("totalElements", equalTo(2));
+
+        given()
+                .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+                .queryParam("channelTypes", "NOTICE")
+                .queryParam("channelTypes", "CLASSROOM")
+                .when()
+                .get("/api/v1/posts")
+                .then()
+                .statusCode(200)
+                .body("totalElements", equalTo(2))
+                .body("content.channelType", not(hasItem("EVENT")));
+
+        given()
+                .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+                .queryParam("excludedChannelTypes", "EVENT")
+                .when()
+                .get("/api/v1/posts")
+                .then()
+                .statusCode(200)
+                .body("totalElements", equalTo(2))
+                .body("content.channelType", not(hasItem("EVENT")));
+
+        given()
+                .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+                .queryParam("channelTypes", "FOO")
+                .when()
+                .get("/api/v1/posts")
+                .then()
+                .statusCode(400);
+    }
+
+    private Long saveChannel(String name, ChannelType channelType, Long refId) {
+        Channel channel = channelRepository.save(Channel.builder()
+                .name(name)
+                .description(name)
+                .channelType(channelType)
+                .bindingType(ChannelBindingType.STANDALONE)
+                .refId(refId)
+                .accessLevel(ChannelAccessLevel.READ_WRITE)
+                .isActive(true)
+                .build());
+        testChannelHelper.registerChannel(channel.getId());
+        return channel.getId();
+    }
+
     private Long createPost(Long channelId, String title) {
         CreatePostRequest request = new CreatePostRequest(
                 title,
