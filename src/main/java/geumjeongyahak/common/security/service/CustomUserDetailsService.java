@@ -9,6 +9,7 @@ import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
 import geumjeongyahak.domain.department.service.DepartmentPermissionProxyService;
 import geumjeongyahak.domain.users.entity.User;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -34,6 +35,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         return toUserDetails(credential);
     }
 
+    @Cacheable(UserDetailsCacheEvictor.CACHE)
     @Transactional(readOnly = true)
     public UserDetails loadUserByUserId(Long userId) throws UsernameNotFoundException {
         UserCredential credential = userCredentialRepository.findByUserIdAndProvider(userId, ProviderType.LOCAL)

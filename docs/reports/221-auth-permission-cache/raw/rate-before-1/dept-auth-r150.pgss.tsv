@@ -1,0 +1,12 @@
+13502	152.71	0.0113	BEGIN READ ONLY
+6751	166.71	0.0247	select u1_0.id,u1_0.classroom_id,u1_0.created_at,u1_0.deleted_at,u1_0.department_id,u1_0.primary_email,u1_0.is_deleted,u1_0.name,u1_0.phone_number,u1_0.profile_image_url,u1_0.resident_registration_number_prefix,u1_0.role,u1_0.teacher_end_at,u1_0.teacher_start_at,u1_0.updated_at from users u1_0 where u1_0.id=$1
+6751	376.68	0.0558	select uc1_0.id,uc1_0.created_at,uc1_0.credential_email,uc1_0.email_verification_failed_attempts,uc1_0.email_verification_requested_at,uc1_0.email_verification_token_expires_at,uc1_0.email_verification_token_hash,uc1_0.email_verified,uc1_0.last_login_at,uc1_0.password_hash,uc1_0.password_reset_failed_attempts,uc1_0.password_reset_requested_at,uc1_0.password_reset_token_expires_at,uc1_0.password_reset_token_hash,uc1_0.provider,uc1_0.provider_user_id,uc1_0.updated_at,uc1_0.user_id from user_credentials uc1_0 join users u1_0 on u1_0.id=uc1_0.user_id where u1_0.id=$1 and uc1_0.provider=$2
+6751	116.56	0.0173	select p1_0.user_id,p1_0.id,p1_0.created_at,p1_0.permission_code,p1_0.updated_at from user_permissions p1_0 where p1_0.user_id=$1
+6751	152.57	0.0226	select d1_0.id,d1_0.created_at,d1_0.description,d1_0.name,d1_0.updated_at from departments d1_0
+5130	201.27	0.0392	select dp1_0.id,dp1_0.created_at,dp1_0.department_id,dp1_0.permission_code,dp1_0.role_type,dp1_0.updated_at from department_permissions dp1_0 join departments d1_0 on d1_0.id=dp1_0.department_id where d1_0.id=$1 and dp1_0.role_type in ($2)
+675	39.16	0.0580	select dp1_0.id,dp1_0.created_at,dp1_0.department_id,dp1_0.permission_code,dp1_0.role_type,dp1_0.updated_at from department_permissions dp1_0 join departments d1_0 on d1_0.id=dp1_0.department_id where d1_0.id=$1 and dp1_0.role_type in ($2,$3)
+2	0.00	0.0010	BEGIN
+1	0.01	0.0062	update absence_requests ar1_0 set status='EXPIRED',version=(ar1_0.version+1),updated_at=$1 where ar1_0.status='PENDING' and ar1_0.expires_at<=$2
+1	0.16	0.1602	select pg_stat_statements_reset()
+1	0.01	0.0056	update lesson_exchange_proposals lep1_0 set status='CLOSED',closed_at=$1,updated_at=$2 where lep1_0.status='ACTIVE' and lep1_0.request_id in (select ler1_0.id from lesson_exchange_requests ler1_0 where ler1_0.status in ('PENDING','APPROVED') and ler1_0.expires_at<=$3)
+1	0.01	0.0067	update lesson_exchange_requests ler1_0 set status='EXPIRED',version=(ler1_0.version+1),updated_at=$1 where ler1_0.status in ('PENDING','APPROVED') and ler1_0.expires_at<=$2

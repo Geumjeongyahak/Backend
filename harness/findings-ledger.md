@@ -30,3 +30,5 @@ codex 리뷰 지적 한 건이 한 행이다. **반려한 것도 적는다** —
 | 2026-10-01 | #244 | P2 | local | 지운 구매 요청의 품의·결제 영수증이 계속 내려받아진다. 구매 요청 조회는 `findByIdAndIsDeletedFalse`다 (`PurchaseReceiptReadPolicy`) | 수용 | 존재 확인 질의에 `purchaseRequest.isDeleted = false` 조건. E2E ⑫로 재현 후 수정 |
 | 2026-10-01 | #244 | P2 | local | post 정책이 channel 도메인 내부 `ChannelAccessChecker`를 직접 주입한다 (`PostAttachmentReadPolicy`) | 수용 | `ChannelProxyService.canRead` 추가(없거나 지운 채널은 false). 기존 `PostCrudService`의 직접 주입은 범위 밖으로 남김 |
 | 2026-10-01 | #244 | P2 | blocking | 구매 영수증 정책이 역할만 봐서, 관리자 상세 조회(`purchase-request:read:*`)로 영수증 id를 보는 세밀 권한 사용자가 다운로드는 403 (`PurchaseReceiptReadPolicy`) | 수용 (3회차) | 열람 권한을 두 상세 API의 합(VOLUNTEER·MANAGER·ADMIN 또는 `purchase-request:read:*`)으로. E2E ⑬ |
+| 2026-10-01 | #221 | P2 | local | 로그인 토큰 수를 출력만 하고 확인하지 않아, 로그인이 실패하면 인증 시나리오가 익명 경로로 측정된다 (`loadtest/run.sh`) | 수용 | 58개가 아니면 멈추고, k6 스크립트도 인증 시나리오에서 토큰이 비면 시작하지 않는다. 기존 측정은 인증 시나리오 요청당 SQL 5회로 실제 인증을 거쳤음을 확인 |
+| 2026-10-01 | #221 | P2 | local | 환경 스냅샷이 측정한 jar 대신 저장소 HEAD 를 남겨 전·후 jar 를 구분할 수 없다 (`loadtest/run.sh`) | 수용 | jar 의 sha256 과 빌드 커밋(`JAR_COMMIT`)을 남긴다. VM 에도 해시 이름으로 올린다 |
