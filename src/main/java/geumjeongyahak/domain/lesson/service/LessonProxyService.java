@@ -105,6 +105,14 @@ public class LessonProxyService {
         return conflictChecker.hasConflict(teacherId, List.of(date), startTime, endTime, ConflictExclusion.NONE);
     }
 
+    /** 그 날짜에 남아 있는 과목 수업들의 시작 시각. 과목 수정이 오늘 수업에 반영될 수 있는지 볼 때 쓴다. */
+    @Transactional(readOnly = true)
+    public List<LocalTime> getActiveLessonStartTimesBySubjectIdAndDate(Long subjectId, LocalDate date) {
+        return lessonRepository.findAllBySubjectIdAndDateAndIsDeletedFalse(subjectId, date).stream()
+            .map(Lesson::getStartTime)
+            .toList();
+    }
+
     @Transactional(readOnly = true)
     public boolean existsFutureActiveLessonBySubjectId(Long subjectId, LocalDate from) {
         return !lessonRepository

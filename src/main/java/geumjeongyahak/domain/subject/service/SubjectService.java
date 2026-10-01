@@ -1,9 +1,13 @@
 package geumjeongyahak.domain.subject.service;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -42,6 +46,7 @@ public class SubjectService {
     private final LessonProxyService lessonProxyService;
     private final SubjectScheduleValidator validator;
     private final EventPublisher eventPublisher;
+    private final Clock clock;
 
     @Transactional
     public SubjectDetailResponse createSubject(CreateSubjectRequest request) {
@@ -79,7 +84,7 @@ public class SubjectService {
             request.startTime(),
             request.endTime(),
             request.period(),
-            teacher != null ? LocalDateTime.now() : null,
+            teacher != null ? LocalDateTime.now(clock) : null,
             request.description()
         );
 
@@ -91,9 +96,9 @@ public class SubjectService {
                 savedSubject.getId(),
                 savedSubject.getClassroom().getId(),
                 savedSubject.getTeacher().getId(),
-                LocalDate.now()
+                LocalDate.now(clock)
             ));
-            LocalDate lessonStartAt = max(LocalDate.now(), savedSubject.getStartAt());
+            LocalDate lessonStartAt = max(LocalDate.now(clock), savedSubject.getStartAt());
             if (!lessonStartAt.isAfter(savedSubject.getEndAt())) {
                 eventPublisher.publish(new SubjectCreatedEvent(
                     savedSubject.getId(),
@@ -192,17 +197,22 @@ public class SubjectService {
                 log.info("과목 담당 교사 배정 실패 - 과목을 찾을 수 없습니다. ID: {}", subjectId);
                 return new SubjectNotFoundException(subjectId);
             });
-        LocalDate today = LocalDate.now();
+        Long currentTeacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
+        if (!isChanged(currentTeacherId, request.teacherId())) {
+            // 시간표 칸 저장은 교사가 그대로여도 매번 보낸다. 수업을 안 바꾸므로 검증·이벤트를 건너뛴다 (#244)
+            log.debug("과목 담당 교사 변경 없음 (subjectId={}, teacherId={})", subjectId, currentTeacherId);
+            return SubjectDetailResponse.from(subject);
+        }
+        LocalDate changeFrom = lessonChangeFrom(subjectId, subject.getStartTime());
         if (request.teacherId() == null) {
-            validator.validateFutureLessonsChangeable(subjectId, today);
+            validator.validateFutureLessonsChangeable(subjectId, changeFrom);
             Long classroomId = subject.getClassroom().getId();
-            Long previousTeacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
             subject.assignTeacher(null, null);
             eventPublisher.publish(new SubjectTeacherUnassignedEvent(
                 subject.getId(),
                 classroomId,
-                previousTeacherId,
-                today
+                currentTeacherId,
+                changeFrom
             ));
             log.debug("과목 담당 교사 해제 완료 (subjectId={})", subject.getId());
             return SubjectDetailResponse.from(subject);
@@ -212,20 +222,20 @@ public class SubjectService {
         teacher.validateCanTeach();
         validator.validateTeacherScheduleAssignable(teacher.getId(), subject);
 
-        validator.validateFutureLessonsChangeable(subjectId, today);
-        validator.validateNoTeacherConflict(subjectId, teacher.getId(), today);
+        validator.validateFutureLessonsChangeable(subjectId, changeFrom);
+        validator.validateNoTeacherConflict(subjectId, teacher.getId(), changeFrom);
 
-        subject.assignTeacher(teacher, LocalDateTime.now());
+        subject.assignTeacher(teacher, LocalDateTime.now(clock));
 
-        if (lessonProxyService.existsFutureActiveLessonBySubjectId(subjectId, today)) {
+        if (lessonProxyService.existsFutureActiveLessonBySubjectId(subjectId, changeFrom)) {
             eventPublisher.publish(new SubjectTeacherAssignedEvent(
                 subject.getId(),
                 subject.getClassroom().getId(),
                 teacher.getId(),
-                today
+                changeFrom
             ));
         } else {
-            LocalDate lessonStartAt = max(today, subject.getStartAt());
+            LocalDate lessonStartAt = max(changeFrom, subject.getStartAt());
             if (!lessonStartAt.isAfter(subject.getEndAt())) {
                 eventPublisher.publish(new SubjectCreatedEvent(
                     subject.getId(),
@@ -281,15 +291,16 @@ public class SubjectService {
             || isChanged(subject.getEndTime(), newEndTime)
             || isChanged(subject.getPeriod(), newPeriod);
 
-        LocalDate today = LocalDate.now();
+        LocalDate changeFrom = lessonChangeFrom(subjectId, subject.getStartTime(), newStartTime);
+        LocalDate lessonStartAt = max(changeFrom, newStartAt);
         Long teacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
         if (updateLessons && teacherId != null) {
-            validator.validateFutureLessonsChangeable(subjectId, today);
+            validator.validateFutureLessonsChangeable(subjectId, changeFrom);
             validator.validateNoTeacherConflictForSchedule(
                 subjectId,
                 teacherId,
-                today,
-                max(today, newStartAt),
+                changeFrom,
+                lessonStartAt,
                 newEndAt,
                 newDayOfWeek,
                 newStartTime,
@@ -312,8 +323,8 @@ public class SubjectService {
                 eventPublisher.publish(new SubjectScheduleRecreatedEvent(
                     subject.getId(),
                     teacherId,
-                    today,
-                    max(today, newStartAt),
+                    changeFrom,
+                    lessonStartAt,
                     newEndAt,
                     newDayOfWeek,
                     newStartTime,
@@ -323,7 +334,7 @@ public class SubjectService {
             } else {
                 eventPublisher.publish(new SubjectScheduleUpdatedEvent(
                     subject.getId(),
-                    today,
+                    changeFrom,
                     newStartTime,
                     newEndTime,
                     newPeriod
@@ -351,19 +362,35 @@ public class SubjectService {
             return;
         }
 
-        LocalDate today = LocalDate.now();
-        validator.validateFutureLessonsChangeable(subjectId, today);
+        LocalDate changeFrom = lessonChangeFrom(subjectId, subject.getStartTime());
+        validator.validateFutureLessonsChangeable(subjectId, changeFrom);
         Long classroomId = subject.getClassroom().getId();
         Long teacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
         subject.deactivate();
         subjectRepository.save(subject);
-        eventPublisher.publish(new SubjectDeletedEvent(subject.getId(), classroomId, teacherId, today));
+        eventPublisher.publish(new SubjectDeletedEvent(subject.getId(), classroomId, teacherId, changeFrom));
 
         log.debug("과목 삭제(비활성화) 완료 (id={})", subjectId);
     }
 
     private boolean isChanged(Object before, Object after) {
         return !Objects.equals(before, after);
+    }
+
+    /**
+     * 과목 수정이 수업에 반영되기 시작하는 날. 오늘 수업이 아직 시작 전이면 오늘, 시작했거나 끝났으면 내일이다.
+     * 진행 중이거나 끝난 당일 수업·DailySchedule·출석을 건드리지 않는다 (#241).
+     * 과목 시각(옛·새)과 함께 오늘 실제로 남아 있는 수업의 시각도 본다. 앞선 수정으로 과목 시각만 늦춰졌을 수 있다.
+     */
+    private LocalDate lessonChangeFrom(Long subjectId, LocalTime... subjectStartTimes) {
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDate today = now.toLocalDate();
+        boolean started = Stream.concat(
+                Arrays.stream(subjectStartTimes),
+                lessonProxyService.getActiveLessonStartTimesBySubjectIdAndDate(subjectId, today).stream()
+            )
+            .anyMatch(startTime -> !now.toLocalTime().isBefore(startTime));
+        return started ? today.plusDays(1) : today;
     }
 
     private LocalDate max(LocalDate left, LocalDate right) {
