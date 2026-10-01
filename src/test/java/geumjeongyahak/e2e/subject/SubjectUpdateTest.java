@@ -811,7 +811,11 @@ public class SubjectUpdateTest extends SubjectBaseTest {
         );
     }
 
-    /** 교사 TEACHER_ID의 월요일 2교시 12:20–13:00 수업을 학기 전체에 만든다. */
+    /**
+     * 교사 TEACHER_ID의 벚꽃반 월요일 2교시 12:20–13:00 수업을 학기 전체에 만든다.
+     * 교사 배정은 같은 분반·요일에만 허용되므로(#199) 배정 경로 테스트는 같은 분반을 쓴다.
+     * 일정 변경 경로는 분반 중복 검사를 피하려고 다른 분반(CLASSROOM_2)을 쓴다.
+     */
     private void createSecondPeriodOfTeacher() {
         long secondPeriod = createScheduledSubject(
             CLASSROOM_1, TEACHER_ID, "2교시", TERM_START, TERM_END, "12:20:00", "13:00:00", 2
@@ -983,7 +987,7 @@ public class SubjectUpdateTest extends SubjectBaseTest {
     void assignTeacher_CreatesEveryLesson_WhenTeacherHasAdjacentLesson() {
         createSecondPeriodOfTeacher();
         long thirdPeriod = createScheduledSubject(
-            CLASSROOM_2, null, "3교시", TERM_START, TERM_END, "13:00:00", "13:30:00", 3
+            CLASSROOM_1, null, "3교시", TERM_START, TERM_END, "13:00:00", "13:30:00", 3
         );
 
         given()
@@ -1004,7 +1008,7 @@ public class SubjectUpdateTest extends SubjectBaseTest {
         createSecondPeriodOfTeacher();
 
         long thirdPeriod = createScheduledSubject(
-            CLASSROOM_2, TEACHER_ID, "3교시", TERM_START, TERM_END, "13:00:00", "13:30:00", 3
+            CLASSROOM_1, TEACHER_ID, "3교시", TERM_START, TERM_END, "13:00:00", "13:30:00", 3
         );
 
         assertThat(countActiveLessons(thirdPeriod)).isEqualTo(MONDAYS_IN_TERM);

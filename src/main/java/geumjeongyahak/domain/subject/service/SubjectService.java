@@ -400,7 +400,9 @@ public class SubjectService {
         if (lessonProxyService.existsTeacherConflictForFutureSubjectScheduledLessons(
             subjectId,
             teacherId,
-            today
+            today,
+            null,
+            null
         )) {
             throw new SubjectTeacherAssignmentConflictException("새 담당 교사의 기존 수업과 시간이 겹쳐 자동 변경할 수 없습니다.");
         }

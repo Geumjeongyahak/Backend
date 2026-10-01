@@ -8,10 +8,11 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface LessonRepository extends JpaRepository<Lesson, Long> {
+public interface LessonRepository extends JpaRepository<Lesson, Long>, JpaSpecificationExecutor<Lesson> {
 
     long countByIsDeletedFalse();
 
@@ -87,22 +88,6 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
         LocalDate startDate
     );
 
-    boolean existsByTeacherIdAndDateAndIsDeletedFalseAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
-        Long teacherId, LocalDate date, LocalTime endTime, LocalTime startTime);
 
-    boolean existsByTeacherIdAndDateAndIsDeletedFalseAndIdNotAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
-        Long teacherId,
-        LocalDate date,
-        Long lessonId,
-        LocalTime endTime,
-        LocalTime startTime
-    );
 
-    boolean existsByTeacherIdAndDateAndIsDeletedFalseAndSubjectIdNotAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
-        Long teacherId,
-        LocalDate date,
-        Long subjectId,
-        LocalTime endTime,
-        LocalTime startTime
-    );
 }

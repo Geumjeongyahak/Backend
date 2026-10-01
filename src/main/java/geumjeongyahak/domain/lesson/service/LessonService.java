@@ -3,6 +3,8 @@ package geumjeongyahak.domain.lesson.service;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +28,9 @@ import geumjeongyahak.domain.lesson.exception.InvalidLessonStatusTransitionExcep
 import geumjeongyahak.domain.lesson.exception.LessonDuplicateException;
 import geumjeongyahak.domain.lesson.exception.LessonNotFoundException;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
+import geumjeongyahak.domain.lesson.service.schedule.LessonGenerator;
+import geumjeongyahak.domain.lesson.service.schedule.TeacherLessonConflictChecker;
+import geumjeongyahak.domain.lesson.service.schedule.TeacherLessonConflictChecker.ConflictExclusion;
 import geumjeongyahak.domain.lesson.v1.dto.request.CreateLessonRequest;
 import geumjeongyahak.domain.lesson.v1.dto.request.LessonRangeRequest;
 import geumjeongyahak.domain.lesson.v1.dto.request.UpdateLessonRequest;
@@ -33,8 +38,7 @@ import geumjeongyahak.domain.lesson.v1.dto.response.LessonDetailResponse;
 import geumjeongyahak.domain.lesson.v1.dto.response.LessonSummaryResponse;
 import geumjeongyahak.domain.auth.enums.RoleType;
 import geumjeongyahak.domain.subject.entity.Subject;
-import geumjeongyahak.domain.subject.exception.SubjectNotFoundException;
-import geumjeongyahak.domain.subject.repository.SubjectRepository;
+import geumjeongyahak.domain.subject.service.SubjectProxyService;
 import geumjeongyahak.domain.users.entity.User;
 import geumjeongyahak.domain.users.service.UserProxyService;
 
@@ -45,11 +49,12 @@ import geumjeongyahak.domain.users.service.UserProxyService;
 public class LessonService {
 
     private final LessonRepository lessonRepository;
-    private final SubjectRepository subjectRepository;
+    private final SubjectProxyService subjectProxyService;
     private final UserProxyService userProxyService;
     private final EventPublisher eventPublisher;
     private final DailyScheduleProxyService dailyScheduleProxyService;
-
+    private final TeacherLessonConflictChecker conflictChecker;
+    private final LessonGenerator lessonGenerator;
 
     @Transactional
     public LessonDetailResponse createLesson(
@@ -58,22 +63,18 @@ public class LessonService {
     ) {
         log.debug("수업 생성 요청 (requesterId={})", requesterId);
 
-        Subject subject = subjectRepository.findById(request.subjectId())
-            .orElseThrow(() -> {
-                log.info("수업 생성 실패 - 과목을 찾을 수 없습니다. ID: {}", request.subjectId());
-                return new SubjectNotFoundException(request.subjectId());
-            });
+        Subject subject = subjectProxyService.getById(request.subjectId());
 
         User teacher = userProxyService.getById(request.teacherId());
         validateTeacherAssignable(teacher);
         userProxyService.fillDefaultClassroomIfMissing(teacher, subject.getClassroom());
 
-        // 같은 teacher + 같은 date 기준 겹치는 시간이 있는지 확인
-        if (lessonRepository.existsByTeacherIdAndDateAndIsDeletedFalseAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+        if (conflictChecker.hasConflict(
             teacher.getId(),
-            request.date(),
+            List.of(request.date()),
+            request.startTime(),
             request.endTime(),
-            request.startTime()
+            ConflictExclusion.NONE
         )) {
             log.info("수업 생성 실패 - 시간대가 겹치는 수업이 존재합니다.");
             throw new LessonDuplicateException("시간대가 겹치는 수업이 존재합니다.");
@@ -89,7 +90,7 @@ public class LessonService {
         );
 
         Lesson saved = lessonRepository.save(lesson);
-        publishDailyScheduleSync(saved);
+        publishDailyScheduleSyncFor(List.of(saved));
         log.debug("수업 생성 완료 (lessonId={})", saved.getId());
 
         return LessonDetailResponse.from(saved);
@@ -164,14 +165,13 @@ public class LessonService {
         }
 
         // 중복 검사 (merge 기준, 자기 자신 제외)
-        boolean overlap = lessonRepository
-            .existsByTeacherIdAndDateAndIsDeletedFalseAndIdNotAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
-                newTeacherId,
-                newDate,
-                lesson.getId(),
-                newEnd,
-                newStart
-            );
+        boolean overlap = conflictChecker.hasConflict(
+            newTeacherId,
+            List.of(newDate),
+            newStart,
+            newEnd,
+            ConflictExclusion.ofLesson(lesson.getId())
+        );
 
         if (overlap) {
             log.info("수업 수정 실패 - 시간대가 겹치는 수업이 존재합니다.");
@@ -181,11 +181,7 @@ public class LessonService {
         // 연관 엔티티가 바뀌는 경우만 조회
         Subject subject = lesson.getSubject();
         if (!subject.getId().equals(newSubjectId)) {
-            subject = subjectRepository.findById(newSubjectId)
-                .orElseThrow(() -> {
-                    log.info("수업 수정 실패 - 과목을 찾을 수 없습니다. ID: {}", newSubjectId);
-                    return new SubjectNotFoundException(newSubjectId);
-                });
+            subject = subjectProxyService.getById(newSubjectId);
         }
 
         User teacher = lesson.getTeacher();
@@ -197,10 +193,10 @@ public class LessonService {
 
         // 변경 반영
         lesson.update(subject, teacher, newDate, newStart, newEnd, newPeriod);
-        publishDailyScheduleSync(lesson);
-        if (!previousClassroomId.equals(subject.getClassroom().getId()) || !previousDate.equals(newDate)) {
-            publishDailyScheduleSync(previousClassroomId, previousDate);
-        }
+        publishDailyScheduleSync(List.of(
+            DailyScheduleKey.from(lesson),
+            new DailyScheduleKey(previousClassroomId, previousDate)
+        ));
         log.debug("수업 수정 완료 (lessonId={})", lessonId);
         return LessonDetailResponse.from(lesson);
     }
@@ -230,7 +226,7 @@ public class LessonService {
 
     /**
      * 과목 생성 이벤트 처리용 - startAt~endAt 사이 dayOfWeek에 해당하는 날짜에 수업을 자동 생성한다.
-     * 특정 날짜에 교사 시간 충돌이 있으면 해당 날짜만 스킵하고 계속 진행한다.
+     * 특정 날짜에 교사 시간 충돌이 있으면 해당 날짜만 스킵하고 계속 진행한다 ({@link LessonGenerator}).
      */
     @Transactional
     public void createLessonsFromSubject(
@@ -245,31 +241,16 @@ public class LessonService {
     ) {
         log.debug("과목 수업 자동 생성 (subjectId={})", subjectId);
 
-        Subject subject = subjectRepository.findById(subjectId)
-            .orElseThrow(() -> new SubjectNotFoundException(subjectId));
+        Subject subject = subjectProxyService.getById(subjectId);
         User teacher = userProxyService.getById(teacherId);
         validateTeacherAssignable(teacher);
 
-        List<LocalDate> dates = startAt.datesUntil(endAt.plusDays(1))
-            .filter(d -> d.getDayOfWeek() == dayOfWeek)
-            .toList();
+        List<Lesson> created = lessonGenerator.generate(
+            subject, teacher, startAt, endAt, dayOfWeek, startTime, endTime, period
+        );
+        publishDailyScheduleSyncFor(created);
 
-        int created = 0;
-        for (LocalDate date : dates) {
-            boolean conflict = lessonRepository
-                .existsByTeacherIdAndDateAndIsDeletedFalseAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
-                    teacherId, date, endTime, startTime
-                );
-            if (conflict) {
-                log.warn("수업 자동 생성 스킵 - 교사 시간 충돌 (date={}, teacherId={})", date, teacherId);
-                continue;
-            }
-            Lesson lesson = lessonRepository.save(new Lesson(subject, teacher, date, startTime, endTime, period));
-            publishDailyScheduleSync(lesson);
-            created++;
-        }
-
-        log.debug("수업 자동 생성 완료 (subjectId={}, 생성={}건, 스킵={}건)", subjectId, created, dates.size() - created);
+        log.debug("수업 자동 생성 완료 (subjectId={}, 생성={}건)", subjectId, created.size());
     }
 
     private void validateTeacherAssignable(User teacher) {
@@ -310,10 +291,8 @@ public class LessonService {
                 from
             );
 
-        lessons.forEach(lesson -> {
-            lesson.changeTeacher(newTeacher);
-            publishDailyScheduleSync(lesson);
-        });
+        lessons.forEach(lesson -> lesson.changeTeacher(newTeacher));
+        publishDailyScheduleSyncFor(lessons);
     }
 
     @Transactional
@@ -326,12 +305,8 @@ public class LessonService {
                 from
             );
 
-        lessons.forEach(lesson -> {
-            Long classroomId = lesson.getSubject().getClassroom().getId();
-            LocalDate date = lesson.getDate();
-            lesson.softDelete();
-            publishDailyScheduleSync(classroomId, date);
-        });
+        lessons.forEach(Lesson::softDelete);
+        publishDailyScheduleSyncFor(lessons);
     }
 
     @Transactional
@@ -350,10 +325,8 @@ public class LessonService {
                 from
             );
 
-        lessons.forEach(lesson -> {
-            lesson.changeSchedule(startTime, endTime, period);
-            publishDailyScheduleSync(lesson);
-        });
+        lessons.forEach(lesson -> lesson.changeSchedule(startTime, endTime, period));
+        publishDailyScheduleSyncFor(lessons);
     }
 
     @Transactional
@@ -394,20 +367,21 @@ public class LessonService {
                 return new LessonNotFoundException(lessonId);
             });
         if (!lesson.getIsDeleted()) {
-            Long classroomId = lesson.getSubject().getClassroom().getId();
-            LocalDate date = lesson.getDate();
             lesson.softDelete();
-            publishDailyScheduleSync(classroomId, date);
+            publishDailyScheduleSyncFor(List.of(lesson));
         }
         log.debug("수업 삭제 완료 (lessonId={})", lessonId);
     }
 
-    private void publishDailyScheduleSync(Lesson lesson) {
-        publishDailyScheduleSync(lesson.getSubject().getClassroom().getId(), lesson.getDate());
+    private void publishDailyScheduleSyncFor(Collection<Lesson> lessons) {
+        publishDailyScheduleSync(lessons.stream().map(DailyScheduleKey::from).toList());
     }
 
-    private void publishDailyScheduleSync(Long classroomId, LocalDate lessonDate) {
-        eventPublisher.publish(new LessonDailyScheduleSyncRequestedEvent(classroomId, lessonDate));
+    /** 바뀐 (분반, 날짜)마다 DailySchedule 동기화를 한 번만 요청한다. */
+    private void publishDailyScheduleSync(Collection<DailyScheduleKey> keys) {
+        new LinkedHashSet<>(keys).forEach(key -> eventPublisher.publish(
+            new LessonDailyScheduleSyncRequestedEvent(key.classroomId(), key.lessonDate())
+        ));
     }
 
     private LessonDetailResponse toDetailResponse(Lesson lesson) {

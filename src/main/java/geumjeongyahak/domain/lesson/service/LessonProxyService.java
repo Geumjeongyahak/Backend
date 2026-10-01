@@ -4,7 +4,9 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +15,9 @@ import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.enums.LessonStatus;
 import geumjeongyahak.domain.lesson.exception.LessonNotFoundException;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
+import geumjeongyahak.domain.lesson.service.schedule.LessonGenerator;
+import geumjeongyahak.domain.lesson.service.schedule.TeacherLessonConflictChecker;
+import geumjeongyahak.domain.lesson.service.schedule.TeacherLessonConflictChecker.ConflictExclusion;
 import geumjeongyahak.domain.users.entity.User;
 
 /**
@@ -24,6 +29,7 @@ import geumjeongyahak.domain.users.entity.User;
 public class LessonProxyService {
 
     private final LessonRepository lessonRepository;
+    private final TeacherLessonConflictChecker conflictChecker;
 
     /**
      * 삭제되지 않은 수업 조회. 없으면 예외 발생.
@@ -96,12 +102,7 @@ public class LessonProxyService {
         LocalTime startTime,
         LocalTime endTime
     ) {
-        return lessonRepository.existsByTeacherIdAndDateAndIsDeletedFalseAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
-            teacherId,
-            date,
-            endTime,
-            startTime
-        );
+        return conflictChecker.hasConflict(teacherId, List.of(date), startTime, endTime, ConflictExclusion.NONE);
     }
 
     @Transactional(readOnly = true)
@@ -141,31 +142,10 @@ public class LessonProxyService {
             );
     }
 
-    @Transactional(readOnly = true)
-    public boolean existsTeacherConflictForFutureSubjectScheduledLessons(
-        Long subjectId,
-        Long teacherId,
-        LocalDate from
-    ) {
-        List<Lesson> lessons = lessonRepository
-            .findAllBySubjectIdAndStatusAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(
-                subjectId,
-                LessonStatus.SCHEDULED,
-                from
-            );
-
-        return lessons.stream()
-            .anyMatch(lesson -> lessonRepository
-                .existsByTeacherIdAndDateAndIsDeletedFalseAndIdNotAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
-                    teacherId,
-                    lesson.getDate(),
-                    lesson.getId(),
-                    lesson.getEndTime(),
-                    lesson.getStartTime()
-                )
-            );
-    }
-
+    /**
+     * 과목의 미래 예정 수업들을 teacherId가 맡았을 때 그 교사의 다른 수업과 겹치는지 본다.
+     * startTime·endTime이 null이면 각 수업의 지금 시간으로, 아니면 새 시간으로 본다.
+     */
     @Transactional(readOnly = true)
     public boolean existsTeacherConflictForFutureSubjectScheduledLessons(
         Long subjectId,
@@ -174,23 +154,29 @@ public class LessonProxyService {
         LocalTime startTime,
         LocalTime endTime
     ) {
-        List<Lesson> lessons = lessonRepository
+        Map<List<LocalTime>, List<LocalDate>> datesByTime = lessonRepository
             .findAllBySubjectIdAndStatusAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(
                 subjectId,
                 LessonStatus.SCHEDULED,
                 from
-            );
+            )
+            .stream()
+            .collect(Collectors.groupingBy(
+                lesson -> List.of(
+                    startTime != null ? startTime : lesson.getStartTime(),
+                    endTime != null ? endTime : lesson.getEndTime()
+                ),
+                Collectors.mapping(Lesson::getDate, Collectors.toList())
+            ));
 
-        return lessons.stream()
-            .anyMatch(lesson -> lessonRepository
-                .existsByTeacherIdAndDateAndIsDeletedFalseAndIdNotAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
-                    teacherId,
-                    lesson.getDate(),
-                    lesson.getId(),
-                    endTime,
-                    startTime
-                )
-            );
+        return datesByTime.entrySet().stream()
+            .anyMatch(entry -> conflictChecker.hasConflict(
+                teacherId,
+                entry.getValue(),
+                entry.getKey().get(0),
+                entry.getKey().get(1),
+                ConflictExclusion.ofSubject(subjectId)
+            ));
     }
 
     @Transactional(readOnly = true)
@@ -203,19 +189,12 @@ public class LessonProxyService {
         LocalTime startTime,
         LocalTime endTime
     ) {
-        List<LocalDate> dates = startAt.datesUntil(endAt.plusDays(1))
-            .filter(date -> date.getDayOfWeek() == dayOfWeek)
-            .toList();
-
-        return dates.stream()
-            .anyMatch(date -> lessonRepository
-                .existsByTeacherIdAndDateAndIsDeletedFalseAndSubjectIdNotAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
-                    teacherId,
-                    date,
-                    subjectId,
-                    endTime,
-                    startTime
-                )
-            );
+        return conflictChecker.hasConflict(
+            teacherId,
+            LessonGenerator.lessonDates(startAt, endAt, dayOfWeek),
+            startTime,
+            endTime,
+            ConflictExclusion.ofSubject(subjectId)
+        );
     }
 }
