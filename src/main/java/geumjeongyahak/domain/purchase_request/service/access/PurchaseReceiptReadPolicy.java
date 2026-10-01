@@ -31,7 +31,7 @@ public class PurchaseReceiptReadPolicy implements AttachmentReadPolicy {
     public boolean canRead(UUID fileId, CustomUserDetails user) {
         return user != null
             && user.getAuthorities().stream().anyMatch(a -> TEACHER_OR_HIGHER_ROLES.contains(a.getAuthority()))
-            && (proposalReceiptRepository.existsByFileIdAndIsDeletedFalse(fileId)
-                || paymentTransactionRepository.existsByReceiptFileId(fileId));
+            && (proposalReceiptRepository.existsByFileIdAndIsDeletedFalseAndProposalPurchaseRequestIsDeletedFalse(fileId)
+                || paymentTransactionRepository.existsByReceiptFileIdAndPurchaseRequestIsDeletedFalse(fileId));
     }
 }

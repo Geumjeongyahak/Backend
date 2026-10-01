@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import geumjeongyahak.common.security.service.CustomUserDetails;
-import geumjeongyahak.domain.channel.service.ChannelAccessChecker;
+import geumjeongyahak.domain.channel.service.ChannelProxyService;
 import geumjeongyahak.domain.file.service.access.AttachmentReadPolicy;
 import geumjeongyahak.domain.post.enums.PostStatus;
 import geumjeongyahak.domain.post.repository.PostRepository;
@@ -22,13 +22,17 @@ import lombok.RequiredArgsConstructor;
 public class PostAttachmentReadPolicy implements AttachmentReadPolicy {
 
     private final PostRepository postRepository;
-    private final ChannelAccessChecker channelAccessChecker;
+    private final ChannelProxyService channelProxyService;
 
     @Override
     public boolean canRead(UUID fileId, CustomUserDetails user) {
+        // 글 조회(PostCrudService#getPost)와 같다: 채널을 읽을 수 있어야 하고, 게시 전 글은 작성자만
         return postRepository.findFileHoldersByFileId(fileId).stream().anyMatch(post ->
-            post.getStatus() == PostStatus.PUBLISHED
-                ? channelAccessChecker.can("read", post.getChannelId(), user)
-                : user != null && post.getAuthorId().equals(user.getUserId()));
+            (post.getStatus() == PostStatus.PUBLISHED || isAuthor(post, user))
+                && channelProxyService.canRead(post.getChannelId(), user));
+    }
+
+    private boolean isAuthor(PostRepository.FileHolder post, CustomUserDetails user) {
+        return user != null && post.getAuthorId().equals(user.getUserId());
     }
 }

@@ -34,6 +34,7 @@ class AttachmentDownloadAuthorizationTest extends BaseFileTest {
     @AfterEach
     @Override
     public void tearDown() {
+        jdbcTemplate.update("UPDATE channels SET is_active = TRUE WHERE id = ?", NOTICE_CHANNEL_ID);
         jdbcTemplate.update("DELETE FROM post_attachments");
         jdbcTemplate.update("DELETE FROM posts WHERE title = 'attachment-auth'");
         jdbcTemplate.update("DELETE FROM meeting_record_attachments");
@@ -145,6 +146,29 @@ class AttachmentDownloadAuthorizationTest extends BaseFileTest {
         expectDownload(userAccessToken, fileId, 403);
         expectDownload(userTestHelper.generateAccessTokenByUserKey(VENDOR_READER), fileId, 200);
         expectDownload(adminAccessToken, fileId, 200);
+    }
+
+    @Test
+    @DisplayName("⑪ 채널을 읽을 수 없게 되면 자기 임시저장 글의 첨부도 받을 수 없다 (글 조회와 같은 규칙)")
+    void ownDraftAttachment_channelNotReadable_forbidden() {
+        UUID fileId = uploadAttachment();
+        attachToPost(fileId, userTestHelper.getUser(TEST_FILE_USER).getId(), "DRAFT");
+        jdbcTemplate.update("UPDATE channels SET is_active = FALSE WHERE id = ?", NOTICE_CHANNEL_ID);
+
+        expectDownload(userAccessToken, fileId, 403);
+    }
+
+    @Test
+    @DisplayName("⑫ 지운 구매 요청의 품의·결제 영수증은 받을 수 없다")
+    void deletedPurchaseRequestReceipts_forbidden() {
+        UUID proposalReceipt = uploadAttachment();
+        attachToPurchaseProposal(proposalReceipt);
+        UUID paymentReceipt = uploadAttachment();
+        attachToPaymentTransaction(paymentReceipt);
+        jdbcTemplate.update("UPDATE purchase_requests SET is_deleted = TRUE WHERE title = 'attachment-auth'");
+
+        expectDownload(userAccessToken, proposalReceipt, 403);
+        expectDownload(userAccessToken, paymentReceipt, 403);
     }
 
     private UUID uploadAttachment() {
