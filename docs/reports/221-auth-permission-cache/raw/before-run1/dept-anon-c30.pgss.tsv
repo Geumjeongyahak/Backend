@@ -1,0 +1,7 @@
+61286	1401.45	0.0229	select d1_0.id,d1_0.created_at,d1_0.description,d1_0.name,d1_0.updated_at from departments d1_0
+61286	544.68	0.0089	BEGIN READ ONLY
+2	0.00	0.0016	BEGIN
+1	0.01	0.0068	update lesson_exchange_proposals lep1_0 set status=$4,closed_at=$1,updated_at=$2 where lep1_0.status=$5 and lep1_0.request_id in (select ler1_0.id from lesson_exchange_requests ler1_0 where ler1_0.status in ($6,$7) and ler1_0.expires_at<=$3)
+1	0.01	0.0062	update absence_requests ar1_0 set status='EXPIRED',version=(ar1_0.version+1),updated_at=$1 where ar1_0.status='PENDING' and ar1_0.expires_at<=$2
+1	0.18	0.1810	select pg_stat_statements_reset()
+1	0.01	0.0105	update lesson_exchange_requests ler1_0 set status=$3,version=(ler1_0.version+$4),updated_at=$1 where ler1_0.status in ($5,$6) and ler1_0.expires_at<=$2

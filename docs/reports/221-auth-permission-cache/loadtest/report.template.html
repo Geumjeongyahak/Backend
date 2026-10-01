@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>인증 권한 캐시 부하 측정</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10); --code-bg: #f0efec;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --good: #006300; --bad: #d03b3b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --code-bg: #262624;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --good: #0ca30c; --bad: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --code-bg: #262624;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --good: #0ca30c; --bad: #e66767;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--page); color: var(--ink);
+  font: 16px/1.7 system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  word-break: keep-all;
+}
+main { max-width: 920px; margin: 0 auto; padding: 48px 16px 96px; }
+header .kicker { color: var(--muted); font-size: 14px; letter-spacing: .02em; }
+h1 { font-size: clamp(26px, 4.5vw, 36px); line-height: 1.3; margin: 8px 0 16px; letter-spacing: -0.01em; }
+h2 { font-size: 22px; margin: 64px 0 12px; letter-spacing: -0.01em; }
+h3 { font-size: 16px; margin: 28px 0 8px; }
+p, li { color: var(--ink-2); }
+strong { color: var(--ink); }
+.lede { font-size: 18px; color: var(--ink-2); max-width: 720px; }
+code, pre { font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre { background: var(--code-bg); padding: 14px 16px; border-radius: 8px; overflow-x: auto; color: var(--ink); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin: 16px 0; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 28px 0; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.tile .label { font-size: 13px; color: var(--ink-2); }
+.tile .value { font-size: 30px; font-weight: 650; line-height: 1.25; margin-top: 4px; color: var(--ink); }
+.tile .note { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+.flow { list-style: none; padding: 0; margin: 0; counter-reset: q; }
+.flow li { counter-increment: q; display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--grid); }
+.flow li:first-child { border-top: 0; }
+.flow li::before { content: counter(q); width: 24px; height: 24px; border-radius: 50%; background: var(--code-bg); color: var(--ink); font-size: 13px; display: grid; place-items: center; font-weight: 600; }
+.flow .why { font-size: 13.5px; color: var(--muted); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: right; padding: 7px 8px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; white-space: nowrap; }
+th:first-child, td:first-child, th.l, td.l { text-align: left; }
+td.l { white-space: normal; min-width: 160px; }
+th { color: var(--ink-2); font-weight: 600; font-size: 13px; }
+.scroll { overflow-x: auto; }
+.chart-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: baseline; }
+.chart-title { font-weight: 600; color: var(--ink); }
+.chart-sub { font-size: 13px; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+svg.chart { width: 100%; height: auto; display: block; margin-top: 8px; }
+svg.chart text { fill: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+svg.chart .val { fill: var(--ink-2); font-size: 11.5px; }
+svg.chart .bar { transition: opacity .12s; }
+svg.chart .bar:hover, svg.chart .bar:focus { opacity: .78; outline: none; }
+.tip { position: fixed; pointer-events: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.12); display: none; z-index: 10; }
+.tip b { display: block; font-size: 15px; color: var(--ink); }
+.tip span { color: var(--ink-2); }
+details { margin-top: 10px; }
+summary { cursor: pointer; color: var(--ink-2); font-size: 14px; }
+.pending { border-style: dashed; color: var(--muted); }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 16px; }
+.theme { position: fixed; top: 12px; right: 12px; background: var(--surface); color: var(--ink-2); border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+footer { margin-top: 64px; font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<button class="theme" id="theme" type="button" aria-label="테마 전환">테마</button>
+<main>
+<header>
+  <div class="kicker">금정야학 플랫폼 API · 이슈 #221 · 성능 측정 리포트</div>
+  <h1>인증된 요청마다 DB를 네 번 다녀온다<br>— 권한 조회 캐시 도입 전후 부하 측정</h1>
+  <p class="lede">JWT 필터는 토큰을 검증한 뒤 같은 사용자의 자격증명·계정·개인 권한·부서 권한을 <strong>요청마다</strong> DB에서 다시 조립한다.
+  운영과 같은 사양으로 GCP에 임시 복제 환경을 만들고, 같은 엔드포인트를 토큰 유무만 바꿔 쳐서 이 고정 비용을 떼어 쟀다.</p>
+</header>
+
+<div class="tiles" id="tiles"></div>
+
+<h2>문제 — 인증 한 번에 나가는 쿼리</h2>
+<p>토큰 안에 사용자 id가 들어 있지만, 그 사용자가 누구고 무슨 권한을 가졌는지는 매번 다시 읽는다.
+화면 하나가 API를 대여섯 개 부르면 인증만으로 스무 번 안팎의 왕복이 붙는다.</p>
+<div class="card">
+  <ol class="flow">
+    <li><div><code>user_credentials ⋈ users</code> — 사용자 id로 LOCAL 자격증명 조회<div class="why">조인은 WHERE에만 쓰이고 User는 LAZY 프록시로 남는다</div></div></li>
+    <li><div><code>users</code> — 같은 사용자 행을 다시 읽음<div class="why"><code>credential.getUser().isDeleted()</code>를 읽는 순간 프록시 초기화</div></div></li>
+    <li><div><code>user_permissions</code> — 개인 권한<div class="why">@OneToMany LAZY 컬렉션</div></div></li>
+    <li><div><code>department_permissions</code> — 부서 × 직책 권한<div class="why">부서 소속 봉사자·매니저만. 관리자·게스트는 건너뜀</div></div></li>
+  </ol>
+</div>
+
+<h2>환경 — dev 서버를 그대로 복제</h2>
+<p>실데이터가 있는 dev 서버에는 부하를 걸지 않았다. 같은 존에 같은 머신 타입으로 VM을 새로 만들고,
+DB 설정은 dev의 <code>pg_settings</code>에서 기본값과 다른 것을, 데이터는 dev의 테이블별 행 수만 가져와 합성했다.</p>
+<div class="card scroll">
+<table>
+  <thead><tr><th class="l">구성</th><th class="l">dev (운영 중)</th><th class="l">측정 복제본</th></tr></thead>
+  <tbody>
+    <tr><td>앱 VM</td><td class="l">e2-small (2 vCPU 공유, 2 GB) · Ubuntu 24.04 · OpenJDK 21.0.12</td><td class="l">같음</td></tr>
+    <tr><td>DB VM</td><td class="l">e2-micro (2 vCPU 공유, 1 GB) · PostgreSQL 16.14</td><td class="l">e2-micro · PostgreSQL 16.15</td></tr>
+    <tr><td>DB 설정</td><td class="l">shared_buffers 160 MB · max_connections 100 · ssl on</td><td class="l">같음 + pg_stat_statements (측정용)</td></tr>
+    <tr><td>앱↔DB 왕복</td><td class="l">평균 0.45 ms (ping 20회)</td><td class="l" id="env-rtt">—</td></tr>
+    <tr><td>디스크</td><td class="l">pd-standard 10 GB</td><td class="l">같음</td></tr>
+    <tr><td>인증 테이블 행 수</td><td class="l">users 63 · user_credentials 65 · user_permissions 15 · department_permissions 34</td><td class="l">같음 (합성 데이터)</td></tr>
+    <tr><td>앞단</td><td class="l">Caddy (TLS)</td><td class="l">없음 — 부하 VM이 앱 8080에 직접</td></tr>
+    <tr><td>부하 생성</td><td class="l">—</td><td class="l">e2-standard-2 · k6 1.3 · 같은 존</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>방법 — 같은 엔드포인트, 토큰만 바꿔서</h2>
+<p><code>GET /api/v1/departments</code>는 로그인 없이 열린 엔드포인트지만, 토큰을 실어 보내면 필터가 인증 조회를 그대로 수행한다.
+그래서 <strong>두 시나리오의 차이가 곧 인증 비용</strong>이다. 실사용 경로로 <code>GET /api/v1/users/me</code>를 함께 쟀다.</p>
+<div class="card scroll">
+<table>
+  <thead><tr><th class="l">시나리오</th><th class="l">요청</th><th class="l">무엇을 재나</th></tr></thead>
+  <tbody>
+    <tr><td><span class="sw" data-s="dept-anon"></span>부서 목록 · 익명</td><td class="l"><code>GET /api/v1/departments</code></td><td class="l">본문 비용만</td></tr>
+    <tr><td><span class="sw" data-s="dept-auth"></span>부서 목록 · 인증</td><td class="l">같은 요청 + <code>Authorization</code></td><td class="l">본문 + 인증</td></tr>
+    <tr><td><span class="sw" data-s="me"></span>내 정보</td><td class="l"><code>GET /api/v1/users/me</code></td><td class="l">실사용 경로</td></tr>
+  </tbody>
+</table>
+</div>
+<ul>
+  <li>동시 사용자 1 · 10 · 30, 각 <span id="m-dur">60</span>초. 사이에 <span id="m-rest">20</span>초 쉼. 대기 시간 없이 연달아 보낸다 (닫힌 모델).</li>
+  <li>측정 전 시나리오마다 30초 워밍업 (JIT · 커넥션 풀 · DB 버퍼).</li>
+  <li>토큰 58개를 VU마다 나눠 준다. 로그인은 측정 구간 밖에서 미리 한다.</li>
+  <li>측정마다 <code>pg_stat_statements</code>를 비우고 끝나면 덤프 → 요청당 쿼리 수. 앱·DB VM의 <code>vmstat</code> 1초 표본 → CPU.</li>
+</ul>
+
+<h2>결과</h2>
+<div id="results"></div>
+
+<h2>해석</h2>
+<div class="card">
+<h3 style="margin-top:0">흔들리지 않은 것 — 세 번 다 같았다</h3>
+<ul>
+  <li><strong>요청당 SQL</strong>: 익명 1회 → 토큰을 실으면 5회 (인증 4회). 내 정보는 9회 — 본문이 인증에서 이미 읽은 users · user_permissions · department_permissions를 다시 읽는다. 필터와 컨트롤러가 트랜잭션을 따로 열어 1차 캐시를 나눠 쓰지 못하기 때문이다.</li>
+  <li><strong>요청당 트랜잭션</strong>: 1 → 2. 인증 요청은 커넥션을 두 번 빌린다 (필터 한 번, 본문 한 번).</li>
+  <li><strong>커넥션 풀이 줄이 된다</strong>: 동시 30에서 풀 10개가 꽉 차고, 인증 시나리오는 평균 19개 · 최대 21개가 커넥션을 기다린다. 동시 10까지는 대기가 0이다.</li>
+</ul>
+<h3>병목은 DB CPU가 아니라 앱 CPU와 커넥션 풀</h3>
+<ul>
+  <li>2차 측정 동시 10에서 익명 857 → 인증 484 req/s (−44%). 두 경우 모두 앱 CPU가 91%로 꽉 찼고 DB CPU는 18% · 30%였다. 같은 CPU로 처리하는 요청 수가 절반 가까이 줄었다 — 인증 4쿼리의 엔티티 조립 · JDBC · 트랜잭션 비용이 앱 쪽에서 든다.</li>
+  <li>인증 쿼리 넷은 모두 PK · 인덱스를 타는 단건 조회라 DB에서는 싸다 (평균 0.02~0.06 ms). 비용은 쿼리의 무게가 아니라 <strong>횟수와 왕복, 커넥션 점유</strong>에서 나온다.</li>
+</ul>
+<h3>흔들린 것 — 공유 코어 CPU 크레딧</h3>
+<ul>
+  <li>같은 조건(익명 · 동시 10)이 1차 1,095 · 2차 857 · 대조 322 req/s로 흔들렸다. e2-small · e2-micro는 쉬는 동안 쌓인 크레딧으로 순간 성능을 내고, 다 쓰면 vCPU 일부만 받는다.</li>
+  <li>그래서 DB만 표준 코어로 바꾼 대조 실험은 결론을 못 낸다 — 앞선 측정으로 앱 VM 크레딧이 바닥난 채 돌았다 (앱 CPU 94%인데 처리량 1/3).</li>
+  <li><strong>도입 후 측정의 설계를 바꾼다</strong>: 같은 VM에서 도입 전 · 후 jar를 번갈아(ABAB) 두 번씩 돌리고, 닫힌 모델의 최대 처리량 대신 <strong>고정 도착률</strong>(실사용보다 높은 50 · 150 req/s)에서 지연 · 쿼리 수 · CPU를 비교한다. 크레딧 상태가 양쪽에 똑같이 걸리게 하기 위해서다.</li>
+</ul>
+</div>
+
+<h2>한계</h2>
+<ul>
+  <li>e2-micro · e2-small은 공유 코어라 CPU 크레딧이 남아 있으면 순간적으로 더 빠르다. 구간 사이 20초 쉼으로는 크레딧이 회복되지 않았고, <code>steal</code>에도 잘 드러나지 않는다. 위 「흔들린 것」 참고.</li>
+  <li>앞단 Caddy(TLS)를 뺐다. 모든 시나리오에 같은 비용이 더해지므로 차이 비교에는 영향이 없다.</li>
+  <li>합성 데이터는 인증 경로의 행 수만 맞췄다. 다른 테이블의 크기는 이 측정과 상관이 없다.</li>
+</ul>
+
+<h2>재현</h2>
+<pre>cd docs/reports/221-auth-permission-cache/loadtest
+./provision.sh                                   # VM 셋 생성 (label purpose=loadtest-221)
+./run.sh before ../../../../build/libs/&lt;jar&gt;     # raw/before/
+./run.sh after  ../../../../build/libs/&lt;jar&gt;     # raw/after/
+python3 build_report.py                          # data.json · index.html
+./teardown.sh                                    # VM 삭제</pre>
+
+<details><summary>측정 환경 스냅샷 (env.txt)</summary><pre id="envtxt"></pre></details>
+
+<footer>원본: <code>raw/</code> · 집계: <code>data.json</code> · 스크립트: <code>loadtest/</code></footer>
+</main>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script id="data" type="application/json">/*__DATA__*/{}</script>
+<script>
+(() => {
+  const DATA = JSON.parse(document.getElementById('data').textContent);
+  const SCEN = [
+    { key: 'dept-anon', name: '부서 목록 · 익명', color: 'var(--s1)' },
+    { key: 'dept-auth', name: '부서 목록 · 인증', color: 'var(--s2)' },
+    { key: 'me', name: '내 정보', color: 'var(--s3)' },
+  ];
+  const LABEL_NAME = { before: '도입 전', after: '도입 후', 'before-run1': '참고 — 도입 전 1차 (Hikari 지표 없음)', 'before-db-standard': '참고 — 대조 실험: DB만 표준 코어 (앱 VM 크레딧 소진으로 무효)' };
+  const LEVELS = [1, 10, 30];
+  const $ = (s) => document.querySelector(s);
+  const el = (tag, attrs = {}, text) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  const svgEl = (tag, attrs = {}) => {
+    const n = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    return n;
+  };
+  const fmt = (v, d = 1) => v == null ? '—' : Number(v).toLocaleString('ko-KR', { maximumFractionDigits: d, minimumFractionDigits: 0 });
+  const run = (label, s, c) => DATA[label]?.runs.find((r) => r.scenario === s && r.vus === c);
+
+  // 테마 전환
+  $('#theme').addEventListener('click', () => {
+    const r = document.documentElement;
+    const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    r.dataset.theme = dark ? 'light' : 'dark';
+  });
+
+  document.querySelectorAll('.sw').forEach((n) => {
+    const s = SCEN.find((x) => x.key === n.dataset.s);
+    n.style.cssText = `display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;background:${s.color}`;
+  });
+
+  // 툴팁
+  const tip = $('#tip');
+  const showTip = (e, value, label) => {
+    tip.replaceChildren(el('b', {}, value), el('span', {}, label));
+    tip.style.display = 'block';
+    const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8);
+    tip.style.left = x + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+  };
+  const hideTip = () => { tip.style.display = 'none'; };
+
+  // 묶음 세로 막대
+  function columns({ title, sub, categories, series, unit, digits = 1, width = 860 }) {
+    const card = el('div', { class: 'card' });
+    const head = el('div', { class: 'chart-head' });
+    const left = el('div');
+    left.append(el('div', { class: 'chart-title' }, title), el('div', { class: 'chart-sub' }, sub));
+    head.append(left);
+    if (series.length > 1) {
+      const lg = el('div', { class: 'legend' });
+      series.forEach((s) => { const sp = el('span'); const i = el('i'); i.style.background = s.color; sp.append(i, document.createTextNode(s.name)); lg.append(sp); });
+      head.append(lg);
+    }
+    card.append(head);
+
+    const W = width, H = width < 600 ? 300 : 280, M = { t: 18, r: 8, b: 30, l: 52 };
+    const iw = W - M.l - M.r, ih = H - M.t - M.b;
+    const max = Math.max(...series.flatMap((s) => s.values.filter((v) => v != null)), 0) || 1;
+    const step = niceStep(max / 4);
+    const top = Math.ceil(max / step) * step;
+    const y = (v) => M.t + ih - (v / top) * ih;
+    const svg = svgEl('svg', { class: 'chart', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': title });
+    for (let v = 0; v <= top + 1e-9; v += step) {
+      svg.append(svgEl('line', { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v), stroke: v === 0 ? 'var(--axis)' : 'var(--grid)', 'stroke-width': 1 }));
+      const t = svgEl('text', { x: M.l - 8, y: y(v) + 4, 'text-anchor': 'end' }); t.textContent = fmt(v, 2); svg.append(t);
+    }
+    const band = iw / categories.length;
+    const bw = Math.min(24, (band * 0.7) / series.length - 2);
+    const groupW = series.length * (bw + 2) - 2;
+    categories.forEach((cat, ci) => {
+      const gx = M.l + band * ci + (band - groupW) / 2;
+      series.forEach((s, si) => {
+        const v = s.values[ci];
+        if (v == null) return;
+        const x = gx + si * (bw + 2), h = Math.max(1, (v / top) * ih), yy = M.t + ih - h, r = Math.min(4, bw / 2, h);
+        const p = svgEl('path', {
+          class: 'bar', tabindex: 0, fill: s.color,
+          d: `M${x},${M.t + ih}V${yy + r}Q${x},${yy} ${x + r},${yy}H${x + bw - r}Q${x + bw},${yy} ${x + bw},${yy + r}V${M.t + ih}Z`,
+        });
+        const label = `${s.name} · ${cat}`;
+        p.addEventListener('pointermove', (e) => showTip(e, `${fmt(v, digits)} ${unit}`, label));
+        p.addEventListener('pointerleave', hideTip);
+        p.addEventListener('focus', () => { const b = p.getBoundingClientRect(); showTip({ clientX: b.right, clientY: b.top }, `${fmt(v, digits)} ${unit}`, label); });
+        p.addEventListener('blur', hideTip);
+        svg.append(p);
+        const groupMax = Math.max(...series.map((x) => x.values[ci] ?? -Infinity));
+        if (v === groupMax) { const t = svgEl('text', { class: 'val', x: x + bw / 2, y: yy - 6, 'text-anchor': 'middle' }); t.textContent = fmt(v, digits); svg.append(t); }
+      });
+      const t = svgEl('text', { x: M.l + band * ci + band / 2, y: H - 8, 'text-anchor': 'middle' }); t.textContent = cat; svg.append(t);
+    });
+    card.append(svg);
+    return card;
+  }
+  function niceStep(raw) {
+    const p = Math.pow(10, Math.floor(Math.log10(raw || 1)));
+    return [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw) || 10 * p;
+  }
+
+  function table(rows, cols) {
+    const wrap = el('div', { class: 'card scroll' });
+    const t = el('table'); const thead = el('thead'); const tr = el('tr');
+    cols.forEach((c) => tr.append(el('th', c.l ? { class: 'l' } : {}, c.h)));
+    thead.append(tr); t.append(thead);
+    const tb = el('tbody');
+    rows.forEach((r) => { const row = el('tr'); cols.forEach((c) => row.append(el('td', c.l ? { class: 'l' } : {}, c.f(r)))); tb.append(row); });
+    t.append(tb); wrap.append(t); return wrap;
+  }
+
+  const labels = Object.keys(DATA);
+  const results = $('#results');
+  if (!labels.length) { results.append(el('p', {}, '측정 데이터가 없다.')); return; }
+
+  // 타일 — 도입 전의 인증 비용
+  const B = 'before';
+  const tiles = $('#tiles');
+  const tile = (label, value, note) => { const t = el('div', { class: 'tile' }); t.append(el('div', { class: 'label' }, label), el('div', { class: 'value' }, value), el('div', { class: 'note' }, note)); tiles.append(t); };
+  const a1 = run(B, 'dept-anon', 1), u1 = run(B, 'dept-auth', 1), a30 = run(B, 'dept-anon', 30), u30 = run(B, 'dept-auth', 30), me1 = run(B, 'me', 1);
+  if (a1 && u1) {
+    tile('인증 1회에 더해지는 쿼리', `+${fmt(u1.queries_per_req - a1.queries_per_req, 1)}회`, `요청당 ${fmt(a1.queries_per_req, 1)} → ${fmt(u1.queries_per_req, 1)} (부서 목록, 동시 1)`);
+    tile('인증 1회에 더해지는 지연', `+${fmt(u1.p50 - a1.p50, 2)} ms`, `p50 ${fmt(a1.p50, 2)} → ${fmt(u1.p50, 2)} ms (동시 1)`);
+  }
+  const a10 = run(B, 'dept-anon', 10), u10 = run(B, 'dept-auth', 10);
+  if (a10 && u10) tile('동시 10명일 때 처리량', `${fmt((u10.rps / a10.rps - 1) * 100, 0)}%`, `${fmt(a10.rps, 0)} → ${fmt(u10.rps, 0)} req/s (토큰을 실었을 때)`);
+  if (u30?.hikari_pending_max != null) tile('동시 30명일 때 커넥션 대기', `최대 ${u30.hikari_pending_max}개`, `풀 10개, 평균 ${fmt(u30.hikari_pending_avg, 0)}개가 줄 선다 (인증)`);
+
+  // 도입 전 — 시나리오 비교
+  for (const label of labels) {
+    const main = label === 'before' || label === 'after';
+    const sec = el(main ? 'div' : 'details');
+    sec.append(el(main ? 'h3' : 'summary', {}, `${LABEL_NAME[label] || label}`));
+    const series = (metric) => SCEN.map((s) => ({ name: s.name, color: s.color, values: LEVELS.map((c) => run(label, s.key, c)?.[metric] ?? null) }));
+    const cats = LEVELS.map((c) => `동시 ${c}`);
+    const g = el('div');
+    g.append(columns({ title: 'p95 응답 시간', sub: '낮을수록 좋다 · ms', categories: cats, series: series('p95'), unit: 'ms', digits: 2 }));
+    g.append(columns({ title: '처리량', sub: '높을수록 좋다 · 초당 요청', categories: cats, series: series('rps'), unit: 'req/s', digits: 0 }));
+    const g2 = el('div', { class: 'grid2' });
+    g2.append(columns({ title: '요청당 DB 쿼리', sub: 'pg_stat_statements 실행 수 ÷ 요청 수', categories: cats, series: series('queries_per_req'), unit: '회', digits: 2, width: 440 }));
+    g2.append(columns({ title: 'DB VM CPU 사용률', sub: 'vmstat 1초 표본 평균 · %', categories: cats, series: series('db_cpu'), unit: '%', digits: 0, width: 440 }));
+    g.append(g2);
+    if (DATA[label].runs.some((r) => r.hikari_pending_avg != null)) {
+      g.append(columns({ title: 'DB 커넥션 풀 대기', sub: 'hikaricp_connections_pending 1초 표본 평균 · 풀 크기 10', categories: cats, series: series('hikari_pending_avg'), unit: '개', digits: 1 }));
+    }
+    sec.append(g);
+    const rows = DATA[label].runs.slice().sort((a, b) => SCEN.findIndex((s) => s.key === a.scenario) - SCEN.findIndex((s) => s.key === b.scenario) || a.vus - b.vus);
+    const det = el('details'); det.append(el('summary', {}, '표로 보기'));
+    det.append(table(rows, [
+      { h: '시나리오', l: 1, f: (r) => SCEN.find((s) => s.key === r.scenario)?.name },
+      { h: '동시', f: (r) => r.vus }, { h: '요청 수', f: (r) => fmt(r.requests, 0) }, { h: 'req/s', f: (r) => fmt(r.rps, 1) },
+      { h: 'p50', f: (r) => fmt(r.p50, 2) }, { h: 'p95', f: (r) => fmt(r.p95, 2) }, { h: 'p99', f: (r) => fmt(r.p99, 2) },
+      { h: '실패', f: (r) => fmt(r.fail_rate * 100, 2) + '%' }, { h: '쿼리/요청', f: (r) => fmt(r.queries_per_req, 2) },
+      { h: '앱 CPU', f: (r) => fmt(r.app_cpu, 0) + '%' }, { h: 'DB CPU', f: (r) => fmt(r.db_cpu, 0) + '%' }, { h: 'DB steal', f: (r) => fmt(r.db_steal, 0) + '%' },
+      { h: '풀 대기 평균', f: (r) => fmt(r.hikari_pending_avg, 1) }, { h: '풀 대기 최대', f: (r) => fmt(r.hikari_pending_max, 0) },
+    ]));
+    const q = rows.find((r) => r.scenario === 'dept-auth' && r.vus === 1);
+    if (q) {
+      det.append(el('h3', {}, '부서 목록 · 인증 (동시 1)에서 많이 실행된 쿼리'));
+      det.append(table(q.top_queries, [{ h: '실행', f: (r) => fmt(r.calls, 0) }, { h: '평균 ms', f: (r) => fmt(r.mean_ms, 3) }, { h: '쿼리', l: 1, f: (r) => r.query }]));
+    }
+    sec.append(det);
+    results.append(sec);
+  }
+
+  // 전후 비교
+  const cmp = el('div');
+  if (DATA.after) {
+    cmp.append(el('h3', {}, '도입 전 · 후 비교'));
+    const cats = SCEN.filter((s) => s.key !== 'dept-anon').flatMap((s) => LEVELS.map((c) => ({ s, c })));
+    const ser = (metric) => ['before', 'after'].map((l, i) => ({ name: LABEL_NAME[l], color: i ? 'var(--s1)' : 'var(--s2)', values: cats.map(({ s, c }) => run(l, s.key, c)?.[metric] ?? null) }));
+    const names = cats.map(({ s, c }) => `${s.key === 'me' ? '내 정보' : '부서·인증'} ${c}`);
+    cmp.append(columns({ title: 'p95 응답 시간 — 전후', sub: 'ms', categories: names, series: ser('p95'), unit: 'ms', digits: 2 }));
+    cmp.append(columns({ title: '요청당 DB 쿼리 — 전후', sub: '회', categories: names, series: ser('queries_per_req'), unit: '회', digits: 2 }));
+  } else {
+    const p = el('div', { class: 'card pending' });
+    p.append(el('div', {}, '도입 후 측정: 캐시 구현 뒤 같은 환경 · 같은 스크립트로 추가한다 (run.sh after …).'));
+    cmp.append(p);
+  }
+  results.append(cmp);
+
+  const env = DATA[labels[0]].env || '';
+  $('#envtxt').textContent = env;
+  const rtt = env.match(/rtt min\/avg\/max\/mdev = ([\d.]+)\/([\d.]+)\/([\d.]+)/);
+  if (rtt) $('#env-rtt').textContent = `평균 ${rtt[2]} ms (ping 20회)`;
+  const dur = env.match(/duration_s=(\d+) warmup_s=(\d+) rest_s=(\d+)/);
+  if (dur) { $('#m-dur').textContent = dur[1]; $('#m-rest').textContent = dur[3]; }
+})();
+</script>
+</body>
+</html>
