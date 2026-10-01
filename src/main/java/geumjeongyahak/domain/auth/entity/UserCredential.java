@@ -1,16 +1,16 @@
 package geumjeongyahak.domain.auth.entity;
 
-import geumjeongyahak.common.security.service.UserDetailsCacheEvictor;
-import jakarta.persistence.EntityListeners;
 import java.time.LocalDateTime;
 
 import org.springframework.lang.NonNull;
 
+import geumjeongyahak.common.security.service.UserDetailsCacheEvictor;
 import geumjeongyahak.domain.auth.enums.ProviderType;
 import geumjeongyahak.domain.base.entity.BaseEntity;
 import geumjeongyahak.domain.users.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;

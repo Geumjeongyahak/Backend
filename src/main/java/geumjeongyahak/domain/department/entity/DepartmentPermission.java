@@ -1,11 +1,11 @@
 package geumjeongyahak.domain.department.entity;
 
 import geumjeongyahak.common.security.service.UserDetailsCacheEvictor;
-import jakarta.persistence.EntityListeners;
 import geumjeongyahak.domain.base.entity.BaseEntity;
 import geumjeongyahak.domain.department.enums.DepartmentRoleType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
