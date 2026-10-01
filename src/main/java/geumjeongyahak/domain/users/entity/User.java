@@ -23,6 +23,8 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.Setter;
 
+import geumjeongyahak.common.exception.BusinessException;
+import geumjeongyahak.common.exception.CommonErrorCode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -174,5 +176,12 @@ public class User extends BaseEntity {
         return credentials.stream()
             .filter(credential -> credential.getProvider() == ProviderType.LOCAL)
             .findFirst();
+    }
+
+    /** 봉사자·매니저·관리자만 수업 교사가 될 수 있다. */
+    public void validateCanTeach() {
+        if (role != RoleType.VOLUNTEER && role != RoleType.MANAGER && role != RoleType.ADMIN) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "봉사자, 매니저 또는 관리자 사용자만 교사로 배정할 수 있습니다.");
+        }
     }
 }
