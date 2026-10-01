@@ -1,5 +1,6 @@
 plugins {
 	id 'java'
+	id 'jacoco'
 	id 'org.springframework.boot' version '3.5.13'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
@@ -92,4 +93,12 @@ tasks.named('test') {
 	useJUnitPlatform()
 	// 운영과 같게 한국 시간으로 띄운다. 앱은 시작 클래스에서 맞추지만, 테스트에서는 그보다 H2 가 먼저 떠 시간대를 기억해 버린다.
 	systemProperty 'user.timezone', 'Asia/Seoul'
+	finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+	reports {
+		xml.required = true
+		html.required = true
+	}
 }
