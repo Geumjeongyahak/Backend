@@ -130,3 +130,4 @@
 - **URL**: `GET /api/v1/posts`
 - **상태 필터**: 비관리자는 `PUBLISHED`만 반환합니다.
 - **채널 필터**: 비로그인은 게스트 읽기 허용 채널만, 로그인 사용자는 공개 읽기 채널과 명시적 읽기 권한 채널만 포함합니다.
+- **채널 유형 필터**: `channelTypes`(이 유형들만)·`excludedChannelTypes`(이 유형들은 빼고). 쉼표로 잇거나 파라미터를 반복합니다 — `?channelTypes=NOTICE,CLASSROOM,DEPARTMENT`. 다른 조건과 AND로 붙고, 없는 유형은 400입니다.
