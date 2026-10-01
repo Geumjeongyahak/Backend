@@ -157,6 +157,32 @@ class SubjectTeacherOverlapTest extends SubjectBaseTest {
     }
 
     @Test
+    @DisplayName("PATCH /schedule: 시간만 바꿀 때 같은 날 같은 과목 수업끼리 겹치게 되면 409 Conflict")
+    void updateSchedule_Conflict_WhenOwnLessonsOnSameDateWouldOverlap() {
+        long subjectId = createMondaySubject(
+            CLASSROOM_2, TEACHER_ID, "3교시", TERM_START, TERM_END, "10:00:00", "11:00:00", 3
+        );
+        jdbcTemplate.update(
+            """
+            INSERT INTO lessons (subject_id, teacher_id, date, start_time, end_time, period, status, is_deleted)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            subjectId, TEACHER_ID, java.time.LocalDate.parse(TERM_START), java.time.LocalTime.of(12, 0),
+            java.time.LocalTime.of(13, 0), 4, "SCHEDULED", false
+        );
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(Map.of("startTime", "10:30:00", "endTime", "11:30:00"))
+        .when()
+            .patch("/{subjectId}/schedule", subjectId)
+        .then()
+            .statusCode(409)
+            .body("code", is("BIZ-05-002"));
+    }
+
+    @Test
     @DisplayName("PATCH /schedule: 다른 교사나 삭제된 수업은 같은 시간이어도 겹침으로 보지 않는다")
     void updateSchedule_Success_WhenSameTimeBelongsToOtherTeacherOrDeletedLesson() {
         long otherTeacherSubject = createMondaySubject(

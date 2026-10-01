@@ -9,11 +9,14 @@ import static geumjeongyahak.domain.lesson.repository.specification.LessonSpecs.
 
 import geumjeongyahak.domain.lesson.entity.Lesson;
 import geumjeongyahak.domain.lesson.repository.LessonRepository;
+import geumjeongyahak.domain.lesson.repository.specification.LessonSpecs;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
@@ -62,6 +65,27 @@ public class TeacherLessonConflictChecker {
         ConflictExclusion exclusion
     ) {
         return !findConflictDates(teacherId, dates, startTime, endTime, exclusion).isEmpty();
+    }
+
+    /** 바꿀 수업들끼리 같은 날 시간이 겹치는지. 겹침 규칙은 {@link LessonSpecs#overlapsTime}과 같은 반열린 구간이다. */
+    public static boolean overlapAmong(Collection<TimeSlot> slots) {
+        return slots.stream()
+            .collect(Collectors.groupingBy(TimeSlot::date))
+            .values()
+            .stream()
+            .map(sameDate -> sameDate.stream().sorted(Comparator.comparing(TimeSlot::startTime)).toList())
+            .anyMatch(sorted -> IntStream.range(1, sorted.size())
+                .anyMatch(i -> sorted.get(i - 1).overlaps(sorted.get(i))));
+    }
+
+    /** 한 날짜의 수업 시간 [startTime, endTime). */
+    public record TimeSlot(LocalDate date, LocalTime startTime, LocalTime endTime) {
+
+        boolean overlaps(TimeSlot other) {
+            return date.equals(other.date)
+                && startTime.isBefore(other.endTime)
+                && endTime.isAfter(other.startTime);
+        }
     }
 
     /** 겹침 검사에서 뺄 수업. 자기 자신을 다시 저장할 때 자기와 겹치지 않게 한다. */

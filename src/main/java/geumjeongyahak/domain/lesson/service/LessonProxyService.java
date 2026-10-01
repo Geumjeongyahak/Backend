@@ -4,7 +4,6 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +17,7 @@ import geumjeongyahak.domain.lesson.repository.LessonRepository;
 import geumjeongyahak.domain.lesson.service.schedule.LessonGenerator;
 import geumjeongyahak.domain.lesson.service.schedule.TeacherLessonConflictChecker;
 import geumjeongyahak.domain.lesson.service.schedule.TeacherLessonConflictChecker.ConflictExclusion;
+import geumjeongyahak.domain.lesson.service.schedule.TeacherLessonConflictChecker.TimeSlot;
 import geumjeongyahak.domain.users.entity.User;
 
 /**
@@ -143,8 +143,9 @@ public class LessonProxyService {
     }
 
     /**
-     * 과목의 미래 예정 수업들을 teacherId가 맡았을 때 그 교사의 다른 수업과 겹치는지 본다.
+     * 과목의 미래 예정 수업들을 teacherId가 맡았을 때 겹침이 생기는지 본다.
      * startTime·endTime이 null이면 각 수업의 지금 시간으로, 아니면 새 시간으로 본다.
+     * 교사의 다른 과목 수업과의 겹침, 그리고 바꾼 뒤 같은 날 이 과목 수업끼리의 겹침을 둘 다 본다.
      */
     @Transactional(readOnly = true)
     public boolean existsTeacherConflictForFutureSubjectScheduledLessons(
@@ -154,22 +155,30 @@ public class LessonProxyService {
         LocalTime startTime,
         LocalTime endTime
     ) {
-        Map<List<LocalTime>, List<LocalDate>> datesByTime = lessonRepository
+        List<TimeSlot> planned = lessonRepository
             .findAllBySubjectIdAndStatusAndIsDeletedFalseAndDateGreaterThanEqualOrderByDateAscPeriodAsc(
                 subjectId,
                 LessonStatus.SCHEDULED,
                 from
             )
             .stream()
-            .collect(Collectors.groupingBy(
-                lesson -> List.of(
-                    startTime != null ? startTime : lesson.getStartTime(),
-                    endTime != null ? endTime : lesson.getEndTime()
-                ),
-                Collectors.mapping(Lesson::getDate, Collectors.toList())
-            ));
+            .map(lesson -> new TimeSlot(
+                lesson.getDate(),
+                startTime != null ? startTime : lesson.getStartTime(),
+                endTime != null ? endTime : lesson.getEndTime()
+            ))
+            .toList();
 
-        return datesByTime.entrySet().stream()
+        if (TeacherLessonConflictChecker.overlapAmong(planned)) {
+            return true;
+        }
+        return planned.stream()
+            .collect(Collectors.groupingBy(
+                slot -> List.of(slot.startTime(), slot.endTime()),
+                Collectors.mapping(TimeSlot::date, Collectors.toList())
+            ))
+            .entrySet()
+            .stream()
             .anyMatch(entry -> conflictChecker.hasConflict(
                 teacherId,
                 entry.getValue(),
