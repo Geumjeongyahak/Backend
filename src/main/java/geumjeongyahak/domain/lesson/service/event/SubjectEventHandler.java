@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import geumjeongyahak.domain.lesson.service.LessonService;
+import geumjeongyahak.domain.lesson.service.schedule.SubjectLessonScheduleService;
 import geumjeongyahak.domain.subject.event.SubjectCreatedEvent;
 import geumjeongyahak.domain.subject.event.SubjectDeletedEvent;
 import geumjeongyahak.domain.subject.event.SubjectScheduleRecreatedEvent;
@@ -18,12 +18,12 @@ import geumjeongyahak.domain.subject.event.SubjectTeacherUnassignedEvent;
 @RequiredArgsConstructor
 public class SubjectEventHandler {
 
-    private final LessonService lessonService;
+    private final SubjectLessonScheduleService scheduleService;
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void handleSubjectCreated(SubjectCreatedEvent event) {
         log.info("과목 생성 이벤트 처리 - 수업 자동 생성 (subjectId={})", event.getSubjectId());
-        lessonService.createLessonsFromSubject(
+        scheduleService.createLessons(
             event.getSubjectId(),
             event.getTeacherId(),
             event.getStartAt(),
@@ -42,7 +42,7 @@ public class SubjectEventHandler {
             event.getSubjectId(),
             event.getTeacherId()
         );
-        lessonService.assignTeacherToSubjectScheduledLessons(
+        scheduleService.assignTeacher(
             event.getSubjectId(),
             event.getTeacherId(),
             event.getEffectiveFrom()
@@ -55,7 +55,7 @@ public class SubjectEventHandler {
             "과목 담당 교사 해제 이벤트 처리 - 수업 삭제 (subjectId={})",
             event.getSubjectId()
         );
-        lessonService.deleteFutureSubjectScheduledLessons(
+        scheduleService.deleteFutureLessons(
             event.getSubjectId(),
             event.getEffectiveFrom()
         );
@@ -67,7 +67,7 @@ public class SubjectEventHandler {
             "과목 삭제 이벤트 처리 - 수업 삭제 (subjectId={})",
             event.getSubjectId()
         );
-        lessonService.deleteFutureSubjectScheduledLessons(
+        scheduleService.deleteFutureLessons(
             event.getSubjectId(),
             event.getEffectiveFrom()
         );
@@ -79,7 +79,7 @@ public class SubjectEventHandler {
             "과목 일정 수정 이벤트 처리 - 수업 시간 변경 (subjectId={})",
             event.getSubjectId()
         );
-        lessonService.updateSubjectScheduledLessonsSchedule(
+        scheduleService.changeTime(
             event.getSubjectId(),
             event.getEffectiveFrom(),
             event.getStartTime(),
@@ -94,7 +94,7 @@ public class SubjectEventHandler {
             "과목 일정 수정 이벤트 처리 - 수업 재생성 (subjectId={})",
             event.getSubjectId()
         );
-        lessonService.recreateSubjectScheduledLessons(
+        scheduleService.recreateLessons(
             event.getSubjectId(),
             event.getTeacherId(),
             event.getEffectiveFrom(),
