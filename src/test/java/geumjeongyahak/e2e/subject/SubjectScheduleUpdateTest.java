@@ -23,6 +23,7 @@ public class SubjectScheduleUpdateTest extends SubjectBaseTest {
     private static final long CLASSROOM_1 = DEFAULT_CLASSROOM_ID;
     private static final long TEACHER_ID = DEFAULT_TEACHER_ID;
     private static final long NEW_TEACHER_ID = 3L;
+    private static final int SEED_CLASSROOM_1_STUDENTS = 2;
 
     @Test
     @DisplayName("PATCH /schedule: 시간과 교시만 변경하면 미래 수업의 시간과 교시를 수정한다")
@@ -341,5 +342,105 @@ public class SubjectScheduleUpdateTest extends SubjectBaseTest {
             .patch("/{subjectId}/schedule", subjectId)
             .then()
             .statusCode(409);
+    }
+
+    @Test
+    @DisplayName("PATCH /schedule: 기간을 미래로 옮겨도 당일 수업과 DailySchedule·출석은 남는다 (#241)")
+    void updateSchedule_KeepsTodayLesson_WhenPeriodMovesToFuture() {
+        LocalDate today = LocalDate.now();
+        long subjectId = createTodaySubject(today);
+        long todayLessonId = activeLessonId(subjectId, today);
+        long dailyScheduleId = activeDailyScheduleId(today);
+
+        patchSchedule(subjectId, Map.of("startAt", today.plusDays(1).toString(), "endAt", today.plusDays(30).toString()));
+
+        assertThat(activeLessonId(subjectId, today)).isEqualTo(todayLessonId);
+        assertTodayRecordsKept(dailyScheduleId, today);
+        List<LocalDate> activeDates = jdbcTemplate.query(
+            "SELECT date FROM lessons WHERE subject_id = ? AND is_deleted = FALSE ORDER BY date",
+            (rs, rowNum) -> rs.getDate("date").toLocalDate(),
+            subjectId
+        );
+        assertThat(activeDates).first().isEqualTo(today);
+        assertThat(activeDates).element(1).isEqualTo(today.plusDays(7));
+    }
+
+    @Test
+    @DisplayName("PATCH /schedule: 종료일만 연장하면 당일 수업을 다시 만들지 않고 DailySchedule·출석을 그대로 둔다 (#241)")
+    void updateSchedule_KeepsTodayLesson_WhenEndAtExtended() {
+        LocalDate today = LocalDate.now();
+        long subjectId = createTodaySubject(today);
+        long todayLessonId = activeLessonId(subjectId, today);
+        long dailyScheduleId = activeDailyScheduleId(today);
+
+        patchSchedule(subjectId, Map.of("endAt", today.plusDays(60).toString()));
+
+        assertThat(activeLessonId(subjectId, today)).isEqualTo(todayLessonId);
+        assertTodayRecordsKept(dailyScheduleId, today);
+    }
+
+    /** 오늘 시작, 요일 = 오늘 요일인 과목. 만들 때 오늘 수업과 DailySchedule·교사 출석이 생긴다. */
+    private long createTodaySubject(LocalDate today) {
+        Map<String, Object> request = new HashMap<>(createRequest(CLASSROOM_1, "오늘 과목", today.getDayOfWeek().name(), 1));
+        request.put("startAt", today.toString());
+        request.put("endAt", today.plusDays(30).toString());
+        request.put("startTime", "06:00:00");
+        request.put("endTime", "06:40:00");
+
+        return given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .post()
+            .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
+    }
+
+    private void patchSchedule(long subjectId, Map<String, Object> request) {
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body(request)
+            .when()
+            .patch("/{subjectId}/schedule", subjectId)
+            .then()
+            .statusCode(200);
+    }
+
+    /** 오늘 날짜의 활성 수업 id. 2건 이상이면 queryForObject가 실패한다. */
+    private long activeLessonId(long subjectId, LocalDate date) {
+        return jdbcTemplate.queryForObject(
+            "SELECT id FROM lessons WHERE subject_id = ? AND date = ? AND is_deleted = FALSE",
+            Long.class,
+            subjectId,
+            date
+        );
+    }
+
+    private long activeDailyScheduleId(LocalDate date) {
+        return jdbcTemplate.queryForObject(
+            "SELECT id FROM daily_schedules WHERE classroom_id = ? AND lesson_date = ? AND is_deleted = FALSE",
+            Long.class,
+            CLASSROOM_1,
+            date
+        );
+    }
+
+    private void assertTodayRecordsKept(long dailyScheduleId, LocalDate today) {
+        assertThat(activeDailyScheduleId(today)).isEqualTo(dailyScheduleId);
+        assertThat(jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM daily_teacher_attendances WHERE daily_schedule_id = ? AND is_deleted = FALSE",
+            Integer.class,
+            dailyScheduleId
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM daily_student_attendances WHERE daily_schedule_id = ? AND is_deleted = FALSE",
+            Integer.class,
+            dailyScheduleId
+        )).isEqualTo(SEED_CLASSROOM_1_STUDENTS);
     }
 }
