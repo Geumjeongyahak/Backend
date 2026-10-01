@@ -57,6 +57,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -972,12 +973,22 @@ public class DailyScheduleService {
     }
 
     private void initializeStudentAttendances(DailySchedule dailySchedule, Long classroomId) {
-        List<Student> activeStudents = studentProxyService.getActiveStudentsByClassroomId(classroomId);
-        for (Student student : activeStudents) {
-            DailyStudentAttendance attendance = dailyStudentAttendanceRepository
-                .findByDailyScheduleIdAndStudentId(dailySchedule.getId(), student.getId())
-                .orElseGet(() -> dailyStudentAttendanceRepository.save(new DailyStudentAttendance(dailySchedule, student)));
-            attendance.restore();
+        Map<Long, DailyStudentAttendance> attendanceByStudentId = dailyStudentAttendanceRepository
+            .findAllByDailyScheduleId(dailySchedule.getId())
+            .stream()
+            .collect(toMap(attendance -> attendance.getStudent().getId(), Function.identity(), (first, second) -> first));
+
+        List<DailyStudentAttendance> missing = new ArrayList<>();
+        for (Student student : studentProxyService.getActiveStudentsByClassroomId(classroomId)) {
+            DailyStudentAttendance attendance = attendanceByStudentId.get(student.getId());
+            if (attendance == null) {
+                missing.add(new DailyStudentAttendance(dailySchedule, student));
+            } else {
+                attendance.restore();
+            }
+        }
+        if (!missing.isEmpty()) {
+            dailyStudentAttendanceRepository.saveAll(missing);
         }
     }
 

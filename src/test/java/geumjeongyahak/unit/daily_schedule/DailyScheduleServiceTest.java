@@ -40,6 +40,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -68,6 +69,9 @@ class DailyScheduleServiceTest {
 
     @InjectMocks
     private DailyScheduleService dailyScheduleService;
+
+    @Captor
+    private ArgumentCaptor<List<DailyStudentAttendance>> studentAttendancesCaptor;
 
     @Test
     void getStudentAttendanceSheet_aggregatesMonthlySchedulesAndStudentAttendances() {
@@ -174,10 +178,7 @@ class DailyScheduleServiceTest {
             .willAnswer(invocation -> invocation.getArgument(0));
         given(studentProxyService.getActiveStudentsByClassroomId(classroom.getId()))
             .willReturn(List.of(student));
-        given(dailyStudentAttendanceRepository.findByDailyScheduleIdAndStudentId(100L, student.getId()))
-            .willReturn(Optional.empty());
-        given(dailyStudentAttendanceRepository.save(any(DailyStudentAttendance.class)))
-            .willAnswer(invocation -> invocation.getArgument(0));
+        given(dailyStudentAttendanceRepository.findAllByDailyScheduleId(100L)).willReturn(List.of());
 
         dailyScheduleService.synchronizeByClassroomAndDate(classroom.getId(), lessonDate);
 
@@ -194,10 +195,46 @@ class DailyScheduleServiceTest {
         verify(dailyTeacherAttendanceRepository).save(teacherAttendanceCaptor.capture());
         assertThat(teacherAttendanceCaptor.getValue().getVolunteerServiceMinutes()).isEqualTo(120);
 
-        ArgumentCaptor<DailyStudentAttendance> studentAttendanceCaptor =
-            ArgumentCaptor.forClass(DailyStudentAttendance.class);
-        verify(dailyStudentAttendanceRepository).save(studentAttendanceCaptor.capture());
-        assertThat(studentAttendanceCaptor.getValue().getStudent()).isEqualTo(student);
+        verify(dailyStudentAttendanceRepository).saveAll(studentAttendancesCaptor.capture());
+        assertThat(studentAttendancesCaptor.getValue())
+            .extracting(DailyStudentAttendance::getStudent)
+            .containsExactly(student);
+    }
+
+    @Test
+    void synchronizeByClassroomAndDate_readsStudentAttendancesOnceAndCreatesOnlyMissingOnes() {
+        LocalDate lessonDate = LocalDate.of(2026, 5, 20);
+        Classroom classroom = classroom(1L);
+        User teacher = teacher("홍길동");
+        Subject subject = subject(classroom, teacher, lessonDate);
+        Lesson lesson = lesson(subject, teacher, lessonDate, LocalTime.of(14, 0), LocalTime.of(15, 0), 1);
+        Student attending = student(10L, classroom);
+        Student newcomer = student(11L, classroom);
+        DailySchedule dailySchedule = new DailySchedule(classroom, teacher, lessonDate, LocalTime.of(14, 0), LocalTime.of(15, 0));
+        ReflectionTestUtils.setField(dailySchedule, "id", 100L);
+        DailyStudentAttendance deletedAttendance = new DailyStudentAttendance(dailySchedule, attending);
+        deletedAttendance.softDelete();
+
+        given(lessonProxyService.getActiveLessonsByClassroomAndDate(classroom.getId(), lessonDate))
+            .willReturn(List.of(lesson));
+        given(dailyScheduleRepository.findByClassroomIdAndLessonDate(classroom.getId(), lessonDate))
+            .willReturn(Optional.of(dailySchedule));
+        given(dailyTeacherAttendanceRepository.findByDailyScheduleId(100L)).willReturn(Optional.empty());
+        given(dailyTeacherAttendanceRepository.save(any(DailyTeacherAttendance.class)))
+            .willAnswer(invocation -> invocation.getArgument(0));
+        given(studentProxyService.getActiveStudentsByClassroomId(classroom.getId()))
+            .willReturn(List.of(attending, newcomer));
+        given(dailyStudentAttendanceRepository.findAllByDailyScheduleId(100L))
+            .willReturn(List.of(deletedAttendance));
+
+        dailyScheduleService.synchronizeByClassroomAndDate(classroom.getId(), lessonDate);
+
+        verify(dailyStudentAttendanceRepository).findAllByDailyScheduleId(100L);
+        verify(dailyStudentAttendanceRepository).saveAll(studentAttendancesCaptor.capture());
+        assertThat(studentAttendancesCaptor.getValue())
+            .extracting(DailyStudentAttendance::getStudent)
+            .containsExactly(newcomer);
+        assertThat(deletedAttendance.isDeleted()).isFalse();
     }
 
     @Test
