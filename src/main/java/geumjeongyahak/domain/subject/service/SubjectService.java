@@ -282,14 +282,17 @@ public class SubjectService {
             || isChanged(subject.getPeriod(), newPeriod);
 
         LocalDate today = LocalDate.now();
+        // 수업을 다시 만드는 변경은 내일부터 적용한다. 당일 수업·DailySchedule·출석을 지우지 않는다 (#241)
+        LocalDate changeFrom = recreateLessons ? today.plusDays(1) : today;
+        LocalDate lessonStartAt = max(changeFrom, newStartAt);
         Long teacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
         if (updateLessons && teacherId != null) {
-            validator.validateFutureLessonsChangeable(subjectId, today);
+            validator.validateFutureLessonsChangeable(subjectId, changeFrom);
             validator.validateNoTeacherConflictForSchedule(
                 subjectId,
                 teacherId,
                 today,
-                max(today, newStartAt),
+                lessonStartAt,
                 newEndAt,
                 newDayOfWeek,
                 newStartTime,
@@ -312,8 +315,8 @@ public class SubjectService {
                 eventPublisher.publish(new SubjectScheduleRecreatedEvent(
                     subject.getId(),
                     teacherId,
-                    today,
-                    max(today, newStartAt),
+                    changeFrom,
+                    lessonStartAt,
                     newEndAt,
                     newDayOfWeek,
                     newStartTime,
