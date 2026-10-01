@@ -273,3 +273,30 @@ HeyMoa 서버처럼 하한을 두지 않는다. CI 댓글 같은 장치도 붙�
 ## 배포 뒤
 
 dev에서 과목 59·78·160(3교시 13:00–13:30, 기간 7/1–8/31)을 10월 기간으로 다시 저장해 담당 교사 18·27·32의 10월 3교시 수업이 생기는지 확인한다.
+
+## 구현 중 바뀐 것
+
+| 계획 | 실제 | 이유 |
+|---|---|---|
+| `DailyScheduleSyncCollector`가 키를 **트랜잭션 단위**로 모아 `beforeCommit`에 발행 | `DailyScheduleSyncPublisher`가 **메서드 단위**로 모아 메서드 끝에서 (분반, 날짜)마다 1번 발행 | 과목 이벤트 수신자가 `BEFORE_COMMIT` 단계에서 돈다. Spring은 `beforeCommit` 직전에 동기화 목록을 복사해 돌리므로(`TransactionSynchronizationManager.getSynchronizations()`), 그 단계에서 새로 등록한 동기화는 실행되지 않는다. 교사 배정 묶음(K개 과목)의 중복 동기화(냄새 7)는 남는다 — `ponytail` 상한: 묶음 배정이 느려지면 과목 이벤트를 묶음 단위로 발행 |
+| 수업 생성만 `LessonGenerator`로 분리 | 사용자 요청으로 모듈을 더 나눔 | 한 파일·한 테스트에 줄이 너무 많다는 지적 (2026-10-01) |
+
+모듈 분리 결과
+
+| 전 | 후 |
+|---|---|
+| `SubjectService` 557줄 (CRUD + 검증 9개) | `SubjectService` 372줄 + `SubjectScheduleValidator` |
+| `LessonService` 465줄 (CRUD + 조회 + 과목 이벤트용 일괄 처리) | `LessonService` 310줄 + `schedule/SubjectLessonScheduleService` + `schedule/DailyScheduleSyncPublisher` + `schedule/LessonGenerator` + `schedule/TeacherLessonConflictChecker` |
+| `DailyScheduleService` 1114줄 | 동기화만 `DailyScheduleSynchronizer`로 (1017줄). 일지·출석·조회 분리는 이번 범위 밖 |
+| 교사 자격 검사 2곳 복붙 | `User.validateCanTeach()` |
+| `SubjectUpdateTest` 1083줄 | 기본 PATCH 139 · `/teacher` 346 · `/schedule` 345 · 겹침 225 줄, 공통 생성 헬퍼는 `SubjectBaseTest` |
+
+질의 수 (한 학기 월요일 18회, 학생 6명, 조회 = 전체 문 − insert/update/delete)
+
+| 동작 | 전 (조회/전체) | 후 (조회/전체) |
+|---|---|---|
+| 교사 있는 과목 생성 | 137 / 229 | 102 / 194 |
+| 기간 변경 재생성 | 263 / 444 | 211 / 392 |
+
+남은 조회는 (분반, 날짜)마다 5번(수업·일정·교사 출석·학생·학생 출석)이다. 쓰기 문은 새 행 수만큼이고 ID가 IDENTITY라 JDBC 배치가 안 된다.
+`ponytail` 상한: 동기화를 날짜 묶음 단위로 읽으면(IN 질의) 조회를 날짜 수와 무관하게 만들 수 있다. 과목 저장이 느려지면 그때 한다.
