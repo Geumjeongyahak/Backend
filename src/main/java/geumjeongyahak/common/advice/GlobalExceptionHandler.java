@@ -4,6 +4,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -337,6 +338,23 @@ public class GlobalExceptionHandler {
         );
         problemDetail.setTitle(CommonErrorCode.RESOURCE_BUSY.getCode());
         problemDetail.setProperty("code", CommonErrorCode.RESOURCE_BUSY.getCode());
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail);
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ProblemDetail> handleObjectOptimisticLockingFailureException(
+        ObjectOptimisticLockingFailureException ex
+    ) {
+        // 다른 트랜잭션(만료 스케줄러 등)이 같은 행을 먼저 바꿨다
+        log.warn("낙관적 락 충돌 - {}", ex.getPersistentClassName());
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                CommonErrorCode.INVALID_STATE.getMessage()
+        );
+        problemDetail.setTitle(CommonErrorCode.INVALID_STATE.getCode());
+        problemDetail.setProperty("code", CommonErrorCode.INVALID_STATE.getCode());
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail);
     }
