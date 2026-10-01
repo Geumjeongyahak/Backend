@@ -33,7 +33,7 @@ public class ImageUploadService {
 
     private static final String PROFILE_DIRECTORY = "profiles";
     private static final String EDITOR_DIRECTORY = "editor";
-    private static final String SITE_CONTENT_DIRECTORY = "site-contents";
+    static final String SITE_CONTENT_DIRECTORY = "site-contents";
     private static final String PURCHASE_ITEM_DIRECTORY = "documents/purchase-items";
     private static final int PROFILE_IMAGE_WIDTH = 256;
     private static final int PROFILE_IMAGE_HEIGHT = 256;

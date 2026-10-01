@@ -13,6 +13,8 @@ import geumjeongyahak.domain.auth.repository.UserCredentialRepository;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +23,9 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class RefreshTokenService {
+
+    // ponytail: 계정당 기기 5대 상한, 넘으면 가장 오래된 기기가 다음 재발급 때 다시 로그인. 기기 관리 화면이 생기면 설정값으로
+    private static final int MAX_ACTIVE_REFRESH_TOKENS_PER_CREDENTIAL = 5;
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserCredentialRepository userCredentialRepository;
@@ -35,7 +40,7 @@ public class RefreshTokenService {
     public String createRefreshToken(Long credentialId) {
         log.debug("Refresh Token 생성 요청: credentialId={}", credentialId);
 
-        refreshTokenRepository.deleteByCredentialId(credentialId);
+        pruneTokens(credentialId);
 
         // 새로운 Refresh Token 생성
         Instant now = Instant.now();
@@ -55,6 +60,28 @@ public class RefreshTokenService {
 
         log.debug("Refresh Token 생성 완료: credentialId={}, expiresAt={}", credentialId, expiryDate);
         return tokenValue;
+    }
+
+    /**
+     * 새 토큰 자리를 만든다: 만료된 토큰과, 새 토큰을 더하면 상한을 넘는 가장 오래된 토큰을 지운다.
+     */
+    private void pruneTokens(Long credentialId) {
+        List<RefreshToken> live = new ArrayList<>();
+        List<String> stale = new ArrayList<>();
+        for (RefreshToken token : refreshTokenRepository.findByCredentialId(credentialId)) {
+            if (token.isExpired()) {
+                stale.add(token.getToken());
+            } else {
+                live.add(token);
+            }
+        }
+        live.sort(Comparator.comparing(RefreshToken::getCreatedAt).reversed());
+        live.stream()
+                .skip(MAX_ACTIVE_REFRESH_TOKENS_PER_CREDENTIAL - 1)
+                .forEach(token -> stale.add(token.getToken()));
+        if (!stale.isEmpty()) {
+            refreshTokenRepository.deleteAllByIdInBatch(stale);
+        }
     }
 
     /**
@@ -99,7 +126,8 @@ public class RefreshTokenService {
         log.debug("Refresh Token 삭제 요청");
 
         if (StringUtils.hasText(token)) {
-            refreshTokenRepository.deleteById(token);
+            // 없는 행이어도 예외 없이 지나간다 (동시 재발급·중복 로그아웃)
+            refreshTokenRepository.deleteAllByIdInBatch(List.of(token));
             log.info("Refresh Token 삭제 완료");
         }
     }
