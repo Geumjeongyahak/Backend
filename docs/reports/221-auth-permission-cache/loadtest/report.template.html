@@ -80,7 +80,8 @@ summary { cursor: pointer; color: var(--ink-2); font-size: 14px; }
 .theme { position: fixed; top: 12px; right: 12px; background: var(--surface); color: var(--ink-2); border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 13px; cursor: pointer; }
 .toc { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; margin-top: 8px; }
 .toc a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--axis); }
-h2.part { font-size: 13px; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; margin: 80px 0 -40px; font-weight: 600; }
+h2.part { font-size: 13px; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; margin: 88px 0 8px; font-weight: 600; }
+h2.part + h2 { margin-top: 0; }
 tr.pick td { background: var(--code-bg); }
 pre.mermaid { background: transparent; text-align: center; padding: 0; }
 footer { margin-top: 64px; font-size: 13px; color: var(--muted); }
@@ -269,6 +270,16 @@ DB 설정은 dev의 <code>pg_settings</code>에서 기본값과 다른 것을, �
 <p>도입 전 jar와 도입 후 jar를 <strong>같은 VM에서 번갈아 두 번씩</strong>(전 → 후 → 전 → 후) 돌렸다. 공유 코어의 CPU 크레딧 상태가 양쪽에 똑같이 걸리게 하기 위해서다.
 최대 처리량이 아니라 <strong>고정 도착률</strong>(초당 50 · 150건)로 보내, 같은 부하에서 지연 · 쿼리 수 · CPU를 비교한다.</p>
 <div id="compare"></div>
+<div class="card">
+<h3 style="margin-top:0">무엇이 달라졌나 — 두 회차가 같은 방향</h3>
+<ul>
+  <li><strong>부서 목록 · 인증</strong>: 요청당 SQL 4.86 → 1.0, 트랜잭션 2 → 1. 초당 150건에서 p50 7.0 → 3.7 ms, p95 9.3 → 4.5 ms, p99 16.7 → 7.3 ms. 이제 익명 요청(p50 3.5 ms, SQL 1)과 거의 같다 — <strong>인증의 고정 비용이 사라졌다.</strong></li>
+  <li><strong>내 정보</strong>: SQL 8.6 → 4.7, 트랜잭션 2 → 1, 초당 150건에서 p95 14.5 → 11.4 ms. 남은 4.7회는 본문이 읽는 것이라 이번 범위 밖이다.</li>
+  <li><strong>자원</strong>: 초당 150건 · 부서 목록 · 인증에서 앱 CPU 33 → 24%, DB CPU 9.7 → 5.2%. 같은 VM으로 더 많은 요청을 받을 여유가 생겼다.</li>
+  <li><strong>대조군이 그대로다</strong>: 캐시와 상관없는 익명 요청은 전후가 같다(초당 150건 p95 4.8 → 4.6 ms). 전 · 후 jar가 같은 크레딧 상태에서 돌았다는 뜻이다.</li>
+  <li>각 회차 첫 구간(익명 · 초당 50건)의 p95가 160~190 ms로 튀는 것은 전후 모두 같다. 워밍업 직후 첫 측정의 효과로 보고 비교에서 읽지 않는다. 실패한 요청은 전 구간 0건.</li>
+</ul>
+</div>
 
 <h2>측정의 한계</h2>
 <ul>
@@ -279,11 +290,19 @@ DB 설정은 dev의 <code>pg_settings</code>에서 기본값과 다른 것을, �
 
 <h2>재현</h2>
 <pre>cd docs/reports/221-auth-permission-cache/loadtest
-./provision.sh                                   # VM 셋 생성 (label purpose=loadtest-221)
-./run.sh before ../../../../build/libs/&lt;jar&gt;     # raw/before/
-./run.sh after  ../../../../build/libs/&lt;jar&gt;     # raw/after/
-python3 build_report.py                          # data.json · index.html
-./teardown.sh                                    # VM 삭제</pre>
+./provision.sh                                         # VM 셋 생성 (label purpose=loadtest-221)
+
+# 2부 — 닫힌 모델 (동시 사용자 1 · 10 · 30)
+./run.sh before &lt;도입 전 jar&gt;                          # raw/before/
+
+# 3부 — 같은 VM에서 전 → 후 → 전 → 후, 고정 도착률
+for n in 1 2; do
+  JAR_COMMIT=532f2676 MODE=rate LEVELS="50 150" DURATION=45 REST=15 ./run.sh rate-before-$n &lt;도입 전 jar&gt;
+  JAR_COMMIT=b70a0aae MODE=rate LEVELS="50 150" DURATION=45 REST=15 ./run.sh rate-after-$n  &lt;도입 후 jar&gt;
+done
+
+python3 build_report.py                                # data.json · index.html
+./teardown.sh                                          # VM · 디스크 삭제, 남은 것 없는지 확인</pre>
 
 <details><summary>측정 환경 스냅샷 (env.txt)</summary><pre id="envtxt"></pre></details>
 
@@ -488,7 +507,8 @@ python3 build_report.py                          # data.json · index.html
       { name: '도입 전', color: 'var(--s2)', values: C.rows.map((r) => r.before[metric] ?? null) },
       { name: '도입 후', color: 'var(--s1)', values: C.rows.map((r) => r.after[metric] ?? null) },
     ];
-    const cats = C.rows.map(nameOf);
+    const SHORT = { 'dept-anon': '익명', 'dept-auth': '인증', me: '내 정보' };
+    const cats = C.rows.map((r) => `${SHORT[r.scenario]} ${r.rate}/s`);
     const ct = $('#tiles');
     const pick = (s, rate) => C.rows.find((r) => r.scenario === s && r.rate === rate);
     const a = pick('dept-auth', 150), m = pick('me', 150);
@@ -496,13 +516,17 @@ python3 build_report.py                          # data.json · index.html
       tile('도입 후 인증 쿼리', `${fmt(a.before.queries_per_req, 1)} → ${fmt(a.after.queries_per_req, 1)}회`, '요청당 SQL (부서 목록 · 인증, 150/s)');
       tile('도입 후 p95', `${fmt(a.before.p95, 1)} → ${fmt(a.after.p95, 1)} ms`, '부서 목록 · 인증, 150/s, 2회차 평균');
     }
-    if (m) tile('도입 후 앱 CPU', `${fmt(m.before.app_cpu, 0)} → ${fmt(m.after.app_cpu, 0)}%`, '내 정보, 150/s, 2회차 평균');
+    if (a) tile('도입 후 앱 · DB CPU', `${fmt(a.before.app_cpu, 0)} → ${fmt(a.after.app_cpu, 0)}%`, `DB ${fmt(a.before.db_cpu, 1)} → ${fmt(a.after.db_cpu, 1)}% (부서 목록 · 인증, 150/s)`);
     cmpEl.append(columns({ title: '요청당 DB 쿼리 — 전후', sub: '회 · 2회차 평균', categories: cats, series: pair('queries_per_req'), unit: '회', digits: 2 }));
-    cmpEl.append(columns({ title: 'p95 응답 시간 — 전후', sub: 'ms · 2회차 평균 · 낮을수록 좋다', categories: cats, series: pair('p95'), unit: 'ms', digits: 1 }));
-    const g2 = el('div', { class: 'grid2' });
-    g2.append(columns({ title: '앱 VM CPU — 전후', sub: '% · 2회차 평균', categories: cats, series: pair('app_cpu'), unit: '%', digits: 0, width: 440 }));
-    g2.append(columns({ title: 'DB VM CPU — 전후', sub: '% · 2회차 평균', categories: cats, series: pair('db_cpu'), unit: '%', digits: 0, width: 440 }));
-    cmpEl.append(g2);
+    // 익명 · 50/s 는 각 회차의 첫 구간(워밍업 직후)이라 p95 가 160~190 ms 로 튄다 — 지연 차트에서만 뺀다 (표에는 남김)
+    const keep = C.rows.map((r) => !(r.scenario === 'dept-anon' && r.rate === 50));
+    const pairKept = (metric) => pair(metric).map((s) => ({ ...s, values: s.values.filter((_, i) => keep[i]) }));
+    const catsKept = cats.filter((_, i) => keep[i]);
+    const latSub = '2회차 평균 · 낮을수록 좋다 · 익명 50/s는 회차 첫 구간이라 뺐다 (표에 있음)';
+    cmpEl.append(columns({ title: 'p50 응답 시간 — 전후', sub: 'ms · ' + latSub, categories: catsKept, series: pairKept('p50'), unit: 'ms', digits: 1 }));
+    cmpEl.append(columns({ title: 'p95 응답 시간 — 전후', sub: 'ms · ' + latSub, categories: catsKept, series: pairKept('p95'), unit: 'ms', digits: 1 }));
+    cmpEl.append(columns({ title: '앱 VM CPU — 전후', sub: '% · 2회차 평균', categories: cats, series: pair('app_cpu'), unit: '%', digits: 0 }));
+    cmpEl.append(columns({ title: 'DB VM CPU — 전후', sub: '% · 2회차 평균', categories: cats, series: pair('db_cpu'), unit: '%', digits: 0 }));
     const det = el('details'); det.append(el('summary', {}, '표로 보기 (회차별 값 포함)'));
     const rounds = (r, side, m, d) => r[side].rounds.map((x) => fmt(x[m], d)).join(' / ');
     det.append(table(C.rows, [

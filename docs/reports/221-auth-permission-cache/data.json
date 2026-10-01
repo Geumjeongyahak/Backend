@@ -1217,5 +1217,359 @@
    }
   ],
   "env": "label=before-db-standard\njar=geumjeongyahak-api-0.0.1.jar\ngit=5a061904\ndate=2026-10-01T12:43:32+09:00\nduration_s=60 warmup_s=30 rest_s=20\nlt221-app\te2-small\nlt221-db\te2-standard-2\nlt221-load\te2-standard-2\n--- db\nPostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit\neffective_cache_size\t524288\nmax_connections\t100\nshared_buffers\t20481\nshared_preload_libraries\tpg_stat_statements\nssl\ton\nwork_mem\t4096\ndepartment_permissions\t34\ndepartments\t6\nuser_credentials\t65\nuser_permissions\t15\nusers\t63\n--- app→db rtt\nrtt min/avg/max/mdev = 0.238/0.384/1.250/0.214 ms\n--- app\nopenjdk version \"21.0.12.1\" 2026-08-18\n2\nMem:            1960         808         834           1         472        1152\n"
+ },
+ "compare": {
+  "rows": [
+   {
+    "scenario": "dept-anon",
+    "rate": 50,
+    "before": {
+     "p50": 7.17,
+     "p95": 183.9,
+     "p99": 199.77,
+     "rps": 49.9,
+     "queries_per_req": 1.0,
+     "tx_per_req": 1.0,
+     "app_cpu": 44.5,
+     "db_cpu": 1.8,
+     "hikari_active_avg": 0.35,
+     "fail_rate": 0,
+     "rounds": [
+      {
+       "p50": 8.08,
+       "p95": 186.42,
+       "queries_per_req": 1.0,
+       "app_cpu": 48.1
+      },
+      {
+       "p50": 6.26,
+       "p95": 181.38,
+       "queries_per_req": 1.0,
+       "app_cpu": 40.9
+      }
+     ]
+    },
+    "after": {
+     "p50": 5.19,
+     "p95": 172.905,
+     "p99": 223.19,
+     "rps": 50.0,
+     "queries_per_req": 1.0,
+     "tx_per_req": 1.0,
+     "app_cpu": 41.3,
+     "db_cpu": 1.5,
+     "hikari_active_avg": 0.45,
+     "fail_rate": 0,
+     "rounds": [
+      {
+       "p50": 4.75,
+       "p95": 159.12,
+       "queries_per_req": 1.0,
+       "app_cpu": 37.4
+      },
+      {
+       "p50": 5.63,
+       "p95": 186.69,
+       "queries_per_req": 1.0,
+       "app_cpu": 45.2
+      }
+     ]
+    }
+   },
+   {
+    "scenario": "dept-anon",
+    "rate": 150,
+    "before": {
+     "p50": 3.54,
+     "p95": 4.84,
+     "p99": 7.5,
+     "rps": 150.0,
+     "queries_per_req": 1.0,
+     "tx_per_req": 1.0,
+     "app_cpu": 26.65,
+     "db_cpu": 4.2,
+     "hikari_active_avg": 0.25,
+     "fail_rate": 0,
+     "rounds": [
+      {
+       "p50": 3.47,
+       "p95": 4.55,
+       "queries_per_req": 1.0,
+       "app_cpu": 26.0
+      },
+      {
+       "p50": 3.61,
+       "p95": 5.13,
+       "queries_per_req": 1.0,
+       "app_cpu": 27.3
+      }
+     ]
+    },
+    "after": {
+     "p50": 3.605,
+     "p95": 4.575,
+     "p99": 7.23,
+     "rps": 150.0,
+     "queries_per_req": 1.0,
+     "tx_per_req": 1.0,
+     "app_cpu": 23.4,
+     "db_cpu": 4.05,
+     "hikari_active_avg": 0.25,
+     "fail_rate": 0,
+     "rounds": [
+      {
+       "p50": 3.56,
+       "p95": 4.62,
+       "queries_per_req": 1.0,
+       "app_cpu": 21.4
+      },
+      {
+       "p50": 3.65,
+       "p95": 4.53,
+       "queries_per_req": 1.0,
+       "app_cpu": 25.4
+      }
+     ]
+    }
+   },
+   {
+    "scenario": "dept-auth",
+    "rate": 50,
+    "before": {
+     "p50": 8.5,
+     "p95": 13.05,
+     "p99": 22.1,
+     "rps": 50.0,
+     "queries_per_req": 4.86,
+     "tx_per_req": 2.0,
+     "app_cpu": 24.8,
+     "db_cpu": 4.5,
+     "hikari_active_avg": 0.35,
+     "fail_rate": 0,
+     "rounds": [
+      {
+       "p50": 8.41,
+       "p95": 10.71,
+       "queries_per_req": 4.86,
+       "app_cpu": 21.2
+      },
+      {
+       "p50": 8.59,
+       "p95": 15.39,
+       "queries_per_req": 4.86,
+       "app_cpu": 28.4
+      }
+     ]
+    },
+    "after": {
+     "p50": 4.08,
+     "p95": 5.53,
+     "p99": 16.215,
+     "rps": 50.0,
+     "queries_per_req": 1.09,
+     "tx_per_req": 1.02,
+     "app_cpu": 12.8,
+     "db_cpu": 2.0,
+     "hikari_active_avg": 0.1,
+     "fail_rate": 0,
+     "rounds": [
+      {
+       "p50": 4.03,
+       "p95": 5.24,
+       "queries_per_req": 1.09,
+       "app_cpu": 13.5
+      },
+      {
+       "p50": 4.13,
+       "p95": 5.82,
+       "queries_per_req": 1.09,
+       "app_cpu": 12.1
+      }
+     ]
+    }
+   },
+   {
+    "scenario": "dept-auth",
+    "rate": 150,
+    "before": {
+     "p50": 7.01,
+     "p95": 9.29,
+     "p99": 16.725,
+     "rps": 150.0,
+     "queries_per_req": 4.86,
+     "tx_per_req": 2.0,
+     "app_cpu": 32.8,
+     "db_cpu": 9.65,
+     "hikari_active_avg": 0.85,
+     "fail_rate": 0,
+     "rounds": [
+      {
+       "p50": 7.02,
+       "p95": 8.41,
+       "queries_per_req": 4.86,
+       "app_cpu": 31.7
+      },
+      {
+       "p50": 7.0,
+       "p95": 10.17,
+       "queries_per_req": 4.86,
+       "app_cpu": 33.9
+      }
+     ]
+    },
+    "after": {
+     "p50": 3.69,
+     "p95": 4.45,
+     "p99": 7.29,
+     "rps": 150.0,
+     "queries_per_req": 1.0,
+     "tx_per_req": 1.0,
+     "app_cpu": 24.35,
+     "db_cpu": 5.2,
+     "hikari_active_avg": 0.2,
+     "fail_rate": 0,
+     "rounds": [
+      {
+       "p50": 3.69,
+       "p95": 4.47,
+       "queries_per_req": 1.0,
+       "app_cpu": 23.9
+      },
+      {
+       "p50": 3.69,
+       "p95": 4.43,
+       "queries_per_req": 1.0,
+       "app_cpu": 24.8
+      }
+     ]
+    }
+   },
+   {
+    "scenario": "me",
+    "rate": 50,
+    "before": {
+     "p50": 12.095,
+     "p95": 14.4,
+     "p99": 19.67,
+     "rps": 50.0,
+     "queries_per_req": 8.58,
+     "tx_per_req": 2.0,
+     "app_cpu": 23.0,
+     "db_cpu": 5.8,
+     "hikari_active_avg": 0.55,
+     "fail_rate": 0,
+     "rounds": [
+      {
+       "p50": 12.55,
+       "p95": 15.12,
+       "queries_per_req": 8.58,
+       "app_cpu": 23.7
+      },
+      {
+       "p50": 11.64,
+       "p95": 13.68,
+       "queries_per_req": 8.58,
+       "app_cpu": 22.3
+      }
+     ]
+    },
+    "after": {
+     "p50": 9.42,
+     "p95": 12.47,
+     "p99": 20.695,
+     "rps": 50.0,
+     "queries_per_req": 4.72,
+     "tx_per_req": 1.0,
+     "app_cpu": 24.7,
+     "db_cpu": 3.65,
+     "hikari_active_avg": 0.25,
+     "fail_rate": 0,
+     "rounds": [
+      {
+       "p50": 8.54,
+       "p95": 10.36,
+       "queries_per_req": 4.72,
+       "app_cpu": 20.7
+      },
+      {
+       "p50": 10.3,
+       "p95": 14.58,
+       "queries_per_req": 4.72,
+       "app_cpu": 28.7
+      }
+     ]
+    }
+   },
+   {
+    "scenario": "me",
+    "rate": 150,
+    "before": {
+     "p50": 10.36,
+     "p95": 14.515,
+     "p99": 26.22,
+     "rps": 150.0,
+     "queries_per_req": 8.58,
+     "tx_per_req": 2.0,
+     "app_cpu": 47.3,
+     "db_cpu": 15.65,
+     "hikari_active_avg": 1.45,
+     "fail_rate": 0,
+     "rounds": [
+      {
+       "p50": 10.43,
+       "p95": 14.72,
+       "queries_per_req": 8.58,
+       "app_cpu": 46.7
+      },
+      {
+       "p50": 10.29,
+       "p95": 14.31,
+       "queries_per_req": 8.58,
+       "app_cpu": 47.9
+      }
+     ]
+    },
+    "after": {
+     "p50": 7.62,
+     "p95": 11.42,
+     "p99": 23.975,
+     "rps": 149.95,
+     "queries_per_req": 4.725,
+     "tx_per_req": 1.0,
+     "app_cpu": 42.5,
+     "db_cpu": 9.15,
+     "hikari_active_avg": 1.15,
+     "fail_rate": 0,
+     "rounds": [
+      {
+       "p50": 7.43,
+       "p95": 10.23,
+       "queries_per_req": 4.73,
+       "app_cpu": 40.2
+      },
+      {
+       "p50": 7.81,
+       "p95": 12.61,
+       "queries_per_req": 4.72,
+       "app_cpu": 44.8
+      }
+     ]
+    }
+   }
+  ],
+  "env": {
+   "after": "label=rate-after-1\njar_sha256=c4729cead051d6d168139bab71a47f713373f600ab368addd9bf0475a6f3cc27\njar_commit=b70a0aae\nmode=rate\ndate=2026-10-01T14:15:57+09:00\nduration_s=45 warmup_s=30 rest_s=15\nlt221-app\te2-small\nlt221-db\te2-micro\nlt221-load\te2-standard-2\n--- db\nPostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit\neffective_cache_size\t524288\nmax_connections\t100\nshared_buffers\t20481\nshared_preload_libraries\tpg_stat_statements\nssl\ton\nwork_mem\t4096\ndepartment_permissions\t34\ndepartments\t6\nuser_credentials\t65\nuser_permissions\t15\nusers\t63\n--- app→db rtt\nrtt min/avg/max/mdev = 0.311/0.495/1.815/0.309 ms\n--- app\nopenjdk version \"21.0.12.1\" 2026-08-18\n2\nMem:            1960         871         425           1         823        1088\n",
+   "before": "label=rate-before-1\njar_sha256=0c94ecb029fea83d73e47bd7179f3b048bbdca81354a1a2457e22a9337f1a627\njar_commit=532f2676\nmode=rate\ndate=2026-10-01T14:02:19+09:00\nduration_s=45 warmup_s=30 rest_s=15\nlt221-app\te2-small\nlt221-db\te2-micro\nlt221-load\te2-standard-2\n--- db\nPostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit\neffective_cache_size\t524288\nmax_connections\t100\nshared_buffers\t20481\nshared_preload_libraries\tpg_stat_statements\nssl\ton\nwork_mem\t4096\ndepartment_permissions\t34\ndepartments\t6\nuser_credentials\t65\nuser_permissions\t15\nusers\t63\n--- app→db rtt\nrtt min/avg/max/mdev = 0.269/0.442/2.181/0.402 ms\n--- app\nopenjdk version \"21.0.12.1\" 2026-08-18\n2\nMem:            1960         894          87           1        1141        1065\n"
+  },
+  "rounds": {
+   "after": [
+    "1",
+    "2"
+   ],
+   "before": [
+    "1",
+    "2"
+   ]
+  }
  }
 }
