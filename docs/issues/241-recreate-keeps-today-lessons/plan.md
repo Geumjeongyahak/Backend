@@ -1,4 +1,4 @@
-# 과목 수업 재생성은 내일부터 — 당일 수업·DailySchedule·출석을 건드리지 않는다
+# 과목 수정이 수업을 지우거나 바꾸는 것은 내일부터 — 당일 수업·DailySchedule·출석을 건드리지 않는다
 
 - 이슈: #241
 - 브랜치: `fix/241-recreate-keeps-today-lessons` (#240 병합 커밋 `532f2676` 위로 rebase)
@@ -21,9 +21,32 @@
 | 경우 | 결과 |
 |---|---|
 | 기간을 미래로 옮긴다 (dev 2026-09-30 20:08, 9월 → 10/1–10/30) | 당일 수업이 지워지고 다시 안 만들어진다. DailySchedule·출석 삭제 |
-| 당일이 새 기간 안에 그대로 있다 (예: 종료일만 연장) | 당일 수업을 지웠다가 새로 만든다. 3에서 DailySchedule·출석이 지워지고, 4의 동기화는 `IsDeletedFalse`로 찾으므로 **새 DailySchedule을 만든다**. 지워진 출석은 되살아나지 않는다 |
+| 당일이 새 기간 안에 그대로 있다 (예: 종료일만 연장) | 당일 수업을 지웠다가 **새 id로** 다시 만든다. DailySchedule·출석은 지워졌다가 #240의 `DailyScheduleSynchronizer`가 `restore()`로 되살린다 (첫 계획의 「되살아나지 않는다」는 #240 이전 코드 기준이라 틀렸다) |
 
-## 기준
+## 개정 2 (#240 창 리뷰 피드백, 2026-10-01)
+
+같은 「오늘부터 지운다」가 두 경로에 더 있다. 9/30에도 교사 해제가 9건 있었고, 그날이 수업 요일이 아니어서 피해가 없었을 뿐이다.
+
+| 경로 | 지금 | 바꾼 뒤 |
+|---|---|---|
+| 담당 교사 해제 `PATCH /teacher {teacherId:null}` → `SubjectTeacherUnassignedEvent(today)` | 당일 수업·DailySchedule·출석 삭제 | 내일부터 삭제. 당일 수업은 옛 교사로 남는다 |
+| 과목 삭제 `DELETE` → `SubjectDeletedEvent(today)` | 같음 | 내일부터 삭제. 당일 수업은 비활성 과목에 달린 채 남는다 (과목은 soft delete가 아니라 `deactivate`) |
+| 담당 교사 교체 A→B → `SubjectTeacherAssignedEvent(today)` | 당일 수업 교사가 B로 바뀌고, DailySchedule 담당 교사와 그날 봉사 기록도 B로 넘어간다. 수업 중에 바꾸면 A가 한 수업이 B 몫이 된다 | 내일부터 교체. 당일 대타는 수업 교환 요청으로 처리한다 |
+| 미배정 과목에 교사 배정 → `SubjectCreatedEvent(max(today, startAt))` | 오늘부터 생성 | 내일부터 생성. 같은 날 해제(당일 수업 남음) → 재배정이면 오늘 수업이 둘이 되는 것을 막는다. 「미래 수업이 있나」(`existsFutureActiveLessonBySubjectId`)도 내일부터 본다. 안 그러면 남은 당일 수업 하나 때문에 내일부터의 수업이 안 만들어진다 |
+| 시간·교시만 변경 → `SubjectScheduleUpdatedEvent(today)` | 오늘 수업 시간도 바뀐다 | **그대로 오늘부터.** 지우지 않고, 아침에 오늘 수업 시간을 바로잡는 쓰임이 있다 |
+| 과목 생성 → `SubjectCreatedEvent(max(today, startAt))` | 오늘부터 생성 | 그대로. 지울 것이 없다 |
+
+**적용 시작일은 `SubjectService` 한 곳에서 정한다.** `Clock` 빈(Asia/Seoul)을 주입하고
+`lessonChangeFrom()` = `LocalDate.now(clock).plusDays(1)` 하나를 두어 위 네 경로와 재생성이 같이 쓴다. 날짜 경계는 달력 자정이다(사람 결정).
+`SubjectService`의 인자 없는 `LocalDate.now()`·`LocalDateTime.now()`는 모두 `clock`으로 바꾼다 (diff-signals #226).
+
+요일을 오늘 요일로 바꾸면 오늘 수업은 새로 생기지 않는다(내일부터 생성). 의도이며 PR `리뷰어에게`에 적는다.
+
+테스트: #241 E2E를 `SubjectTodayLessonTest`로 옮기고 `@TestConfiguration`의 `@Primary` 고정 `Clock`(오늘 12:00 KST)을 쓴다.
+테스트와 서버가 같은 시각을 보므로 `assumeTrue` 자정 건너뛰기를 지운다. 이 클래스 하나만 별도 컨텍스트가 뜬다.
+추가 E2E: 교사 해제 · 과목 삭제 · 교사 교체 뒤 당일 수업(교사 포함)·DailySchedule·출석 유지, 해제 → 같은 날 재배정 시 내일부터 수업 생성·당일 1건.
+
+## 기준 (첫 계획)
 
 **재생성(기간·요일 변경)은 내일부터 적용한다. 오늘과 그 이전 수업은 그대로 둔다.**
 
@@ -69,8 +92,7 @@ lesson 쪽은 받은 `from`부터 지우는 일만 하고, 날짜 기준은 발�
 
 ## 안 하는 것
 
-- 담당 교사 해제(`SubjectTeacherUnassignedEvent`)와 과목 삭제(`SubjectDeletedEvent`)도 `today`부터 지운다.
-  같은 성질의 위험이지만 이슈 범위 밖이고, 과목을 삭제할 때 당일 수업을 남길지는 따로 정해야 한다. PR `리뷰어에게`에 후속 이슈 후보로 적는다
+- ~~담당 교사 해제·과목 삭제는 범위 밖~~ → 개정 2에서 포함
 - 지우는 동기화가 출석을 soft delete하고 새 동기화가 되살리지 않는 `DailyScheduleSynchronizer`의 성질 자체.
   이번 기준으로 재생성 경로에서는 당일이 빠지므로 드러나지 않는다. 고치려면 daily_schedule 도메인 설계가 필요하다
 - 기간별 과목 복사 흐름, 칸 저장 부분 반영 (이슈 본문대로 Frontend 이슈)
