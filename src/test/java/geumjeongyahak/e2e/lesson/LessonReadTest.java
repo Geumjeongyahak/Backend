@@ -91,6 +91,54 @@ public class LessonReadTest extends LessonBaseTest {
     }
 
     @Test
+    @DisplayName("전체·내 수업 목록에 수업 상태를 내려준다 — 취소된 수업은 CANCELED (#244)")
+    void lessonLists_includeStatus() {
+        LocalDate lessonDate = LocalDate.of(2027, 5, 21);
+        Long lessonId = createTrackedLessonFixture(
+            "read-list-status",
+            TEACHER_ID,
+            "2042-05-21",
+            "FRIDAY",
+            1,
+            lessonDate.toString(),
+            "19:20:00",
+            "20:00:00",
+            1
+        );
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .contentType("application/json")
+            .body("""
+                { "status": "CANCELED" }
+                """)
+            .when()
+            .patch("/{lessonId}/status", lessonId)
+            .then()
+            .statusCode(200);
+
+        given()
+            .queryParam("from", lessonDate.toString())
+            .queryParam("to", lessonDate.toString())
+            .when()
+            .get()
+            .then()
+            .statusCode(200)
+            .body("size()", is(1))
+            .body("[0].status", is("CANCELED"));
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(volunteerAccessToken))
+            .queryParam("from", lessonDate.toString())
+            .queryParam("to", lessonDate.toString())
+            .when()
+            .get("/me")
+            .then()
+            .statusCode(200)
+            .body("size()", is(1))
+            .body("[0].status", is("CANCELED"));
+    }
+
+    @Test
     @DisplayName("전체 수업 목록에서 DailySchedule 교사 출석/퇴근 여부를 반환한다")
     void getAllLessons_returnsDailyScheduleTeacherAttendance() {
         LocalDate lessonDate = LocalDate.of(2027, 5, 21);
