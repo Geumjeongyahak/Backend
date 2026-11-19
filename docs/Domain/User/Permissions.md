@@ -146,6 +146,8 @@ permission code로는 표현되지 않습니다.
 | `GET /api/v1/students` | 인증만 |
 | `GET /api/v1/students/{studentId}` | 인증만 |
 | `POST /api/v1/students` | `ADMIN` \| `student:write:*` |
+| `PUT /api/v1/students/{studentId}/classrooms/{classroomId}` | `ADMIN` \| `student:manage:*` |
+| `DELETE /api/v1/students/{studentId}/classrooms/{classroomId}` | `ADMIN` \| `student:manage:*` |
 | `PATCH /api/v1/students/{studentId}` | `ADMIN` \| `student:manage:*` |
 | `DELETE /api/v1/students/{studentId}` | `ADMIN` \| `student:manage:*` |
 
