@@ -108,6 +108,23 @@ public class StudentService {
     }
 
     @Transactional
+    public StudentResponse addClassroom(Long studentId, Long classroomId) {
+        log.info("학생 분반 소속 추가 요청 - studentId: {}, classroomId: {}", studentId, classroomId);
+
+        Student student = studentRepository.findByIdAndIsDeletedFalse(studentId)
+            .orElseThrow(() -> {
+                log.warn("학생 분반 소속 추가 실패 - 학생을 찾을 수 없습니다. studentId: {}", studentId);
+                return new StudentNotFoundException(studentId);
+            });
+        Classroom classroom = classroomProxyService.getActiveById(classroomId);
+
+        student.addClassroom(classroom);
+
+        log.info("학생 분반 소속 추가 완료 - studentId: {}, classroomId: {}", studentId, classroomId);
+        return StudentResponse.from(student);
+    }
+
+    @Transactional
     public void deleteStudentById(Long studentId) {
         log.info("학생 삭제 요청 - ID: {}", studentId);
         Student student = studentRepository.findByIdAndIsDeletedFalse(studentId)

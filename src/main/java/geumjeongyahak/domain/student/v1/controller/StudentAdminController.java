@@ -63,6 +63,35 @@ public class StudentAdminController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PreAuthorize(STUDENT_WRITE_ACCESS)
+    @Operation(
+        summary = "학생 분반 소속 추가",
+        description = """
+            기존 학생을 특정 분반에 추가합니다.
+
+            동작 방식:
+            - 삭제되지 않은 학생과 분반이 존재하는지 확인합니다.
+            - 기존의 다른 분반 소속은 유지합니다.
+            - 이미 해당 분반에 소속되어 있으면 현재 상태를 그대로 반환합니다.
+            - 해제된 학생-분반 관계가 있으면 해당 관계를 다시 활성화합니다.
+            """
+    )
+    @PutMapping("/{studentId}/classrooms/{classroomId}")
+    public ResponseEntity<StudentResponse> addClassroom(
+        @Parameter(description = "학생 식별자", example = "1")
+        @PathVariable Long studentId,
+        @Parameter(description = "분반 식별자", example = "1")
+        @PathVariable Long classroomId
+    ) {
+        log.debug(
+            "PUT /api/v1/students/{}/classrooms/{} - 학생 분반 소속 추가 요청",
+            studentId,
+            classroomId
+        );
+        StudentResponse response = studentService.addClassroom(studentId, classroomId);
+        return ResponseEntity.ok(response);
+    }
+
     @PreAuthorize(STUDENT_MANAGE_ACCESS)
     @Operation(
         summary = "학생 수정",
