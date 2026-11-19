@@ -114,12 +114,12 @@ class StudentClassroomAddTest extends StudentBaseTest {
     }
 
     @Test
-    @DisplayName("student:write 권한으로 학생을 분반에 추가할 수 있다")
-    void addClassroom_Success_StudentWritePermission() {
+    @DisplayName("student:manage 권한으로 학생을 분반에 추가할 수 있다")
+    void addClassroom_Success_StudentManagePermission() {
         StudentResponse created = createStudent("분반 추가 권한 학생", "010-1100-0004");
 
         given()
-            .header(AUTH_HEADER, getAuthHeader(studentWriteAccessToken))
+            .header(AUTH_HEADER, getAuthHeader(studentManageAccessToken))
             .when()
             .put("/{studentId}/classrooms/{classroomId}", created.id(), ADDITIONAL_CLASSROOM_ID)
             .then()
@@ -128,6 +128,20 @@ class StudentClassroomAddTest extends StudentBaseTest {
                 DEFAULT_CLASSROOM_ID.intValue(),
                 ADDITIONAL_CLASSROOM_ID.intValue()
             ));
+    }
+
+    @Test
+    @DisplayName("student:write 권한만으로는 학생을 분반에 추가할 수 없다")
+    void addClassroom_Forbidden_StudentWritePermission() {
+        StudentResponse created = createStudent("분반 추가 쓰기 권한 학생", "010-1100-0012");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(studentWriteAccessToken))
+            .when()
+            .put("/{studentId}/classrooms/{classroomId}", created.id(), ADDITIONAL_CLASSROOM_ID)
+            .then()
+            .statusCode(403)
+            .body("code", equalTo("AUTHZ001"));
     }
 
     @Test

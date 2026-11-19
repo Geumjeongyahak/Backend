@@ -9,6 +9,7 @@ import geumjeongyahak.common.exception.ErrorCode;
 @RequiredArgsConstructor
 public enum StudentErrorCode implements ErrorCode {
     STUDENT_NOT_FOUND(HttpStatus.NOT_FOUND, "RES-04-001", "학생을 찾을 수 없습니다."),
+    STUDENT_CLASSROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "RES-04-002", "학생의 분반 소속을 찾을 수 없습니다."),
     DUPLICATE_STUDENT(HttpStatus.CONFLICT, "BIZ-04-001", "이미 존재하는 학생입니다.");
 
     private final HttpStatus status;

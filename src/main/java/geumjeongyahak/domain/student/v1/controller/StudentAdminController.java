@@ -63,7 +63,7 @@ public class StudentAdminController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PreAuthorize(STUDENT_WRITE_ACCESS)
+    @PreAuthorize(STUDENT_MANAGE_ACCESS)
     @Operation(
         summary = "학생 분반 소속 추가",
         description = """
@@ -90,6 +90,35 @@ public class StudentAdminController {
         );
         StudentResponse response = studentService.addClassroom(studentId, classroomId);
         return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize(STUDENT_MANAGE_ACCESS)
+    @Operation(
+        summary = "학생 분반 소속 해제",
+        description = """
+            기존 학생의 특정 분반 소속을 해제합니다.
+
+            동작 방식:
+            - 삭제되지 않은 학생과 분반이 존재하는지 확인합니다.
+            - 지정한 학생-분반 관계만 soft delete 처리합니다.
+            - 학생 정보와 다른 분반 소속은 유지합니다.
+            - 존재하지 않거나 이미 해제된 소속 관계는 404를 반환합니다.
+            """
+    )
+    @DeleteMapping("/{studentId}/classrooms/{classroomId}")
+    public ResponseEntity<Void> removeClassroom(
+        @Parameter(description = "학생 식별자", example = "1")
+        @PathVariable Long studentId,
+        @Parameter(description = "분반 식별자", example = "1")
+        @PathVariable Long classroomId
+    ) {
+        log.debug(
+            "DELETE /api/v1/students/{}/classrooms/{} - 학생 분반 소속 해제 요청",
+            studentId,
+            classroomId
+        );
+        studentService.removeClassroom(studentId, classroomId);
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize(STUDENT_MANAGE_ACCESS)

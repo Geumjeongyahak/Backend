@@ -12,6 +12,7 @@ import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.service.ClassroomProxyService;
 import geumjeongyahak.domain.student.entity.Student;
 import geumjeongyahak.domain.student.exception.DuplicateStudentException;
+import geumjeongyahak.domain.student.exception.StudentClassroomNotFoundException;
 import geumjeongyahak.domain.student.exception.StudentNotFoundException;
 import geumjeongyahak.domain.student.repository.StudentRepository;
 import geumjeongyahak.domain.student.repository.specification.StudentSpecs;
@@ -122,6 +123,29 @@ public class StudentService {
 
         log.info("학생 분반 소속 추가 완료 - studentId: {}, classroomId: {}", studentId, classroomId);
         return StudentResponse.from(student);
+    }
+
+    @Transactional
+    public void removeClassroom(Long studentId, Long classroomId) {
+        log.info("학생 분반 소속 해제 요청 - studentId: {}, classroomId: {}", studentId, classroomId);
+
+        Student student = studentRepository.findByIdAndIsDeletedFalse(studentId)
+            .orElseThrow(() -> {
+                log.warn("학생 분반 소속 해제 실패 - 학생을 찾을 수 없습니다. studentId: {}", studentId);
+                return new StudentNotFoundException(studentId);
+            });
+        Classroom classroom = classroomProxyService.getActiveById(classroomId);
+
+        if (!student.removeClassroom(classroom)) {
+            log.warn(
+                "학생 분반 소속 해제 실패 - 소속 관계를 찾을 수 없습니다. studentId: {}, classroomId: {}",
+                studentId,
+                classroomId
+            );
+            throw new StudentClassroomNotFoundException(studentId, classroomId);
+        }
+
+        log.info("학생 분반 소속 해제 완료 - studentId: {}, classroomId: {}", studentId, classroomId);
     }
 
     @Transactional

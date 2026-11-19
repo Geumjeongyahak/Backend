@@ -122,6 +122,21 @@ public class Student extends BaseEntity {
                 .ifPresentOrElse(StudentClassroom::restore, () -> studentClassrooms.add(new StudentClassroom(this, classroom)));
     }
 
+    public boolean removeClassroom(Classroom classroom) {
+        if (classroom == null) {
+            return false;
+        }
+        return studentClassrooms.stream()
+                .filter(studentClassroom -> !studentClassroom.isDeleted())
+                .filter(studentClassroom -> isSameClassroom(studentClassroom.getClassroom(), classroom))
+                .findFirst()
+                .map(studentClassroom -> {
+                    studentClassroom.delete();
+                    return true;
+                })
+                .orElse(false);
+    }
+
     private boolean isSameClassroom(Classroom existing, Classroom classroom) {
         return existing == classroom
                 || existing.getId() != null && existing.getId().equals(classroom.getId());
