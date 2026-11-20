@@ -17,9 +17,11 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User>{
     Optional<User> findByEmail(String email);
     Optional<User> findByIdAndIsDeletedFalse(Long userId);
+    Optional<User> findByHomeroomClassroomIdAndIsDeletedFalse(Long classroomId);
     boolean existsByEmail(String email);
     boolean existsByIdAndIsDeletedFalse(Long userId);
     boolean existsByClassroomIdAndIsDeletedFalse(Long classroomId);
+    boolean existsByHomeroomClassroomIdAndIsDeletedFalse(Long classroomId);
     boolean existsByDepartmentIdAndIsDeletedFalse(Long departmentId);
     boolean existsByIdAndDepartmentIdAndIsDeletedFalse(Long userId, Long departmentId);
     boolean existsByDepartmentIdAndRoleAndIsDeletedFalse(Long departmentId, RoleType role);

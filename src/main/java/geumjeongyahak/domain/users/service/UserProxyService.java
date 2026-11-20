@@ -47,7 +47,11 @@ public class UserProxyService {
     public boolean existsByClassroomId(Long classroomId) {
         return userRepository.existsByClassroomIdAndIsDeletedFalse(classroomId);
     }
-    
+
+    @Transactional(readOnly = true)
+    public boolean existsByHomeroomClassroomId(Long classroomId) {
+        return userRepository.existsByHomeroomClassroomIdAndIsDeletedFalse(classroomId);
+    }
 
     @Transactional(readOnly = true)
     public boolean existsByIdAndDepartmentId(Long userId, Long departmentId) {

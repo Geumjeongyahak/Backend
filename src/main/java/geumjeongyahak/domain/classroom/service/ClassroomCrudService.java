@@ -160,5 +160,11 @@ public class ClassroomCrudService {
                 "기본 분반으로 사용 중인 사용자가 있는 분반은 삭제할 수 없습니다."
             );
         }
+        if (userProxyService.existsByHomeroomClassroomId(classroomId)) {
+            throw new BusinessException(
+                CommonErrorCode.INVALID_STATE,
+                "담임 업무분장으로 사용 중인 분반은 삭제할 수 없습니다."
+            );
+        }
     }
 }
