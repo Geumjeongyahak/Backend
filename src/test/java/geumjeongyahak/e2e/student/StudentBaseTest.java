@@ -22,14 +22,17 @@ public abstract class StudentBaseTest extends BaseE2ETest {
     public static final String TEST_VOLUNTEER_USERNAME = "volunteer1234";
     public static final String TEST_GUEST_USERNAME = "studentGuest1234";
     public static final String TEST_STUDENT_WRITER_USERNAME = "studentWriter1234";
+    public static final String TEST_STUDENT_MANAGER_USERNAME = "studentManager1234";
     protected static final Long DEFAULT_CLASSROOM_ID = 1L;
     protected static final String DEFAULT_CLASSROOM_NAME = "벚꽃반";
     private static final String STUDENT_WRITE_PERMISSION = "student:write:*";
+    private static final String STUDENT_MANAGE_PERMISSION = "student:manage:*";
 
     protected String adminAccessToken;
     protected String volunteerAccessToken;
     protected String guestAccessToken;
     protected String studentWriteAccessToken;
+    protected String studentManageAccessToken;
 
     @Autowired
     private UserPermissionRepository userPermissionRepository;
@@ -51,6 +54,11 @@ public abstract class StudentBaseTest extends BaseE2ETest {
         userPermissionRepository.findByUserIdAndPermissionCode(studentWriter.getId(), STUDENT_WRITE_PERMISSION)
             .orElseGet(() -> userPermissionRepository.save(new UserPermission(studentWriter, STUDENT_WRITE_PERMISSION)));
         this.studentWriteAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_STUDENT_WRITER_USERNAME);
+
+        User studentManager = this.userTestHelper.createTestUser(TEST_STUDENT_MANAGER_USERNAME, RoleType.GUEST);
+        userPermissionRepository.findByUserIdAndPermissionCode(studentManager.getId(), STUDENT_MANAGE_PERMISSION)
+            .orElseGet(() -> userPermissionRepository.save(new UserPermission(studentManager, STUDENT_MANAGE_PERMISSION)));
+        this.studentManageAccessToken = userTestHelper.generateAccessTokenByUserKey(TEST_STUDENT_MANAGER_USERNAME);
     }
 
     protected StudentResponse createStudent(String name, String phoneNumber) {
