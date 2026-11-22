@@ -11,6 +11,7 @@ import geumjeongyahak.domain.subject.event.SubjectDeletedEvent;
 import geumjeongyahak.domain.subject.event.SubjectScheduleRecreatedEvent;
 import geumjeongyahak.domain.subject.event.SubjectScheduleUpdatedEvent;
 import geumjeongyahak.domain.subject.event.SubjectTeacherAssignedEvent;
+import geumjeongyahak.domain.subject.event.SubjectsCopiedEvent;
 import geumjeongyahak.domain.subject.event.SubjectTeacherUnassignedEvent;
 
 @Slf4j
@@ -33,6 +34,12 @@ public class SubjectEventHandler {
             event.getEndTime(),
             event.getPeriod()
         );
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void handleSubjectsCopied(SubjectsCopiedEvent event) {
+        log.info("시간표 복사 이벤트 처리 - 수업 자동 생성 (과목={}건)", event.getSubjects().size());
+        scheduleService.createLessonsForAll(event.getSubjects());
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
