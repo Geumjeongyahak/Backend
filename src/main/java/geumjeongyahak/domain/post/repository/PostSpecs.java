@@ -6,6 +6,8 @@ import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.post.entity.Post;
 import geumjeongyahak.domain.post.enums.PostStatus;
 
+import java.util.Collection;
+
 public final class PostSpecs {
 
     private PostSpecs() {
@@ -55,6 +57,14 @@ public final class PostSpecs {
 
     public static Specification<Post> hasChannelType(ChannelType channelType) {
         return (root, query, cb) -> cb.equal(root.get("channel").get("channelType"), channelType);
+    }
+
+    public static Specification<Post> hasChannelTypeIn(Collection<ChannelType> channelTypes) {
+        return (root, query, cb) -> root.get("channel").get("channelType").in(channelTypes);
+    }
+
+    public static Specification<Post> hasChannelTypeNotIn(Collection<ChannelType> channelTypes) {
+        return (root, query, cb) -> cb.not(root.get("channel").get("channelType").in(channelTypes));
     }
 
     public static Specification<Post> hasChannelRefId(Long refId) {
