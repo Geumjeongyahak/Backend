@@ -171,6 +171,7 @@ public class LocalAuthService {
             );
             throw new InvalidRefreshTokenException();
         }
+        refreshTokenService.deleteRefreshToken(request.refreshToken());
         TokenResponse tokenResponse = createTokenResponse(user, credentialId);
 
         log.info("토큰 재발급 성공: credentialId={}, userId={}", credentialId, user.getId());

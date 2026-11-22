@@ -9,6 +9,8 @@ public interface MeetingRecordAttachmentRepository extends JpaRepository<Meeting
 
     boolean existsByMeetingRecordIdAndFileId(Long meetingRecordId, UUID fileId);
 
+    boolean existsByFileIdAndMeetingRecordIsDeletedFalse(UUID fileId);
+
     long countByMeetingRecordId(Long meetingRecordId);
 
     Optional<MeetingRecordAttachment> findByMeetingRecordIdAndFileId(Long meetingRecordId, UUID fileId);

@@ -13,7 +13,9 @@ import org.springframework.data.repository.query.Param;
 import geumjeongyahak.domain.post.entity.Post;
 import geumjeongyahak.domain.post.enums.PostStatus;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificationExecutor<Post> {
 
@@ -41,6 +43,22 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     @Modifying
     @Query("update Post p set p.viewCount = p.viewCount + 1 where p.id = :id")
     void incrementViewCount(@Param("id") Long id);
+
+    /** 첨부 다운로드 권한용 — 이 파일을 첨부(post_attachments)나 이미지(post_files)로 단, 삭제되지 않은 글 */
+    @Query("""
+        select p.status as status, p.channel.id as channelId, p.author.id as authorId
+        from Post p
+        where p.isDeleted = false
+          and (exists (select 1 from PostAttachment pa where pa.post = p and pa.file.id = :fileId)
+            or exists (select 1 from PostFile pf where pf.post = p and pf.file.id = :fileId))
+        """)
+    List<FileHolder> findFileHoldersByFileId(@Param("fileId") UUID fileId);
+
+    interface FileHolder {
+        PostStatus getStatus();
+        Long getChannelId();
+        Long getAuthorId();
+    }
 
     @Query("select p.author.id from Post p where p.id = :id and p.isDeleted = false")
     Optional<Long> findAuthorIdById(@org.springframework.data.repository.query.Param("id") Long id);

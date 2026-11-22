@@ -18,6 +18,8 @@ public interface FileRepository extends JpaRepository<File, UUID> {
 
     Optional<File> findByPublicUrlAndIsGoogleDriveTrue(String publicUrl);
 
+    Optional<File> findFirstByPublicUrlAndStorageKeyStartingWithAndIsDeletedFalse(String publicUrl, String storageKeyPrefix);
+
     List<File> findAllByIdInAndIsDeletedFalse(Collection<UUID> ids);
 
     List<File> findByIsDeletedTrueAndDeletedAtBefore(LocalDateTime threshold);

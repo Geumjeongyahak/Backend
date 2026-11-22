@@ -7,7 +7,7 @@ work-an-issue <이슈 번호>
 **성질: 자동.** 사람이 봐야 하는 자리는 `plan` 게이트 하나다. 나머지는 막히면 부른다.
 
 ```
-05-issue ──▶ 10-plan ──[게이트 plan]──▶ 20-implement ──▶ 30-test ──▶ 40-review
+05-issue ──▶ 10-plan ──[게이트 plan]──▶ 20-implement ──▶ 30-test ──▶ 35-rules ──▶ 40-review
                  ▲                            ▲                          │
                  └────────── 다시 설계 ────────┴───── P1·P2 있으면 ────────┘
 ```
@@ -167,6 +167,26 @@ scripts/harness/verify.sh              # 그다음 전체
 **리뷰에 보내기 전에 diff를 한 번 훑는다.** 볼 목록은
 [`rules/diff-signals.md`](../rules/diff-signals.md)에 있다. 걸린 자리는 왜 괜찮은지를
 PR의 `리뷰어에게`에 적는다.
+
+### 35 — 규칙 1차 검증 (codex 전에)
+
+codex는 다른 눈이지만 이 레포의 규칙을 다 알지는 못한다. **규칙으로 걸러지는 것은 codex에
+보내기 전에 스스로 거른다.** 그래야 codex 회차가 규칙 위반이 아니라 설계·상호작용을 본다.
+(2026-10-01 사용자 지시, #244부터)
+
+`dev` 대비 diff 전체를 아래 문서와 나란히 놓고 항목마다 «지킴 / 어김 → 고침 / 해당 없음»을
+판정한다. 근거는 파일:줄이나 명령 출력으로 단다.
+
+| 문서 | 볼 것 |
+|---|---|
+| [`CLAUDE.md`](../../../../CLAUDE.md) | 도메인 경계(조회는 Proxy, 부수 효과는 이벤트, 남의 Repository 직접 주입 금지), 응답은 `*Response` record·Entity 미노출, `BaseEntity`, 권한 표기, 커밋 scope |
+| [`rules/writing-a-plan.md`](../rules/writing-a-plan.md) | 계획의 실패 경로·질의·판정 기준이 구현과 맞나. 구현 중 바뀐 것은 `plan.md`에 적었나 |
+| [`rules/changing-code.md`](../rules/changing-code.md) | 고친 공유 메서드·DTO의 호출자를 다 셌나, 공유 지점 한 곳을 고쳤나, 범위 밖 변경이 섞였나, 필요 없는 것을 만들었나 |
+| [`rules/testing.md`](../rules/testing.md) | 새 테스트가 고치기 전에 실패했나, 목 값을 되읽지 않나, 권한 분기는 통과·거절 둘 다, 목록은 질의 수, 날짜는 미래 기준 |
+| [`rules/diff-signals.md`](../rules/diff-signals.md) | 반복문 안 질의, 전체 읽고 메모리 자르기, 트랜잭션 안 외부 호출, 락 없는 확인 후 변경, 인자 없는 `now()`, 원인 버리는 `catch` |
+
+결과는 `docs/issues/<번호>-*/review.md`의 `## 규칙 1차 검증` 표에 남긴다. «어김»은 고친 뒤
+40으로 간다. 고치지 않기로 한 것은 이유를 PR `리뷰어에게`에 옮긴다.
 
 ### 40 — 리뷰
 

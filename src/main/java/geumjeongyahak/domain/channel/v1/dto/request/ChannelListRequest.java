@@ -4,13 +4,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.domain.Sort;
-import geumjeongyahak.common.exception.BadRequestException;
-import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.validation.annotation.ValidChannelBindingType;
 import geumjeongyahak.common.validation.annotation.ValidChannelType;
 import geumjeongyahak.common.validation.annotation.ValidSortField;
+import geumjeongyahak.domain.base.dto.request.SortOrders;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -100,7 +98,7 @@ public class ChannelListRequest {
     private String sort;
 
     public Sort toSort() {
-        List<Sort.Order> orders = toSortOrders(this.sort);
+        List<Sort.Order> orders = SortOrders.parse(this.sort);
         if (orders.isEmpty()) {
             orders = List.of(
                     Sort.Order.desc("createdAt"),
@@ -108,38 +106,5 @@ public class ChannelListRequest {
             );
         }
         return Sort.by(orders);
-    }
-
-    private List<Sort.Order> toSortOrders(String sortFields) {
-        if (sortFields == null || sortFields.isEmpty()) {
-            return List.of();
-        }
-        List<Sort.Order> orders = new ArrayList<>();
-        String[] sorts = sortFields.split(";");
-        for (String sort : sorts) {
-            if (sort.isEmpty()) {
-                continue;
-            }
-            String[] parts = sort.split(",");
-            if (parts.length != 2) {
-                throw new BadRequestException(
-                        CommonErrorCode.INVALID_INPUT,
-                        "정렬 조건은 '필드명,방향' 형식이어야 합니다: " + sort
-                );
-            }
-            String field = parts[0].trim();
-            String direction = parts[1].trim().toUpperCase();
-            if (direction.equals("ASC")) {
-                orders.add(Sort.Order.asc(field));
-            } else if (direction.equals("DESC")) {
-                orders.add(Sort.Order.desc(field));
-            } else {
-                throw new BadRequestException(
-                        CommonErrorCode.INVALID_INPUT,
-                        "정렬 방향은 ASC 또는 DESC만 사용할 수 있습니다: " + sort
-                );
-            }
-        }
-        return orders;
     }
 }

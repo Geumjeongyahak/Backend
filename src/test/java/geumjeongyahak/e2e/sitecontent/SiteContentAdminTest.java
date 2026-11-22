@@ -281,6 +281,110 @@ class SiteContentAdminTest extends SiteContentBaseTest {
     }
 
     @Test
+    @DisplayName("fileId 없이 업로드 URL만 보낸 사진도 파일과 연결되어 수정에서 빼면 soft delete 된다 (#244)")
+    void updateHistory_PhotoWithoutFileId_LinkedBySrcAndSoftDeleted() {
+        File file = saveSiteContentImageFile("https://example.com/history-" + UUID.randomUUID() + ".png");
+        Integer id = createHistoryWithPhotoSrcOnly(file.getPublicUrl());
+
+        Map<String, Object> updateRequest = new HashMap<>();
+        updateRequest.put("title", "금정열린배움터 시작");
+        updateRequest.put("historyDate", "1997-01-01");
+        updateRequest.put("photos", List.of());
+
+        given()
+            .contentType(ContentType.JSON)
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .body(updateRequest)
+        .when()
+            .put("/history/{id}", id)
+        .then()
+            .statusCode(200);
+
+        org.assertj.core.api.Assertions.assertThat(fileRepository.findById(file.getId()).orElseThrow().isDeleted())
+            .isTrue();
+    }
+
+    @Test
+    @DisplayName("fileId 없이 업로드 URL만 보낸 사진 파일은 연혁 삭제 시 soft delete 된다 (#244)")
+    void deleteHistory_PhotoWithoutFileId_SoftDeleted() {
+        File file = saveSiteContentImageFile("https://example.com/history-" + UUID.randomUUID() + ".png");
+        Integer id = createHistoryWithPhotoSrcOnly(file.getPublicUrl());
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/history/{id}", id)
+        .then()
+            .statusCode(204);
+
+        org.assertj.core.api.Assertions.assertThat(fileRepository.findById(file.getId()).orElseThrow().isDeleted())
+            .isTrue();
+    }
+
+    @Test
+    @DisplayName("다른 곳(게시글 등)에 올린 파일의 URL을 연혁 사진으로 써도 그 파일은 연결·삭제되지 않는다 (#244)")
+    void updateHistory_OtherResourceFileUrl_NotLinkedNorDeleted() {
+        File postImage = fileRepository.save(File.builder()
+            .storageKey("posts/" + UUID.randomUUID() + ".png")
+            .bucket("test-bucket")
+            .originalName("post.png")
+            .contentType("image/png")
+            .fileSize(10L)
+            .ext("png")
+            .publicUrl("https://example.com/post-" + UUID.randomUUID() + ".png")
+            .build());
+        Integer id = createHistoryWithPhotoSrcOnly(postImage.getPublicUrl());
+
+        Map<String, Object> updateRequest = new HashMap<>();
+        updateRequest.put("title", "금정열린배움터 시작");
+        updateRequest.put("historyDate", "1997-01-01");
+        updateRequest.put("photos", List.of());
+
+        given()
+            .contentType(ContentType.JSON)
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .body(updateRequest)
+        .when()
+            .put("/history/{id}", id)
+        .then()
+            .statusCode(200);
+
+        org.assertj.core.api.Assertions.assertThat(fileRepository.findById(postImage.getId()).orElseThrow().isDeleted())
+            .isFalse();
+    }
+
+    @Test
+    @DisplayName("업로드 파일이 아닌 외부 이미지 URL 사진은 파일 없이 저장된다 (#244)")
+    void createHistory_ExternalPhotoUrl_StaysWithoutFile() {
+        Integer id = createHistoryWithPhotoSrcOnly("https://external.example.org/photo-" + UUID.randomUUID() + ".jpg");
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/history/{id}", id)
+        .then()
+            .statusCode(204);
+    }
+
+    private Integer createHistoryWithPhotoSrcOnly(String src) {
+        Map<String, Object> createRequest = new HashMap<>();
+        createRequest.put("title", "금정열린배움터 시작");
+        createRequest.put("historyDate", "1997-01-01");
+        createRequest.put("photos", List.of(Map.of("src", src, "alt", "업로드 사진")));
+
+        return given()
+            .contentType(ContentType.JSON)
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+            .body(createRequest)
+        .when()
+            .post("/history")
+        .then()
+            .statusCode(201)
+            .extract()
+            .path("id");
+    }
+
+    @Test
     @DisplayName("연혁 생성 요청은 title과 photos.src를 검증한다")
     void createHistory_InvalidRequest_BadRequest() {
         Map<String, Object> blankTitleRequest = new HashMap<>();
@@ -778,6 +882,10 @@ class SiteContentAdminTest extends SiteContentBaseTest {
     }
 
     private File saveSiteContentImageFile() {
+        return saveSiteContentImageFile("https://example.com/history.png");
+    }
+
+    private File saveSiteContentImageFile(String publicUrl) {
         return fileRepository.save(File.builder()
             .storageKey("site-contents/" + UUID.randomUUID() + ".png")
             .bucket("test-bucket")
@@ -785,7 +893,7 @@ class SiteContentAdminTest extends SiteContentBaseTest {
             .contentType("image/png")
             .fileSize(10L)
             .ext("png")
-            .publicUrl("https://example.com/history.png")
+            .publicUrl(publicUrl)
             .build());
     }
 

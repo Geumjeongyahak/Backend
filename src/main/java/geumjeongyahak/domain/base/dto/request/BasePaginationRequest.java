@@ -8,7 +8,6 @@ import lombok.Setter;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -40,24 +39,6 @@ public abstract class BasePaginationRequest {
     }
 
     protected List<Sort.Order> toSortOrders(String sortFields) {
-        if (sortFields == null || sortFields.isEmpty()) {
-            return List.of();
-        }
-        List<Sort.Order> orders = new ArrayList<>();
-        String[] sorts = sortFields.split(";");
-        for (String sort : sorts) {
-            if (sort.isEmpty()) {
-                continue;
-            }
-            String[] parts = sort.split(",");
-            String field = parts[0].trim();
-            String direction = parts[1].trim().toUpperCase();
-            if (direction.equals("ASC")) {
-                orders.add(Sort.Order.asc(field));
-            } else if (direction.equals("DESC")) {
-                orders.add(Sort.Order.desc(field));
-            }
-        }
-        return orders;
+        return SortOrders.parse(sortFields);
     }
 }

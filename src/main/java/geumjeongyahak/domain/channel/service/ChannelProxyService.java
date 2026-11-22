@@ -6,6 +6,7 @@ import geumjeongyahak.domain.channel.enums.ChannelBindingType;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.channel.exception.ChannelErrorCode;
 import geumjeongyahak.domain.channel.repository.ChannelRepository;
+import geumjeongyahak.common.security.service.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ChannelProxyService {
+
+    private final ChannelAccessChecker channelAccessChecker;
 
     private final ChannelRepository channelRepository;
 
@@ -41,5 +44,18 @@ public class ChannelProxyService {
         }
 
         return channel;
+    }
+
+    /**
+     * 다른 도메인이 «이 채널을 읽을 수 있나»만 물을 때 쓴다. 없거나 지운 채널이면 false.
+     * 규칙은 {@link ChannelAccessChecker}와 같다.
+     */
+    @Transactional(readOnly = true)
+    public boolean canRead(Long channelId, CustomUserDetails user) {
+        try {
+            return channelAccessChecker.can("read", channelId, user);
+        } catch (ResourceNotFoundException notFound) {
+            return false;
+        }
     }
 }

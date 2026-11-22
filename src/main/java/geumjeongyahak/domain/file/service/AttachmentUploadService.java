@@ -1,6 +1,7 @@
 package geumjeongyahak.domain.file.service;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -14,11 +15,10 @@ import geumjeongyahak.common.exception.CommonErrorCode;
 import geumjeongyahak.common.exception.ResourceNotFoundException;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.common.validation.FileValidationSupport;
-import geumjeongyahak.domain.channel.service.ChannelAccessChecker;
 import geumjeongyahak.domain.file.entity.File;
 import geumjeongyahak.domain.file.repository.FileRepository;
+import geumjeongyahak.domain.file.service.access.AttachmentReadPolicy;
 import geumjeongyahak.domain.file.v1.dto.response.FileUploadResponse;
-import geumjeongyahak.domain.post.repository.PostAttachmentRepository;
 
 @Slf4j
 @Service
@@ -32,8 +32,7 @@ public class AttachmentUploadService {
     private final FileRepository fileRepository;
     private final StorageService storageService;
     private final FileValidationSupport fileValidationSupport;
-    private final PostAttachmentRepository postAttachmentRepository;
-    private final ChannelAccessChecker channelAccessChecker;
+    private final List<AttachmentReadPolicy> readPolicies;
 
     @Transactional
     public FileUploadResponse uploadAttachment(MultipartFile file) {
@@ -97,7 +96,6 @@ public class AttachmentUploadService {
         if (userDetails != null && userDetails.isAdmin()) {
             return true;
         }
-        return postAttachmentRepository.findPublishedPostChannelIdsByFileId(fileId).stream()
-            .anyMatch(channelId -> channelAccessChecker.can("read", channelId, userDetails));
+        return readPolicies.stream().anyMatch(policy -> policy.canRead(fileId, userDetails));
     }
 }
