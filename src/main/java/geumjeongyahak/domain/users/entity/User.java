@@ -16,6 +16,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -55,7 +56,6 @@ public class User extends BaseEntity {
     @Column(length = 255, name = "profile_image_url")
     private String profileImageUrl;
 
-    @Setter
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id", nullable = true)
     private Department department;
@@ -64,6 +64,10 @@ public class User extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "classroom_id", nullable = true)
     private Classroom classroom;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "homeroom_classroom_id", unique = true)
+    private Classroom homeroomClassroom;
 
     @Setter
     @Column(length = 6, name = "resident_registration_number_prefix")
@@ -128,8 +132,26 @@ public class User extends BaseEntity {
     public void releaseTeacherProfile(LocalDate teacherEndAt) {
         this.department = null;
         this.classroom = null;
+        this.homeroomClassroom = null;
         this.teacherEndAt = teacherEndAt;
         this.role = RoleType.GUEST;
+    }
+
+    public void setDepartment(Department department) {
+        this.department = department;
+        if (department != null) {
+            this.homeroomClassroom = null;
+        }
+    }
+
+    public void assignHomeroomClassroom(Classroom classroom) {
+        validateCanTeach();
+        this.department = null;
+        this.homeroomClassroom = classroom;
+    }
+
+    public void releaseHomeroomClassroom() {
+        this.homeroomClassroom = null;
     }
 
     public String getUsername() {
@@ -159,6 +181,7 @@ public class User extends BaseEntity {
     public void softDelete() {
         this.isDeleted = true;
         this.deletedAt = LocalDateTime.now();
+        this.homeroomClassroom = null;
     }
 
     public void reactivateForSignup(String name, String phoneNumber, String residentRegistrationNumberPrefix) {
@@ -169,6 +192,7 @@ public class User extends BaseEntity {
         this.residentRegistrationNumberPrefix = residentRegistrationNumberPrefix;
         this.department = null;
         this.classroom = null;
+        this.homeroomClassroom = null;
         this.teacherStartAt = null;
         this.teacherEndAt = null;
         this.role = RoleType.GUEST;

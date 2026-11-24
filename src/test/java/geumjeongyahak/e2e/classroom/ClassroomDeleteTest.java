@@ -11,6 +11,8 @@ import geumjeongyahak.domain.channel.enums.ChannelBindingType;
 import geumjeongyahak.domain.channel.enums.ChannelType;
 import geumjeongyahak.domain.classroom.entity.Classroom;
 import geumjeongyahak.domain.classroom.enums.ClassroomType;
+import geumjeongyahak.domain.auth.enums.RoleType;
+import geumjeongyahak.domain.users.service.HomeroomAssignmentService;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,6 +24,9 @@ public class ClassroomDeleteTest extends BaseClassroomTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private HomeroomAssignmentService homeroomAssignmentService;
 
     @AfterEach
     void cleanupSubjectFixture() {
@@ -129,6 +134,38 @@ public class ClassroomDeleteTest extends BaseClassroomTest {
         .then()
             .statusCode(409)
             .log().all();
+    }
+
+    @Test
+    @DisplayName("담임 업무분장으로 사용 중인 Classroom 삭제 실패(409 Conflict)")
+    void deleteClassroom_withHomeroomAssignment_returns409() {
+        Classroom classroom = testClassroomHelper.createTestClassroom(
+            "Test Classroom Delete With Homeroom",
+            ClassroomType.WEEKDAY,
+            "담임 업무분장 연결 삭제 차단 테스트"
+        );
+        var homeroom = userTestHelper.createTestUser(
+            "classroom-delete-homeroom@test.com",
+            "담임 분반 삭제 테스트 사용자",
+            "password123!",
+            RoleType.VOLUNTEER
+        );
+        homeroomAssignmentService.assign(homeroom.getId(), classroom.getId());
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .delete("/{id}", classroom.getId())
+        .then()
+            .statusCode(409)
+            .log().all();
+
+        given()
+            .header(AUTH_HEADER, getAuthHeader(adminAccessToken))
+        .when()
+            .get("/{id}", classroom.getId())
+        .then()
+            .statusCode(200);
     }
 
     @Test

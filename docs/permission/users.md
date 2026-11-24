@@ -25,7 +25,7 @@
 | `hasRole('ADMIN') or hasAuthority('user:read:*')` | `GET /api/v1/users/{userId}` |
 | `hasRole('ADMIN') or hasAuthority('user:read:*') or hasAuthority('user:grant:*')` | `GET /api/v1/users/{userId}/permissions` |
 | `hasRole('ADMIN') or hasAuthority('user:write:*')` | `POST /api/v1/users` |
-| `hasRole('ADMIN') or hasAuthority('user:manage:*')` | `PATCH /api/v1/users/{userId}`, `DELETE /api/v1/users/{userId}` |
+| `hasRole('ADMIN') or hasAuthority('user:manage:*')` | `PATCH /api/v1/users/{userId}`, `DELETE /api/v1/users/{userId}`, `PUT/DELETE /api/v1/users/{userId}/classroom`, `DELETE /api/v1/users/{userId}/department`, `PUT/DELETE /api/v1/users/{userId}/homeroom` |
 | `hasRole('ADMIN') or hasAuthority('user:grant:*')` | `POST /api/v1/users/{userId}/permissions`, `DELETE /api/v1/users/{userId}/permissions` |
 
 ## API별 메모
@@ -38,6 +38,8 @@
 | `GET /api/v1/users/{userId}` | 특정 사용자 조회 | 목록 조회와 같은 읽기 권한으로 관리 |
 | `POST /api/v1/users` | 사용자 생성 | 전역 생성 권한 필요 |
 | `PATCH /api/v1/users/{userId}` | 특정 사용자 수정 | 전역 관리 권한 필요. `role=GUEST`는 교원 해제로 처리 |
+| `PUT /api/v1/users/{userId}/homeroom` | 담임 업무분장 지정/변경 | 기존 담임과 대상 사용자의 부서 업무분장을 자동 해제 |
+| `DELETE /api/v1/users/{userId}/homeroom` | 담임 업무분장 해제 | 대표 분반과 담당 수업은 유지 |
 | `DELETE /api/v1/users/{userId}` | 특정 사용자 삭제 | 전역 관리 권한 필요 |
 | `GET /api/v1/users/{userId}/permissions` | 특정 사용자 직접 권한 조회 | `user_permissions`에 저장된 수동 예외 권한만 조회 |
 | `POST /api/v1/users/{userId}/permissions` | 특정 사용자 직접 권한 부여 | `user:grant:*` 권한으로만 허용 |
@@ -51,7 +53,7 @@
 | --- | --- | --- |
 | `user:read:*` | 전체 사용자 및 특정 사용자 상세 조회 | `GET /api/v1/users`, `GET /api/v1/users/{userId}` |
 | `user:write:*` | 사용자 생성 | `POST /api/v1/users` |
-| `user:manage:*` | 사용자 수정/삭제 | `PATCH /api/v1/users/{userId}`, `DELETE /api/v1/users/{userId}` |
+| `user:manage:*` | 사용자 수정/삭제 및 소속·업무분장 관리 | `PATCH /api/v1/users/{userId}`, `DELETE /api/v1/users/{userId}`, `PUT/DELETE /api/v1/users/{userId}/classroom`, `DELETE /api/v1/users/{userId}/department`, `PUT/DELETE /api/v1/users/{userId}/homeroom` |
 | `user:grant:*` | 사용자 직접 권한 조회/부여/회수 | `GET /api/v1/users/{userId}/permissions`, `POST /api/v1/users/{userId}/permissions`, `DELETE /api/v1/users/{userId}/permissions` |
 
 ## 설계 메모
@@ -61,7 +63,7 @@
 - `user:grant:*`와 `department:grant:*`는 운영상 ADMIN 전용 예외 권한으로 취급합니다.
 - 사용자 상세 응답의 `permissions`에는 직접 권한(`MANUAL`)과 부서 직책 권한(`MEMBER`, `MANAGER`)이 함께 표시될 수 있습니다.
 - 사용자 직접 권한 API는 `user_permissions`만 다루며, 부서 직책 권한은 `department_permissions`에서 관리합니다.
-- `role=GUEST`로 사용자 수정 시 교원 해제로 처리하여 소속 부서, 배정 분반, 직접 권한을 회수합니다.
+- `role=GUEST`로 사용자 수정 시 교원 해제로 처리하여 소속 부서, 대표 분반, 담임 업무분장, 직접 권한을 회수합니다.
 
 ## 코드 기준 위치
 

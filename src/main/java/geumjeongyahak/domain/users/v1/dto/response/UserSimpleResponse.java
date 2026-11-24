@@ -29,6 +29,9 @@ public record UserSimpleResponse(
     @Schema(description = "배정 분반 ID. 배정 분반이 없으면 null일 수 있습니다.", example = "1", nullable = true)
     Long classroomId,
 
+    @Schema(description = "부서 또는 담임 업무분장. 미지정이면 null입니다.", nullable = true)
+    UserWorkAssignmentResponse workAssignment,
+
     @Schema(description = "교사로 담당 중인 활성 과목 수", example = "2")
     long teacherAssignmentCount,
 
@@ -43,7 +46,7 @@ public record UserSimpleResponse(
         String role,
         Long departmentId
     ) {
-        this(id, name, email, phoneNumber, role, departmentId, null, 0L, List.of());
+        this(id, name, email, phoneNumber, role, departmentId, null, null, 0L, List.of());
     }
 
     public static UserSimpleResponse from(User user) {
@@ -59,6 +62,7 @@ public record UserSimpleResponse(
             user.getRole().name(),
             user.getDepartment() != null ? user.getDepartment().getId() : null,
             user.getClassroom() != null ? user.getClassroom().getId() : null,
+            UserWorkAssignmentResponse.from(user),
             teacherAssignments.size(),
             teacherAssignments.stream()
                 .map(TeacherAssignmentResponse::classroomName)

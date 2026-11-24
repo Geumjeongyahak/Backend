@@ -7,7 +7,7 @@
         <div class="page-title">
             <div>
                 <h1>사용자</h1>
-                <p>계정, 역할, 소속 부서, 직접 권한을 필터링해 조회합니다.</p>
+                <p>계정, 역할, 업무분장, 직접 권한을 필터링해 조회합니다.</p>
             </div>
             <a class="button" th:href="@{/admin/user/users/new}">사용자 등록</a>
         </div>
@@ -30,7 +30,7 @@
                     <option th:each="department : ${departments}" th:value="${department.id}" th:text="${department.name}" th:selected="${filter.departmentId == department.id}">부서</option>
                 </select>
             </label>
-            <label>분반
+            <label>대표 분반
                 <select name="classroomId">
                     <option value="">전체</option>
                     <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}" th:selected="${filter.classroomId == classroom.id}">분반</option>
@@ -53,7 +53,7 @@
                     <option value="createdAt,ASC" th:selected="${filter.sort == 'createdAt,ASC'}">생성일 오래된순</option>
                     <option value="name,ASC" th:selected="${filter.sort == 'name,ASC'}">이름 오름차순</option>
                     <option value="role,ASC" th:selected="${filter.sort == 'role,ASC'}">역할 오름차순</option>
-                    <option value="departmentName,ASC" th:selected="${filter.sort == 'departmentName,ASC'}">부서 오름차순</option>
+                    <option value="workAssignmentName,ASC" th:selected="${filter.sort == 'workAssignmentName,ASC'}">업무분장 오름차순</option>
                 </select>
             </label>
             <button class="button" type="submit">조회</button>
@@ -70,8 +70,8 @@
                         <th>이메일</th>
                         <th>연락처</th>
                         <th>역할</th>
-                        <th>부서</th>
-                        <th>분반</th>
+                        <th>업무분장</th>
+                        <th>대표 분반</th>
                         <th>직접 권한</th>
                         <th>운영</th>
                         <th>생성일</th>
@@ -85,8 +85,9 @@
                         <td th:text="${user.phoneNumber ?: '-'}">010</td>
                         <td><span class="pill" th:text="${user.role}">ADMIN</span></td>
                         <td>
-                            <a class="link" th:if="${user.departmentId != null}" th:href="@{/admin/department/departments/{departmentId}(departmentId=${user.departmentId})}" th:text="${user.departmentName}">학사</a>
-                            <span th:if="${user.departmentId == null}">-</span>
+                            <a class="link" th:if="${user.workAssignmentType != null && user.workAssignmentType.name() == 'DEPARTMENT'}" th:href="@{/admin/department/departments/{departmentId}(departmentId=${user.departmentId})}" th:text="${user.workAssignmentName}">학사</a>
+                            <span class="pill" th:if="${user.workAssignmentType != null && user.workAssignmentType.name() == 'HOMEROOM'}" th:text="${user.workAssignmentName}">담임</span>
+                            <span th:if="${user.workAssignmentType == null}">-</span>
                         </td>
                         <td>
                             <a class="link" th:if="${user.classroomId != null}" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${user.classroomId})}" th:text="${user.classroomName}">벚꽃반</a>

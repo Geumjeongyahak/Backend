@@ -18,6 +18,7 @@
 | 필드 | 의미 | 화면 예시 |
 |------|------|-----------|
 | `user.classroomId`, `user.classroomName` | 기본/소속 분반 | 사용자 기본 정보 |
+| `user.workAssignment` | 부서 또는 담임 업무분장 | 업무분장 표시 |
 | `user.teacherAssignments[]` | 실제 담당 중인 시간표 슬롯들 | 교사 담당 수업/분반 목록 |
 | `user.teacherAssignmentClassroomNames[]` | 실제 담당 분반명 요약 | 사용자 목록 badge |
 
@@ -246,6 +247,8 @@ PATCH /api/v1/admin/teacher-applications/{applicationId}/approve
 - 사용자 기본 정보에는 `classroomName`을 표시합니다.
 - 교사 담당 영역에는 `teacherAssignments`를 표시합니다.
 - 기본 분반과 담당 분반이 다를 수 있습니다.
+- 담임 분반은 `workAssignment.type === 'HOMEROOM'`일 때만 `workAssignment.classroomId`로 확인합니다.
+- 담임 업무분장과 시간표 배정은 독립적입니다. 자세한 내용은 [담임 업무분장 프론트 가이드](./HomeroomAssignmentFrontendGuide.md)를 참고합니다.
 
 ## 5. 내 담당 시간표 조회
 

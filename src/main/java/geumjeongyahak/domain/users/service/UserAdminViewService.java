@@ -63,6 +63,7 @@ public class UserAdminViewService {
             "email", Comparator.comparing(AdminUserRow::email, Comparator.nullsLast(String::compareToIgnoreCase)),
             "role", Comparator.comparing(AdminUserRow::role, Comparator.nullsLast(String::compareToIgnoreCase)),
             "departmentName", Comparator.comparing(AdminUserRow::departmentName, Comparator.nullsLast(String::compareToIgnoreCase)),
+            "workAssignmentName", Comparator.comparing(AdminUserRow::workAssignmentName, Comparator.nullsLast(String::compareToIgnoreCase)),
             "classroomName", Comparator.comparing(AdminUserRow::classroomName, Comparator.nullsLast(String::compareToIgnoreCase)),
             "createdAt", Comparator.comparing(AdminUserRow::createdAt, Comparator.nullsLast(LocalDateTime::compareTo))
         ), "createdAt,DESC");
@@ -190,6 +191,16 @@ public class UserAdminViewService {
             null,
             classroomId
         ));
+    }
+
+    @Transactional
+    public void assignHomeroom(Long userId, Long classroomId) {
+        userCrudService.assignHomeroom(userId, classroomId);
+    }
+
+    @Transactional
+    public void releaseHomeroom(Long userId) {
+        userCrudService.releaseHomeroom(userId);
     }
 
     @Transactional
