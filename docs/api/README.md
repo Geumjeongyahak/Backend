@@ -10,6 +10,7 @@
 - [Subjects](./Subjects.md)
 - [TeacherApplications](./TeacherApplications.md)
 - [TeacherAssignmentFrontendGuide](./TeacherAssignmentFrontendGuide.md)
+- [HomeroomAssignmentFrontendGuide](./HomeroomAssignmentFrontendGuide.md)
 - [Lessons](./Lessons.md)
 - [Events](./Events.md)
 - [DailySchedules](./DailySchedules.md)

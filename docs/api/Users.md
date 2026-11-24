@@ -1,6 +1,6 @@
 # User API
 
-사용자 정보 조회, 생성, 수정, 삭제 및 부서/권한 관리를 위한 API 명세입니다.
+사용자 정보 조회, 생성, 수정, 삭제 및 업무분장/권한 관리를 위한 API 명세입니다.
 
 ---
 
@@ -51,8 +51,13 @@
         "email": "user@example.com",
         "phoneNumber": "010-1234-5678",
         "role": "VOLUNTEER",
-        "departmentId": 2,
         "classroomId": 1,
+        "workAssignment": {
+          "type": "HOMEROOM",
+          "name": "담임",
+          "classroomId": 2,
+          "classroomName": "장미반"
+        },
         "teacherAssignmentCount": 2,
         "teacherAssignmentClassroomNames": ["국화반", "장미반"]
       }
@@ -89,6 +94,11 @@
       "id": 1,
       "name": "국화반",
       "type": "WEEKDAY"
+    },
+    "workAssignment": {
+      "type": "DEPARTMENT",
+      "name": "교육연구부",
+      "departmentId": 2
     },
     "teacherStartAt": "2026-06-01",
     "teacherEndAt": "2026-12-31",
@@ -142,7 +152,16 @@
   }
 ```
 
-`classroom`은 사용자의 기본/소속 분반입니다. 실제 담당 분반은 `teacherAssignments[].classroomId`로 확인합니다.
+`classroom`은 사용자의 대표 분반입니다. 담임 분반은 `workAssignment.type=HOMEROOM`일 때
+`workAssignment.classroomId`로 확인하며, 실제 담당 수업의 분반은 `teacherAssignments[].classroomId`로 확인합니다.
+세 값은 서로 독립적이므로 같다고 가정하면 안 됩니다.
+
+`workAssignment`는 사용자의 업무분장을 표현합니다.
+
+- 부서 업무분장: `type=DEPARTMENT`, `name=부서명`, `departmentId` 제공
+- 담임 업무분장: `type=HOMEROOM`, `name=담임`, `classroomId`, `classroomName` 제공
+- 업무분장 미지정: `workAssignment` 필드가 응답에서 생략될 수 있음
+
 담당 중인 활성 과목이 있는 사용자는 삭제하거나 `GUEST`처럼 교사 배정이 불가능한 역할로 변경할 수 없습니다. 먼저 과목 담당 교사를 해제해야 합니다.
 
 ### 1.3. 사용자 본인 조회
@@ -189,7 +208,7 @@
 - **Response**: `200 OK` (UserDetailResponse)
 - **Side Effect**:
   - `role`을 `GUEST`로 변경하면 교원 해제로 처리합니다.
-  - 교원 해제 시 `departmentId`, `classroomId`는 `null`이 되고 `teacherEndAt`은 처리일로 설정됩니다.
+  - 교원 해제 시 부서·대표 분반·담임 업무분장이 해제되고 `teacherEndAt`은 처리일로 설정됩니다.
   - 교원 해제 시 `user_permissions`의 직접 권한이 모두 삭제됩니다.
   - `role=GUEST` 요청에 `departmentId`나 `classroomId`를 함께 보내도 소속/분반은 비워진 상태로 유지됩니다.
 
@@ -207,7 +226,39 @@
   ```
 - **Response**: `200 OK` (UserDetailResponse)
 
-### 1.7. 사용자 계정 비활성화
+### 1.7. 사용자 담임 업무분장 지정/변경
+
+사용자를 특정 분반의 담임으로 지정하거나 담임 분반을 변경합니다.
+
+- **URL**: `/api/v1/users/{userId}/homeroom`
+- **Method**: `PUT`
+- **Authorization**: `ADMIN` 또는 `user:manage:*`
+- **Request Body**: (AssignUserHomeroomRequest)
+  ```json
+  {
+    "classroomId": 2
+  }
+  ```
+- **Response**: `200 OK` (UserDetailResponse)
+- **처리 방식**:
+  - 활성 사용자와 활성 분반만 지정할 수 있습니다.
+  - 같은 분반에 기존 담임이 있으면 기존 담임은 자동으로 해제됩니다.
+  - 대상 사용자의 기존 부서 업무분장은 자동으로 해제됩니다.
+  - `VOLUNTEER`, `MANAGER`, `ADMIN` 역할만 담임으로 지정할 수 있습니다.
+  - 대표 분반과 담당 과목은 변경하지 않습니다.
+
+### 1.8. 사용자 담임 업무분장 해제
+
+- **URL**: `/api/v1/users/{userId}/homeroom`
+- **Method**: `DELETE`
+- **Authorization**: `ADMIN` 또는 `user:manage:*`
+- **Response**: `204 No Content`
+- **처리 방식**:
+  - 담임 업무분장만 해제합니다.
+  - 이전 부서 업무분장을 복원하지 않습니다.
+  - 대표 분반과 담당 과목은 변경하지 않습니다.
+
+### 1.9. 사용자 계정 비활성화
 사용자 레코드와 운영 이력을 보존하면서 계정 접근을 차단합니다.
 
 - **URL**: `/api/v1/users/{userId}`
@@ -221,6 +272,7 @@
   - 활성 Push 구독을 모두 즉시 해제합니다.
   - 기존 Access Token, 로컬/관리자/Google 로그인 및 토큰 재발급을 차단합니다.
   - 사용자 상세/목록, 교사 후보, 연락망 및 운영 집계에서 제외합니다.
+  - 담임 업무분장을 해제하여 같은 분반에 후임 담임을 지정할 수 있게 합니다.
   - 게시글, 댓글, 요청, 수업 등 기존 이력의 사용자 ID와 이름은 유지합니다.
 - **제약 사항**:
   - 본인 계정은 비활성화할 수 없습니다.

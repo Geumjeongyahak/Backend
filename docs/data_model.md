@@ -32,6 +32,7 @@
 | Subjects | Lessons | subject_id | 과목별 수업 |
 | Users | Subjects | teacher_id | 봉사자가 담당하는 과목 |
 | Users | Lessons | teacher_id | 봉사자가 진행하는 수업 |
+| Classrooms | Users | classroom_id | 사용자 대표 분반 |
 | Daily Schedules | Absence Requests | daily_schedule_id | 하루 일정별 결석 요청 |
 | Lesson Exchange Requests | Lesson Exchange Proposals | request_id | 교환 요청별 제안 |
 | Classrooms | Purchase Requests | classroom_id | 분반별 기자재 구입 요청 |
@@ -49,6 +50,12 @@
 | Files | Purchase Request Payment Transactions | receipt_file_id | 구매 완료 거래 영수증 파일 |
 | Files | Purchase Request Proposal Receipts | file_id | 품의 단계 영수증 파일 |
 
+#### 1:1 관계
+
+| 엔티티 A | 엔티티 B | FK 필드 | 설명 |
+|----------|----------|---------|------|
+| Classrooms | Users | homeroom_classroom_id | 분반별 담임 업무분장, 분반당 최대 한 명 |
+
 #### N:M 관계
 
 | 엔티티 A | 엔티티 B | 조인 테이블 | 설명 |
@@ -64,6 +71,8 @@ erDiagram
     users ||--o{ user_permissions : "has"
     departments ||--o{ department_permissions : "grants by role"
     departments ||--o{ users : "has members"
+    classrooms ||--o{ users : "represents"
+    classrooms o|--o| users : "homeroom assignment"
 
     %% 분반 및 과목
     classrooms ||--o{ subjects : "contains"
@@ -108,6 +117,9 @@ erDiagram
           varchar primary_email UK
           varchar phone_number
           varchar role
+          bigint department_id FK
+          bigint classroom_id FK
+          bigint homeroom_classroom_id FK
           boolean is_deleted
           timestamp deleted_at
       }
@@ -338,17 +350,28 @@ erDiagram
 | 필드명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
 | id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | 사용자 고유 ID |
-| username | VARCHAR(50) | UNIQUE, NOT NULL | 사용자 아이디 (로그인용) |
 | name | VARCHAR(50) | NOT NULL | 사용자 실명 |
-| email | VARCHAR(100) | UNIQUE, NULL | 이메일 주소 |
-| gmail | VARCHAR(100) | UNIQUE, NULL | Gmail 주소 (OAuth) |
-| password_hash | VARCHAR(512) | NULL | 암호화된 비밀번호 |
-  | phone_number | VARCHAR(20) | NULL | 전화번호 |
-  | is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | 계정 비활성화 여부 |
-  | deleted_at | TIMESTAMP | NULL | 계정 비활성화 처리 시각 |
-  | client_id | VARCHAR(512) | NULL | OAuth Client ID |
+| primary_email | VARCHAR(100) | UNIQUE, NULL | 사용자 기본 이메일 |
+| phone_number | VARCHAR(20) | NULL | 전화번호 |
+| profile_image_url | VARCHAR(255) | NULL | 프로필 이미지 URL |
+| role | VARCHAR(20) | NOT NULL | 사용자 기본 역할 |
+| department_id | BIGINT | FOREIGN KEY, NULL | 부서 업무분장 ID |
+| classroom_id | BIGINT | FOREIGN KEY, NULL | 대표 분반 ID |
+| homeroom_classroom_id | BIGINT | FOREIGN KEY, UNIQUE, NULL | 담임 업무분장 분반 ID |
+| resident_registration_number_prefix | VARCHAR(6) | NULL | 생년월일 변환용 주민등록번호 앞자리 |
+| teacher_start_at | DATE | NULL | 교원 활동 시작일 |
+| teacher_end_at | DATE | NULL | 교원 활동 종료일 |
+| is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | 계정 비활성화 여부 |
+| deleted_at | TIMESTAMP | NULL | 계정 비활성화 처리 시각 |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정일시 |
+
+**업무분장 제약:**
+
+- `department_id`와 `homeroom_classroom_id`는 동시에 지정할 수 없습니다.
+- `homeroom_classroom_id`는 UNIQUE이므로 한 분반에는 담임을 한 명만 지정할 수 있습니다.
+- `classroom_id`는 대표 분반이며 업무분장과 독립적입니다.
+- 담임으로 배정된 분반은 삭제할 수 없습니다.
 
 ### 3.2 역할 (RoleType)
 
