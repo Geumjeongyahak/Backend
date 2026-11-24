@@ -55,6 +55,7 @@ public class UserCrudService {
     private final UserProxyService userProxyService;
     private final DepartmentPermissionProxyService departmentPermissionProxyService;
     private final UserPermissionService userPermissionService;
+    private final HomeroomAssignmentService homeroomAssignmentService;
     private final SubjectProxyService subjectProxyService;
     private final TeacherApplicationProxyService teacherApplicationProxyService;
     private final PurchaseRequestProxyService purchaseRequestProxyService;
@@ -225,6 +226,17 @@ public class UserCrudService {
 
         user.setDepartment(null);
         log.info("사용자 부서 해제 완료 - userId: {}", userId);
+    }
+
+    @Transactional
+    public UserDetailResponse assignHomeroom(Long userId, Long classroomId) {
+        User user = homeroomAssignmentService.assign(userId, classroomId);
+        return toDetailResponse(user);
+    }
+
+    @Transactional
+    public void releaseHomeroom(Long userId) {
+        homeroomAssignmentService.release(userId);
     }
 
     private UserDetailResponse toDetailResponse(User user) {

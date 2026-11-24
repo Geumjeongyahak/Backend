@@ -6,6 +6,7 @@ import geumjeongyahak.domain.base.service.PermissionRegistryViewService;
 import geumjeongyahak.domain.users.service.UserAdminViewService;
 import geumjeongyahak.domain.users.service.dto.UserFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -171,6 +172,29 @@ public class UserViewController {
     ) {
         userAdminViewService.updateClassroom(userId, classroomId);
         redirectAttributes.addFlashAttribute("message", "사용자 배정 분반을 변경했습니다.");
+        return "redirect:/admin/user/users/" + userId;
+    }
+
+    @PostMapping("/{userId}/homeroom")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:manage:*')")
+    public String assignHomeroom(
+        @PathVariable Long userId,
+        @RequestParam Long classroomId,
+        RedirectAttributes redirectAttributes
+    ) {
+        userAdminViewService.assignHomeroom(userId, classroomId);
+        redirectAttributes.addFlashAttribute("message", "담임 업무분장을 지정했습니다.");
+        return "redirect:/admin/user/users/" + userId;
+    }
+
+    @PostMapping("/{userId}/homeroom/release")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:manage:*')")
+    public String releaseHomeroom(
+        @PathVariable Long userId,
+        RedirectAttributes redirectAttributes
+    ) {
+        userAdminViewService.releaseHomeroom(userId);
+        redirectAttributes.addFlashAttribute("message", "담임 업무분장을 해제했습니다.");
         return "redirect:/admin/user/users/" + userId;
     }
 

@@ -16,6 +16,7 @@ import geumjeongyahak.domain.base.dto.response.PaginationResponse;
 import geumjeongyahak.common.security.service.CustomUserDetails;
 import geumjeongyahak.domain.users.service.UserCrudService;
 import geumjeongyahak.domain.users.v1.dto.request.AssignUserClassroomRequest;
+import geumjeongyahak.domain.users.v1.dto.request.AssignUserHomeroomRequest;
 import geumjeongyahak.domain.users.v1.dto.request.CreateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UpdateUserRequest;
 import geumjeongyahak.domain.users.v1.dto.request.UserPaginationRequest;
@@ -246,6 +247,54 @@ public class UserAdminController {
     ) {
         log.debug("DELETE /api/v1/users/{}/department - 사용자 부서 해제 요청", userId);
         userCrudService.releaseDepartment(userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:manage:*')")
+    @Operation(
+        summary = "사용자 담임 업무분장 지정/변경",
+        description = """
+            사용자를 특정 분반의 담임으로 지정합니다.
+
+            동작 방식:
+            - 활성 분반과 활성 사용자를 확인합니다.
+            - 해당 분반에 기존 담임이 있으면 자동으로 해제합니다.
+            - 사용자의 기존 부서 업무분장은 자동으로 해제됩니다.
+            - 대표 분반과 수업 담당 교사 배정은 변경하지 않습니다.
+
+            사이드 이펙트:
+            - users.homeroom_classroom_id가 요청한 분반 ID로 변경됩니다.
+            - users.department_id는 null로 변경됩니다.
+            """
+    )
+    @PutMapping("/{userId}/homeroom")
+    public ResponseEntity<UserDetailResponse> assignHomeroom(
+        @Parameter(description = "사용자 ID", example = "1")
+        @PathVariable Long userId,
+        @Valid @RequestBody AssignUserHomeroomRequest request
+    ) {
+        log.debug("PUT /api/v1/users/{}/homeroom - 담임 업무분장 지정 요청", userId);
+        return ResponseEntity.ok(userCrudService.assignHomeroom(userId, request.classroomId()));
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('user:manage:*')")
+    @Operation(
+        summary = "사용자 담임 업무분장 해제",
+        description = """
+            사용자의 담임 업무분장을 해제합니다.
+
+            사이드 이펙트:
+            - users.homeroom_classroom_id가 null로 변경됩니다.
+            - 대표 분반과 수업 담당 교사 배정은 변경하지 않습니다.
+            """
+    )
+    @DeleteMapping("/{userId}/homeroom")
+    public ResponseEntity<Void> releaseHomeroom(
+        @Parameter(description = "사용자 ID", example = "1")
+        @PathVariable Long userId
+    ) {
+        log.debug("DELETE /api/v1/users/{}/homeroom - 담임 업무분장 해제 요청", userId);
+        userCrudService.releaseHomeroom(userId);
         return ResponseEntity.noContent().build();
     }
 

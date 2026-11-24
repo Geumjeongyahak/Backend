@@ -42,6 +42,9 @@ public record UserDetailResponse(
     @Schema(description = "교원으로 배정된 분반. 교원 승인 전이거나 교원 해제 상태이면 null일 수 있습니다.", nullable = true)
     ClassroomSummaryResponse classroom,
 
+    @Schema(description = "부서 또는 담임 업무분장. 미지정이면 null입니다.", nullable = true)
+    UserWorkAssignmentResponse workAssignment,
+
     @Schema(description = "사용자 생년월일", example = "1990-01-01", nullable = true)
     LocalDate birthDate,
 
@@ -91,6 +94,7 @@ public record UserDetailResponse(
             user.getRole().name(),
             user.getDepartment() != null ? DepartmentSimpleResponse.from(user.getDepartment()) : null,
             user.getClassroom() != null ? ClassroomSummaryResponse.from(user.getClassroom()) : null,
+            UserWorkAssignmentResponse.from(user),
             UserBirthDateConverter.toBirthDate(user.getResidentRegistrationNumberPrefix()),
             user.getTeacherStartAt(),
             user.getTeacherEndAt(),

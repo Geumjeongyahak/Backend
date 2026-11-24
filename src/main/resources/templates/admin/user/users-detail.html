@@ -13,11 +13,11 @@
         <div class="detail-item"><span>이메일</span><strong th:text="${user.email}">email</strong></div>
         <div class="detail-item"><span>연락처</span><strong th:text="${user.phoneNumber ?: '-'}">-</strong></div>
         <div class="detail-item"><span>생년월일</span><strong th:text="${user.birthDate ?: '-'}">-</strong></div>
-        <div class="detail-item"><span>부서</span><strong><a class="link" th:if="${user.departmentId != null}" th:href="@{/admin/department/departments/{departmentId}(departmentId=${user.departmentId})}" th:text="${user.departmentName}">부서</a><span th:if="${user.departmentId == null}">-</span></strong></div>
-        <div class="detail-item"><span>분반</span><strong><a class="link" th:if="${user.classroomId != null}" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${user.classroomId})}" th:text="${user.classroomName}">분반</a><span th:if="${user.classroomId == null}">-</span></strong></div>
+        <div class="detail-item"><span>업무분장</span><strong><a class="link" th:if="${user.workAssignment != null && user.workAssignment.type.name() == 'DEPARTMENT'}" th:href="@{/admin/department/departments/{departmentId}(departmentId=${user.workAssignment.departmentId})}" th:text="${user.workAssignment.name}">부서</a><span th:if="${user.workAssignment != null && user.workAssignment.type.name() == 'HOMEROOM'}">담임 · <a class="link" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${user.workAssignment.classroomId})}" th:text="${user.workAssignment.classroomName}">분반</a></span><span th:if="${user.workAssignment == null}">-</span></strong></div>
+        <div class="detail-item"><span>대표 분반</span><strong><a class="link" th:if="${user.classroomId != null}" th:href="@{/admin/classroom/classrooms/{classroomId}(classroomId=${user.classroomId})}" th:text="${user.classroomName}">분반</a><span th:if="${user.classroomId == null}">-</span></strong></div>
     </section>
     <section class="panel stack">
-        <h2>소속 변경</h2>
+        <h2>업무분장 및 대표 분반 변경</h2>
         <div class="inline-form">
             <form class="inline-form" th:action="@{/admin/user/users/{userId}/department(userId=${user.id})}" method="post">
                 <select name="departmentId" required>
@@ -26,12 +26,22 @@
                 </select>
                 <button class="button secondary" type="submit">부서 변경</button>
             </form>
+            <form class="inline-form" th:action="@{/admin/user/users/{userId}/homeroom(userId=${user.id})}" method="post">
+                <select name="classroomId" required>
+                    <option value="">담임 분반 선택</option>
+                    <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}" th:selected="${user.workAssignment != null && user.workAssignment.type.name() == 'HOMEROOM' && user.workAssignment.classroomId == classroom.id}">분반</option>
+                </select>
+                <button class="button secondary" type="submit">담임 지정</button>
+            </form>
+            <form class="inline-form" th:if="${user.workAssignment != null && user.workAssignment.type.name() == 'HOMEROOM'}" th:action="@{/admin/user/users/{userId}/homeroom/release(userId=${user.id})}" method="post">
+                <button class="button secondary" type="submit">담임 해제</button>
+            </form>
             <form class="inline-form" th:action="@{/admin/user/users/{userId}/classroom(userId=${user.id})}" method="post">
                 <select name="classroomId" required>
-                    <option value="">분반 선택</option>
+                    <option value="">대표 분반 선택</option>
                     <option th:each="classroom : ${classrooms}" th:value="${classroom.id}" th:text="${classroom.name}" th:selected="${user.classroomId == classroom.id}">분반</option>
                 </select>
-                <button class="button secondary" type="submit">분반 변경</button>
+                <button class="button secondary" type="submit">대표 분반 변경</button>
             </form>
         </div>
     </section>
